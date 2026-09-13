@@ -20,6 +20,29 @@ static inline int rin_sdk_nonzero_bytes_valid(const void* value, size_t size)
     return size != 0u && aggregate != 0u;
 }
 
+/* Session identity is a transport-visible, versioned value rather than a
+ * POSIX credential.  Keep its exact layout available to SDK clients that use
+ * peer-session socket metadata without importing the OS-Core API header. */
+#define RIN_SESSION_IDENTITY_VERSION_1 1u
+#ifndef RIN_SESSION_IDENTITY_V1_DEFINED
+#define RIN_SESSION_IDENTITY_V1_DEFINED 1
+typedef struct RinSessionIdentityV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t session_id;
+    uint32_t uid;
+    uint64_t instance_cookie;
+    uint64_t reserved[2];
+} RinSessionIdentityV1;
+#if defined(__cplusplus)
+static_assert(sizeof(RinSessionIdentityV1) == 40u,
+              "RinSessionIdentityV1 ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinSessionIdentityV1) == 40u,
+               "RinSessionIdentityV1 ABI drift");
+#endif
+#endif
+
 #define SO_RIN_UNIX_PUBLISH_SERVICE  0x5001
 #define SO_RIN_UNIX_SERVICE_IDENTITY 0x5002
 #define SO_RIN_UNIX_PEER_IDENTITY    0x5004
@@ -307,4 +330,3 @@ _Static_assert(sizeof(rin_unix_peer_application_image_path_v1) == 176u,
 #endif
 
 #endif /* RIN_SDK_SOCKET_ABI_H */
-
