@@ -181,7 +181,7 @@ static inline uint32_t rin_audio_service_format_frame_bytes(
  * the application, the consumer is Audio Service, and both counters are
  * monotonically increasing frame positions rather than wrapped indexes. */
 #pragma pack(pop)
-typedef struct RinAudioServiceSharedRingV1 {
+typedef struct __attribute__((aligned(8))) RinAudioServiceSharedRingV1 {
     uint32_t magic;
     uint32_t version;
     uint32_t header_bytes;

@@ -45,7 +45,7 @@ typedef struct RinGpuCrossProcessCapabilityDescV1 {
     uint64_t device_generation;
     uint64_t resource_id;
     uint32_t rights;
-    uint32_t reserved[2];
+    uint32_t reserved[3];
 } RinGpuCrossProcessCapabilityDescV1;
 
 typedef struct RinGpuCrossProcessCapabilityTokenV1 {
@@ -55,7 +55,7 @@ typedef struct RinGpuCrossProcessCapabilityTokenV1 {
     uint64_t owner_process_id;
     uint64_t device_generation;
     uint32_t rights;
-    uint32_t reserved[2];
+    uint32_t reserved[3];
 } RinGpuCrossProcessCapabilityTokenV1;
 
 typedef struct RinGpuCrossProcessCapabilityRequestV1 {
@@ -65,7 +65,7 @@ typedef struct RinGpuCrossProcessCapabilityRequestV1 {
     uint64_t process_id;
     uint64_t device_generation;
     uint32_t required_rights;
-    uint32_t reserved[2];
+    uint32_t reserved[3];
 } RinGpuCrossProcessCapabilityRequestV1;
 
 typedef struct RinGpuCapabilityValidateResponseV1 {
