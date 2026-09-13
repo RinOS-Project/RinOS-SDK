@@ -10,4 +10,5 @@
 #include "config.h"
 #include "pkg.h"
 #include "device.h"
+#include "render_target.h"
 #endif
