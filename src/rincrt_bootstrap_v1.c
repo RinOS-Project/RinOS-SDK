@@ -10,7 +10,7 @@
 #include <stdarg.h>
 #include <limits.h>
 
-#include "../../../src/shared/rin_syscall_abi.h"
+#include <rin/syscall_abi.h>
 
 extern void* rin_user_allocator_malloc(size_t size);
 extern void rin_user_allocator_free(void* pointer);
