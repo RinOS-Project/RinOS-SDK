@@ -10,5 +10,6 @@
 #include "config.h"
 #include "pkg.h"
 #include "device.h"
+#include "service.h"
 #include "render_target.h"
 #endif
