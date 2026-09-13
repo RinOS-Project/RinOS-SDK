@@ -11,5 +11,10 @@
 #include "pkg.h"
 #include "device.h"
 #include "service.h"
+#include "audio/device_abi.h"
+#include "audio/formats.h"
+#include "audio/policy_abi.h"
+#include "audio/ring_abi.h"
+#include "audio/service_abi.h"
 #include "render_target.h"
 #endif
