@@ -180,6 +180,7 @@ static inline uint32_t rin_audio_service_format_frame_bytes(
 /* The header and PCM bytes live in one named RinSHM region.  The producer is
  * the application, the consumer is Audio Service, and both counters are
  * monotonically increasing frame positions rather than wrapped indexes. */
+#pragma pack(pop)
 typedef struct RinAudioServiceSharedRingV1 {
     uint32_t magic;
     uint32_t version;
@@ -192,6 +193,7 @@ typedef struct RinAudioServiceSharedRingV1 {
     volatile uint64_t consumer_frames;
     uint64_t reserved1[2];
 } RinAudioServiceSharedRingV1;
+#pragma pack(push, 1)
 
 typedef struct RinAudioServiceCreateStreamRequestV1 {
     RinAudioServiceFormatV1 format;

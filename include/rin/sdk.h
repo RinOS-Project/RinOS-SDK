@@ -16,5 +16,6 @@
 #include "audio/policy_abi.h"
 #include "audio/ring_abi.h"
 #include "audio/service_abi.h"
+#include "audio/stream_abi.h"
 #include "render_target.h"
 #endif
