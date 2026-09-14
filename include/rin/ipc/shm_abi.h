@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: MIT
+#ifndef RIN_SDK_IPC_SHM_ABI_H
+#define RIN_SDK_IPC_SHM_ABI_H
+
+#define RIN_SHM_NAME_MAX 64
+
+#define RIN_SHM_FLAG_CREAT            0x00000001u
+#define RIN_SHM_FLAG_EXCL             0x00000002u
+#define RIN_SHM_FLAG_UNLINK_ON_CLOSE  0x00000004u
+
+#define RIN_SHM_PROT_READ   0x00000001u
+#define RIN_SHM_PROT_WRITE  0x00000002u
+
+#endif

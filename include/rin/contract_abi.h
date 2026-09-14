@@ -657,6 +657,8 @@ typedef struct RinInputMethodConfigV1 {
     uint64_t reserved;
 } RinInputMethodConfigV1;
 
+#ifndef RIN_SDK_TEXT_INPUT_ABI_DEFINED
+#define RIN_SDK_TEXT_INPUT_ABI_DEFINED
 typedef struct RinTextInputStateV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -680,6 +682,7 @@ typedef struct RinTextCompositionV1 {
     uint8_t text[400];
     uint64_t reserved[2];
 } RinTextCompositionV1;
+#endif
 
 typedef struct RinStorageGeometryV1 {
     uint32_t struct_size;
@@ -910,6 +913,8 @@ typedef struct RinPassStatusV1 {
     uint64_t reserved[3];
 } RinPassStatusV1;
 
+#ifndef RIN_SDK_WEBAUTHN_ABI_DEFINED
+#define RIN_SDK_WEBAUTHN_ABI_DEFINED
 typedef struct RinPassWebAuthnRequestV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -941,6 +946,7 @@ typedef struct RinPassWebAuthnRequestV1 {
     uint8_t credential_ids[1024];
     uint64_t reserved[4];
 } RinPassWebAuthnRequestV1;
+#endif /* RIN_SDK_WEBAUTHN_ABI_DEFINED */
 
 typedef struct RinPassResultV1 {
     uint32_t struct_size;
@@ -1225,6 +1231,8 @@ typedef struct RinDeviceResourceResponseV1 {
     uint64_t reserved;
 } RinDeviceResourceResponseV1;
 
+#ifndef RIN_SDK_TIME_ABI_DEFINED
+#define RIN_SDK_TIME_ABI_DEFINED
 typedef struct RinCpuTimeV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -1273,6 +1281,7 @@ typedef struct RinClockSettimeV1 {
     int64_t tv_sec;
     int64_t tv_nsec;
 } RinClockSettimeV1;
+#endif /* RIN_SDK_TIME_ABI_DEFINED */
 
 #if defined(__cplusplus)
 static_assert(sizeof(RinEventV1) == 48, "RinEventV1 ABI drift");
@@ -2654,5 +2663,4 @@ _Static_assert(offsetof(RinClockSettimeV1, tv_sec) == 16, "RinClockSettimeV1.tv_
 _Static_assert(offsetof(RinClockSettimeV1, tv_nsec) == 24, "RinClockSettimeV1.tv_nsec ABI drift");
 #endif
 
-#endif /* RIN_SHARED_RIN_CONTRACT_ABI_H */
-
+#endif /* RIN_SDK_CONTRACT_ABI_H */

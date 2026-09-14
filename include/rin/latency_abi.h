@@ -145,5 +145,5 @@ _Static_assert(sizeof(RinLatencyHistogramV1) == 160u,
                "latency histogram ABI drift");
 #endif
 
-#endif /* RIN_SHARED_LATENCY_ABI_H */
+#endif /* RIN_SDK_LATENCY_ABI_H */
 
