@@ -682,7 +682,8 @@ typedef struct RinTextCompositionV1 {
     uint8_t text[400];
     uint64_t reserved[2];
 } RinTextCompositionV1;
-#endif
+
+#endif /* RIN_SDK_TEXT_INPUT_ABI_DEFINED */
 
 typedef struct RinStorageGeometryV1 {
     uint32_t struct_size;
@@ -946,6 +947,7 @@ typedef struct RinPassWebAuthnRequestV1 {
     uint8_t credential_ids[1024];
     uint64_t reserved[4];
 } RinPassWebAuthnRequestV1;
+
 #endif /* RIN_SDK_WEBAUTHN_ABI_DEFINED */
 
 typedef struct RinPassResultV1 {
@@ -1281,6 +1283,7 @@ typedef struct RinClockSettimeV1 {
     int64_t tv_sec;
     int64_t tv_nsec;
 } RinClockSettimeV1;
+
 #endif /* RIN_SDK_TIME_ABI_DEFINED */
 
 #if defined(__cplusplus)
