@@ -11,6 +11,7 @@
 #include "pkg.h"
 #include "device.h"
 #include "service.h"
+#include "keyring.h"
 #include "syscall_abi.h"
 #include "syscall_contract.h"
 #include "syscall_legacy.h"
@@ -78,4 +79,5 @@
 #include "audio/service_abi.h"
 #include "audio/stream_abi.h"
 #include "render_target.h"
+#include "runtime.h"
 #endif

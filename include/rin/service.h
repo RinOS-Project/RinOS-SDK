@@ -17,6 +17,12 @@ extern "C" {
  * by a success-returning compatibility stub. */
 RIN_SDK_API RinResult rin_service_start(int scope, const char* id);
 
+/* Resolve a kernel-published system service slot before trusting the
+ * service identity returned by a connected local socket.  A non-zero return
+ * is failure; slot_id is cleared on every failure path. */
+RIN_SDK_API int rin_service_find_system_slot(const char* service_id,
+                                             uint32_t* slot_id);
+
 #ifdef __cplusplus
 }
 #endif
