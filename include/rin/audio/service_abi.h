@@ -116,6 +116,8 @@ enum {
     RIN_AUDIO_SERVICE_EVENT_PERIOD_COMPLETE = 5u,
     /* Capture producer could not fit the complete input quantum. */
     RIN_AUDIO_SERVICE_EVENT_CAPTURE_OVERRUN = 6u,
+    /* A newly available device was admitted into the published topology. */
+    RIN_AUDIO_SERVICE_EVENT_DEVICE_ADDED = 7u,
 };
 
 typedef struct RinAudioServiceMessageHeaderV1 {
@@ -608,7 +610,7 @@ static inline int rin_audio_service_event_valid(
            event->struct_size == sizeof(*event) &&
            event->version == RIN_AUDIO_SERVICE_PROTOCOL_VERSION &&
            event->type >= RIN_AUDIO_SERVICE_EVENT_UNDERRUN &&
-           event->type <= RIN_AUDIO_SERVICE_EVENT_CAPTURE_OVERRUN &&
+           event->type <= RIN_AUDIO_SERVICE_EVENT_DEVICE_ADDED &&
            event->reserved0 == 0u && event->sequence != 0u &&
            event->status <= 0 && event->reserved1 == 0u;
 }
