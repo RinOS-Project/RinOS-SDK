@@ -276,6 +276,17 @@ directory_next(RinDirectory directory) noexcept {
     return {rin_directory_next_v1(directory, &entry), entry};
 }
 
+/* Directory names are caller-owned output.  Keeping the buffer explicit
+ * prevents an opaque SDK handle from smuggling a pointer to a temporary
+ * string across the ABI. */
+[[nodiscard]] inline outcome<RinDirectoryEntryV1>
+directory_next(RinDirectory directory, char* name,
+               uint64_t name_capacity) noexcept {
+    auto entry = versioned<RinDirectoryEntryV1>();
+    entry.name = string(name, name_capacity);
+    return {rin_directory_next_v1(directory, &entry), entry};
+}
+
 [[nodiscard]] inline outcome<RinDirectory>
 directory_open(const RinDirectoryOpenV1& request) noexcept {
     RinDirectory directory = RIN_HANDLE_INVALID;

@@ -38,7 +38,7 @@ RIN_SDK_API RinResult rin_channel_receive_v1(RinChannel channel, RinIpcMessageV1
 RIN_SDK_API RinResult rin_event_create_v1(uint32_t flags, RinEvent* event);
 RIN_SDK_API RinResult rin_event_signal_v1(RinEvent event, uint64_t value);
 RIN_SDK_API RinResult rin_wait_many_v1(RinSliceV1 items, uint64_t timeout_ns, uint32_t* index);
-RIN_SDK_API RinResult RIN_SDK_memory_create_v1(uint64_t size, uint32_t flags, RinSharedMemory* memory);
+RIN_SDK_API RinResult rin_shared_memory_create_v1(uint64_t size, uint32_t flags, RinSharedMemory* memory);
 RIN_SDK_API RinResult rin_service_connect_v1(RinStringV1 name, RinChannel* channel);
 RIN_SDK_API RinResult rin_wait_set_create_v1(uint32_t flags, RinWaitSet* wait_set);
 RIN_SDK_API RinResult rin_wait_set_set_items_v1(RinWaitSet wait_set, RinSliceV1 items);

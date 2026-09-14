@@ -31,6 +31,10 @@ extern "C" {
 #define RIN_FILE_PORTAL_OPERATION_SETTINGS_REVOKE_REQUEST UINT16_C(7)
 #define RIN_FILE_PORTAL_OPERATION_SETTINGS_REVOKE_STATUS  UINT16_C(8)
 #define RIN_FILE_PORTAL_OPERATION_SETTINGS_REVOKE_FINISH  UINT16_C(9)
+#define RIN_FILE_PORTAL_OPERATION_PAYLOAD_READ     UINT16_C(10)
+#define RIN_FILE_PORTAL_OPERATION_PAYLOAD_WRITE    UINT16_C(11)
+#define RIN_FILE_PORTAL_OPERATION_PAYLOAD_SYNC     UINT16_C(12)
+#define RIN_FILE_PORTAL_OPERATION_PAYLOAD_TRUNCATE UINT16_C(13)
 
 #define RIN_FILE_PORTAL_CALL_FD_CLOEXEC UINT32_C(1)
 #define RIN_FILE_PORTAL_TOKEN_LIFETIME_SECONDS UINT64_C(120)
@@ -41,6 +45,8 @@ extern "C" {
 #define RIN_FILE_PORTAL_DURABLE_SCOPE_DESCENDANTS UINT32_C(2)
 #define RIN_FILE_PORTAL_DURABLE_STATE_ACTIVE UINT32_C(1)
 #define RIN_FILE_PORTAL_DURABLE_STATE_EXPIRED UINT32_C(2)
+#define RIN_FILE_PORTAL_PAYLOAD_VERSION UINT16_C(1)
+#define RIN_FILE_PORTAL_PAYLOAD_DATA_SIZE 176u
 
 /* Public listing never exposes an identity (it is always the current
  * sandbox), a pathname, a file descriptor, an object cookie or a portal
@@ -80,6 +86,28 @@ typedef struct __attribute__((packed)) RinFilePortalSettingsEntryV1 {
     uint8_t reserved[32];
 } RinFilePortalSettingsEntryV1;
 
+/* A bounded inline chunk. Larger payloads are streamed through repeated
+ * offset-addressed calls so the syscall copies the complete request/result
+ * atomically and never trusts a user pointer embedded in the portal ABI. */
+typedef struct __attribute__((packed)) RinFilePortalPayloadV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t payload_size;
+    uint32_t reserved0;
+    uint64_t offset;
+    uint64_t result_size;
+    uint8_t bytes[RIN_FILE_PORTAL_PAYLOAD_DATA_SIZE];
+} RinFilePortalPayloadV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinFilePortalPayloadV1) == RIN_FILE_PORTAL_TOKEN_SIZE,
+              "RinFilePortalPayloadV1 ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinFilePortalPayloadV1) == RIN_FILE_PORTAL_TOKEN_SIZE,
+               "RinFilePortalPayloadV1 ABI drift");
+#endif
+
 /* ISSUE input:
  *   descriptor = chooser-owned VFS descriptor
  *   requested_rights, target_process_id, target_process_cookie
@@ -111,6 +139,15 @@ typedef struct __attribute__((packed)) RinFilePortalSettingsEntryV1 {
  *   expiry. STATUS and FINISH accept only request_id. STATUS returns the
  *   terminal permission status and committed database generation; mutation
  *   occurs only after the built-in physical prompt receives an exact click.
+ * PAYLOAD_READ/PAYLOAD_WRITE:
+ *   descriptor = current-process VFS file descriptor returned by OPEN or
+ *   DURABLE_OPEN; payload.offset and payload_size select one bounded chunk.
+ *   READ returns bytes/result_size, WRITE consumes bytes/result_size.
+ * PAYLOAD_SYNC:
+ *   descriptor = current-process VFS file descriptor; payload is empty.
+ * PAYLOAD_TRUNCATE:
+ *   descriptor = current-process VFS file descriptor; payload.offset is the
+ *   new exact size and payload is otherwise empty.
  *
  * The kernel requires every output field to have its canonical empty value
  * before executing the operation. process_fd is -1 when empty. Listing
@@ -134,6 +171,7 @@ typedef struct RinFilePortalCallV1 {
         RinFilePortalTokenV1 token;
         RinFilePortalDurableEntryV1 durable_entry;
         RinFilePortalSettingsEntryV1 settings_entry;
+        RinFilePortalPayloadV1 payload;
     };
     uint32_t granted_rights;
     int32_t process_fd;
@@ -172,4 +210,3 @@ _Static_assert(sizeof(RinFilePortalSettingsEntryV1) == RIN_FILE_PORTAL_TOKEN_SIZ
 #endif
 
 #endif /* RIN_SDK_FILE_PORTAL_CALL_H */
-

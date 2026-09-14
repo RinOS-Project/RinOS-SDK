@@ -241,6 +241,22 @@ typedef RinResult (*RinSdkInvokeV1)(
     const void* request, uint32_t request_size,
     void* response, uint32_t response_size);
 
+/* Fixed-width argument carrier used by SDK operations whose request is only
+ * a handle and scalar values.  Keeping this in the public ABI lets an
+ * OS-owned backend validate the exact request shape instead of depending on
+ * the private SDK implementation's local type. */
+typedef struct RinSdkArgsV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t value[6];
+} RinSdkArgsV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinSdkArgsV1) == 56u, "SDK args ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinSdkArgsV1) == 56u, "SDK args ABI drift");
+#endif
+
 typedef struct RinSdkBackendV1 {
     uint32_t struct_size;
     uint32_t version;

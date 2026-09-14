@@ -26,12 +26,6 @@ static RinSdkBackendV1 g_backend;
 static volatile uint32_t g_backend_state;
 #endif
 
-typedef struct RinSdkArgsV1 {
-    uint32_t struct_size;
-    uint32_t version;
-    uint64_t value[6];
-} RinSdkArgsV1;
-
 enum {
     BASE_OBJECT_CLOSE = 1, BASE_OBJECT_QUERY, BASE_PROCESS_SPAWN,
     BASE_PROCESS_WAIT, BASE_MEMORY_MAP, BASE_MEMORY_UNMAP, BASE_TIME_GET,
@@ -46,6 +40,16 @@ enum {
     FS_FILE_READ_ASYNC, FS_FILE_WRITE_ASYNC, FS_FILE_IO_RESULT,
     FS_FILE_IO_CANCEL, FS_DIRECTORY_OPEN, FS_DIRECTORY_REWIND,
     FS_FILE_WATCH_NEXT,
+    FS_FILE_CLOSE = RIN_FS_OPERATION_FILE_CLOSE,
+    FS_DIRECTORY_CLOSE = RIN_FS_OPERATION_DIRECTORY_CLOSE,
+    FS_FILE_SEEK = RIN_FS_OPERATION_FILE_SEEK,
+    FS_FILE_TRUNCATE = RIN_FS_OPERATION_FILE_TRUNCATE,
+    FS_DIRECTORY_SYNC = RIN_FS_OPERATION_DIRECTORY_SYNC,
+    FS_PATH_STAT = RIN_FS_OPERATION_PATH_STAT,
+    FS_PATH_MKDIR = RIN_FS_OPERATION_PATH_MKDIR,
+    FS_PATH_UNLINK = RIN_FS_OPERATION_PATH_UNLINK,
+    FS_PATH_RENAME = RIN_FS_OPERATION_PATH_RENAME,
+    FS_PORTAL_OPEN = RIN_FS_OPERATION_PORTAL_OPEN,
     NET_SOCKET_CREATE = 1, NET_SOCKET_CONNECT, NET_SOCKET_SEND,
     NET_SOCKET_RECEIVE, NET_DNS_RESOLVE, NET_TLS_CONNECT, NET_HTTP_EXECUTE,
     NET_TLS_SEND, NET_TLS_RECEIVE, NET_TLS_SHUTDOWN,
@@ -219,14 +223,17 @@ RinResult rin_service_accept_v1(RinService service, uint64_t timeout_ns, RinChan
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_FS)
 RinResult rin_file_open_v1(const RinFileOpenV1* request, RinFile* file) {
     if (!versioned(request, sizeof(*request)) || !file) return RIN_ERROR_INVALID_ARGUMENT;
+    *file = RIN_HANDLE_INVALID;
     return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_OPEN, request, sizeof(*request), file, sizeof(*file));
 }
 RinResult rin_file_read_v1(RinFileIoV1* request, uint64_t* transferred) {
     if (!versioned(request, sizeof(*request))) return RIN_ERROR_ABI_MISMATCH;
+    if (transferred != NULL) *transferred = 0u;
     return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_READ, request, sizeof(*request), transferred, transferred ? sizeof(*transferred) : 0u);
 }
 RinResult rin_file_write_v1(RinFileIoV1* request, uint64_t* transferred) {
     if (!versioned(request, sizeof(*request))) return RIN_ERROR_ABI_MISMATCH;
+    if (transferred != NULL) *transferred = 0u;
     return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_WRITE, request, sizeof(*request), transferred, transferred ? sizeof(*transferred) : 0u);
 }
 RinResult rin_file_flush_v1(RinFile file) { SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_FILE_FLUSH, (RinResult*)0, file,0,0,0,0,0); }
@@ -256,6 +263,7 @@ RinResult rin_file_io_cancel_v1(RinIoRequest operation) {
 }
 RinResult rin_directory_open_v1(const RinDirectoryOpenV1* request, RinDirectory* directory) {
     if (!versioned(request, sizeof(*request)) || !directory) return RIN_ERROR_INVALID_ARGUMENT;
+    *directory = RIN_HANDLE_INVALID;
     return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_DIRECTORY_OPEN, request, sizeof(*request), directory, sizeof(*directory));
 }
 RinResult rin_directory_rewind_v1(RinDirectory directory) {
@@ -264,6 +272,84 @@ RinResult rin_directory_rewind_v1(RinDirectory directory) {
 RinResult rin_file_watch_next_v1(RinFileWatch watch, uint64_t timeout_ns, RinFileWatchEventV1* event) {
     if (!versioned(event, sizeof(*event))) return RIN_ERROR_ABI_MISMATCH;
     SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_FILE_WATCH_NEXT, event, watch,timeout_ns,0,0,0,0);
+}
+RinResult rin_file_close_v1(RinFile file) {
+    SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_FILE_CLOSE, (RinResult*)0, file,0,0,0,0,0);
+}
+RinResult rin_directory_close_v1(RinDirectory directory) {
+    SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_DIRECTORY_CLOSE, (RinResult*)0, directory,0,0,0,0,0);
+}
+RinResult rin_file_seek_v1(const RinFileSeekV1* request, uint64_t* position) {
+    if (!versioned(request, sizeof(*request)) || !position)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    *position = 0u;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_SEEK,
+                             request, sizeof(*request), position,
+                             sizeof(*position));
+}
+RinResult rin_file_truncate_v1(const RinFileTruncateV1* request) {
+    if (!versioned(request, sizeof(*request))) return RIN_ERROR_ABI_MISMATCH;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_TRUNCATE,
+                             request, sizeof(*request), NULL, 0u);
+}
+RinResult rin_directory_sync_v1(RinDirectory directory) {
+    SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_DIRECTORY_SYNC, (RinResult*)0, directory,0,0,0,0,0);
+}
+RinResult rin_path_stat_v1(const RinFsPathRequestV1* request, RinFileStatV1* stat) {
+    if (!versioned(request, sizeof(*request)) || !stat)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    *stat = (RinFileStatV1){0};
+    if (request->secondary_path.address != 0u ||
+        request->secondary_path.size != 0u || request->flags != 0u ||
+        request->mode != 0u || request->reserved[0] != 0u ||
+        request->reserved[1] != 0u ||
+        request->secondary_directory != RIN_HANDLE_INVALID)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (!versioned(stat, sizeof(*stat))) return RIN_ERROR_ABI_MISMATCH;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PATH_STAT,
+                             request, sizeof(*request), stat, sizeof(*stat));
+}
+RinResult rin_path_mkdir_v1(const RinFsPathRequestV1* request) {
+    if (!versioned(request, sizeof(*request)) ||
+        request->secondary_directory != RIN_HANDLE_INVALID ||
+        request->secondary_path.address != 0u ||
+        request->secondary_path.size != 0u ||
+        request->flags != 0u || request->reserved[0] != 0u ||
+        request->reserved[1] != 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PATH_MKDIR,
+                             request, sizeof(*request), NULL, 0u);
+}
+RinResult rin_path_unlink_v1(const RinFsPathRequestV1* request) {
+    if (!versioned(request, sizeof(*request)) ||
+        request->secondary_directory != RIN_HANDLE_INVALID ||
+        request->secondary_path.address != 0u ||
+        request->secondary_path.size != 0u || request->mode != 0u ||
+        request->reserved[0] != 0u || request->reserved[1] != 0u ||
+        (request->flags & ~RIN_FS_PATH_UNLINK_DIRECTORY) != 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PATH_UNLINK,
+                             request, sizeof(*request), NULL, 0u);
+}
+RinResult rin_path_rename_v1(const RinFsPathRequestV1* request) {
+    if (!versioned(request, sizeof(*request)) ||
+        request->path.address == 0u || request->path.size == 0u ||
+        request->secondary_path.address == 0u ||
+        request->secondary_path.size == 0u || request->flags != 0u ||
+        request->mode != 0u || request->reserved[0] != 0u ||
+        request->reserved[1] != 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PATH_RENAME,
+                             request, sizeof(*request), NULL, 0u);
+}
+RinResult rin_fs_portal_open_v1(const RinFsPortalOpenV1* request,
+                                uint64_t* handle) {
+    if (!versioned(request, sizeof(*request)) || handle == NULL)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    *handle = RIN_HANDLE_INVALID;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PORTAL_OPEN,
+                             request, sizeof(*request), handle,
+                             sizeof(*handle));
 }
 #endif
 
