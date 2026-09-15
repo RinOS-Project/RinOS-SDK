@@ -208,8 +208,26 @@ RinResult rin_wait_set_set_items_v1(RinWaitSet wait_set, RinSliceV1 items) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_IPC, IPC_WAIT_SET_SET_ITEMS, (RinResult*)0, wait_set,items.address,items.size,0,0,0);
 }
 RinResult rin_wait_set_wait_v1(RinWaitSet wait_set, uint64_t timeout_ns, RinWaitResultV1* result) {
+    RinSdkArgsV1 request;
+    RinResult wait_result;
     if (!versioned(result, sizeof(*result))) return RIN_ERROR_ABI_MISMATCH;
-    SIMPLE_CALL(RIN_SDK_LIBRARY_IPC, IPC_WAIT_SET_WAIT, result, wait_set,timeout_ns,0,0,0,0);
+    rin_sdk_zero_bytes(result, sizeof(*result));
+    result->struct_size = sizeof(*result);
+    result->version = RIN_SDK_STRUCT_VERSION_1;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = wait_set;
+    request.value[1] = timeout_ns;
+    wait_result = rin_sdk_invoke_v1(RIN_SDK_LIBRARY_IPC, IPC_WAIT_SET_WAIT,
+                                    &request, sizeof(request), result,
+                                    sizeof(*result));
+    if (wait_result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(result, sizeof(*result));
+        result->struct_size = sizeof(*result);
+        result->version = RIN_SDK_STRUCT_VERSION_1;
+    }
+    return wait_result;
 }
 RinResult rin_service_register_v1(RinStringV1 name, uint32_t flags, RinService* service) {
     if (!service) return RIN_ERROR_INVALID_ARGUMENT;
