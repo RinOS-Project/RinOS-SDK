@@ -152,6 +152,150 @@ typedef struct RCCBootstrapFile {
 
 typedef void (*RinCrtExitHandler)(void);
 
+/* RCC++ and rincrt share this compact target-width exception ABI.  It is
+ * deliberately implemented here, rather than supplied by a hosted libc, so
+ * generated .rin/.rll/.drv images can propagate scalar exceptions across
+ * library boundaries using the same frame layout. */
+#if defined(__x86_64__) || defined(_M_X64)
+typedef long RinCrtJmpBuf[8];
+#elif defined(__i386__) || defined(_M_IX86)
+typedef long RinCrtJmpBuf[6];
+#else
+#error "rincrt C++ exceptions only support x86_64 and i386"
+#endif
+
+typedef struct RinCrtCppExceptionFrame {
+    RinCrtJmpBuf env;
+    struct RinCrtCppExceptionFrame* previous;
+    uintptr_t value;
+    uintptr_t type;
+} RinCrtCppExceptionFrame;
+
+void _exit(int status);
+
+#if defined(__x86_64__) || defined(_M_X64)
+__attribute__((naked, returns_twice))
+int setjmp(RinCrtJmpBuf env __attribute__((unused)))
+{
+    __asm__ __volatile__(
+        "mov %rdi, %rax\n"
+        "mov %rbx, 0(%rax)\n"
+        "mov %rbp, 8(%rax)\n"
+        "mov %r12, 16(%rax)\n"
+        "mov %r13, 24(%rax)\n"
+        "mov %r14, 32(%rax)\n"
+        "mov %r15, 40(%rax)\n"
+        "lea 8(%rsp), %rdx\n"
+        "mov %rdx, 48(%rax)\n"
+        "mov (%rsp), %rdx\n"
+        "mov %rdx, 56(%rax)\n"
+        "xor %eax, %eax\n"
+        "ret\n");
+}
+
+__attribute__((naked, noreturn))
+void longjmp(RinCrtJmpBuf env __attribute__((unused)),
+             int value __attribute__((unused)))
+{
+    __asm__ __volatile__(
+        "mov %rdi, %rdx\n"
+        "mov %esi, %eax\n"
+        "test %eax, %eax\n"
+        "jnz 1f\n"
+        "mov $1, %eax\n"
+        "1:\n"
+        "mov 0(%rdx), %rbx\n"
+        "mov 8(%rdx), %rbp\n"
+        "mov 16(%rdx), %r12\n"
+        "mov 24(%rdx), %r13\n"
+        "mov 32(%rdx), %r14\n"
+        "mov 40(%rdx), %r15\n"
+        "mov 48(%rdx), %rsp\n"
+        "mov 56(%rdx), %rcx\n"
+        "jmp *%rcx\n");
+}
+#elif defined(__i386__) || defined(_M_IX86)
+__attribute__((naked, returns_twice))
+int setjmp(RinCrtJmpBuf env __attribute__((unused)))
+{
+    __asm__ __volatile__(
+        "mov 4(%esp), %eax\n"
+        "mov %ebx, 0(%eax)\n"
+        "mov %esi, 4(%eax)\n"
+        "mov %edi, 8(%eax)\n"
+        "mov %ebp, 12(%eax)\n"
+        "lea 4(%esp), %edx\n"
+        "mov %edx, 16(%eax)\n"
+        "mov (%esp), %edx\n"
+        "mov %edx, 20(%eax)\n"
+        "xor %eax, %eax\n"
+        "ret\n");
+}
+
+__attribute__((naked, noreturn))
+void longjmp(RinCrtJmpBuf env __attribute__((unused)),
+             int value __attribute__((unused)))
+{
+    __asm__ __volatile__(
+        "mov 4(%esp), %edx\n"
+        "mov 8(%esp), %eax\n"
+        "test %eax, %eax\n"
+        "jnz 1f\n"
+        "mov $1, %eax\n"
+        "1:\n"
+        "mov 0(%edx), %ebx\n"
+        "mov 4(%edx), %esi\n"
+        "mov 8(%edx), %edi\n"
+        "mov 12(%edx), %ebp\n"
+        "mov 16(%edx), %esp\n"
+        "mov 20(%edx), %ecx\n"
+        "jmp *%ecx\n");
+}
+#endif
+
+static _Thread_local RinCrtCppExceptionFrame* rincrt_cpp_exception_top;
+static _Thread_local uintptr_t rincrt_cpp_exception_current_value;
+static _Thread_local uintptr_t rincrt_cpp_exception_current_type;
+
+void rin_cpp_exception_install(RinCrtCppExceptionFrame* frame)
+{
+    if (!frame) {
+        _exit(134);
+    }
+    frame->previous = rincrt_cpp_exception_top;
+    rincrt_cpp_exception_top = frame;
+}
+
+void rin_cpp_exception_leave(RinCrtCppExceptionFrame* frame)
+{
+    if (frame && rincrt_cpp_exception_top == frame) {
+        rincrt_cpp_exception_top = frame->previous;
+    }
+}
+
+__attribute__((noreturn, no_stack_protector))
+void rin_cpp_exception_throw(uintptr_t value, uintptr_t type)
+{
+    RinCrtCppExceptionFrame* frame = rincrt_cpp_exception_top;
+    if (!frame) {
+        _exit(1);
+    }
+    frame->value = value;
+    frame->type = type;
+    rincrt_cpp_exception_current_value = value;
+    rincrt_cpp_exception_current_type = type;
+    rincrt_cpp_exception_top = frame->previous;
+    longjmp(frame->env, 1);
+    __builtin_unreachable();
+}
+
+__attribute__((noreturn, no_stack_protector))
+void rin_cpp_exception_rethrow(void)
+{
+    rin_cpp_exception_throw(rincrt_cpp_exception_current_value,
+                            rincrt_cpp_exception_current_type);
+}
+
 /* The stable symbol ABI goes through __errno_location(); the signed-library
  * graph loader assigns this module's local-exec slot to every thread. */
 static _Thread_local int g_rincrt_errno;
