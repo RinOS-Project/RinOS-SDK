@@ -323,18 +323,28 @@ RinResult rin_directory_sync_v1(RinDirectory directory) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_DIRECTORY_SYNC, (RinResult*)0, directory,0,0,0,0,0);
 }
 RinResult rin_path_stat_v1(const RinFsPathRequestV1* request, RinFileStatV1* stat) {
+    RinResult stat_result;
     if (!versioned(request, sizeof(*request)) || !stat)
         return RIN_ERROR_INVALID_ARGUMENT;
-    *stat = (RinFileStatV1){0};
+    if (!versioned(stat, sizeof(*stat))) return RIN_ERROR_ABI_MISMATCH;
+    rin_sdk_zero_bytes(stat, sizeof(*stat));
+    stat->struct_size = sizeof(*stat);
+    stat->version = RIN_SDK_STRUCT_VERSION_1;
     if (request->secondary_path.address != 0u ||
         request->secondary_path.size != 0u || request->flags != 0u ||
         request->mode != 0u || request->reserved[0] != 0u ||
         request->reserved[1] != 0u ||
         request->secondary_directory != RIN_HANDLE_INVALID)
         return RIN_ERROR_INVALID_ARGUMENT;
-    if (!versioned(stat, sizeof(*stat))) return RIN_ERROR_ABI_MISMATCH;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PATH_STAT,
-                             request, sizeof(*request), stat, sizeof(*stat));
+    stat_result = rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PATH_STAT,
+                                    request, sizeof(*request), stat,
+                                    sizeof(*stat));
+    if (stat_result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(stat, sizeof(*stat));
+        stat->struct_size = sizeof(*stat);
+        stat->version = RIN_SDK_STRUCT_VERSION_1;
+    }
+    return stat_result;
 }
 RinResult rin_path_mkdir_v1(const RinFsPathRequestV1* request) {
     if (!versioned(request, sizeof(*request)) ||
