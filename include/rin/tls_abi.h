@@ -10,6 +10,8 @@
 #define RIN_TLS_DTV_GENERATION_SLOT UINT32_C(0)
 #define RIN_TLS_DTV_FIRST_MODULE_SLOT UINT32_C(1)
 #define RIN_TLS_DTV_MAX_MODULES UINT32_C(64)
+/* The current kernel publication contains only the static module block. */
+#define RIN_TLS_DTV_PUBLISHED_MODULES UINT32_C(1)
 #define RIN_TLS_TCB_DTV_OFFSET UINT32_C(8)
 
 typedef struct RinTlsIndexV1 {
