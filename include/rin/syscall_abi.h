@@ -424,6 +424,8 @@
 #define RIN_SYS_FILESYSTEM_WATCH_ADD        0x8060u
 #define RIN_SYS_FILESYSTEM_WATCH_REMOVE     0x8061u
 #define RIN_SYS_FILESYSTEM_WATCH_CLOSE      0x8062u
+#define RIN_SYS_READV                       0x8063u
+#define RIN_SYS_WRITEV                      0x8064u
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
