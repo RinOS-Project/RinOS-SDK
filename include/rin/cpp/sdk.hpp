@@ -287,6 +287,19 @@ directory_next(RinDirectory directory, char* name,
     return {rin_directory_next_v1(directory, &entry), entry};
 }
 
+[[nodiscard]] inline outcome<uint32_t>
+directory_next_batch(RinDirectory directory, RinDirectoryEntryV1* entries,
+                     uint32_t capacity) noexcept {
+    RinDirectoryBatchV1 request = versioned<RinDirectoryBatchV1>();
+    uint32_t count = 0u;
+    request.directory = directory;
+    request.entries = slice(entries,
+                             static_cast<uint64_t>(capacity) *
+                                 sizeof(RinDirectoryEntryV1));
+    request.capacity = capacity;
+    return {rin_directory_next_batch_v1(&request, &count), count};
+}
+
 [[nodiscard]] inline outcome<RinDirectory>
 directory_open(const RinDirectoryOpenV1& request) noexcept {
     RinDirectory directory = RIN_HANDLE_INVALID;

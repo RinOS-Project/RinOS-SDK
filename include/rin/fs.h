@@ -32,7 +32,8 @@ enum {
     RIN_FS_OPERATION_PATH_MKDIR = 21,
     RIN_FS_OPERATION_PATH_UNLINK = 22,
     RIN_FS_OPERATION_PATH_RENAME = 23,
-    RIN_FS_OPERATION_PORTAL_OPEN = 24
+    RIN_FS_OPERATION_PORTAL_OPEN = 24,
+    RIN_FS_OPERATION_DIRECTORY_NEXT_BATCH = 25
 };
 
 #define RIN_FS_PATH_UNLINK_DIRECTORY UINT32_C(1)
@@ -137,6 +138,21 @@ typedef struct RinDirectoryEntryV1 {
     uint64_t reserved[2];
 } RinDirectoryEntryV1;
 
+/* A bounded directory read.  `entries` points to caller-owned
+ * RinDirectoryEntryV1 records; each record retains the same caller-owned
+ * name buffer contract as rin_directory_next_v1.  The owner returns the
+ * number of records in the response and never advances beyond the supplied
+ * capacity. */
+typedef struct RinDirectoryBatchV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinDirectory directory;
+    RinSliceV1 entries;
+    uint32_t capacity;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinDirectoryBatchV1;
+
 typedef struct RinDirectoryOpenV1 {
     uint32_t struct_size;
     uint32_t version;
@@ -164,6 +180,8 @@ RIN_SDK_API RinResult rin_file_read_v1(RinFileIoV1* request, uint64_t* transferr
 RIN_SDK_API RinResult rin_file_write_v1(RinFileIoV1* request, uint64_t* transferred);
 RIN_SDK_API RinResult rin_file_flush_v1(RinFile file);
 RIN_SDK_API RinResult rin_directory_next_v1(RinDirectory directory, RinDirectoryEntryV1* entry);
+RIN_SDK_API RinResult rin_directory_next_batch_v1(const RinDirectoryBatchV1* request,
+                                                  uint32_t* count);
 RIN_SDK_API RinResult rin_path_normalize_v1(RinStringV1 input, RinSliceV1 output, uint64_t* required);
 RIN_SDK_API RinResult rin_file_watch_v1(RinStringV1 path, uint32_t events, RinFileWatch* watch);
 RIN_SDK_API RinResult rin_file_read_async_v1(const RinFileIoV1* request, RinIoRequest* operation);
@@ -194,6 +212,8 @@ static_assert(sizeof(RinFsPathRequestV1) == 80u,
 static_assert(sizeof(RinFsPortalOpenV1) == 48u,
               "RinFsPortalOpenV1 ABI drift");
 static_assert(sizeof(RinFileStatV1) == 64u, "RinFileStatV1 ABI drift");
+static_assert(sizeof(RinDirectoryBatchV1) == 56u,
+              "RinDirectoryBatchV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinFileSeekV1) == 48u, "RinFileSeekV1 ABI drift");
 _Static_assert(sizeof(RinFileTruncateV1) == 40u,
@@ -203,6 +223,8 @@ _Static_assert(sizeof(RinFsPathRequestV1) == 80u,
 _Static_assert(sizeof(RinFsPortalOpenV1) == 48u,
                "RinFsPortalOpenV1 ABI drift");
 _Static_assert(sizeof(RinFileStatV1) == 64u, "RinFileStatV1 ABI drift");
+_Static_assert(sizeof(RinDirectoryBatchV1) == 56u,
+               "RinDirectoryBatchV1 ABI drift");
 #endif
 
 #ifdef __cplusplus

@@ -50,6 +50,7 @@ enum {
     FS_PATH_UNLINK = RIN_FS_OPERATION_PATH_UNLINK,
     FS_PATH_RENAME = RIN_FS_OPERATION_PATH_RENAME,
     FS_PORTAL_OPEN = RIN_FS_OPERATION_PORTAL_OPEN,
+    FS_DIRECTORY_NEXT_BATCH = RIN_FS_OPERATION_DIRECTORY_NEXT_BATCH,
     NET_SOCKET_CREATE = 1, NET_SOCKET_CONNECT, NET_SOCKET_SEND,
     NET_SOCKET_RECEIVE, NET_DNS_RESOLVE, NET_TLS_CONNECT, NET_HTTP_EXECUTE,
     NET_TLS_SEND, NET_TLS_RECEIVE, NET_TLS_SHUTDOWN,
@@ -240,6 +241,14 @@ RinResult rin_file_flush_v1(RinFile file) { SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_F
 RinResult rin_directory_next_v1(RinDirectory directory, RinDirectoryEntryV1* entry) {
     if (!versioned(entry, sizeof(*entry))) return RIN_ERROR_ABI_MISMATCH;
     SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_DIRECTORY_NEXT, entry, directory,0,0,0,0,0);
+}
+RinResult rin_directory_next_batch_v1(const RinDirectoryBatchV1* request,
+                                      uint32_t* count) {
+    if (!versioned(request, sizeof(*request)) || !count)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    *count = 0u;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_DIRECTORY_NEXT_BATCH,
+                             request, sizeof(*request), count, sizeof(*count));
 }
 RinResult rin_path_normalize_v1(RinStringV1 input, RinSliceV1 output, uint64_t* required) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_PATH_NORMALIZE, required, input.address,input.size,output.address,output.size,0,0);

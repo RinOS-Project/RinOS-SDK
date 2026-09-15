@@ -177,6 +177,43 @@ static inline int rin_compositor_input_ring_pop(
     return rin_compositor_input_ring_event_valid(event) ? 1 : -1;
 }
 
+/* Dequeue at most `capacity` records with one producer/consumer index
+ * publication.  A corrupt record is consumed and reported as an error; the
+ * caller must not reinterpret the remaining records as valid. */
+static inline int rin_compositor_input_ring_pop_batch(
+    RinCompositorInputRingHeaderV1* header,
+    RinCompositorInputRingEventV1* events, uint32_t capacity,
+    uint32_t mapped_bytes, uint32_t* count_out) {
+    uint64_t producer;
+    uint64_t consumer;
+    uint64_t available;
+    uint32_t count;
+    if (count_out != NULL) *count_out = 0u;
+    if (!header || !events || capacity == 0u || count_out == NULL ||
+        !rin_compositor_input_ring_header_valid(header, mapped_bytes))
+        return -1;
+    producer = __atomic_load_n(&header->producer_sequence, __ATOMIC_ACQUIRE);
+    consumer = __atomic_load_n(&header->consumer_sequence, __ATOMIC_RELAXED);
+    if (consumer == producer) return 0;
+    if (producer - consumer > header->capacity) return -1;
+    available = producer - consumer;
+    count = available < capacity ? (uint32_t)available : capacity;
+    for (uint32_t index = 0u; index < count; ++index) {
+        events[index] = *rin_compositor_input_ring_slot(header,
+                                                         consumer + index);
+        if (!rin_compositor_input_ring_event_valid(&events[index])) {
+            __atomic_store_n(&header->consumer_sequence,
+                             consumer + index + 1u, __ATOMIC_RELEASE);
+            *count_out = index + 1u;
+            return -1;
+        }
+    }
+    __atomic_store_n(&header->consumer_sequence, consumer + count,
+                     __ATOMIC_RELEASE);
+    *count_out = count;
+    return 1;
+}
+
 #ifdef __cplusplus
 static_assert(sizeof(RinCompositorInputRingHeaderV1) == 80u,
               "input ring header ABI drift");
