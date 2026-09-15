@@ -7,6 +7,7 @@
 /* Keep the public umbrella source-compatible while the individual contracts
  * remain independently includable. */
 #include "formats_v3.h"
+#include "tls_abi.h"
 
 #ifdef __cplusplus
 extern "C" {
