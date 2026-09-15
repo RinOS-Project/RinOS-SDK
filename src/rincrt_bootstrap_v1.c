@@ -164,6 +164,8 @@ typedef long RinCrtJmpBuf[6];
 #error "rincrt C++ exceptions only support x86_64 and i386"
 #endif
 
+#define RINCRT_CPP_EXCEPTION_OBJECT_FLAG ((uintptr_t)UINT32_C(0x80000000))
+
 typedef struct RinCrtCppExceptionFrame {
     RinCrtJmpBuf env;
     struct RinCrtCppExceptionFrame* previous;
@@ -287,6 +289,41 @@ void rin_cpp_exception_throw(uintptr_t value, uintptr_t type)
     rincrt_cpp_exception_top = frame->previous;
     longjmp(frame->env, 1);
     __builtin_unreachable();
+}
+
+__attribute__((noreturn, no_stack_protector))
+void rin_cpp_exception_throw_object(const void* object, uintptr_t size,
+                                    uintptr_t type)
+{
+    unsigned char* copy;
+    const unsigned char* source = (const unsigned char*)object;
+    uintptr_t index;
+    if (!object || size == 0u ||
+        (type & RINCRT_CPP_EXCEPTION_OBJECT_FLAG) == 0u) {
+        _exit(134);
+    }
+    copy = (unsigned char*)rin_user_allocator_malloc((size_t)size);
+    if (!copy) _exit(1);
+    for (index = 0u; index < size; ++index) copy[index] = source[index];
+    rin_cpp_exception_throw((uintptr_t)copy, type);
+}
+
+void rin_cpp_exception_release_frame(RinCrtCppExceptionFrame* frame)
+{
+    if (!frame || (frame->type & RINCRT_CPP_EXCEPTION_OBJECT_FLAG) == 0u ||
+        frame->value == 0u) {
+        return;
+    }
+    rin_user_allocator_free((void*)frame->value);
+    frame->value = 0u;
+    frame->type = 0u;
+}
+
+__attribute__((noreturn, no_stack_protector))
+void rin_cpp_exception_rethrow_frame(RinCrtCppExceptionFrame* frame)
+{
+    if (!frame || frame->type == 0u) _exit(134);
+    rin_cpp_exception_throw(frame->value, frame->type);
 }
 
 __attribute__((noreturn, no_stack_protector))
