@@ -22,6 +22,18 @@ typedef struct RinWaitItemV1 {
     uint64_t user_tag;
 } RinWaitItemV1;
 
+/* Readiness bits are shared with the public RinRuntime EventLoop adapter.
+ * The kernel owns only production/dispatch of these observations; the
+ * userspace adapter and ordinary applications may consume the ABI. */
+#define RIN_WAIT_EVENT_READABLE (UINT32_C(1) << 0u)
+#define RIN_WAIT_EVENT_WRITABLE (UINT32_C(1) << 1u)
+#define RIN_WAIT_EVENT_ERROR    (UINT32_C(1) << 2u)
+#define RIN_WAIT_EVENT_HANGUP   (UINT32_C(1) << 3u)
+#define RIN_WAIT_EVENT_ALL      (RIN_WAIT_EVENT_READABLE | \
+                                 RIN_WAIT_EVENT_WRITABLE | \
+                                 RIN_WAIT_EVENT_ERROR | \
+                                 RIN_WAIT_EVENT_HANGUP)
+
 typedef struct RinWaitResultV1 {
     uint32_t struct_size;
     uint32_t version;
