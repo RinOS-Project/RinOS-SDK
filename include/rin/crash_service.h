@@ -14,6 +14,7 @@
 #define RIN_CRASH_SERVICE_OP_READ   UINT16_C(2)
 #define RIN_CRASH_SERVICE_OP_REGISTER_RECOVERY UINT16_C(3)
 #define RIN_CRASH_SERVICE_OP_APPEND_DIAGNOSTIC UINT16_C(4)
+#define RIN_CRASH_SERVICE_OP_HANDOFF_REPORT UINT16_C(5)
 
 #define RIN_CRASH_SERVICE_STATUS_CONSENT_REQUIRED INT32_C(-1000)
 
@@ -21,11 +22,13 @@
 #define RIN_CRASH_SERVICE_FLAG_CONSENT_BROKER_READY  UINT32_C(0x00000002)
 #define RIN_CRASH_SERVICE_FLAG_RECOVERY_REGISTRATION UINT32_C(0x00000004)
 #define RIN_CRASH_SERVICE_FLAG_DIAGNOSTIC_APPEND UINT32_C(0x00000008)
+#define RIN_CRASH_SERVICE_FLAG_REPORT_HANDOFF UINT32_C(0x00000010)
 #define RIN_CRASH_SERVICE_FLAG_MASK \
     (RIN_CRASH_SERVICE_FLAG_READ_REQUIRES_CONSENT | \
      RIN_CRASH_SERVICE_FLAG_CONSENT_BROKER_READY | \
      RIN_CRASH_SERVICE_FLAG_RECOVERY_REGISTRATION | \
-     RIN_CRASH_SERVICE_FLAG_DIAGNOSTIC_APPEND)
+     RIN_CRASH_SERVICE_FLAG_DIAGNOSTIC_APPEND | \
+     RIN_CRASH_SERVICE_FLAG_REPORT_HANDOFF)
 
 #define RIN_CRASH_CONSENT_FLAG_LOCAL_PHYSICAL_GESTURE UINT16_C(0x0001)
 #define RIN_CRASH_CONSENT_FLAG_MASK \
@@ -111,6 +114,30 @@ typedef struct RinCrashDiagnosticLogV1 {
     uint64_t reserved[2];
 } RinCrashDiagnosticLogV1;
 
+/* A fatal signal handler may not connect, allocate, wait, or cross an
+ * untrusted path boundary.  CoreCLR therefore opens the authenticated crashd
+ * stream during startup and writes this fixed-size, path-free notice after
+ * its signal-safe report has been finalized.  The peer identity is captured
+ * again by the kernel on the service connection; the duplicated process
+ * identity below is an anti-confusion check, not an authority. */
+#define RIN_CRASH_HANDOFF_VERSION UINT16_C(1)
+#define RIN_CRASH_HANDOFF_FLAG_REPORT_FILE_READY UINT16_C(0x0001)
+#define RIN_CRASH_HANDOFF_FLAG_KERNEL_SUMMARY_EXPECTED UINT16_C(0x0002)
+#define RIN_CRASH_HANDOFF_FLAG_MASK \
+    (RIN_CRASH_HANDOFF_FLAG_REPORT_FILE_READY | \
+     RIN_CRASH_HANDOFF_FLAG_KERNEL_SUMMARY_EXPECTED)
+
+typedef struct RinCrashReportHandoffV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t signal;
+    uint32_t reserved0;
+    uint64_t process_id;
+    uint64_t process_instance_cookie;
+    uint64_t reserved[2];
+} RinCrashReportHandoffV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinCrashServiceMessageHeaderV1) == 32u,
               "RinCrashServiceMessageHeaderV1 ABI drift");
@@ -122,6 +149,8 @@ static_assert(sizeof(RinCrashRecoveryRegistrationV1) == 152u,
               "RinCrashRecoveryRegistrationV1 ABI drift");
 static_assert(sizeof(RinCrashDiagnosticLogV1) == 288u,
               "RinCrashDiagnosticLogV1 ABI drift");
+static_assert(sizeof(RinCrashReportHandoffV1) == 48u,
+              "RinCrashReportHandoffV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinCrashServiceMessageHeaderV1) == 32u,
                "RinCrashServiceMessageHeaderV1 ABI drift");
@@ -133,8 +162,8 @@ _Static_assert(sizeof(RinCrashRecoveryRegistrationV1) == 152u,
                "RinCrashRecoveryRegistrationV1 ABI drift");
 _Static_assert(sizeof(RinCrashDiagnosticLogV1) == 288u,
                "RinCrashDiagnosticLogV1 ABI drift");
+_Static_assert(sizeof(RinCrashReportHandoffV1) == 48u,
+               "RinCrashReportHandoffV1 ABI drift");
 #endif
 
 #endif /* RIN_SDK_CRASH_SERVICE_H */
-
-
