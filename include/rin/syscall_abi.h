@@ -428,6 +428,8 @@
 #define RIN_SYS_WRITEV                      0x8064u
 /* process. */
 #define RIN_SYS_PROCESS_MEMORY_INFO_GET     0x8065u
+/* network. */
+#define RIN_SYS_NET_WIFI_INFO               0x8066u
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u

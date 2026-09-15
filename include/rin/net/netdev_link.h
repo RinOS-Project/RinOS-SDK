@@ -9,6 +9,7 @@
  * appending a callback that older signed drivers do not own. */
 #define RIN_NETDEV_LINK_STATUS_VERSION UINT32_C(1)
 #define RIN_NETDEV_IOCTL_LINK_STATUS UINT32_C(0x524e4c01)
+#define RIN_NETDEV_IOCTL_WIFI_INFO UINT32_C(0x524e4c02)
 
 /* Stable link classification is supplied by the network owner.  Consumers
  * must not infer it from an interface name. */

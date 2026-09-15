@@ -21,6 +21,17 @@
 #define RIN_NETINFO_FLAG_LINK_KNOWN    0x00000010u
 #define RIN_NETINFO_FLAG_SIGNAL_VALID  0x00000020u
 
+#define RIN_NET_WIFI_INFO_VERSION UINT16_C(1)
+#define RIN_NET_WIFI_INFO_FLAG_CONNECTED       UINT16_C(0x0001)
+#define RIN_NET_WIFI_INFO_FLAG_SSID_VALID      UINT16_C(0x0002)
+#define RIN_NET_WIFI_INFO_FLAG_BSSID_VALID     UINT16_C(0x0004)
+#define RIN_NET_WIFI_INFO_FLAG_RSSI_VALID      UINT16_C(0x0008)
+#define RIN_NET_WIFI_INFO_FLAG_SIGNAL_VALID    UINT16_C(0x0010)
+#define RIN_NET_WIFI_INFO_KNOWN_FLAGS \
+    (RIN_NET_WIFI_INFO_FLAG_CONNECTED | RIN_NET_WIFI_INFO_FLAG_SSID_VALID | \
+     RIN_NET_WIFI_INFO_FLAG_BSSID_VALID | RIN_NET_WIFI_INFO_FLAG_RSSI_VALID | \
+     RIN_NET_WIFI_INFO_FLAG_SIGNAL_VALID)
+
 #define RIN_NETCFG_SOURCE_DHCP          1u
 #define RIN_NETCFG_SOURCE_CLEAR         2u
 #define RIN_NETCFG_SOURCE_DHCPV6        3u
@@ -42,6 +53,24 @@ typedef struct RinNetPrimaryInfo {
     uint32_t link_type;
     uint32_t signal_percent;
 } RinNetPrimaryInfo;
+
+/* Generation-bound Wi-Fi telemetry returned by the privileged network owner.
+ * The SSID is copied only for the currently associated BSS; a disconnected
+ * or stale provider returns no identity and keeps signal_percent unknown. */
+typedef struct RinNetWifiInfoV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t device_generation;
+    uint64_t association_generation;
+    uint8_t ssid_length;
+    uint8_t ssid[32];
+    uint8_t bssid[6];
+    uint8_t reserved0;
+    int32_t signal_dbm;
+    uint32_t signal_percent;
+    uint64_t reserved;
+} RinNetWifiInfoV1;
 
 typedef struct RinIPv4Config {
     uint8_t ip[4];
@@ -98,6 +127,8 @@ typedef struct RinNetIPv6Info {
 #if defined(__cplusplus)
 static_assert(sizeof(RinNetPrimaryInfo) == 52u,
               "RinNetPrimaryInfo ABI drift");
+static_assert(sizeof(RinNetWifiInfoV1) == 80u,
+              "RinNetWifiInfoV1 ABI drift");
 static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
               "RinNetPrimaryInfo.device_generation ABI drift");
 static_assert(__builtin_offsetof(RinNetPrimaryInfo, flags) == 40u,
@@ -111,6 +142,8 @@ static_assert(sizeof(RinNetIPv6Info) == 36u,
 #else
 _Static_assert(sizeof(RinNetPrimaryInfo) == 52u,
                "RinNetPrimaryInfo ABI drift");
+_Static_assert(sizeof(RinNetWifiInfoV1) == 80u,
+               "RinNetWifiInfoV1 ABI drift");
 _Static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
                "RinNetPrimaryInfo.device_generation ABI drift");
 _Static_assert(__builtin_offsetof(RinNetPrimaryInfo, flags) == 40u,
