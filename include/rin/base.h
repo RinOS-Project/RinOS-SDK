@@ -5,15 +5,18 @@
 extern "C" {
 #endif
 
+#ifndef RIN_SDK_OBJECT_INFO_ABI_DEFINED
+#define RIN_SDK_OBJECT_INFO_ABI_DEFINED
 typedef struct RinObjectInfoV1 {
     uint32_t struct_size;
-    uint32_t version;
-    uint32_t object_type;
-    uint32_t rights;
+    uint16_t version;
+    uint16_t type;
+    uint32_t granted_rights;
+    uint32_t flags;
     uint64_t object_id;
-    uint64_t flags;
-    uint64_t reserved[4];
+    uint64_t reserved[2];
 } RinObjectInfoV1;
+#endif /* RIN_SDK_OBJECT_INFO_ABI_DEFINED */
 
 typedef struct RinProcessSpawnV1 {
     uint32_t struct_size;

@@ -32,11 +32,21 @@ static inline int rin_surface_descriptor_valid(
 }
 
 #ifdef __cplusplus
+#if UINTPTR_MAX > UINT32_MAX
 static_assert(sizeof(RinSurfaceDescriptorV1) == 48u,
               "RinSurfaceDescriptorV1 ABI drift");
 #else
+static_assert(sizeof(RinSurfaceDescriptorV1) == 44u,
+              "RinSurfaceDescriptorV1 ABI drift");
+#endif
+#else
+#if UINTPTR_MAX > UINT32_MAX
 _Static_assert(sizeof(RinSurfaceDescriptorV1) == 48u,
                "RinSurfaceDescriptorV1 ABI drift");
+#else
+_Static_assert(sizeof(RinSurfaceDescriptorV1) == 44u,
+               "RinSurfaceDescriptorV1 ABI drift");
+#endif
 #endif
 
 #endif /* RIN_SDK_GUI_SURFACE_ABI_H */

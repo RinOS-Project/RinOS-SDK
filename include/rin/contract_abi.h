@@ -598,6 +598,8 @@ typedef struct RinAccountInfoV1 {
     uint64_t reserved[4];
 } RinAccountInfoV1;
 
+#ifndef RIN_SDK_OBJECT_INFO_ABI_DEFINED
+#define RIN_SDK_OBJECT_INFO_ABI_DEFINED
 typedef struct RinObjectInfoV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -607,6 +609,8 @@ typedef struct RinObjectInfoV1 {
     uint64_t object_id;
     uint64_t reserved[2];
 } RinObjectInfoV1;
+
+#endif /* RIN_SDK_OBJECT_INFO_ABI_DEFINED */
 
 typedef struct RinGuiRequestV2 {
     uint32_t struct_size;
