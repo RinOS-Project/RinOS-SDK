@@ -10,6 +10,7 @@
 #include "abi.h"
 #include "../syscall_abi.h"
 
+#ifndef MIDL_PASS
 static inline int rin_timer_create_v1_valid(const RinTimerCreateV1* value)
 {
     return value && value->struct_size == sizeof(*value) &&
@@ -50,5 +51,6 @@ static inline int rin_clock_settime_v1_to_ns(
     *nanoseconds_out = seconds * UINT64_C(1000000000) + nanoseconds;
     return 0;
 }
+#endif /* !MIDL_PASS */
 
 #endif /* RIN_SDK_TIMER_ABI_H */

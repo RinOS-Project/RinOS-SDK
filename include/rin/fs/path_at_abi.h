@@ -56,10 +56,10 @@ typedef struct RinPathAtCallV1 {
     uint64_t buffer_size;
 } RinPathAtCallV1;
 
-#if defined(__cplusplus)
+#if defined(__cplusplus) && !defined(MIDL_PASS)
 static_assert(sizeof(RinPathAtCallV1) == 72u,
               "RinPathAtCallV1 ABI size");
-#else
+#elif !defined(MIDL_PASS)
 _Static_assert(sizeof(RinPathAtCallV1) == 72u,
                "RinPathAtCallV1 ABI size");
 #endif

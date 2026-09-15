@@ -67,14 +67,14 @@ typedef struct RinClockSettimeV1 {
     int64_t tv_nsec;
 } RinClockSettimeV1;
 
-#if defined(__cplusplus)
+#if !defined(MIDL_PASS) && defined(__cplusplus)
 static_assert(sizeof(RinCpuTimeV1) == 32u, "RinCpuTimeV1 ABI drift");
 static_assert(sizeof(RinItimerV1) == 32u, "RinItimerV1 ABI drift");
 static_assert(sizeof(RinTimerCreateV1) == 32u, "RinTimerCreateV1 ABI drift");
 static_assert(sizeof(RinTimerSpecV1) == 40u, "RinTimerSpecV1 ABI drift");
 static_assert(sizeof(RinClockSettimeV1) == 32u,
               "RinClockSettimeV1 ABI drift");
-#else
+#elif !defined(MIDL_PASS)
 _Static_assert(sizeof(RinCpuTimeV1) == 32u, "RinCpuTimeV1 ABI drift");
 _Static_assert(sizeof(RinItimerV1) == 32u, "RinItimerV1 ABI drift");
 _Static_assert(sizeof(RinTimerCreateV1) == 32u, "RinTimerCreateV1 ABI drift");

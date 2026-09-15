@@ -17,6 +17,7 @@ typedef struct RinUtsnameAbiV1 {
     RIN_UTSNAME_ABI_V1_FIELDS;
 } RinUtsnameAbiV1;
 
+#ifndef MIDL_PASS
 static inline void rin_utsname_abi_v1_copy(
     char output[RIN_UTSNAME_ABI_V1_FIELD_SIZE], const char* input)
 {
@@ -44,5 +45,6 @@ static inline void rin_utsname_abi_v1_fill(RinUtsnameAbiV1* value,
     rin_utsname_abi_v1_copy(value->version, "RinOS Kernel 2.1.0");
     rin_utsname_abi_v1_copy(value->machine, machine);
 }
+#endif /* !MIDL_PASS */
 
 #endif /* RIN_SDK_UTSNAME_ABI_H */

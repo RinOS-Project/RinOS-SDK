@@ -8,6 +8,7 @@
 #include <stdint.h>
 #endif
 
+#ifndef MIDL_PASS
 static inline int rin_sdk_nonzero_bytes_valid(const void* value, size_t size)
 {
     const unsigned char* bytes = (const unsigned char*)value;
@@ -291,7 +292,9 @@ static inline int rin_unix_peer_application_image_path_valid(
            image->reserved[0] == 0u && image->reserved[1] == 0u;
 }
 
-#if defined(__cplusplus)
+#endif /* !MIDL_PASS */
+
+#if defined(__cplusplus) && !defined(MIDL_PASS)
 static_assert(sizeof(rin_unix_service_identity_v1) == 12u,
               "Rin Unix service identity ABI drift");
 static_assert(sizeof(rin_unix_peer_identity_v1) == 48u,
@@ -308,7 +311,7 @@ static_assert(sizeof(rin_unix_peer_application_metadata_v1) == 144u,
               "Rin Unix peer application metadata ABI drift");
 static_assert(sizeof(rin_unix_peer_application_image_path_v1) == 176u,
               "Rin Unix peer application image path ABI drift");
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(MIDL_PASS)
 _Static_assert(sizeof(rin_unix_service_identity_v1) == 12u,
                "Rin Unix service identity ABI drift");
 _Static_assert(sizeof(rin_unix_peer_identity_v1) == 48u,

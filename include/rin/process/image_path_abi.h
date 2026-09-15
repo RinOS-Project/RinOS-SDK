@@ -22,10 +22,10 @@ typedef struct RinProcessImagePathResponseV1 {
     uint64_t reserved[2];
 } RinProcessImagePathResponseV1;
 
-#if defined(__cplusplus)
+#if !defined(MIDL_PASS) && defined(__cplusplus)
 static_assert(sizeof(RinProcessImagePathResponseV1) == 128u,
               "RinProcessImagePathResponseV1 ABI drift");
-#else
+#elif !defined(MIDL_PASS)
 _Static_assert(sizeof(RinProcessImagePathResponseV1) == 128u,
                "RinProcessImagePathResponseV1 ABI drift");
 #endif

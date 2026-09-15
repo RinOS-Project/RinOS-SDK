@@ -37,12 +37,12 @@ typedef struct RinProcessNamespaceInspectResponseV1 {
     uint64_t reserved[4];
 } RinProcessNamespaceInspectResponseV1;
 
-#if defined(__cplusplus)
+#if !defined(MIDL_PASS) && defined(__cplusplus)
 static_assert(sizeof(RinProcessNamespaceInspectRequestV1) == 48u,
               "RinProcessNamespaceInspectRequestV1 ABI drift");
 static_assert(sizeof(RinProcessNamespaceInspectResponseV1) == 112u,
               "RinProcessNamespaceInspectResponseV1 ABI drift");
-#else
+#elif !defined(MIDL_PASS)
 _Static_assert(sizeof(RinProcessNamespaceInspectRequestV1) == 48u,
                "RinProcessNamespaceInspectRequestV1 ABI drift");
 _Static_assert(sizeof(RinProcessNamespaceInspectResponseV1) == 112u,

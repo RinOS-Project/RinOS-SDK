@@ -18,6 +18,7 @@
 #define RIN_CPU_TIME_SCOPE_PROCESS 1u
 #define RIN_CPU_TIME_SCOPE_THREAD  2u
 
+#ifndef MIDL_PASS
 static inline int rin_cpu_time_scope_is_valid(uint16_t scope)
 {
     return scope == RIN_CPU_TIME_SCOPE_PROCESS ||
@@ -31,5 +32,6 @@ static inline int rin_cpu_time_v1_request_is_valid(const RinCpuTimeV1* value)
            rin_cpu_time_scope_is_valid(value->scope) &&
            value->reserved0 == 0u && value->reserved1 == 0u;
 }
+#endif /* !MIDL_PASS */
 
 #endif /* RIN_SDK_CPU_TIME_ABI_H */

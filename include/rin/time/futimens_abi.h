@@ -26,10 +26,10 @@ typedef struct RinFutimensCallV1 {
     uint32_t reserved1;
 } RinFutimensCallV1;
 
-#if defined(__cplusplus)
+#if !defined(MIDL_PASS) && defined(__cplusplus)
 static_assert(sizeof(RinFutimensCallV1) == 40u,
               "RinFutimensCallV1 ABI size mismatch");
-#else
+#elif !defined(MIDL_PASS)
 _Static_assert(sizeof(RinFutimensCallV1) == 40u,
                "RinFutimensCallV1 ABI size mismatch");
 #endif
