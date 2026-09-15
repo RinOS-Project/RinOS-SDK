@@ -109,6 +109,24 @@ RinResult rin_sdk_invoke_v1(uint32_t library_id, uint32_t operation,
 }
 #endif
 
+#if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE) || \
+    defined(RINSDK_BUILD_IPC) || defined(RINSDK_BUILD_FS) || \
+    defined(RINSDK_BUILD_NET) || defined(RINSDK_BUILD_GUI) || \
+    defined(RINSDK_BUILD_MEDIA) || defined(RINSDK_BUILD_CONFIG) || \
+    defined(RINSDK_BUILD_PKG) || defined(RINSDK_BUILD_DEVICE)
+static RinResult rin_sdk_invoke_scalar_output_v1(
+    uint32_t library_id, uint32_t operation, const void* request,
+    uint32_t request_size, void* response, uint32_t response_size) {
+    RinResult result;
+    if (response && response_size) rin_sdk_zero_bytes(response, response_size);
+    result = rin_sdk_invoke_v1(library_id, operation, request, request_size,
+                               response, response_size);
+    if (result != RIN_SUCCESS && response && response_size)
+        rin_sdk_zero_bytes(response, response_size);
+    return result;
+}
+#endif
+
 #define SIMPLE_CALL(lib, op, out, a, b, c, d, e, f) do { \
     RinSdkArgsV1 request; \
     rin_sdk_zero_bytes(&request, sizeof(request)); \
@@ -187,8 +205,9 @@ RinResult rin_object_query_v1(RinObject object, RinObjectInfoV1* info) {
 }
 RinResult rin_process_spawn_v1(const RinProcessSpawnV1* request, RinProcess* process) {
     if (!versioned(request, sizeof(*request)) || !process) return RIN_ERROR_INVALID_ARGUMENT;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_BASE, BASE_PROCESS_SPAWN,
-                             request, sizeof(*request), process, sizeof(*process));
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_BASE, BASE_PROCESS_SPAWN, request, sizeof(*request),
+        process, sizeof(*process));
 }
 RinResult rin_process_wait_v1(RinProcess process, uint64_t timeout_ns, int32_t* exit_code) {
     SCALAR_OUTPUT_SIMPLE_CALL(
@@ -197,8 +216,9 @@ RinResult rin_process_wait_v1(RinProcess process, uint64_t timeout_ns, int32_t* 
 }
 RinResult rin_memory_map_v1(const RinMemoryMapV1* request, uint64_t* address) {
     if (!versioned(request, sizeof(*request)) || !address) return RIN_ERROR_INVALID_ARGUMENT;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_BASE, BASE_MEMORY_MAP,
-                             request, sizeof(*request), address, sizeof(*address));
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_BASE, BASE_MEMORY_MAP, request, sizeof(*request),
+        address, sizeof(*address));
 }
 RinResult rin_memory_unmap_v1(uint64_t address, uint64_t size) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_BASE, BASE_MEMORY_UNMAP, (RinResult*)0, address,size,0,0,0,0);
@@ -215,7 +235,9 @@ RinResult rin_log_write_v1(uint32_t level, RinStringV1 message) {
 }
 RinResult rin_thread_create_v1(const RinThreadCreateV1* request, RinThread* thread) {
     if (!versioned(request, sizeof(*request)) || !thread) return RIN_ERROR_INVALID_ARGUMENT;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_BASE, BASE_THREAD_CREATE, request, sizeof(*request), thread, sizeof(*thread));
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_BASE, BASE_THREAD_CREATE, request, sizeof(*request),
+        thread, sizeof(*thread));
 }
 RinResult rin_thread_join_v1(RinThread thread, uint64_t timeout_ns, int32_t* exit_code) {
     SCALAR_OUTPUT_SIMPLE_CALL(
@@ -226,9 +248,10 @@ RinResult rin_thread_join_v1(RinThread thread, uint64_t timeout_ns, int32_t* exi
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_IPC)
 RinResult rin_channel_create_v1(RinChannel* first, RinChannel* second) {
-    RinChannel pair[2]; RinResult result;
+    RinChannel pair[2] = {0, 0}; RinResult result;
     if (!first || !second) return RIN_ERROR_INVALID_ARGUMENT;
-    result = rin_sdk_invoke_v1(RIN_SDK_LIBRARY_IPC, IPC_CHANNEL_CREATE, NULL, 0u, pair, sizeof(pair));
+    result = rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_IPC, IPC_CHANNEL_CREATE, NULL, 0u, pair, sizeof(pair));
     if (result == RIN_SUCCESS) { *first = pair[0]; *second = pair[1]; }
     return result;
 }
@@ -341,18 +364,21 @@ RinResult rin_service_accept_v1(RinService service, uint64_t timeout_ns, RinChan
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_FS)
 RinResult rin_file_open_v1(const RinFileOpenV1* request, RinFile* file) {
     if (!versioned(request, sizeof(*request)) || !file) return RIN_ERROR_INVALID_ARGUMENT;
-    *file = RIN_HANDLE_INVALID;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_OPEN, request, sizeof(*request), file, sizeof(*file));
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_FS, FS_FILE_OPEN, request, sizeof(*request), file,
+        sizeof(*file));
 }
 RinResult rin_file_read_v1(RinFileIoV1* request, uint64_t* transferred) {
     if (!versioned(request, sizeof(*request))) return RIN_ERROR_ABI_MISMATCH;
-    if (transferred != NULL) *transferred = 0u;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_READ, request, sizeof(*request), transferred, transferred ? sizeof(*transferred) : 0u);
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_FS, FS_FILE_READ, request, sizeof(*request),
+        transferred, transferred ? sizeof(*transferred) : 0u);
 }
 RinResult rin_file_write_v1(RinFileIoV1* request, uint64_t* transferred) {
     if (!versioned(request, sizeof(*request))) return RIN_ERROR_ABI_MISMATCH;
-    if (transferred != NULL) *transferred = 0u;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_WRITE, request, sizeof(*request), transferred, transferred ? sizeof(*transferred) : 0u);
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_FS, FS_FILE_WRITE, request, sizeof(*request),
+        transferred, transferred ? sizeof(*transferred) : 0u);
 }
 RinResult rin_file_flush_v1(RinFile file) { SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_FILE_FLUSH, (RinResult*)0, file,0,0,0,0,0); }
 RinResult rin_directory_next_v1(RinDirectory directory, RinDirectoryEntryV1* entry) {
@@ -384,9 +410,9 @@ RinResult rin_directory_next_batch_v1(const RinDirectoryBatchV1* request,
                                       uint32_t* count) {
     if (!versioned(request, sizeof(*request)) || !count)
         return RIN_ERROR_INVALID_ARGUMENT;
-    *count = 0u;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_DIRECTORY_NEXT_BATCH,
-                             request, sizeof(*request), count, sizeof(*count));
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_FS, FS_DIRECTORY_NEXT_BATCH, request, sizeof(*request),
+        count, sizeof(*count));
 }
 RinResult rin_path_normalize_v1(RinStringV1 input, RinSliceV1 output, uint64_t* required) {
     SCALAR_OUTPUT_SIMPLE_CALL(
@@ -400,11 +426,15 @@ RinResult rin_file_watch_v1(RinStringV1 path, uint32_t events, RinFileWatch* wat
 }
 RinResult rin_file_read_async_v1(const RinFileIoV1* request, RinIoRequest* operation) {
     if (!versioned(request, sizeof(*request)) || !operation) return RIN_ERROR_INVALID_ARGUMENT;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_READ_ASYNC, request, sizeof(*request), operation, sizeof(*operation));
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_FS, FS_FILE_READ_ASYNC, request, sizeof(*request),
+        operation, sizeof(*operation));
 }
 RinResult rin_file_write_async_v1(const RinFileIoV1* request, RinIoRequest* operation) {
     if (!versioned(request, sizeof(*request)) || !operation) return RIN_ERROR_INVALID_ARGUMENT;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_WRITE_ASYNC, request, sizeof(*request), operation, sizeof(*operation));
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_FS, FS_FILE_WRITE_ASYNC, request, sizeof(*request),
+        operation, sizeof(*operation));
 }
 RinResult rin_file_io_result_v1(RinIoRequest operation, uint64_t* transferred) {
     SCALAR_OUTPUT_SIMPLE_CALL(
@@ -416,8 +446,9 @@ RinResult rin_file_io_cancel_v1(RinIoRequest operation) {
 }
 RinResult rin_directory_open_v1(const RinDirectoryOpenV1* request, RinDirectory* directory) {
     if (!versioned(request, sizeof(*request)) || !directory) return RIN_ERROR_INVALID_ARGUMENT;
-    *directory = RIN_HANDLE_INVALID;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_DIRECTORY_OPEN, request, sizeof(*request), directory, sizeof(*directory));
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_FS, FS_DIRECTORY_OPEN, request, sizeof(*request),
+        directory, sizeof(*directory));
 }
 RinResult rin_directory_rewind_v1(RinDirectory directory) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_FS, FS_DIRECTORY_REWIND, (RinResult*)0, directory,0,0,0,0,0);
@@ -457,10 +488,9 @@ RinResult rin_directory_close_v1(RinDirectory directory) {
 RinResult rin_file_seek_v1(const RinFileSeekV1* request, uint64_t* position) {
     if (!versioned(request, sizeof(*request)) || !position)
         return RIN_ERROR_INVALID_ARGUMENT;
-    *position = 0u;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_SEEK,
-                             request, sizeof(*request), position,
-                             sizeof(*position));
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_FS, FS_FILE_SEEK, request, sizeof(*request), position,
+        sizeof(*position));
 }
 RinResult rin_file_truncate_v1(const RinFileTruncateV1* request) {
     if (!versioned(request, sizeof(*request))) return RIN_ERROR_ABI_MISMATCH;
@@ -531,10 +561,9 @@ RinResult rin_fs_portal_open_v1(const RinFsPortalOpenV1* request,
                                 uint64_t* handle) {
     if (!versioned(request, sizeof(*request)) || handle == NULL)
         return RIN_ERROR_INVALID_ARGUMENT;
-    *handle = RIN_HANDLE_INVALID;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PORTAL_OPEN,
-                             request, sizeof(*request), handle,
-                             sizeof(*handle));
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_FS, FS_PORTAL_OPEN, request, sizeof(*request), handle,
+        sizeof(*handle));
 }
 #endif
 
@@ -557,7 +586,9 @@ RinResult rin_dns_resolve_v1(RinStringV1 host, RinStringV1 service, RinSliceV1 r
 RinResult rin_tls_connect_v1(RinSocket socket, RinStringV1 server_name, uint32_t flags, RinTlsSession* session) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_TLS_CONNECT, session, socket,server_name.address,server_name.size,flags,0,0); }
 RinResult rin_http_execute_v1(const RinHttpRequestV1* request, RinChannel* response_stream) {
     if (!versioned(request, sizeof(*request))) return RIN_ERROR_ABI_MISMATCH;
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_NET, NET_HTTP_EXECUTE, request, sizeof(*request), response_stream, response_stream ? sizeof(*response_stream) : 0u);
+    return rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_NET, NET_HTTP_EXECUTE, request, sizeof(*request),
+        response_stream, response_stream ? sizeof(*response_stream) : 0u);
 }
 RinResult rin_tls_send_v1(RinTlsSession session, RinSliceV1 data, uint32_t flags, uint64_t* sent) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_TLS_SEND, sent, session,data.address,data.size,flags,0,0); }
 RinResult rin_tls_receive_v1(RinTlsSession session, RinSliceV1 data, uint32_t flags, uint64_t* received) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_TLS_RECEIVE, received, session,data.address,data.size,flags,0,0); }
@@ -582,7 +613,7 @@ RinResult rin_socket_shutdown_v1(RinSocket socket, uint32_t flags) { SIMPLE_CALL
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GUI)
-RinResult rin_window_create_v1(const RinWindowCreateV1* request, RinWindow* window) { if (!versioned(request,sizeof(*request))) return RIN_ERROR_ABI_MISMATCH; return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_CREATE,request,sizeof(*request),window,window?sizeof(*window):0u); }
+RinResult rin_window_create_v1(const RinWindowCreateV1* request, RinWindow* window) { if (!versioned(request,sizeof(*request))) return RIN_ERROR_ABI_MISMATCH; return rin_sdk_invoke_scalar_output_v1(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_CREATE,request,sizeof(*request),window,window?sizeof(*window):0u); }
 RinResult rin_window_next_event_v1(RinWindow window, uint64_t timeout_ns, RinGuiEventV1* event) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_NEXT_EVENT,event,window,timeout_ns,0,0,0,0); }
 RinResult rin_surface_create_v1(uint32_t width,uint32_t height,uint32_t format,RinSurface* surface) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_SURFACE_CREATE,surface,width,height,format,0,0,0); }
 RinResult rin_window_present_v1(RinWindow window,RinSurface surface,RinSliceV1 damage) { SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_PRESENT,(RinResult*)0,window,surface,damage.address,damage.size,0,0); }
@@ -593,7 +624,7 @@ RinResult rin_notification_show_v1(RinStringV1 title,RinStringV1 message,uint32_
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_MEDIA)
-RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object) { if (!versioned(request,sizeof(*request))) return RIN_ERROR_ABI_MISMATCH; return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_MEDIA,MEDIA_OPEN,request,sizeof(*request),object,object?sizeof(*object):0u); }
+RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object) { if (!versioned(request,sizeof(*request))) return RIN_ERROR_ABI_MISMATCH; return rin_sdk_invoke_scalar_output_v1(RIN_SDK_LIBRARY_MEDIA,MEDIA_OPEN,request,sizeof(*request),object,object?sizeof(*object):0u); }
 RinResult rin_image_decode_v1(RinMediaObject object,uint32_t format,RinSliceV1 output,uint64_t* required) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_IMAGE_DECODE,required,object,format,output.address,output.size,0,0); }
 RinResult rin_audio_decode_v1(RinMediaObject object,RinSliceV1 output,uint64_t* frames) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_AUDIO_DECODE,frames,object,output.address,output.size,0,0,0); }
 RinResult rin_video_decode_v1(RinMediaObject object,RinSurface target,uint64_t* timestamp_ns) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_VIDEO_DECODE,timestamp_ns,object,target,0,0,0,0); }
