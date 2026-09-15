@@ -21,6 +21,7 @@
 #include "fs/namespace_abi.h"
 #include "fs/path_at_abi.h"
 #include "process/image_path_abi.h"
+#include "process/memory_abi.h"
 #include "process/namespace_abi.h"
 #include "process/posix_spawn_abi.h"
 #include "process/process_group_abi.h"
