@@ -120,6 +120,28 @@ RinResult rin_sdk_invoke_v1(uint32_t library_id, uint32_t operation,
                              (out), (out) ? sizeof(*(out)) : 0u); \
 } while (0)
 
+#define VERSIONED_OUTPUT_SIMPLE_CALL(lib, op, out, a, b, c, d, e, f) do { \
+    RinSdkArgsV1 request; \
+    RinResult call_result; \
+    if (!versioned((out), sizeof(*(out)))) return RIN_ERROR_ABI_MISMATCH; \
+    rin_sdk_zero_bytes((out), sizeof(*(out))); \
+    ((RinVersionedV1 *)(out))->struct_size = sizeof(*(out)); \
+    ((RinVersionedV1 *)(out))->version = RIN_SDK_STRUCT_VERSION_1; \
+    rin_sdk_zero_bytes(&request, sizeof(request)); \
+    request.struct_size = sizeof(request); \
+    request.version = RIN_SDK_STRUCT_VERSION_1; \
+    request.value[0] = (a); request.value[1] = (b); request.value[2] = (c); \
+    request.value[3] = (d); request.value[4] = (e); request.value[5] = (f); \
+    call_result = rin_sdk_invoke_v1((lib), (op), &request, sizeof(request), \
+                                    (out), sizeof(*(out))); \
+    if (call_result != RIN_SUCCESS) { \
+        rin_sdk_zero_bytes((out), sizeof(*(out))); \
+        ((RinVersionedV1 *)(out))->struct_size = sizeof(*(out)); \
+        ((RinVersionedV1 *)(out))->version = RIN_SDK_STRUCT_VERSION_1; \
+    } \
+    return call_result; \
+} while (0)
+
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE)
 RinResult rin_object_close_v1(RinObject object) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_BASE, BASE_OBJECT_CLOSE, (RinResult*)0, object,0,0,0,0,0);
@@ -165,8 +187,8 @@ RinResult rin_memory_unmap_v1(uint64_t address, uint64_t size) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_BASE, BASE_MEMORY_UNMAP, (RinResult*)0, address,size,0,0,0,0);
 }
 RinResult rin_time_get_v1(uint32_t clock_id, RinTimeV1* time) {
-    if (!versioned(time, sizeof(*time))) return RIN_ERROR_ABI_MISMATCH;
-    SIMPLE_CALL(RIN_SDK_LIBRARY_BASE, BASE_TIME_GET, time, clock_id,0,0,0,0,0);
+    VERSIONED_OUTPUT_SIMPLE_CALL(
+        RIN_SDK_LIBRARY_BASE, BASE_TIME_GET, time, clock_id,0,0,0,0,0);
 }
 RinResult rin_random_fill_v1(RinSliceV1 buffer) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_BASE, BASE_RANDOM_FILL, (RinResult*)0, buffer.address,buffer.size,0,0,0,0);
@@ -446,15 +468,16 @@ RinResult rin_socket_bind_v1(RinSocket socket, const RinSocketAddressV1* address
 }
 RinResult rin_socket_listen_v1(RinSocket socket, uint32_t backlog) { SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_SOCKET_LISTEN, (RinResult*)0, socket,backlog,0,0,0,0); }
 RinResult rin_socket_accept_v1(RinSocket socket, uint64_t timeout_ns, RinSocketAcceptV1* accepted) {
-    if (!versioned(accepted, sizeof(*accepted))) return RIN_ERROR_ABI_MISMATCH;
-    SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_SOCKET_ACCEPT, accepted, socket,timeout_ns,0,0,0,0);
+    VERSIONED_OUTPUT_SIMPLE_CALL(
+        RIN_SDK_LIBRARY_NET, NET_SOCKET_ACCEPT, accepted,
+        socket,timeout_ns,0,0,0,0);
 }
 RinResult rin_socket_shutdown_v1(RinSocket socket, uint32_t flags) { SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_SOCKET_SHUTDOWN, (RinResult*)0, socket,flags,0,0,0,0); }
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GUI)
 RinResult rin_window_create_v1(const RinWindowCreateV1* request, RinWindow* window) { if (!versioned(request,sizeof(*request))) return RIN_ERROR_ABI_MISMATCH; return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_CREATE,request,sizeof(*request),window,window?sizeof(*window):0u); }
-RinResult rin_window_next_event_v1(RinWindow window, uint64_t timeout_ns, RinGuiEventV1* event) { if (!versioned(event,sizeof(*event))) return RIN_ERROR_ABI_MISMATCH; SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_NEXT_EVENT,event,window,timeout_ns,0,0,0,0); }
+RinResult rin_window_next_event_v1(RinWindow window, uint64_t timeout_ns, RinGuiEventV1* event) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_NEXT_EVENT,event,window,timeout_ns,0,0,0,0); }
 RinResult rin_surface_create_v1(uint32_t width,uint32_t height,uint32_t format,RinSurface* surface) { SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_SURFACE_CREATE,surface,width,height,format,0,0,0); }
 RinResult rin_window_present_v1(RinWindow window,RinSurface surface,RinSliceV1 damage) { SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_PRESENT,(RinResult*)0,window,surface,damage.address,damage.size,0,0); }
 RinResult rin_clipboard_set_v1(uint32_t format,RinSliceV1 data) { SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_CLIPBOARD_SET,(RinResult*)0,format,data.address,data.size,0,0,0); }
@@ -494,3 +517,4 @@ RinResult rin_device_query_v1(RinDevice device,RinDeviceInfoV1* info) { if (!ver
 #endif
 
 #undef SIMPLE_CALL
+#undef VERSIONED_OUTPUT_SIMPLE_CALL
