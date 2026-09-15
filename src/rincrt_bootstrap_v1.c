@@ -166,11 +166,20 @@ typedef long RinCrtJmpBuf[6];
 
 #define RINCRT_CPP_EXCEPTION_OBJECT_FLAG ((uintptr_t)UINT32_C(0x80000000))
 
+typedef void (*RinCrtCppExceptionCleanup)(void* object);
+
+typedef struct RinCrtCppExceptionCleanupRecord {
+    RinCrtCppExceptionCleanup callback;
+    void* object;
+    struct RinCrtCppExceptionCleanupRecord* previous;
+} RinCrtCppExceptionCleanupRecord;
+
 typedef struct RinCrtCppExceptionFrame {
     RinCrtJmpBuf env;
     struct RinCrtCppExceptionFrame* previous;
     uintptr_t value;
     uintptr_t type;
+    RinCrtCppExceptionCleanupRecord* cleanup_top;
 } RinCrtCppExceptionFrame;
 
 void _exit(int status);
@@ -258,6 +267,64 @@ void longjmp(RinCrtJmpBuf env __attribute__((unused)),
 static _Thread_local RinCrtCppExceptionFrame* rincrt_cpp_exception_top;
 static _Thread_local uintptr_t rincrt_cpp_exception_current_value;
 static _Thread_local uintptr_t rincrt_cpp_exception_current_type;
+static _Thread_local RinCrtCppExceptionCleanup
+    rincrt_cpp_exception_current_cleanup;
+
+static __attribute__((noreturn, no_stack_protector))
+void rincrt_cpp_exception_cleanup_fatal(void)
+{
+    _exit(134);
+}
+
+void rin_cpp_exception_unwind_cleanups(RinCrtCppExceptionFrame* frame)
+{
+    RinCrtCppExceptionCleanupRecord* record;
+    if (!frame) rincrt_cpp_exception_cleanup_fatal();
+    record = frame->cleanup_top;
+    frame->cleanup_top = (void*)0;
+    while (record) {
+        RinCrtCppExceptionCleanupRecord* previous = record->previous;
+        RinCrtCppExceptionCleanup callback = record->callback;
+        void* object = record->object;
+        rin_user_allocator_free(record);
+        callback(object);
+        record = previous;
+    }
+}
+
+void rin_cpp_exception_register_cleanup(
+    RinCrtCppExceptionFrame* frame, RinCrtCppExceptionCleanup callback,
+    void* object)
+{
+    RinCrtCppExceptionCleanupRecord* record;
+    if (!frame || !callback || !object) rincrt_cpp_exception_cleanup_fatal();
+    record = (RinCrtCppExceptionCleanupRecord*)
+        rin_user_allocator_malloc(sizeof(*record));
+    if (!record) rincrt_cpp_exception_cleanup_fatal();
+    record->callback = callback;
+    record->object = object;
+    record->previous = frame->cleanup_top;
+    frame->cleanup_top = record;
+}
+
+void rin_cpp_exception_unregister_cleanup(
+    RinCrtCppExceptionFrame* frame, RinCrtCppExceptionCleanup callback,
+    void* object)
+{
+    RinCrtCppExceptionCleanupRecord* record;
+    RinCrtCppExceptionCleanupRecord* previous = (void*)0;
+    if (!frame || !callback || !object) rincrt_cpp_exception_cleanup_fatal();
+    for (record = frame->cleanup_top; record; record = record->previous) {
+        if (record->callback == callback && record->object == object) {
+            if (previous) previous->previous = record->previous;
+            else frame->cleanup_top = record->previous;
+            rin_user_allocator_free(record);
+            return;
+        }
+        previous = record;
+    }
+    rincrt_cpp_exception_cleanup_fatal();
+}
 
 void rin_cpp_exception_install(RinCrtCppExceptionFrame* frame)
 {
@@ -265,6 +332,7 @@ void rin_cpp_exception_install(RinCrtCppExceptionFrame* frame)
         _exit(134);
     }
     frame->previous = rincrt_cpp_exception_top;
+    frame->cleanup_top = (void*)0;
     rincrt_cpp_exception_top = frame;
 }
 
@@ -272,23 +340,33 @@ void rin_cpp_exception_leave(RinCrtCppExceptionFrame* frame)
 {
     if (frame && rincrt_cpp_exception_top == frame) {
         rincrt_cpp_exception_top = frame->previous;
+        rin_cpp_exception_unwind_cleanups(frame);
     }
 }
 
 __attribute__((noreturn, no_stack_protector))
-void rin_cpp_exception_throw(uintptr_t value, uintptr_t type)
+static void rincrt_cpp_exception_throw_owned(
+    uintptr_t value, uintptr_t type, RinCrtCppExceptionCleanup cleanup)
 {
     RinCrtCppExceptionFrame* frame = rincrt_cpp_exception_top;
     if (!frame) {
         _exit(1);
     }
+    rincrt_cpp_exception_top = frame->previous;
+    rin_cpp_exception_unwind_cleanups(frame);
     frame->value = value;
     frame->type = type;
     rincrt_cpp_exception_current_value = value;
     rincrt_cpp_exception_current_type = type;
-    rincrt_cpp_exception_top = frame->previous;
+    rincrt_cpp_exception_current_cleanup = cleanup;
     longjmp(frame->env, 1);
     __builtin_unreachable();
+}
+
+__attribute__((noreturn, no_stack_protector))
+void rin_cpp_exception_throw(uintptr_t value, uintptr_t type)
+{
+    rincrt_cpp_exception_throw_owned(value, type, (void*)0);
 }
 
 __attribute__((noreturn, no_stack_protector))
@@ -305,7 +383,25 @@ void rin_cpp_exception_throw_object(const void* object, uintptr_t size,
     copy = (unsigned char*)rin_user_allocator_malloc((size_t)size);
     if (!copy) _exit(1);
     for (index = 0u; index < size; ++index) copy[index] = source[index];
-    rin_cpp_exception_throw((uintptr_t)copy, type);
+    rincrt_cpp_exception_throw_owned((uintptr_t)copy, type, (void*)0);
+}
+
+__attribute__((noreturn, no_stack_protector))
+void rin_cpp_exception_throw_object_with_cleanup(
+    const void* object, uintptr_t size, uintptr_t type,
+    RinCrtCppExceptionCleanup cleanup)
+{
+    unsigned char* copy;
+    const unsigned char* source = (const unsigned char*)object;
+    uintptr_t index;
+    if (!object || size == 0u || !cleanup ||
+        (type & RINCRT_CPP_EXCEPTION_OBJECT_FLAG) == 0u) {
+        _exit(134);
+    }
+    copy = (unsigned char*)rin_user_allocator_malloc((size_t)size);
+    if (!copy) _exit(1);
+    for (index = 0u; index < size; ++index) copy[index] = source[index];
+    rincrt_cpp_exception_throw_owned((uintptr_t)copy, type, cleanup);
 }
 
 void rin_cpp_exception_release_frame(RinCrtCppExceptionFrame* frame)
@@ -313,6 +409,14 @@ void rin_cpp_exception_release_frame(RinCrtCppExceptionFrame* frame)
     if (!frame || (frame->type & RINCRT_CPP_EXCEPTION_OBJECT_FLAG) == 0u ||
         frame->value == 0u) {
         return;
+    }
+    if (frame->value == rincrt_cpp_exception_current_value &&
+        frame->type == rincrt_cpp_exception_current_type &&
+        rincrt_cpp_exception_current_cleanup) {
+        RinCrtCppExceptionCleanup cleanup =
+            rincrt_cpp_exception_current_cleanup;
+        rincrt_cpp_exception_current_cleanup = (void*)0;
+        cleanup((void*)frame->value);
     }
     rin_user_allocator_free((void*)frame->value);
     frame->value = 0u;
@@ -323,14 +427,19 @@ __attribute__((noreturn, no_stack_protector))
 void rin_cpp_exception_rethrow_frame(RinCrtCppExceptionFrame* frame)
 {
     if (!frame || frame->type == 0u) _exit(134);
-    rin_cpp_exception_throw(frame->value, frame->type);
+    rincrt_cpp_exception_throw_owned(
+        frame->value, frame->type,
+        frame->value == rincrt_cpp_exception_current_value &&
+                frame->type == rincrt_cpp_exception_current_type
+            ? rincrt_cpp_exception_current_cleanup : (void*)0);
 }
 
 __attribute__((noreturn, no_stack_protector))
 void rin_cpp_exception_rethrow(void)
 {
-    rin_cpp_exception_throw(rincrt_cpp_exception_current_value,
-                            rincrt_cpp_exception_current_type);
+    rincrt_cpp_exception_throw_owned(rincrt_cpp_exception_current_value,
+                                     rincrt_cpp_exception_current_type,
+                                     rincrt_cpp_exception_current_cleanup);
 }
 
 /* The stable symbol ABI goes through __errno_location(); the signed-library
