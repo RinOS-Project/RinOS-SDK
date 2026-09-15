@@ -125,8 +125,28 @@ RinResult rin_object_close_v1(RinObject object) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_BASE, BASE_OBJECT_CLOSE, (RinResult*)0, object,0,0,0,0,0);
 }
 RinResult rin_object_query_v1(RinObject object, RinObjectInfoV1* info) {
-    if (!versioned(info, sizeof(*info))) return RIN_ERROR_ABI_MISMATCH;
-    SIMPLE_CALL(RIN_SDK_LIBRARY_BASE, BASE_OBJECT_QUERY, info, object,0,0,0,0,0);
+    RinSdkArgsV1 request;
+    RinResult query_result;
+    if (!info || info->struct_size < sizeof(*info) ||
+        info->version != (uint16_t)RIN_SDK_STRUCT_VERSION_1) {
+        return RIN_ERROR_ABI_MISMATCH;
+    }
+    rin_sdk_zero_bytes(info, sizeof(*info));
+    info->struct_size = sizeof(*info);
+    info->version = (uint16_t)RIN_SDK_STRUCT_VERSION_1;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = object;
+    query_result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_BASE, BASE_OBJECT_QUERY, &request, sizeof(request),
+        info, sizeof(*info));
+    if (query_result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(info, sizeof(*info));
+        info->struct_size = sizeof(*info);
+        info->version = (uint16_t)RIN_SDK_STRUCT_VERSION_1;
+    }
+    return query_result;
 }
 RinResult rin_process_spawn_v1(const RinProcessSpawnV1* request, RinProcess* process) {
     if (!versioned(request, sizeof(*request)) || !process) return RIN_ERROR_INVALID_ARGUMENT;

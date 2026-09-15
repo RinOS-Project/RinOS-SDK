@@ -18,6 +18,12 @@ typedef struct RinObjectInfoV1 {
 } RinObjectInfoV1;
 #endif /* RIN_SDK_OBJECT_INFO_ABI_DEFINED */
 
+#if defined(__cplusplus)
+static_assert(sizeof(RinObjectInfoV1) == 40u, "RinObjectInfoV1 ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinObjectInfoV1) == 40u, "RinObjectInfoV1 ABI drift");
+#endif
+
 typedef struct RinProcessSpawnV1 {
     uint32_t struct_size;
     uint32_t version;
