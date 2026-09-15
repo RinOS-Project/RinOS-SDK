@@ -60,6 +60,13 @@
 #define RIN_RESOLVED_CONFIG_V2_VERSION 2u
 #define RIN_RESOLVED_CONFIG_V3_VERSION 3u
 #define RIN_RESOLVED_SEARCH_DOMAIN_MAX 4u
+#define RIN_RESOLVED_NETWORK_SCOPE_SOURCE_VERSION 1u
+#define RIN_RESOLVED_NETWORK_SCOPE_SOURCE_MAX_EVENTS 16u
+#define RIN_RESOLVED_NETWORK_SCOPE_VPN_ACTIVE_BIT 0x00000001u
+#define RIN_RESOLVED_NETWORK_SCOPE_NAMESPACE_PRESENT_BIT 0x00000002u
+#define RIN_RESOLVED_NETWORK_SCOPE_KNOWN_FLAGS \
+    (RIN_RESOLVED_NETWORK_SCOPE_VPN_ACTIVE_BIT | \
+     RIN_RESOLVED_NETWORK_SCOPE_NAMESPACE_PRESENT_BIT)
 
 enum {
     RIN_RESOLVED_CMD_RESOLVE_A_V1 = 1,
@@ -72,7 +79,8 @@ enum {
     RIN_RESOLVED_CMD_GETADDRINFO_V2 = 8,
     /* One AF_UNSPEC request, with A and AAAA lookups owned concurrently by
      * resolved.  Unlike V2, the response contains both address families. */
-    RIN_RESOLVED_CMD_GETADDRINFO_DUAL_V3 = 9
+    RIN_RESOLVED_CMD_GETADDRINFO_DUAL_V3 = 9,
+    RIN_RESOLVED_CMD_GET_NETWORK_SCOPE_V1 = 10
 };
 
 typedef struct RinResolvedMsgHeader {
@@ -83,6 +91,115 @@ typedef struct RinResolvedMsgHeader {
     uint32_t payload_len;
     uint32_t reserved0;
 } RinResolvedMsgHeader;
+
+/* The scope source is copied byte-for-byte between the resolved service and
+ * the runtime adapter.  It carries no address, pathname, socket, or pointer;
+ * the namespace ID is opaque and is only present when an authenticated
+ * namespace owner supplied it. */
+typedef struct RinResolvedNetworkScopeV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t network_generation;
+    uint64_t namespace_generation;
+    uint64_t route_generation;
+    uint32_t flags;
+    uint32_t reserved0;
+    uint8_t namespace_id[16];
+    uint64_t reserved[2];
+} RinResolvedNetworkScopeV1;
+
+typedef struct RinResolvedNetworkScopeEventV1 {
+    uint64_t sequence;
+    RinResolvedNetworkScopeV1 scope;
+} RinResolvedNetworkScopeEventV1;
+
+typedef struct RinResolvedNetworkScopeSourceV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t next_sequence;
+    uint64_t oldest_sequence;
+    uint32_t event_count;
+    uint32_t poisoned;
+    RinResolvedNetworkScopeV1 current;
+    RinResolvedNetworkScopeEventV1 events[
+        RIN_RESOLVED_NETWORK_SCOPE_SOURCE_MAX_EVENTS];
+} RinResolvedNetworkScopeSourceV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinResolvedNetworkScopeV1) == 72u,
+              "RinResolvedNetworkScopeV1 ABI drift");
+static_assert(sizeof(RinResolvedNetworkScopeEventV1) == 80u,
+              "RinResolvedNetworkScopeEventV1 ABI drift");
+static_assert(sizeof(RinResolvedNetworkScopeSourceV1) == 1384u,
+              "RinResolvedNetworkScopeSourceV1 ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinResolvedNetworkScopeV1) == 72u,
+               "RinResolvedNetworkScopeV1 ABI drift");
+_Static_assert(sizeof(RinResolvedNetworkScopeEventV1) == 80u,
+               "RinResolvedNetworkScopeEventV1 ABI drift");
+_Static_assert(sizeof(RinResolvedNetworkScopeSourceV1) == 1384u,
+               "RinResolvedNetworkScopeSourceV1 ABI drift");
+#endif
+
+static inline int rin_resolved_network_scope_wire_id_zero(
+    const uint8_t* id)
+{
+    uint8_t combined = 0u;
+    uint32_t index;
+    if (!id) return 1;
+    for (index = 0u; index < 16u; ++index) combined |= id[index];
+    return combined == 0u;
+}
+
+static inline int rin_resolved_network_scope_wire_valid(
+    const RinResolvedNetworkScopeV1* scope)
+{
+    if (!scope || scope->struct_size != sizeof(*scope) ||
+        scope->version != RIN_RESOLVED_NETWORK_SCOPE_SOURCE_VERSION ||
+        scope->network_generation == 0u || scope->route_generation == 0u ||
+        scope->reserved0 != 0u || scope->reserved[0] != 0u ||
+        scope->reserved[1] != 0u ||
+        (scope->flags & ~RIN_RESOLVED_NETWORK_SCOPE_KNOWN_FLAGS) != 0u)
+        return 0;
+    if ((scope->flags & RIN_RESOLVED_NETWORK_SCOPE_NAMESPACE_PRESENT_BIT) !=
+        0u) {
+        return scope->namespace_generation != 0u &&
+               !rin_resolved_network_scope_wire_id_zero(scope->namespace_id);
+    }
+    return scope->namespace_generation == 0u &&
+           rin_resolved_network_scope_wire_id_zero(scope->namespace_id) &&
+           (scope->flags & RIN_RESOLVED_NETWORK_SCOPE_VPN_ACTIVE_BIT) == 0u;
+}
+
+static inline int rin_resolved_network_scope_source_wire_valid(
+    const RinResolvedNetworkScopeSourceV1* source)
+{
+    uint64_t latest;
+    uint32_t index;
+    if (!source || source->struct_size != sizeof(*source) ||
+        source->version != RIN_RESOLVED_NETWORK_SCOPE_SOURCE_VERSION ||
+        source->next_sequence == 0u || source->oldest_sequence == 0u ||
+        source->event_count > RIN_RESOLVED_NETWORK_SCOPE_SOURCE_MAX_EVENTS ||
+        source->poisoned != 0u ||
+        !rin_resolved_network_scope_wire_valid(&source->current))
+        return 0;
+    latest = source->next_sequence - 1u;
+    if (source->event_count == 0u)
+        return source->oldest_sequence == source->next_sequence;
+    if (source->oldest_sequence !=
+            latest - (uint64_t)source->event_count + 1u ||
+        source->oldest_sequence > latest)
+        return 0;
+    for (index = 0u; index < source->event_count; ++index) {
+        const RinResolvedNetworkScopeEventV1* event =
+            &source->events[(source->oldest_sequence + index) %
+                            RIN_RESOLVED_NETWORK_SCOPE_SOURCE_MAX_EVENTS];
+        if (event->sequence != source->oldest_sequence + index ||
+            !rin_resolved_network_scope_wire_valid(&event->scope))
+            return 0;
+    }
+    return 1;
+}
 
 typedef struct RinResolvedResolveARequest {
     uint32_t hostname_len;
