@@ -1240,6 +1240,45 @@ typedef struct RinDeviceResourceResponseV1 {
     uint64_t reserved;
 } RinDeviceResourceResponseV1;
 
+typedef struct RinFileToSocketRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved_header;
+    int32_t source_fd;
+    int32_t socket_fd;
+    uint32_t flags;
+    uint32_t reserved0;
+    uint64_t offset;
+    uint64_t length;
+} RinFileToSocketRequestV1;
+
+typedef struct RinSyscallBatchV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t item_count;
+    uint32_t reserved0;
+    uint64_t items;
+    uint32_t item_stride;
+    uint32_t reserved1;
+} RinSyscallBatchV1;
+
+typedef struct RinSyscallBatchItemV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t syscall_number;
+    uint32_t reserved0;
+    uint64_t arg0;
+    uint64_t arg1;
+    uint64_t arg2;
+    uint64_t arg3;
+    uint64_t arg4;
+    uint64_t arg5;
+    int64_t result;
+    uint64_t reserved;
+} RinSyscallBatchItemV1;
+
 #ifndef RIN_SDK_TIME_ABI_DEFINED
 #define RIN_SDK_TIME_ABI_DEFINED
 typedef struct RinCpuTimeV1 {
@@ -1943,6 +1982,39 @@ static_assert(offsetof(RinDeviceResourceResponseV1, handle) == 8, "RinDeviceReso
 static_assert(offsetof(RinDeviceResourceResponseV1, transferred) == 16, "RinDeviceResourceResponseV1.transferred ABI drift");
 static_assert(offsetof(RinDeviceResourceResponseV1, reserved0) == 20, "RinDeviceResourceResponseV1.reserved0 ABI drift");
 static_assert(offsetof(RinDeviceResourceResponseV1, reserved) == 24, "RinDeviceResourceResponseV1.reserved ABI drift");
+static_assert(sizeof(RinFileToSocketRequestV1) == 40, "RinFileToSocketRequestV1 ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV1, struct_size) == 0, "RinFileToSocketRequestV1.struct_size ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV1, version) == 4, "RinFileToSocketRequestV1.version ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV1, reserved_header) == 6, "RinFileToSocketRequestV1.reserved_header ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV1, source_fd) == 8, "RinFileToSocketRequestV1.source_fd ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV1, socket_fd) == 12, "RinFileToSocketRequestV1.socket_fd ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV1, flags) == 16, "RinFileToSocketRequestV1.flags ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV1, reserved0) == 20, "RinFileToSocketRequestV1.reserved0 ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV1, offset) == 24, "RinFileToSocketRequestV1.offset ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV1, length) == 32, "RinFileToSocketRequestV1.length ABI drift");
+static_assert(sizeof(RinSyscallBatchV1) == 32, "RinSyscallBatchV1 ABI drift");
+static_assert(offsetof(RinSyscallBatchV1, struct_size) == 0, "RinSyscallBatchV1.struct_size ABI drift");
+static_assert(offsetof(RinSyscallBatchV1, version) == 4, "RinSyscallBatchV1.version ABI drift");
+static_assert(offsetof(RinSyscallBatchV1, flags) == 6, "RinSyscallBatchV1.flags ABI drift");
+static_assert(offsetof(RinSyscallBatchV1, item_count) == 8, "RinSyscallBatchV1.item_count ABI drift");
+static_assert(offsetof(RinSyscallBatchV1, reserved0) == 12, "RinSyscallBatchV1.reserved0 ABI drift");
+static_assert(offsetof(RinSyscallBatchV1, items) == 16, "RinSyscallBatchV1.items ABI drift");
+static_assert(offsetof(RinSyscallBatchV1, item_stride) == 24, "RinSyscallBatchV1.item_stride ABI drift");
+static_assert(offsetof(RinSyscallBatchV1, reserved1) == 28, "RinSyscallBatchV1.reserved1 ABI drift");
+static_assert(sizeof(RinSyscallBatchItemV1) == 80, "RinSyscallBatchItemV1 ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, struct_size) == 0, "RinSyscallBatchItemV1.struct_size ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, version) == 4, "RinSyscallBatchItemV1.version ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, flags) == 6, "RinSyscallBatchItemV1.flags ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, syscall_number) == 8, "RinSyscallBatchItemV1.syscall_number ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, reserved0) == 12, "RinSyscallBatchItemV1.reserved0 ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, arg0) == 16, "RinSyscallBatchItemV1.arg0 ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, arg1) == 24, "RinSyscallBatchItemV1.arg1 ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, arg2) == 32, "RinSyscallBatchItemV1.arg2 ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, arg3) == 40, "RinSyscallBatchItemV1.arg3 ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, arg4) == 48, "RinSyscallBatchItemV1.arg4 ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, arg5) == 56, "RinSyscallBatchItemV1.arg5 ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, result) == 64, "RinSyscallBatchItemV1.result ABI drift");
+static_assert(offsetof(RinSyscallBatchItemV1, reserved) == 72, "RinSyscallBatchItemV1.reserved ABI drift");
 static_assert(sizeof(RinCpuTimeV1) == 32, "RinCpuTimeV1 ABI drift");
 static_assert(offsetof(RinCpuTimeV1, struct_size) == 0, "RinCpuTimeV1.struct_size ABI drift");
 static_assert(offsetof(RinCpuTimeV1, version) == 4, "RinCpuTimeV1.version ABI drift");
@@ -2632,6 +2704,39 @@ _Static_assert(offsetof(RinDeviceResourceResponseV1, handle) == 8, "RinDeviceRes
 _Static_assert(offsetof(RinDeviceResourceResponseV1, transferred) == 16, "RinDeviceResourceResponseV1.transferred ABI drift");
 _Static_assert(offsetof(RinDeviceResourceResponseV1, reserved0) == 20, "RinDeviceResourceResponseV1.reserved0 ABI drift");
 _Static_assert(offsetof(RinDeviceResourceResponseV1, reserved) == 24, "RinDeviceResourceResponseV1.reserved ABI drift");
+_Static_assert(sizeof(RinFileToSocketRequestV1) == 40, "RinFileToSocketRequestV1 ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV1, struct_size) == 0, "RinFileToSocketRequestV1.struct_size ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV1, version) == 4, "RinFileToSocketRequestV1.version ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV1, reserved_header) == 6, "RinFileToSocketRequestV1.reserved_header ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV1, source_fd) == 8, "RinFileToSocketRequestV1.source_fd ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV1, socket_fd) == 12, "RinFileToSocketRequestV1.socket_fd ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV1, flags) == 16, "RinFileToSocketRequestV1.flags ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV1, reserved0) == 20, "RinFileToSocketRequestV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV1, offset) == 24, "RinFileToSocketRequestV1.offset ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV1, length) == 32, "RinFileToSocketRequestV1.length ABI drift");
+_Static_assert(sizeof(RinSyscallBatchV1) == 32, "RinSyscallBatchV1 ABI drift");
+_Static_assert(offsetof(RinSyscallBatchV1, struct_size) == 0, "RinSyscallBatchV1.struct_size ABI drift");
+_Static_assert(offsetof(RinSyscallBatchV1, version) == 4, "RinSyscallBatchV1.version ABI drift");
+_Static_assert(offsetof(RinSyscallBatchV1, flags) == 6, "RinSyscallBatchV1.flags ABI drift");
+_Static_assert(offsetof(RinSyscallBatchV1, item_count) == 8, "RinSyscallBatchV1.item_count ABI drift");
+_Static_assert(offsetof(RinSyscallBatchV1, reserved0) == 12, "RinSyscallBatchV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinSyscallBatchV1, items) == 16, "RinSyscallBatchV1.items ABI drift");
+_Static_assert(offsetof(RinSyscallBatchV1, item_stride) == 24, "RinSyscallBatchV1.item_stride ABI drift");
+_Static_assert(offsetof(RinSyscallBatchV1, reserved1) == 28, "RinSyscallBatchV1.reserved1 ABI drift");
+_Static_assert(sizeof(RinSyscallBatchItemV1) == 80, "RinSyscallBatchItemV1 ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, struct_size) == 0, "RinSyscallBatchItemV1.struct_size ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, version) == 4, "RinSyscallBatchItemV1.version ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, flags) == 6, "RinSyscallBatchItemV1.flags ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, syscall_number) == 8, "RinSyscallBatchItemV1.syscall_number ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, reserved0) == 12, "RinSyscallBatchItemV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, arg0) == 16, "RinSyscallBatchItemV1.arg0 ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, arg1) == 24, "RinSyscallBatchItemV1.arg1 ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, arg2) == 32, "RinSyscallBatchItemV1.arg2 ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, arg3) == 40, "RinSyscallBatchItemV1.arg3 ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, arg4) == 48, "RinSyscallBatchItemV1.arg4 ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, arg5) == 56, "RinSyscallBatchItemV1.arg5 ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, result) == 64, "RinSyscallBatchItemV1.result ABI drift");
+_Static_assert(offsetof(RinSyscallBatchItemV1, reserved) == 72, "RinSyscallBatchItemV1.reserved ABI drift");
 _Static_assert(sizeof(RinCpuTimeV1) == 32, "RinCpuTimeV1 ABI drift");
 _Static_assert(offsetof(RinCpuTimeV1, struct_size) == 0, "RinCpuTimeV1.struct_size ABI drift");
 _Static_assert(offsetof(RinCpuTimeV1, version) == 4, "RinCpuTimeV1.version ABI drift");

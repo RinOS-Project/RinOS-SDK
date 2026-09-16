@@ -430,6 +430,12 @@
 #define RIN_SYS_PROCESS_MEMORY_INFO_GET     0x8065u
 /* network. */
 #define RIN_SYS_NET_WIFI_INFO               0x8066u
+/* process. */
+#define RIN_SYS_PROCESS_NUMA_POLICY         0x8067u
+/* file. */
+#define RIN_SYS_FILE_TO_SOCKET              0x8068u
+/* system. */
+#define RIN_SYS_SYSCALL_BATCH               0x8069u
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
@@ -449,5 +455,8 @@
 #define RIN_AUDIO_STATE_RUNNING             1u
 #define RIN_AUDIO_STATE_DRAINING            2u
 #define RIN_AUDIO_SAMPLE_FORMAT_S16LE       1u
+#define RIN_SYSCALL_BATCH_ABI_VERSION       1u
+#define RIN_SYSCALL_BATCH_MAX_ITEMS         16u
+#define RIN_SYSCALL_BATCH_ITEM_STRIDE       80u
 
 #endif /* RIN_SDK_SYSCALL_ABI_H */

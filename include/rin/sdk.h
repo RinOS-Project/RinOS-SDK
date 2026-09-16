@@ -39,6 +39,7 @@
 #include "dynlink/flags.h"
 #include "dynlink/inventory_abi.h"
 #include "memory/address_space_abi.h"
+#include "memory/numa_policy_abi.h"
 #include "net/dns_abi.h"
 #include "net/ipv4.h"
 #include "net/ipv6_text.h"
