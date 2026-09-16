@@ -46,6 +46,7 @@ extern "C" {
 #define RIN_COMPOSITOR_FEATURE_INPUT_WAKE_HANDLE UINT64_C(0x00001000)
 #define RIN_COMPOSITOR_FEATURE_FRAME_CALLBACK UINT64_C(0x00002000)
 #define RIN_COMPOSITOR_FEATURE_PRESENT_FEEDBACK UINT64_C(0x00004000)
+#define RIN_COMPOSITOR_FEATURE_GPU_SURFACE_ABI UINT64_C(0x00008000)
 
 #define RIN_COMPOSITOR_SURFACE_FLAG_CURSOR  UINT32_C(0x00000001)
 #define RIN_COMPOSITOR_SURFACE_FLAG_OVERLAY UINT32_C(0x00000002)
@@ -138,6 +139,8 @@ enum RinCompositorMsgType {
     RIN_COMPOSITOR_SET_FRAME_CALLBACK = 38,
     RIN_COMPOSITOR_GET_SCHEDULER_STATE = 39,
     RIN_COMPOSITOR_INJECT_INPUT = 40,
+    RIN_COMPOSITOR_EXPORT_GPU_IMAGE = 41,
+    RIN_COMPOSITOR_PRESENT_GPU_IMAGE = 42,
 };
 
 typedef struct RinCompositorHeader {
@@ -432,6 +435,66 @@ typedef struct RinCompositorPollInputV2 {
     uint32_t reserved[2];
 } RinCompositorPollInputV2;
 
+#define RIN_COMPOSITOR_GPU_SURFACE_ABI_VERSION UINT32_C(1)
+#define RIN_COMPOSITOR_GPU_IMAGE_FLAG_SOFTWARE_SHM UINT32_C(0x00000001)
+#define RIN_COMPOSITOR_GPU_IMAGE_FLAG_PRESENTABLE UINT32_C(0x00000002)
+#define RIN_COMPOSITOR_GPU_PRESENT_FLAG_FULL_DAMAGE UINT32_C(0x00000001)
+
+/* A GPU image view is an opaque, generation-bound view of the existing
+ * caller-owned SHM buffer.  It is a real software presentation resource; a
+ * physical VRAM/scanout handle is deliberately a separate backend contract. */
+typedef struct RinCompositorGpuExportImageV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t flags;
+    uint32_t reserved;
+    uint32_t surface_id;
+    uint32_t buffer_slot;
+    uint64_t expected_surface_generation;
+} RinCompositorGpuExportImageV1;
+
+typedef struct RinCompositorGpuImageV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t surface_id;
+    uint32_t buffer_slot;
+    uint64_t surface_generation;
+    uint64_t image_handle;
+    uint64_t acquire_fence;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pitch;
+    uint32_t format;
+    uint64_t bytes;
+    uint64_t reserved[2];
+} RinCompositorGpuImageV1;
+
+typedef struct RinCompositorGpuDamageRectV1 {
+    int32_t x;
+    int32_t y;
+    uint32_t width;
+    uint32_t height;
+} RinCompositorGpuDamageRectV1;
+
+#define RIN_COMPOSITOR_GPU_MAX_DAMAGE_RECTS UINT32_C(8)
+typedef struct RinCompositorGpuPresentV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t flags;
+    uint32_t reserved;
+    uint32_t surface_id;
+    uint32_t buffer_slot;
+    uint64_t surface_generation;
+    uint64_t image_handle;
+    uint64_t acquire_fence;
+    uint64_t release_fence;
+    uint64_t frame_sequence;
+    uint32_t damage_count;
+    uint32_t reserved2;
+    RinCompositorGpuDamageRectV1
+        damage[RIN_COMPOSITOR_GPU_MAX_DAMAGE_RECTS];
+} RinCompositorGpuPresentV1;
+
 typedef struct RinCompositorInputEventV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -580,6 +643,12 @@ static_assert(sizeof(RinCompositorInputEventV1) == 56u,
               "compositor input event size");
 static_assert(sizeof(RinCompositorSetCursorV1) == 24u,
               "compositor semantic cursor size");
+static_assert(sizeof(RinCompositorGpuExportImageV1) == 32u,
+              "compositor GPU export size");
+static_assert(sizeof(RinCompositorGpuImageV1) == 80u,
+              "compositor GPU image size");
+static_assert(sizeof(RinCompositorGpuPresentV1) == 200u,
+              "compositor GPU present size");
 static_assert(sizeof(RinCompositorWindowDescriptorV1) == 404u,
               "compositor window descriptor size");
 static_assert(sizeof(RinCompositorWindowListV1) == 6488u,
@@ -631,6 +700,12 @@ _Static_assert(sizeof(RinCompositorInputEventV1) == 56u,
                "compositor input event size");
 _Static_assert(sizeof(RinCompositorSetCursorV1) == 24u,
                "compositor semantic cursor size");
+_Static_assert(sizeof(RinCompositorGpuExportImageV1) == 32u,
+               "compositor GPU export size");
+_Static_assert(sizeof(RinCompositorGpuImageV1) == 80u,
+               "compositor GPU image size");
+_Static_assert(sizeof(RinCompositorGpuPresentV1) == 200u,
+               "compositor GPU present size");
 _Static_assert(sizeof(RinCompositorWindowDescriptorV1) == 404u,
                "compositor window descriptor size");
 _Static_assert(sizeof(RinCompositorWindowListV1) == 6488u,
