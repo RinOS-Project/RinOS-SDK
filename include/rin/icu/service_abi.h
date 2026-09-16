@@ -105,6 +105,15 @@ enum {
     RIN_ICU_CASE_FIRST_UPPER = 2
 };
 
+/* The low byte of RinIcuCollatorOptions.case_first is the case-order value.
+ * The upper bits are product collator feature flags, retained in this field
+ * to keep the v2 request shape stable for existing clients. */
+#define RIN_ICU_COLLATOR_CASE_FIRST_MASK UINT32_C(0xff)
+#define RIN_ICU_COLLATOR_FLAG_IGNORE_KANA_TYPE (UINT32_C(1) << 8)
+#define RIN_ICU_COLLATOR_FLAG_IGNORE_WIDTH (UINT32_C(1) << 9)
+#define RIN_ICU_COLLATOR_CASE_FIRST_FLAGS \
+    (RIN_ICU_COLLATOR_FLAG_IGNORE_KANA_TYPE | RIN_ICU_COLLATOR_FLAG_IGNORE_WIDTH)
+
 enum {
     RIN_ICU_SEGMENTATION_GRAPHEME = 1,
     RIN_ICU_SEGMENTATION_WORD = 2,
