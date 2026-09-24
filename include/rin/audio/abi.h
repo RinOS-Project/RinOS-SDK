@@ -7,6 +7,7 @@
 #include "../syscall_abi.h"
 
 /* Version 1 is deliberately fixed-width and has the same layout on i386 and x86_64. */
+#define RIN_AUDIO_STATUS_VERSION 1u
 typedef struct RinAudioStatusV1 {
     uint32_t struct_size;
     uint32_t version;

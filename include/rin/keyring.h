@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #define RIN_KEYRING_ABI_VERSION UINT32_C(0x00010000)
+#define RIN_KEYRING_MESSAGE_VERSION UINT16_C(1)
 #define RIN_KEYRING_SOCKET_PATH "/run/rin/keyring"
 #define RIN_KEYRING_SERVICE_ID "keyring"
 #define RIN_KEYRING_SERVICE_SCOPE UINT16_C(1)
