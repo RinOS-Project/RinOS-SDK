@@ -54,6 +54,7 @@ enum {
 
     RIN_ICU_CMD_NUMBER_FORMATTER_CREATE_V1 = 48,
     RIN_ICU_CMD_NUMBER_FORMAT_V1 = 49,
+    RIN_ICU_CMD_NUMBER_FORMATTER_CREATE_V2 = 50,
 
     RIN_ICU_CMD_DATETIME_FORMATTER_CREATE_V1 = 64,
     RIN_ICU_CMD_DATETIME_FORMAT_EPOCH_MS_V1 = 65,
@@ -130,8 +131,11 @@ enum {
 enum {
     RIN_ICU_NUMBER_STYLE_DECIMAL = 1,
     RIN_ICU_NUMBER_STYLE_PERCENT = 2,
-    RIN_ICU_NUMBER_STYLE_CURRENCY = 3
+    RIN_ICU_NUMBER_STYLE_CURRENCY = 3,
+    RIN_ICU_NUMBER_STYLE_UNIT = 4
 };
+
+#define RIN_ICU_NUMBER_UNIT_MAX 32u
 
 enum {
     RIN_ICU_DATETIME_STYLE_DATE = 1,
@@ -243,6 +247,15 @@ typedef struct RIN_ICU_ABI_PACKED RinIcuNumberFormatterOptions {
     char currency_code[RIN_ICU_CURRENCY_CODE_MAX];
 } RinIcuNumberFormatterOptions;
 
+/* Unit formatting is a v2 create request so existing decimal/percent/currency
+ * clients keep the original 24-byte request shape.  The unit identifier is
+ * an ASCII Intl.MeasureUnit identifier (for example "kilometer"). */
+typedef struct RIN_ICU_ABI_PACKED RinIcuNumberFormatterOptionsV2 {
+    RinIcuNumberFormatterOptions base;
+    char unit[RIN_ICU_NUMBER_UNIT_MAX];
+    uint32_t unit_display;
+} RinIcuNumberFormatterOptionsV2;
+
 typedef struct RIN_ICU_ABI_PACKED RinIcuDateTimeFormatterOptions {
     uint32_t style;
     int32_t tz_offset_minutes;
@@ -289,6 +302,11 @@ typedef struct RIN_ICU_ABI_PACKED RinIcuNumberFormatterCreateRequest {
     uint32_t locale_len;
     RinIcuNumberFormatterOptions options;
 } RinIcuNumberFormatterCreateRequest;
+
+typedef struct RIN_ICU_ABI_PACKED RinIcuNumberFormatterCreateRequestV2 {
+    uint32_t locale_len;
+    RinIcuNumberFormatterOptionsV2 options;
+} RinIcuNumberFormatterCreateRequestV2;
 
 typedef struct RIN_ICU_ABI_PACKED RinIcuDateTimeFormatterCreateRequest {
     uint32_t locale_len;
@@ -434,6 +452,7 @@ static inline int rin_icu_command_known_v2(uint32_t command)
     case RIN_ICU_CMD_SEGMENTER_NEXT_V1:
     case RIN_ICU_CMD_NUMBER_FORMATTER_CREATE_V1:
     case RIN_ICU_CMD_NUMBER_FORMAT_V1:
+    case RIN_ICU_CMD_NUMBER_FORMATTER_CREATE_V2:
     case RIN_ICU_CMD_DATETIME_FORMATTER_CREATE_V1:
     case RIN_ICU_CMD_DATETIME_FORMAT_EPOCH_MS_V1:
     case RIN_ICU_CMD_PLURAL_RULES_CREATE_V1:
@@ -481,6 +500,8 @@ RIN_ICU_STATIC_ASSERT(rin_icu_segmenter_options_size_is_stable,
                       sizeof(RinIcuSegmenterOptions) == 16u);
 RIN_ICU_STATIC_ASSERT(rin_icu_number_options_size_is_stable,
                       sizeof(RinIcuNumberFormatterOptions) == 24u);
+RIN_ICU_STATIC_ASSERT(rin_icu_number_options_v2_size_is_stable,
+                      sizeof(RinIcuNumberFormatterOptionsV2) == 60u);
 RIN_ICU_STATIC_ASSERT(rin_icu_datetime_options_size_is_stable,
                       sizeof(RinIcuDateTimeFormatterOptions) == 16u);
 RIN_ICU_STATIC_ASSERT(rin_icu_plural_options_size_is_stable,
@@ -499,6 +520,8 @@ RIN_ICU_STATIC_ASSERT(rin_icu_segmenter_create_size_is_stable,
                       sizeof(RinIcuSegmenterCreateRequest) == 20u);
 RIN_ICU_STATIC_ASSERT(rin_icu_number_create_size_is_stable,
                       sizeof(RinIcuNumberFormatterCreateRequest) == 28u);
+RIN_ICU_STATIC_ASSERT(rin_icu_number_create_v2_size_is_stable,
+                      sizeof(RinIcuNumberFormatterCreateRequestV2) == 64u);
 RIN_ICU_STATIC_ASSERT(rin_icu_datetime_create_size_is_stable,
                       sizeof(RinIcuDateTimeFormatterCreateRequest) == 20u);
 RIN_ICU_STATIC_ASSERT(rin_icu_plural_create_size_is_stable,
