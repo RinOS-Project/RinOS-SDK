@@ -8,6 +8,11 @@
 #define RIN_FIREWALL_PROFILE_MAX_INTERFACES UINT32_C(16)
 #define RIN_FIREWALL_PROFILE_IDENTITY_BYTES UINT32_C(32)
 
+/* Stable interface ID used by the OS network owner for the primary
+ * interface. Presence and current identity still come from the authenticated
+ * profile table; this constant only lets public clients label that row. */
+#define RIN_FIREWALL_PRIMARY_INTERFACE_ID UINT32_C(2)
+
 typedef struct RinFirewallProfileEntryV1 {
     uint32_t interface_id;
     uint8_t profile;
