@@ -29,7 +29,7 @@ typedef struct RinFirewallPermissionRequestV1 {
     uint16_t reserved0;
     uint64_t request_id;
     uint64_t timestamp_ms;
-    RinFirewallApplicationContextV1 application;
+    RinFirewallApplicationContextV2 application;
     RinFirewallPacketV1 packet;
 } RinFirewallPermissionRequestV1;
 #pragma pack(pop)
