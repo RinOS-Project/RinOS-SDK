@@ -19,7 +19,10 @@ typedef enum RinFirewallPermissionActionV1 {
     RIN_FIREWALL_PERMISSION_ALLOW_ONCE = 1,
     RIN_FIREWALL_PERMISSION_ALLOW_PERSISTENT = 2,
     RIN_FIREWALL_PERMISSION_BLOCK_ONCE = 3,
-    RIN_FIREWALL_PERMISSION_BLOCK_PERSISTENT = 4
+    RIN_FIREWALL_PERMISSION_BLOCK_PERSISTENT = 4,
+    /* Reuse the decision for the same application endpoint until logout. */
+    RIN_FIREWALL_PERMISSION_ALLOW_SESSION = 5,
+    RIN_FIREWALL_PERMISSION_BLOCK_SESSION = 6
 } RinFirewallPermissionActionV1;
 
 #pragma pack(push, 1)
