@@ -78,9 +78,11 @@ typedef enum RinFirewallNetworkProfileV1 {
 
 #define RIN_FIREWALL_PACKET_FLAG_FRAGMENT UINT16_C(0x0001)
 #define RIN_FIREWALL_PACKET_FLAG_PROCESS_IDENTITY UINT16_C(0x0002)
+#define RIN_FIREWALL_PACKET_FLAG_USER_IDENTITY UINT16_C(0x0004)
 #define RIN_FIREWALL_PACKET_KNOWN_FLAGS \
     (RIN_FIREWALL_PACKET_FLAG_FRAGMENT | \
-     RIN_FIREWALL_PACKET_FLAG_PROCESS_IDENTITY)
+     RIN_FIREWALL_PACKET_FLAG_PROCESS_IDENTITY | \
+     RIN_FIREWALL_PACKET_FLAG_USER_IDENTITY)
 
 #define RIN_FIREWALL_STATE_UNTRACKED UINT32_C(0)
 #define RIN_FIREWALL_STATE_NEW UINT32_C(1)
@@ -118,6 +120,7 @@ typedef struct RinFirewallRuleV1 {
     uint16_t flags;
     uint64_t id;
     uint32_t priority;
+    /* Zero is machine-wide; non-zero rules match only that authenticated UID. */
     uint32_t owner_uid;
     uint16_t rule_class;
     uint8_t direction;
@@ -186,8 +189,9 @@ typedef struct RinFirewallPacketV1 {
     uint8_t extension_header_count;
     uint8_t reserved0;
     uint8_t application_id[RIN_FIREWALL_APPLICATION_ID_SIZE];
-    /* With PROCESS_IDENTITY, reserved[0] is process_id and reserved[1] is
-     * process_instance_cookie; reserved[2] remains zero. */
+    /* With PROCESS_IDENTITY, reserved[0..1] are the process ID and instance
+     * cookie. With USER_IDENTITY, reserved[2] carries the authenticated
+     * non-zero owner UID; otherwise it remains zero. */
     uint64_t reserved[3];
 } RinFirewallPacketV1;
 

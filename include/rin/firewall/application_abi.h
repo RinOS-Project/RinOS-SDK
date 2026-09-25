@@ -10,8 +10,10 @@
 #define RIN_FIREWALL_APPLICATION_CONTEXT_VERSION \
     RIN_FIREWALL_APPLICATION_CONTEXT_VERSION_V2
 #define RIN_FIREWALL_APPLICATION_FLAG_SYSTEM_PROCESS UINT16_C(0x0001)
+#define RIN_FIREWALL_APPLICATION_FLAG_USER_SESSION_IDENTITY UINT16_C(0x0002)
 #define RIN_FIREWALL_APPLICATION_KNOWN_FLAGS \
-    RIN_FIREWALL_APPLICATION_FLAG_SYSTEM_PROCESS
+    (RIN_FIREWALL_APPLICATION_FLAG_SYSTEM_PROCESS | \
+     RIN_FIREWALL_APPLICATION_FLAG_USER_SESSION_IDENTITY)
 
 #pragma pack(push, 1)
 typedef struct RinFirewallApplicationContextV2 {
@@ -25,7 +27,11 @@ typedef struct RinFirewallApplicationContextV2 {
     uint8_t package_digest[32];
     uint64_t capability_mask;
     uint64_t namespace_id;
-    uint64_t reserved1[2];
+    /* Present only with USER_SESSION_IDENTITY. These values are copied from
+     * the scheduler-owned session binding, never from the RPC payload. */
+    uint32_t owner_uid;
+    uint32_t session_id;
+    uint64_t session_cookie;
 } RinFirewallApplicationContextV2;
 /* Keep the historical source name as an alias. This does not preserve v1
  * wire compatibility; validators require the embedded v2 version. */
