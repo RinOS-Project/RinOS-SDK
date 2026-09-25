@@ -4,6 +4,7 @@
 #ifndef RIN_SDK_FIREWALL_ABI_H
 #define RIN_SDK_FIREWALL_ABI_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #define RIN_FIREWALL_ABI_MAGIC UINT32_C(0x31574652) /* "RFW1" */
@@ -48,6 +49,11 @@ typedef enum RinFirewallRuleClassV1 {
     RIN_FIREWALL_RULE_CLASS_APPLICATION = 3,
     RIN_FIREWALL_RULE_CLASS_CONTAINER = 4
 } RinFirewallRuleClassV1;
+
+/* Container rule ownership uses a class-specific word from the fixed v1
+ * reserved tail. Owner IDs are stable across adapter restarts. */
+#define RIN_FIREWALL_CONTAINER_OWNER_UNKNOWN UINT32_C(0)
+#define RIN_FIREWALL_CONTAINER_OWNER_R8S UINT32_C(1)
 
 typedef enum RinFirewallNetworkProfileV1 {
     RIN_FIREWALL_PROFILE_ANY = 0,
@@ -150,7 +156,10 @@ typedef struct RinFirewallRuleV1 {
     uint64_t packet_count;
     uint64_t byte_count;
     /* With MATCH_PROCESS, reserved[0..1] carry process_id and
-     * reserved[2..3] carry process_instance_cookie, little-endian words. */
+     * reserved[2..3] carry process_instance_cookie, little-endian words.
+     * Without MATCH_PROCESS, container rules use reserved[0] for a stable
+     * container owner ID and require reserved[1..3] to be zero. Other rule
+     * classes require all four words to be zero. */
     uint32_t reserved[4];
 } RinFirewallRuleV1;
 
@@ -211,6 +220,28 @@ typedef struct RinFirewallDecisionV1 {
 #pragma pack(pop)
 
 typedef RinFirewallRuleV1 RinFirewallRule;
+
+static inline uint32_t rin_firewall_container_rule_owner_id(
+    const RinFirewallRuleV1* rule)
+{
+    if (rule == NULL || rule->rule_class != RIN_FIREWALL_RULE_CLASS_CONTAINER ||
+        (rule->flags & RIN_FIREWALL_RULE_FLAG_MATCH_PROCESS) != 0u)
+        return RIN_FIREWALL_CONTAINER_OWNER_UNKNOWN;
+    return rule->reserved[0];
+}
+
+static inline int rin_firewall_container_rule_set_owner_id(
+    RinFirewallRuleV1* rule, uint32_t owner_id)
+{
+    uint32_t index;
+    if (rule == NULL || rule->rule_class != RIN_FIREWALL_RULE_CLASS_CONTAINER ||
+        (rule->flags & RIN_FIREWALL_RULE_FLAG_MATCH_PROCESS) != 0u ||
+        owner_id == RIN_FIREWALL_CONTAINER_OWNER_UNKNOWN)
+        return 0;
+    for (index = 0u; index < 4u; ++index) rule->reserved[index] = 0u;
+    rule->reserved[0] = owner_id;
+    return 1;
+}
 
 #if defined(__cplusplus)
 static_assert(sizeof(RinFirewallRuleV1) == 304u,
