@@ -137,6 +137,7 @@ typedef uint64_t RinCapabilitySet;
  * not by themselves disclose crash records or imply an endpoint exists. */
 #define RIN_CAP_DEBUGGING        (UINT64_C(1) << 29)
 #define RIN_CAP_PROFILING        (UINT64_C(1) << 30)
+#define RIN_CAP_FIREWALL_PROMPT  (UINT64_C(1) << 31)
 #define RIN_CAP_APP_RESOURCES    (RIN_CAP_NETWORK_ACCESS | \
                                   RIN_CAP_CLIPBOARD | RIN_CAP_NOTIFICATION | \
                                   RIN_CAP_GPU_ACCESS | RIN_CAP_MICROPHONE | \
@@ -154,7 +155,8 @@ typedef uint64_t RinCapabilitySet;
                                   RIN_CAP_THEME_CONTROL | RIN_CAP_ACCESSIBILITY | \
                                   RIN_CAP_DISPLAY | RIN_CAP_DESKTOP | \
                                   RIN_CAP_AUDIO_OUTPUT | RIN_CAP_DEBUGGING | \
-                                  RIN_CAP_PROFILING)
+                                  RIN_CAP_PROFILING | \
+                                  RIN_CAP_FIREWALL_PROMPT)
 
 #if !defined(RIN_SDK_KERNEL_INTERNAL_ABI)
 typedef uint64_t RinObject;
