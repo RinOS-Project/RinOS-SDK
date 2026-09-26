@@ -68,6 +68,10 @@ typedef struct RinWorkerdFetchRequest {
     uint32_t body_len;
     uint32_t body_storage_kind;
     RinWorkerdShmRegion body_region;
+    /* Public token-and-range descriptor.  The private workerd owner resolves
+     * it against the authenticated peer; no pathname, pointer, SHM name, or
+     * native handle is carried on this wire. */
+    RinWorkerdBodyCapability body_capability;
 } RinWorkerdFetchRequest;
 
 typedef struct RinWorkerdFetchHeaderField {
