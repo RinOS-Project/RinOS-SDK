@@ -20,8 +20,8 @@ enum {
 enum {
     RIN_WORKERD_PAYLOAD_INLINE = 0,
     RIN_WORKERD_PAYLOAD_SHM = 1,
-    /* Reserved for the authenticated opaque capability path.  v3 callers
-     * must not select it until RequestServer has a token resolver. */
+    /* Authenticated opaque capability path.  Select it only after the
+     * private RequestServer/workerd owner has bound a token resolver. */
     RIN_WORKERD_PAYLOAD_CAPABILITY = 2
 };
 
