@@ -35,12 +35,15 @@ typedef int32_t RinResultCode;
 #define RIN_NOTIFICATION_TITLE_MAX_BYTES    64u
 #define RIN_NOTIFICATION_MESSAGE_MAX_BYTES  192u
 #define RIN_SYSTEM_INFO_VERSION             1u
+#define RIN_SYSTEM_INFO_VERSION_2           2u
 #define RIN_SYSTEM_ARCH_UNKNOWN             0u
 #define RIN_SYSTEM_ARCH_X86_64              1u
 #define RIN_SYSTEM_INFO_FLAG_ARCHITECTURE_VALID 1u
 #define RIN_SYSTEM_INFO_FLAG_CPU_VALID      2u
 #define RIN_SYSTEM_INFO_FLAG_MEMORY_VALID   4u
 #define RIN_SYSTEM_INFO_FLAG_DISPLAY_VALID  8u
+#define RIN_SYSTEM_INFO_FLAG_PAGEFILE_VALID 16u
+#define RIN_SYSTEM_INFO_FLAG_VIRTUAL_MEMORY_VALID 32u
 #define RIN_FILESYSTEM_USAGE_VERSION        1u
 #define RIN_FILESYSTEM_TYPE_UNKNOWN         0u
 #define RIN_FILESYSTEM_TYPE_RINFS           1u
@@ -537,6 +540,28 @@ typedef struct RinSystemInfoV1 {
     uint32_t reserved0;
     uint64_t reserved;
 } RinSystemInfoV1;
+
+typedef struct RinSystemInfoV2 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t architecture;
+    uint64_t flags;
+    uint32_t logical_cpu_count;
+    uint32_t page_size;
+    uint64_t total_memory_bytes;
+    uint64_t available_memory_bytes;
+    uint32_t display_count;
+    uint32_t virtual_width;
+    uint32_t virtual_height;
+    uint32_t reserved0;
+    uint64_t reserved;
+    uint64_t total_pagefile_bytes;
+    uint64_t available_pagefile_bytes;
+    uint64_t total_free_virtual_bytes;
+    uint64_t largest_free_virtual_extent_bytes;
+    uint64_t virtual_address_base;
+    uint64_t virtual_address_limit;
+} RinSystemInfoV2;
 
 typedef struct RinFilesystemUsageV1 {
     uint32_t struct_size;
@@ -1384,6 +1409,26 @@ static_assert(offsetof(RinSystemInfoV1, virtual_width) == 44, "RinSystemInfoV1.v
 static_assert(offsetof(RinSystemInfoV1, virtual_height) == 48, "RinSystemInfoV1.virtual_height ABI drift");
 static_assert(offsetof(RinSystemInfoV1, reserved0) == 52, "RinSystemInfoV1.reserved0 ABI drift");
 static_assert(offsetof(RinSystemInfoV1, reserved) == 56, "RinSystemInfoV1.reserved ABI drift");
+static_assert(sizeof(RinSystemInfoV2) == 112, "RinSystemInfoV2 ABI drift");
+static_assert(offsetof(RinSystemInfoV2, struct_size) == 0, "RinSystemInfoV2.struct_size ABI drift");
+static_assert(offsetof(RinSystemInfoV2, version) == 4, "RinSystemInfoV2.version ABI drift");
+static_assert(offsetof(RinSystemInfoV2, architecture) == 6, "RinSystemInfoV2.architecture ABI drift");
+static_assert(offsetof(RinSystemInfoV2, flags) == 8, "RinSystemInfoV2.flags ABI drift");
+static_assert(offsetof(RinSystemInfoV2, logical_cpu_count) == 16, "RinSystemInfoV2.logical_cpu_count ABI drift");
+static_assert(offsetof(RinSystemInfoV2, page_size) == 20, "RinSystemInfoV2.page_size ABI drift");
+static_assert(offsetof(RinSystemInfoV2, total_memory_bytes) == 24, "RinSystemInfoV2.total_memory_bytes ABI drift");
+static_assert(offsetof(RinSystemInfoV2, available_memory_bytes) == 32, "RinSystemInfoV2.available_memory_bytes ABI drift");
+static_assert(offsetof(RinSystemInfoV2, display_count) == 40, "RinSystemInfoV2.display_count ABI drift");
+static_assert(offsetof(RinSystemInfoV2, virtual_width) == 44, "RinSystemInfoV2.virtual_width ABI drift");
+static_assert(offsetof(RinSystemInfoV2, virtual_height) == 48, "RinSystemInfoV2.virtual_height ABI drift");
+static_assert(offsetof(RinSystemInfoV2, reserved0) == 52, "RinSystemInfoV2.reserved0 ABI drift");
+static_assert(offsetof(RinSystemInfoV2, reserved) == 56, "RinSystemInfoV2.reserved ABI drift");
+static_assert(offsetof(RinSystemInfoV2, total_pagefile_bytes) == 64, "RinSystemInfoV2.total_pagefile_bytes ABI drift");
+static_assert(offsetof(RinSystemInfoV2, available_pagefile_bytes) == 72, "RinSystemInfoV2.available_pagefile_bytes ABI drift");
+static_assert(offsetof(RinSystemInfoV2, total_free_virtual_bytes) == 80, "RinSystemInfoV2.total_free_virtual_bytes ABI drift");
+static_assert(offsetof(RinSystemInfoV2, largest_free_virtual_extent_bytes) == 88, "RinSystemInfoV2.largest_free_virtual_extent_bytes ABI drift");
+static_assert(offsetof(RinSystemInfoV2, virtual_address_base) == 96, "RinSystemInfoV2.virtual_address_base ABI drift");
+static_assert(offsetof(RinSystemInfoV2, virtual_address_limit) == 104, "RinSystemInfoV2.virtual_address_limit ABI drift");
 static_assert(sizeof(RinFilesystemUsageV1) == 96, "RinFilesystemUsageV1 ABI drift");
 static_assert(offsetof(RinFilesystemUsageV1, struct_size) == 0, "RinFilesystemUsageV1.struct_size ABI drift");
 static_assert(offsetof(RinFilesystemUsageV1, version) == 4, "RinFilesystemUsageV1.version ABI drift");
@@ -2106,6 +2151,26 @@ _Static_assert(offsetof(RinSystemInfoV1, virtual_width) == 44, "RinSystemInfoV1.
 _Static_assert(offsetof(RinSystemInfoV1, virtual_height) == 48, "RinSystemInfoV1.virtual_height ABI drift");
 _Static_assert(offsetof(RinSystemInfoV1, reserved0) == 52, "RinSystemInfoV1.reserved0 ABI drift");
 _Static_assert(offsetof(RinSystemInfoV1, reserved) == 56, "RinSystemInfoV1.reserved ABI drift");
+_Static_assert(sizeof(RinSystemInfoV2) == 112, "RinSystemInfoV2 ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, struct_size) == 0, "RinSystemInfoV2.struct_size ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, version) == 4, "RinSystemInfoV2.version ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, architecture) == 6, "RinSystemInfoV2.architecture ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, flags) == 8, "RinSystemInfoV2.flags ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, logical_cpu_count) == 16, "RinSystemInfoV2.logical_cpu_count ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, page_size) == 20, "RinSystemInfoV2.page_size ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, total_memory_bytes) == 24, "RinSystemInfoV2.total_memory_bytes ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, available_memory_bytes) == 32, "RinSystemInfoV2.available_memory_bytes ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, display_count) == 40, "RinSystemInfoV2.display_count ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, virtual_width) == 44, "RinSystemInfoV2.virtual_width ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, virtual_height) == 48, "RinSystemInfoV2.virtual_height ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, reserved0) == 52, "RinSystemInfoV2.reserved0 ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, reserved) == 56, "RinSystemInfoV2.reserved ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, total_pagefile_bytes) == 64, "RinSystemInfoV2.total_pagefile_bytes ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, available_pagefile_bytes) == 72, "RinSystemInfoV2.available_pagefile_bytes ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, total_free_virtual_bytes) == 80, "RinSystemInfoV2.total_free_virtual_bytes ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, largest_free_virtual_extent_bytes) == 88, "RinSystemInfoV2.largest_free_virtual_extent_bytes ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, virtual_address_base) == 96, "RinSystemInfoV2.virtual_address_base ABI drift");
+_Static_assert(offsetof(RinSystemInfoV2, virtual_address_limit) == 104, "RinSystemInfoV2.virtual_address_limit ABI drift");
 _Static_assert(sizeof(RinFilesystemUsageV1) == 96, "RinFilesystemUsageV1 ABI drift");
 _Static_assert(offsetof(RinFilesystemUsageV1, struct_size) == 0, "RinFilesystemUsageV1.struct_size ABI drift");
 _Static_assert(offsetof(RinFilesystemUsageV1, version) == 4, "RinFilesystemUsageV1.version ABI drift");
