@@ -443,6 +443,7 @@
 /* network. */
 #define RIN_SYS_NET_IP_GLOBAL_STATISTICS    0x806Cu
 #define RIN_SYS_NET_UDP_GLOBAL_STATISTICS   0x806Du
+#define RIN_SYS_NET_TCP_GLOBAL_STATISTICS   0x806Eu
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u

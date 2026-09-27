@@ -130,6 +130,65 @@ typedef struct RinNetUdpGlobalStatisticsV1 {
     uint64_t udp_listeners;
 } RinNetUdpGlobalStatisticsV1;
 
+/* Generation-bound TCP-layer counters.  The target currently exposes the
+ * counters owned by the TCP packet path and leaves metrics without a stable
+ * product owner out of the supported flag set.  Consumers must inspect the
+ * flags before reading each value. */
+#define RIN_NET_TCP_GLOBAL_STATISTICS_VERSION 1u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_AF_IPV4 4u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_AF_IPV6 6u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_CONNECTIONS_ACCEPTED 0x00000001u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_CONNECTIONS_INITIATED 0x00000002u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_CUMULATIVE_CONNECTIONS 0x00000004u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_CURRENT_CONNECTIONS 0x00000008u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_ERRORS_RECEIVED 0x00000010u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_FAILED_CONNECTION_ATTEMPTS 0x00000020u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_RESET_CONNECTIONS 0x00000040u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_SEGMENTS_RECEIVED 0x00000080u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_SEGMENTS_RESENT 0x00000100u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_SEGMENTS_SENT 0x00000200u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_RESETS_SENT 0x00000400u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_MAXIMUM_CONNECTIONS 0x00000800u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_MAXIMUM_TRANSMISSION_TIMEOUT 0x00001000u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_MINIMUM_TRANSMISSION_TIMEOUT 0x00002000u
+#define RIN_NET_TCP_GLOBAL_STATISTICS_KNOWN_FLAGS \
+    (RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_CONNECTIONS_ACCEPTED | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_CONNECTIONS_INITIATED | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_CUMULATIVE_CONNECTIONS | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_CURRENT_CONNECTIONS | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_ERRORS_RECEIVED | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_FAILED_CONNECTION_ATTEMPTS | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_RESET_CONNECTIONS | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_SEGMENTS_RECEIVED | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_SEGMENTS_RESENT | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_SEGMENTS_SENT | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_RESETS_SENT | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_MAXIMUM_CONNECTIONS | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_MAXIMUM_TRANSMISSION_TIMEOUT | \
+     RIN_NET_TCP_GLOBAL_STATISTICS_FLAG_MINIMUM_TRANSMISSION_TIMEOUT)
+
+typedef struct RinNetTcpGlobalStatisticsV1 {
+    uint32_t version;
+    uint32_t struct_size;
+    uint64_t device_generation;
+    uint32_t address_family;
+    uint32_t supported_flags;
+    uint64_t connections_accepted;
+    uint64_t connections_initiated;
+    uint64_t cumulative_connections;
+    uint64_t current_connections;
+    uint64_t errors_received;
+    uint64_t failed_connection_attempts;
+    uint64_t reset_connections;
+    uint64_t segments_received;
+    uint64_t segments_resent;
+    uint64_t segments_sent;
+    uint64_t resets_sent;
+    uint64_t maximum_connections;
+    uint64_t maximum_transmission_timeout;
+    uint64_t minimum_transmission_timeout;
+} RinNetTcpGlobalStatisticsV1;
+
 /* Generation-bound Wi-Fi telemetry returned by the privileged network owner.
  * The SSID is copied only for the currently associated BSS; a disconnected
  * or stale provider returns no identity and keeps signal_percent unknown. */
@@ -209,6 +268,8 @@ static_assert(sizeof(RinNetIpGlobalStatisticsV1) == 56u,
               "RinNetIpGlobalStatisticsV1 ABI drift");
 static_assert(sizeof(RinNetUdpGlobalStatisticsV1) == 64u,
               "RinNetUdpGlobalStatisticsV1 ABI drift");
+static_assert(sizeof(RinNetTcpGlobalStatisticsV1) == 136u,
+              "RinNetTcpGlobalStatisticsV1 ABI drift");
 static_assert(sizeof(RinNetWifiInfoV1) == 80u,
               "RinNetWifiInfoV1 ABI drift");
 static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
@@ -230,6 +291,8 @@ _Static_assert(sizeof(RinNetIpGlobalStatisticsV1) == 56u,
                "RinNetIpGlobalStatisticsV1 ABI drift");
 _Static_assert(sizeof(RinNetUdpGlobalStatisticsV1) == 64u,
                "RinNetUdpGlobalStatisticsV1 ABI drift");
+_Static_assert(sizeof(RinNetTcpGlobalStatisticsV1) == 136u,
+               "RinNetTcpGlobalStatisticsV1 ABI drift");
 _Static_assert(sizeof(RinNetWifiInfoV1) == 80u,
                "RinNetWifiInfoV1 ABI drift");
 _Static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
@@ -249,5 +312,7 @@ int rin_net_get_ip_global_statistics(
     uint32_t address_family, RinNetIpGlobalStatisticsV1* out);
 int rin_net_get_udp_global_statistics(
     uint32_t address_family, RinNetUdpGlobalStatisticsV1* out);
+int rin_net_get_tcp_global_statistics(
+    uint32_t address_family, RinNetTcpGlobalStatisticsV1* out);
 
 #endif
