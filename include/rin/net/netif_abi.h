@@ -54,6 +54,22 @@ typedef struct RinNetPrimaryInfo {
     uint32_t signal_percent;
 } RinNetPrimaryInfo;
 
+/* Live counters owned by the target network platform owner.  This is kept
+ * separate from RinNetPrimaryInfo so the identity/configuration ABI remains
+ * stable while statistics can be sampled with its own generation binding. */
+#define RIN_NET_STATISTICS_VERSION 1u
+typedef struct RinNetInterfaceStatisticsV1 {
+    uint32_t version;
+    uint32_t struct_size;
+    uint64_t device_generation;
+    uint64_t rx_bytes;
+    uint64_t tx_bytes;
+    uint64_t rx_packets;
+    uint64_t tx_packets;
+    uint64_t rx_errors;
+    uint64_t tx_errors;
+} RinNetInterfaceStatisticsV1;
+
 /* Generation-bound Wi-Fi telemetry returned by the privileged network owner.
  * The SSID is copied only for the currently associated BSS; a disconnected
  * or stale provider returns no identity and keeps signal_percent unknown. */
@@ -127,6 +143,8 @@ typedef struct RinNetIPv6Info {
 #if defined(__cplusplus)
 static_assert(sizeof(RinNetPrimaryInfo) == 52u,
               "RinNetPrimaryInfo ABI drift");
+static_assert(sizeof(RinNetInterfaceStatisticsV1) == 64u,
+              "RinNetInterfaceStatisticsV1 ABI drift");
 static_assert(sizeof(RinNetWifiInfoV1) == 80u,
               "RinNetWifiInfoV1 ABI drift");
 static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
@@ -142,6 +160,8 @@ static_assert(sizeof(RinNetIPv6Info) == 36u,
 #else
 _Static_assert(sizeof(RinNetPrimaryInfo) == 52u,
                "RinNetPrimaryInfo ABI drift");
+_Static_assert(sizeof(RinNetInterfaceStatisticsV1) == 64u,
+               "RinNetInterfaceStatisticsV1 ABI drift");
 _Static_assert(sizeof(RinNetWifiInfoV1) == 80u,
                "RinNetWifiInfoV1 ABI drift");
 _Static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
@@ -155,5 +175,7 @@ _Static_assert(sizeof(RinIPv6Config) == 120u,
 _Static_assert(sizeof(RinNetIPv6Info) == 36u,
                "RinNetIPv6Info ABI drift");
 #endif
+
+int rin_net_get_interface_statistics(RinNetInterfaceStatisticsV1* out);
 
 #endif

@@ -436,6 +436,8 @@
 #define RIN_SYS_FILE_TO_SOCKET              0x8068u
 /* system. */
 #define RIN_SYS_SYSCALL_BATCH               0x8069u
+/* network. */
+#define RIN_SYS_NET_STATISTICS              0x806Au
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
