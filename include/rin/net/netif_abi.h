@@ -253,6 +253,93 @@ typedef struct RinNetIcmpGlobalStatisticsV1 {
     uint64_t packet_too_big_sent;
 } RinNetIcmpGlobalStatisticsV1;
 
+/* Version 2 adds the ICMP message classes exposed by the managed
+ * IcmpV4Statistics/IcmpV6Statistics contracts.  Version 1 remains available
+ * for consumers that only need the original product-owned subset. */
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_VERSION 2u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_ADDRESS_MASK 0x00010000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_ADDRESS_MASK_REQUEST 0x00020000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_REDIRECT 0x00040000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_SOURCE_QUENCH 0x00080000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_TIMESTAMP_REPLY 0x00100000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_TIMESTAMP_REQUEST 0x00200000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_MEMBERSHIP_QUERY 0x00400000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_MEMBERSHIP_REDUCTION 0x00800000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_MEMBERSHIP_REPORT 0x01000000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_NEIGHBOR_ADVERTISEMENT 0x02000000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_NEIGHBOR_SOLICIT 0x04000000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_REDIRECT 0x08000000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_ROUTER_ADVERTISEMENT 0x10000000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_ROUTER_SOLICIT 0x20000000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_V2_KNOWN_FLAGS \
+    (RIN_NET_ICMP_GLOBAL_STATISTICS_KNOWN_FLAGS | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_ADDRESS_MASK | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_ADDRESS_MASK_REQUEST | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_REDIRECT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_SOURCE_QUENCH | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_TIMESTAMP_REPLY | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V4_TIMESTAMP_REQUEST | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_MEMBERSHIP_QUERY | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_MEMBERSHIP_REDUCTION | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_MEMBERSHIP_REPORT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_NEIGHBOR_ADVERTISEMENT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_NEIGHBOR_SOLICIT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_REDIRECT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_ROUTER_ADVERTISEMENT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_V2_FLAG_V6_ROUTER_SOLICIT)
+
+typedef struct RinNetIcmpGlobalStatisticsV2 {
+    uint32_t version;
+    uint32_t struct_size;
+    uint64_t device_generation;
+    uint32_t address_family;
+    uint32_t supported_flags;
+    uint64_t messages_received;
+    uint64_t messages_sent;
+    uint64_t errors_received;
+    uint64_t errors_sent;
+    uint64_t destination_unreachable_received;
+    uint64_t destination_unreachable_sent;
+    uint64_t echo_replies_received;
+    uint64_t echo_replies_sent;
+    uint64_t echo_requests_received;
+    uint64_t echo_requests_sent;
+    uint64_t parameter_problems_received;
+    uint64_t parameter_problems_sent;
+    uint64_t time_exceeded_received;
+    uint64_t time_exceeded_sent;
+    uint64_t packet_too_big_received;
+    uint64_t packet_too_big_sent;
+    uint64_t address_mask_replies_received;
+    uint64_t address_mask_replies_sent;
+    uint64_t address_mask_requests_received;
+    uint64_t address_mask_requests_sent;
+    uint64_t redirects_v4_received;
+    uint64_t redirects_v4_sent;
+    uint64_t source_quenches_received;
+    uint64_t source_quenches_sent;
+    uint64_t timestamp_replies_received;
+    uint64_t timestamp_replies_sent;
+    uint64_t timestamp_requests_received;
+    uint64_t timestamp_requests_sent;
+    uint64_t membership_queries_received;
+    uint64_t membership_queries_sent;
+    uint64_t membership_reductions_received;
+    uint64_t membership_reductions_sent;
+    uint64_t membership_reports_received;
+    uint64_t membership_reports_sent;
+    uint64_t neighbor_advertisements_received;
+    uint64_t neighbor_advertisements_sent;
+    uint64_t neighbor_solicits_received;
+    uint64_t neighbor_solicits_sent;
+    uint64_t redirects_v6_received;
+    uint64_t redirects_v6_sent;
+    uint64_t router_advertisements_received;
+    uint64_t router_advertisements_sent;
+    uint64_t router_solicits_received;
+    uint64_t router_solicits_sent;
+} RinNetIcmpGlobalStatisticsV2;
+
 /* Generation-bound Wi-Fi telemetry returned by the privileged network owner.
  * The SSID is copied only for the currently associated BSS; a disconnected
  * or stale provider returns no identity and keeps signal_percent unknown. */
@@ -334,6 +421,8 @@ static_assert(sizeof(RinNetUdpGlobalStatisticsV1) == 64u,
               "RinNetUdpGlobalStatisticsV1 ABI drift");
 static_assert(sizeof(RinNetTcpGlobalStatisticsV1) == 136u,
               "RinNetTcpGlobalStatisticsV1 ABI drift");
+static_assert(sizeof(RinNetIcmpGlobalStatisticsV2) == 376u,
+              "RinNetIcmpGlobalStatisticsV2 ABI drift");
 static_assert(sizeof(RinNetWifiInfoV1) == 80u,
               "RinNetWifiInfoV1 ABI drift");
 static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
@@ -359,6 +448,8 @@ _Static_assert(sizeof(RinNetTcpGlobalStatisticsV1) == 136u,
                "RinNetTcpGlobalStatisticsV1 ABI drift");
 _Static_assert(sizeof(RinNetIcmpGlobalStatisticsV1) == 152u,
                "RinNetIcmpGlobalStatisticsV1 ABI drift");
+_Static_assert(sizeof(RinNetIcmpGlobalStatisticsV2) == 376u,
+               "RinNetIcmpGlobalStatisticsV2 ABI drift");
 _Static_assert(sizeof(RinNetWifiInfoV1) == 80u,
                "RinNetWifiInfoV1 ABI drift");
 _Static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
@@ -382,5 +473,7 @@ int rin_net_get_tcp_global_statistics(
     uint32_t address_family, RinNetTcpGlobalStatisticsV1* out);
 int rin_net_get_icmp_global_statistics(
     uint32_t address_family, RinNetIcmpGlobalStatisticsV1* out);
+int rin_net_get_icmp_global_statistics_v2(
+    uint32_t address_family, RinNetIcmpGlobalStatisticsV2* out);
 
 #endif
