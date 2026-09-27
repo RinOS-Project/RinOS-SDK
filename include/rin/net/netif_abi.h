@@ -189,6 +189,70 @@ typedef struct RinNetTcpGlobalStatisticsV1 {
     uint64_t minimum_transmission_timeout;
 } RinNetTcpGlobalStatisticsV1;
 
+/* Generation-bound ICMP-layer counters.  The packet owner exposes the
+ * message classes it can account for at both ingress and successful egress;
+ * consumers must inspect supported_flags before reading a value. */
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_VERSION 1u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_AF_IPV4 4u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_AF_IPV6 6u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_MESSAGES_RECEIVED 0x00000001u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_MESSAGES_SENT 0x00000002u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ERRORS_RECEIVED 0x00000004u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ERRORS_SENT 0x00000008u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_DEST_UNREACHABLE_RECEIVED 0x00000010u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_DEST_UNREACHABLE_SENT 0x00000020u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ECHO_REPLIES_RECEIVED 0x00000040u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ECHO_REPLIES_SENT 0x00000080u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ECHO_REQUESTS_RECEIVED 0x00000100u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ECHO_REQUESTS_SENT 0x00000200u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_PARAMETER_PROBLEMS_RECEIVED 0x00000400u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_PARAMETER_PROBLEMS_SENT 0x00000800u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_TIME_EXCEEDED_RECEIVED 0x00001000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_TIME_EXCEEDED_SENT 0x00002000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_PACKET_TOO_BIG_RECEIVED 0x00004000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_PACKET_TOO_BIG_SENT 0x00008000u
+#define RIN_NET_ICMP_GLOBAL_STATISTICS_KNOWN_FLAGS \
+    (RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_MESSAGES_RECEIVED | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_MESSAGES_SENT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ERRORS_RECEIVED | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ERRORS_SENT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_DEST_UNREACHABLE_RECEIVED | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_DEST_UNREACHABLE_SENT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ECHO_REPLIES_RECEIVED | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ECHO_REPLIES_SENT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ECHO_REQUESTS_RECEIVED | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_ECHO_REQUESTS_SENT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_PARAMETER_PROBLEMS_RECEIVED | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_PARAMETER_PROBLEMS_SENT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_TIME_EXCEEDED_RECEIVED | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_TIME_EXCEEDED_SENT | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_PACKET_TOO_BIG_RECEIVED | \
+     RIN_NET_ICMP_GLOBAL_STATISTICS_FLAG_PACKET_TOO_BIG_SENT)
+
+typedef struct RinNetIcmpGlobalStatisticsV1 {
+    uint32_t version;
+    uint32_t struct_size;
+    uint64_t device_generation;
+    uint32_t address_family;
+    uint32_t supported_flags;
+    uint64_t messages_received;
+    uint64_t messages_sent;
+    uint64_t errors_received;
+    uint64_t errors_sent;
+    uint64_t destination_unreachable_received;
+    uint64_t destination_unreachable_sent;
+    uint64_t echo_replies_received;
+    uint64_t echo_replies_sent;
+    uint64_t echo_requests_received;
+    uint64_t echo_requests_sent;
+    uint64_t parameter_problems_received;
+    uint64_t parameter_problems_sent;
+    uint64_t time_exceeded_received;
+    uint64_t time_exceeded_sent;
+    uint64_t packet_too_big_received;
+    uint64_t packet_too_big_sent;
+} RinNetIcmpGlobalStatisticsV1;
+
 /* Generation-bound Wi-Fi telemetry returned by the privileged network owner.
  * The SSID is copied only for the currently associated BSS; a disconnected
  * or stale provider returns no identity and keeps signal_percent unknown. */
@@ -293,6 +357,8 @@ _Static_assert(sizeof(RinNetUdpGlobalStatisticsV1) == 64u,
                "RinNetUdpGlobalStatisticsV1 ABI drift");
 _Static_assert(sizeof(RinNetTcpGlobalStatisticsV1) == 136u,
                "RinNetTcpGlobalStatisticsV1 ABI drift");
+_Static_assert(sizeof(RinNetIcmpGlobalStatisticsV1) == 152u,
+               "RinNetIcmpGlobalStatisticsV1 ABI drift");
 _Static_assert(sizeof(RinNetWifiInfoV1) == 80u,
                "RinNetWifiInfoV1 ABI drift");
 _Static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
@@ -314,5 +380,7 @@ int rin_net_get_udp_global_statistics(
     uint32_t address_family, RinNetUdpGlobalStatisticsV1* out);
 int rin_net_get_tcp_global_statistics(
     uint32_t address_family, RinNetTcpGlobalStatisticsV1* out);
+int rin_net_get_icmp_global_statistics(
+    uint32_t address_family, RinNetIcmpGlobalStatisticsV1* out);
 
 #endif
