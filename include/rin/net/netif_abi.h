@@ -70,6 +70,34 @@ typedef struct RinNetInterfaceStatisticsV1 {
     uint64_t tx_errors;
 } RinNetInterfaceStatisticsV1;
 
+/* Generation-bound IP-layer counters.  These counters are deliberately
+ * separate from RinNetInterfaceStatisticsV1: L2 driver accounting cannot be
+ * substituted for IP protocol statistics without changing their meaning. */
+#define RIN_NET_IP_GLOBAL_STATISTICS_VERSION 1u
+#define RIN_NET_IP_GLOBAL_STATISTICS_AF_IPV4 4u
+#define RIN_NET_IP_GLOBAL_STATISTICS_AF_IPV6 6u
+#define RIN_NET_IP_GLOBAL_STATISTICS_FLAG_OUTPUT_PACKET_REQUESTS 0x00000001u
+#define RIN_NET_IP_GLOBAL_STATISTICS_FLAG_RECEIVED_PACKETS 0x00000002u
+#define RIN_NET_IP_GLOBAL_STATISTICS_FLAG_RECEIVED_PACKETS_DELIVERED 0x00000004u
+#define RIN_NET_IP_GLOBAL_STATISTICS_FLAG_RECEIVED_PACKETS_FORWARDED 0x00000008u
+#define RIN_NET_IP_GLOBAL_STATISTICS_KNOWN_FLAGS \
+    (RIN_NET_IP_GLOBAL_STATISTICS_FLAG_OUTPUT_PACKET_REQUESTS | \
+     RIN_NET_IP_GLOBAL_STATISTICS_FLAG_RECEIVED_PACKETS | \
+     RIN_NET_IP_GLOBAL_STATISTICS_FLAG_RECEIVED_PACKETS_DELIVERED | \
+     RIN_NET_IP_GLOBAL_STATISTICS_FLAG_RECEIVED_PACKETS_FORWARDED)
+
+typedef struct RinNetIpGlobalStatisticsV1 {
+    uint32_t version;
+    uint32_t struct_size;
+    uint64_t device_generation;
+    uint32_t address_family;
+    uint32_t supported_flags;
+    uint64_t output_packet_requests;
+    uint64_t received_packets;
+    uint64_t received_packets_delivered;
+    uint64_t received_packets_forwarded;
+} RinNetIpGlobalStatisticsV1;
+
 /* Generation-bound Wi-Fi telemetry returned by the privileged network owner.
  * The SSID is copied only for the currently associated BSS; a disconnected
  * or stale provider returns no identity and keeps signal_percent unknown. */
@@ -145,6 +173,8 @@ static_assert(sizeof(RinNetPrimaryInfo) == 52u,
               "RinNetPrimaryInfo ABI drift");
 static_assert(sizeof(RinNetInterfaceStatisticsV1) == 64u,
               "RinNetInterfaceStatisticsV1 ABI drift");
+static_assert(sizeof(RinNetIpGlobalStatisticsV1) == 56u,
+              "RinNetIpGlobalStatisticsV1 ABI drift");
 static_assert(sizeof(RinNetWifiInfoV1) == 80u,
               "RinNetWifiInfoV1 ABI drift");
 static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
@@ -162,6 +192,8 @@ _Static_assert(sizeof(RinNetPrimaryInfo) == 52u,
                "RinNetPrimaryInfo ABI drift");
 _Static_assert(sizeof(RinNetInterfaceStatisticsV1) == 64u,
                "RinNetInterfaceStatisticsV1 ABI drift");
+_Static_assert(sizeof(RinNetIpGlobalStatisticsV1) == 56u,
+               "RinNetIpGlobalStatisticsV1 ABI drift");
 _Static_assert(sizeof(RinNetWifiInfoV1) == 80u,
                "RinNetWifiInfoV1 ABI drift");
 _Static_assert(__builtin_offsetof(RinNetPrimaryInfo, device_generation) == 22u,
@@ -177,5 +209,7 @@ _Static_assert(sizeof(RinNetIPv6Info) == 36u,
 #endif
 
 int rin_net_get_interface_statistics(RinNetInterfaceStatisticsV1* out);
+int rin_net_get_ip_global_statistics(
+    uint32_t address_family, RinNetIpGlobalStatisticsV1* out);
 
 #endif
