@@ -438,10 +438,10 @@
 #define RIN_SYS_SYSCALL_BATCH               0x8069u
 /* network. */
 #define RIN_SYS_NET_STATISTICS              0x806Au
-/* network. */
-#define RIN_SYS_NET_IP_GLOBAL_STATISTICS    0x806Cu
 /* system. */
 #define RIN_SYS_SDK_CALL                    0x806Bu
+/* network. */
+#define RIN_SYS_NET_IP_GLOBAL_STATISTICS    0x806Cu
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
