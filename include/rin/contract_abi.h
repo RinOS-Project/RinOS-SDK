@@ -58,6 +58,7 @@ typedef int32_t RinResultCode;
 #define RIN_CREDENTIAL_SET_VERSION          1u
 #define RIN_CREDENTIAL_SET_UID              1u
 #define RIN_CREDENTIAL_SET_GID              2u
+#define RIN_CREDENTIAL_SET_EUID             3u
 #define RIN_SUPPLEMENTARY_GROUPS_VERSION    1u
 #define RIN_SUPPLEMENTARY_GROUPS_OPERATION_SET 1u
 #define RIN_ACCOUNT_QUERY_VERSION           1u
