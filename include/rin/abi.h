@@ -274,6 +274,25 @@ typedef struct RinSdkBackendV1 {
     uint64_t reserved[5];
 } RinSdkBackendV1;
 
+/* Public bridge for a backend whose transport is selected by a target
+ * syscall table.  The callback receives the architecture-neutral raw slots;
+ * it does not expose private kernel target-table types to applications. */
+typedef RinResult (*RinSdkTargetInvokeV1)(
+    uint64_t context, uint64_t syscall_number,
+    uint64_t arguments_address, uint64_t arguments_size,
+    uint64_t library_id, uint64_t operation,
+    uint64_t response_address, uint64_t response_size);
+
+typedef struct RinSdkTargetBackendV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t context;
+    uint64_t syscall_number;
+    /* Fixed-width code address. Its high 32 bits must be zero on i686. */
+    uint64_t invoke;
+    uint64_t reserved[4];
+} RinSdkTargetBackendV1;
+
 enum {
     RIN_SDK_LIBRARY_BASE = 1,
     RIN_SDK_LIBRARY_IPC = 2,
@@ -287,6 +306,8 @@ enum {
 };
 
 RIN_SDK_API RinResult rin_sdk_bind_backend_v1(const RinSdkBackendV1* backend);
+RIN_SDK_API RinResult rin_sdk_bind_target_backend_v1(
+    const RinSdkTargetBackendV1* backend);
 RIN_SDK_API RinResult rin_sdk_invoke_v1(
     uint32_t library_id, uint32_t operation,
     const void* request, uint32_t request_size,
@@ -298,12 +319,16 @@ static_assert(sizeof(RinStringV1) == 16, "RinStringV1 ABI drift");
 static_assert(sizeof(RinSliceV1) == 16, "RinSliceV1 ABI drift");
 #if !defined(RIN_SDK_KERNEL_INTERNAL_ABI)
 static_assert(sizeof(RinSdkBackendV1) == 64, "RinSdkBackendV1 ABI drift");
+static_assert(sizeof(RinSdkTargetBackendV1) == 64,
+              "RinSdkTargetBackendV1 ABI drift");
 #endif
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinStringV1) == 16, "RinStringV1 ABI drift");
 _Static_assert(sizeof(RinSliceV1) == 16, "RinSliceV1 ABI drift");
 #if !defined(RIN_SDK_KERNEL_INTERNAL_ABI)
 _Static_assert(sizeof(RinSdkBackendV1) == 64, "RinSdkBackendV1 ABI drift");
+_Static_assert(sizeof(RinSdkTargetBackendV1) == 64,
+               "RinSdkTargetBackendV1 ABI drift");
 #endif
 #endif
 

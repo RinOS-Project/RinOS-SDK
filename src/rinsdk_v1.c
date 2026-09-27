@@ -23,6 +23,7 @@ static void rin_sdk_zero_bytes(void* destination, uint64_t size) {
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_CORE)
 static RinSdkBackendV1 g_backend;
+static RinSdkTargetBackendV1 g_target_backend;
 static volatile uint32_t g_backend_state;
 #endif
 
@@ -79,6 +80,22 @@ static int versioned(const void* value, uint32_t minimum_size) {
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_CORE)
+static RinResult rin_sdk_target_backend_invoke(
+    uint64_t ignored_context, uint32_t library_id, uint32_t operation,
+    const void* request, uint32_t request_size,
+    void* response, uint32_t response_size) {
+    RinSdkTargetInvokeV1 invoke;
+
+    (void)ignored_context;
+    invoke = (RinSdkTargetInvokeV1)(uintptr_t)g_target_backend.invoke;
+    if (!invoke) return RIN_ERROR_ABI_MISMATCH;
+    return invoke(
+        g_target_backend.context, g_target_backend.syscall_number,
+        (uint64_t)(uintptr_t)request, (uint64_t)request_size,
+        (uint64_t)library_id, (uint64_t)operation,
+        (uint64_t)(uintptr_t)response, (uint64_t)response_size);
+}
+
 RinResult rin_sdk_bind_backend_v1(const RinSdkBackendV1* backend) {
     if (!backend || backend->struct_size < sizeof(RinSdkBackendV1) ||
         backend->version != RIN_SDK_STRUCT_VERSION_1 || !backend->invoke ||
@@ -89,6 +106,26 @@ RinResult rin_sdk_bind_backend_v1(const RinSdkBackendV1* backend) {
         return RIN_ERROR_BUSY;
     }
     rin_sdk_copy_bytes(&g_backend, backend, sizeof(g_backend));
+    __atomic_store_n(&g_backend_state, 2u, __ATOMIC_RELEASE);
+    return RIN_SUCCESS;
+}
+
+RinResult rin_sdk_bind_target_backend_v1(
+    const RinSdkTargetBackendV1* backend) {
+    if (!backend || backend->struct_size < sizeof(RinSdkTargetBackendV1) ||
+        backend->version != RIN_SDK_STRUCT_VERSION_1 ||
+        backend->syscall_number == 0u || !backend->invoke ||
+        backend->invoke > (uint64_t)UINTPTR_MAX) {
+        return RIN_ERROR_ABI_MISMATCH;
+    }
+    if (!__sync_bool_compare_and_swap(&g_backend_state, 0u, 1u)) {
+        return RIN_ERROR_BUSY;
+    }
+    rin_sdk_copy_bytes(&g_target_backend, backend, sizeof(g_target_backend));
+    g_backend.struct_size = sizeof(g_backend);
+    g_backend.version = RIN_SDK_STRUCT_VERSION_1;
+    g_backend.context = 0u;
+    g_backend.invoke = (uint64_t)(uintptr_t)&rin_sdk_target_backend_invoke;
     __atomic_store_n(&g_backend_state, 2u, __ATOMIC_RELEASE);
     return RIN_SUCCESS;
 }
