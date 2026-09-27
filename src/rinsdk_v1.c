@@ -51,6 +51,7 @@ enum {
     FS_PATH_RENAME = RIN_FS_OPERATION_PATH_RENAME,
     FS_PORTAL_OPEN = RIN_FS_OPERATION_PORTAL_OPEN,
     FS_DIRECTORY_NEXT_BATCH = RIN_FS_OPERATION_DIRECTORY_NEXT_BATCH,
+    FS_FILE_STAT = RIN_FS_OPERATION_FILE_STAT,
     NET_SOCKET_CREATE = 1, NET_SOCKET_CONNECT, NET_SOCKET_SEND,
     NET_SOCKET_RECEIVE, NET_DNS_RESOLVE, NET_TLS_CONNECT, NET_HTTP_EXECUTE,
     NET_TLS_SEND, NET_TLS_RECEIVE, NET_TLS_SHUTDOWN,
@@ -491,6 +492,28 @@ RinResult rin_file_seek_v1(const RinFileSeekV1* request, uint64_t* position) {
     return rin_sdk_invoke_scalar_output_v1(
         RIN_SDK_LIBRARY_FS, FS_FILE_SEEK, request, sizeof(*request), position,
         sizeof(*position));
+}
+RinResult rin_file_stat_v1(RinFile file, RinFileStatV1* stat) {
+    RinSdkArgsV1 request = {};
+    RinResult stat_result;
+    if (file == RIN_HANDLE_INVALID || !stat)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (!versioned(stat, sizeof(*stat))) return RIN_ERROR_ABI_MISMATCH;
+    rin_sdk_zero_bytes(stat, sizeof(*stat));
+    stat->struct_size = sizeof(*stat);
+    stat->version = RIN_SDK_STRUCT_VERSION_1;
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = file;
+    stat_result = rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_STAT,
+                                    &request, sizeof(request), stat,
+                                    sizeof(*stat));
+    if (stat_result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(stat, sizeof(*stat));
+        stat->struct_size = sizeof(*stat);
+        stat->version = RIN_SDK_STRUCT_VERSION_1;
+    }
+    return stat_result;
 }
 RinResult rin_file_truncate_v1(const RinFileTruncateV1* request) {
     if (!versioned(request, sizeof(*request))) return RIN_ERROR_ABI_MISMATCH;

@@ -33,7 +33,8 @@ enum {
     RIN_FS_OPERATION_PATH_UNLINK = 22,
     RIN_FS_OPERATION_PATH_RENAME = 23,
     RIN_FS_OPERATION_PORTAL_OPEN = 24,
-    RIN_FS_OPERATION_DIRECTORY_NEXT_BATCH = 25
+    RIN_FS_OPERATION_DIRECTORY_NEXT_BATCH = 25,
+    RIN_FS_OPERATION_FILE_STAT = 26
 };
 
 #define RIN_FS_PATH_UNLINK_DIRECTORY UINT32_C(1)
@@ -194,6 +195,7 @@ RIN_SDK_API RinResult rin_file_watch_next_v1(RinFileWatch watch, uint64_t timeou
 RIN_SDK_API RinResult rin_file_close_v1(RinFile file);
 RIN_SDK_API RinResult rin_directory_close_v1(RinDirectory directory);
 RIN_SDK_API RinResult rin_file_seek_v1(const RinFileSeekV1* request, uint64_t* position);
+RIN_SDK_API RinResult rin_file_stat_v1(RinFile file, RinFileStatV1* stat);
 RIN_SDK_API RinResult rin_file_truncate_v1(const RinFileTruncateV1* request);
 RIN_SDK_API RinResult rin_directory_sync_v1(RinDirectory directory);
 RIN_SDK_API RinResult rin_path_stat_v1(const RinFsPathRequestV1* request, RinFileStatV1* stat);
