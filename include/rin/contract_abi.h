@@ -18,6 +18,7 @@
 typedef int32_t RinResultCode;
 
 /* Public fixed-value constants shared by all RinNative clients. */
+#define RIN_INSTALL_SOURCE_PAYLOAD_COUNT    6u
 #define RIN_ITIMER_ABI_VERSION              1u
 #define RIN_TIMER_ABI_VERSION               1u
 #define RIN_TIMER_MAX_SLOTS                 16u
@@ -792,6 +793,29 @@ typedef struct RinInstallSourceReadV1 {
     uint32_t read_size;
     uint32_t reserved;
 } RinInstallSourceReadV1;
+
+typedef struct RinInstallSourcePayloadSetV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t payload_count;
+    uint32_t reserved0;
+    uint8_t manifest_sha256[32];
+    uint32_t payload_sizes[6];
+    uint8_t payload_sha256[192];
+} RinInstallSourcePayloadSetV1;
+
+typedef struct RinInstallSourcePayloadReadV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t source_handle;
+    uint64_t target_handle;
+    uint32_t payload_id;
+    uint32_t read_size;
+    uint64_t offset;
+    uint64_t buffer;
+} RinInstallSourcePayloadReadV1;
 
 typedef struct RinInstallTargetSessionV1 {
     uint32_t struct_size;
@@ -1615,6 +1639,25 @@ static_assert(offsetof(RinInstallSourceReadV1, offset) == 16, "RinInstallSourceR
 static_assert(offsetof(RinInstallSourceReadV1, buffer) == 24, "RinInstallSourceReadV1.buffer ABI drift");
 static_assert(offsetof(RinInstallSourceReadV1, read_size) == 32, "RinInstallSourceReadV1.read_size ABI drift");
 static_assert(offsetof(RinInstallSourceReadV1, reserved) == 36, "RinInstallSourceReadV1.reserved ABI drift");
+static_assert(sizeof(RinInstallSourcePayloadSetV1) == 264, "RinInstallSourcePayloadSetV1 ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadSetV1, struct_size) == 0, "RinInstallSourcePayloadSetV1.struct_size ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadSetV1, version) == 4, "RinInstallSourcePayloadSetV1.version ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadSetV1, flags) == 6, "RinInstallSourcePayloadSetV1.flags ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadSetV1, payload_count) == 8, "RinInstallSourcePayloadSetV1.payload_count ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadSetV1, reserved0) == 12, "RinInstallSourcePayloadSetV1.reserved0 ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadSetV1, manifest_sha256) == 16, "RinInstallSourcePayloadSetV1.manifest_sha256 ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadSetV1, payload_sizes) == 48, "RinInstallSourcePayloadSetV1.payload_sizes ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadSetV1, payload_sha256) == 72, "RinInstallSourcePayloadSetV1.payload_sha256 ABI drift");
+static_assert(sizeof(RinInstallSourcePayloadReadV1) == 48, "RinInstallSourcePayloadReadV1 ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadReadV1, struct_size) == 0, "RinInstallSourcePayloadReadV1.struct_size ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadReadV1, version) == 4, "RinInstallSourcePayloadReadV1.version ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadReadV1, flags) == 6, "RinInstallSourcePayloadReadV1.flags ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadReadV1, source_handle) == 8, "RinInstallSourcePayloadReadV1.source_handle ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadReadV1, target_handle) == 16, "RinInstallSourcePayloadReadV1.target_handle ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadReadV1, payload_id) == 24, "RinInstallSourcePayloadReadV1.payload_id ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadReadV1, read_size) == 28, "RinInstallSourcePayloadReadV1.read_size ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadReadV1, offset) == 32, "RinInstallSourcePayloadReadV1.offset ABI drift");
+static_assert(offsetof(RinInstallSourcePayloadReadV1, buffer) == 40, "RinInstallSourcePayloadReadV1.buffer ABI drift");
 static_assert(sizeof(RinInstallTargetSessionV1) == 152, "RinInstallTargetSessionV1 ABI drift");
 static_assert(offsetof(RinInstallTargetSessionV1, struct_size) == 0, "RinInstallTargetSessionV1.struct_size ABI drift");
 static_assert(offsetof(RinInstallTargetSessionV1, version) == 4, "RinInstallTargetSessionV1.version ABI drift");
@@ -2357,6 +2400,25 @@ _Static_assert(offsetof(RinInstallSourceReadV1, offset) == 16, "RinInstallSource
 _Static_assert(offsetof(RinInstallSourceReadV1, buffer) == 24, "RinInstallSourceReadV1.buffer ABI drift");
 _Static_assert(offsetof(RinInstallSourceReadV1, read_size) == 32, "RinInstallSourceReadV1.read_size ABI drift");
 _Static_assert(offsetof(RinInstallSourceReadV1, reserved) == 36, "RinInstallSourceReadV1.reserved ABI drift");
+_Static_assert(sizeof(RinInstallSourcePayloadSetV1) == 264, "RinInstallSourcePayloadSetV1 ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadSetV1, struct_size) == 0, "RinInstallSourcePayloadSetV1.struct_size ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadSetV1, version) == 4, "RinInstallSourcePayloadSetV1.version ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadSetV1, flags) == 6, "RinInstallSourcePayloadSetV1.flags ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadSetV1, payload_count) == 8, "RinInstallSourcePayloadSetV1.payload_count ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadSetV1, reserved0) == 12, "RinInstallSourcePayloadSetV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadSetV1, manifest_sha256) == 16, "RinInstallSourcePayloadSetV1.manifest_sha256 ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadSetV1, payload_sizes) == 48, "RinInstallSourcePayloadSetV1.payload_sizes ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadSetV1, payload_sha256) == 72, "RinInstallSourcePayloadSetV1.payload_sha256 ABI drift");
+_Static_assert(sizeof(RinInstallSourcePayloadReadV1) == 48, "RinInstallSourcePayloadReadV1 ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadReadV1, struct_size) == 0, "RinInstallSourcePayloadReadV1.struct_size ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadReadV1, version) == 4, "RinInstallSourcePayloadReadV1.version ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadReadV1, flags) == 6, "RinInstallSourcePayloadReadV1.flags ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadReadV1, source_handle) == 8, "RinInstallSourcePayloadReadV1.source_handle ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadReadV1, target_handle) == 16, "RinInstallSourcePayloadReadV1.target_handle ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadReadV1, payload_id) == 24, "RinInstallSourcePayloadReadV1.payload_id ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadReadV1, read_size) == 28, "RinInstallSourcePayloadReadV1.read_size ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadReadV1, offset) == 32, "RinInstallSourcePayloadReadV1.offset ABI drift");
+_Static_assert(offsetof(RinInstallSourcePayloadReadV1, buffer) == 40, "RinInstallSourcePayloadReadV1.buffer ABI drift");
 _Static_assert(sizeof(RinInstallTargetSessionV1) == 152, "RinInstallTargetSessionV1 ABI drift");
 _Static_assert(offsetof(RinInstallTargetSessionV1, struct_size) == 0, "RinInstallTargetSessionV1.struct_size ABI drift");
 _Static_assert(offsetof(RinInstallTargetSessionV1, version) == 4, "RinInstallTargetSessionV1.version ABI drift");
