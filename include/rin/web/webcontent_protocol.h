@@ -143,7 +143,9 @@ enum {
      * for older clients which only consume lifecycle events. */
     RIN_WEBCONTENT_CMD_GET_DOWNLOAD_EVENT_V2 = 27,
     RIN_WEBCONTENT_CMD_RESUME_DOWNLOAD_V1 = 28,
-    RIN_WEBCONTENT_CMD_PAUSE_DOWNLOAD_V1 = 29
+    RIN_WEBCONTENT_CMD_PAUSE_DOWNLOAD_V1 = 29,
+    RIN_WEBCONTENT_CMD_GET_DOWNLOAD_EVENT_V3 = 30,
+    RIN_WEBCONTENT_CMD_RESUME_DOWNLOAD_V2 = 31
 };
 
 enum {
@@ -264,6 +266,8 @@ enum {
 };
 
 #define RIN_WEBCONTENT_DOWNLOAD_EVENT_V2_VERSION UINT16_C(2)
+#define RIN_WEBCONTENT_DOWNLOAD_EVENT_V3_VERSION UINT16_C(3)
+#define RIN_WEBCONTENT_DOWNLOAD_RESUME_V2_VERSION UINT16_C(2)
 #define RIN_WEBCONTENT_DOWNLOAD_VALIDATOR_MAX UINT32_C(128)
 #define RIN_WEBCONTENT_DOWNLOAD_MAX_BYTES UINT64_C(134217728)
 
@@ -655,6 +659,28 @@ typedef struct RinWebContentDownloadEventV2 {
     uint64_t reserved[2];
 } RinWebContentDownloadEventV2;
 
+/* V3 adds the privacy-filtered document referrer to the durable download
+ * event. V2 remains layout-compatible for existing clients. */
+typedef struct RinWebContentDownloadEventV3 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t event;
+    uint32_t revision;
+    uint64_t transfer_id;
+    uint64_t timestamp_ms;
+    uint64_t size_bytes;
+    uint64_t committed_bytes;
+    uint64_t generation;
+    uint32_t failure_status;
+    uint32_t reserved0;
+    char url[RIN_WEBCONTENT_URL_MAX];
+    char referrer[RIN_WEBCONTENT_URL_MAX];
+    char filename[RIN_WEBCONTENT_FILE_PICKER_NAME_MAX];
+    char validator[RIN_WEBCONTENT_DOWNLOAD_VALIDATOR_MAX];
+    uint64_t reserved[2];
+} RinWebContentDownloadEventV3;
+
 /* Browser supplies only the authenticated durable receipt identity when it
  * asks WebContent to issue a RequestServer Range request.  The FileDownloader
  * reacquires the existing File Manager stage and independently validates the
@@ -672,6 +698,21 @@ typedef struct RinWebContentDownloadResumeV1 {
     char validator[RIN_WEBCONTENT_DOWNLOAD_VALIDATOR_MAX];
     uint64_t reserved[2];
 } RinWebContentDownloadResumeV1;
+
+typedef struct RinWebContentDownloadResumeV2 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t transfer_id;
+    uint64_t generation;
+    uint64_t total_bytes;
+    uint64_t committed_bytes;
+    char url[RIN_WEBCONTENT_URL_MAX];
+    char referrer[RIN_WEBCONTENT_URL_MAX];
+    char filename[RIN_WEBCONTENT_FILE_PICKER_NAME_MAX];
+    char validator[RIN_WEBCONTENT_DOWNLOAD_VALIDATOR_MAX];
+    uint64_t reserved[2];
+} RinWebContentDownloadResumeV2;
 
 /* WebContent publishes a renderer-owned semantic snapshot as a response to
  * an explicit Browser poll.  This keeps the socket request/response model
@@ -771,8 +812,12 @@ static_assert(sizeof(RinWebContentDownloadEventV1) == 2368u,
               "WebContent download event ABI drift");
 static_assert(sizeof(RinWebContentDownloadEventV2) == 2512u,
               "WebContent download event v2 ABI drift");
+static_assert(sizeof(RinWebContentDownloadEventV3) == 4560u,
+              "WebContent download event v3 ABI drift");
 static_assert(sizeof(RinWebContentDownloadResumeV1) == 2488u,
               "WebContent download resume ABI drift");
+static_assert(sizeof(RinWebContentDownloadResumeV2) == 4536u,
+              "WebContent download resume v2 ABI drift");
 static_assert(sizeof(RinWebContentAccessibilityTextV1) == 196u,
               "WebContent accessibility text ABI drift");
 static_assert(sizeof(RinWebContentAccessibilityRequestV1) == 8u,
@@ -818,8 +863,12 @@ _Static_assert(sizeof(RinWebContentDownloadEventV1) == 2368u,
                "WebContent download event ABI drift");
 _Static_assert(sizeof(RinWebContentDownloadEventV2) == 2512u,
                "WebContent download event v2 ABI drift");
+_Static_assert(sizeof(RinWebContentDownloadEventV3) == 4560u,
+               "WebContent download event v3 ABI drift");
 _Static_assert(sizeof(RinWebContentDownloadResumeV1) == 2488u,
                "WebContent download resume ABI drift");
+_Static_assert(sizeof(RinWebContentDownloadResumeV2) == 4536u,
+               "WebContent download resume v2 ABI drift");
 _Static_assert(sizeof(RinWebContentAccessibilityTextV1) == 196u,
                "WebContent accessibility text ABI drift");
 _Static_assert(sizeof(RinWebContentAccessibilityRequestV1) == 8u,
