@@ -145,7 +145,9 @@ enum {
     RIN_WEBCONTENT_CMD_RESUME_DOWNLOAD_V1 = 28,
     RIN_WEBCONTENT_CMD_PAUSE_DOWNLOAD_V1 = 29,
     RIN_WEBCONTENT_CMD_GET_DOWNLOAD_EVENT_V3 = 30,
-    RIN_WEBCONTENT_CMD_RESUME_DOWNLOAD_V2 = 31
+    RIN_WEBCONTENT_CMD_RESUME_DOWNLOAD_V2 = 31,
+    /* Variable-sized, authenticated CacheStorage data-plane request. */
+    RIN_WEBCONTENT_CMD_CACHE_STORAGE_OWNER_V1 = 32
 };
 
 enum {
@@ -158,7 +160,22 @@ enum {
     /* Authorize one exact Cache.add()/addAll() fetch URL before network I/O. */
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_AUTHORIZE_CACHE_FETCH = 5,
     /* Query the Browser-owned notification decision for the current document. */
-    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_QUERY_NOTIFICATION_PERMISSION = 6
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_QUERY_NOTIFICATION_PERMISSION = 6,
+    /* Stage, commit, or discard a WebContent CacheStorage write batch. */
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_BEGIN_CACHE_BATCH = 7,
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_COMMIT_CACHE_BATCH = 8,
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_ABORT_CACHE_BATCH = 9
+};
+
+enum {
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_SET = 1,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_REMOVE = 2,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_SET_CACHE_NAME = 3,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_REMOVE_CACHE_NAME = 4,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_RESULT_REJECTED = 0,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_RESULT_COMMITTED = 1,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_MAX_KEY_BYTES = 16u * 1024u,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_MAX_VALUE_BYTES = 16u * 1024u * 1024u
 };
 
 enum {
@@ -471,6 +488,30 @@ typedef struct RinWebContentServiceWorkerOwnerResponseV1 {
     char scope[RIN_WEBCONTENT_URL_MAX];
     uint64_t reserved[2];
 } RinWebContentServiceWorkerOwnerResponseV1;
+
+/* The request payload is this header followed by origin, storage key, then
+ * value bytes.  Lengths exclude terminators.  The page id in the message
+ * header and owner_generation jointly bind the mutation to the live page and
+ * Browser profile generation. */
+typedef struct RinWebContentCacheStorageOwnerRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t operation;
+    uint64_t owner_generation;
+    uint32_t origin_size;
+    uint32_t key_size;
+    uint32_t value_size;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinWebContentCacheStorageOwnerRequestV1;
+
+typedef struct RinWebContentCacheStorageOwnerResponseV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t result;
+    uint64_t owner_generation;
+    uint64_t reserved;
+} RinWebContentCacheStorageOwnerResponseV1;
 
 /* The Browser polls a page so WebContent never writes unsolicited bytes into
  * an in-flight request/response exchange. after_request_id prevents replay of
@@ -786,6 +827,10 @@ static_assert(sizeof(RinWebContentServiceWorkerOwnerRequestV1) == 8232u,
               "WebContent ServiceWorker owner request ABI drift");
 static_assert(sizeof(RinWebContentServiceWorkerOwnerResponseV1) == 6184u,
               "WebContent ServiceWorker owner response ABI drift");
+static_assert(sizeof(RinWebContentCacheStorageOwnerRequestV1) == 48u,
+              "WebContent CacheStorage owner request ABI drift");
+static_assert(sizeof(RinWebContentCacheStorageOwnerResponseV1) == 24u,
+              "WebContent CacheStorage owner response ABI drift");
 static_assert(sizeof(RinWebContentWebAuthnPollV1) == 32u,
               "WebContent WebAuthn poll ABI drift");
 static_assert(sizeof(RinWebContentWebAuthnEventV1) == 4608u,
@@ -837,6 +882,10 @@ _Static_assert(sizeof(RinWebContentServiceWorkerOwnerRequestV1) == 8232u,
                "WebContent ServiceWorker owner request ABI drift");
 _Static_assert(sizeof(RinWebContentServiceWorkerOwnerResponseV1) == 6184u,
                "WebContent ServiceWorker owner response ABI drift");
+_Static_assert(sizeof(RinWebContentCacheStorageOwnerRequestV1) == 48u,
+               "WebContent CacheStorage owner request ABI drift");
+_Static_assert(sizeof(RinWebContentCacheStorageOwnerResponseV1) == 24u,
+               "WebContent CacheStorage owner response ABI drift");
 _Static_assert(sizeof(RinWebContentWebAuthnPollV1) == 32u,
                "WebContent WebAuthn poll ABI drift");
 _Static_assert(sizeof(RinWebContentWebAuthnEventV1) == 4608u,
