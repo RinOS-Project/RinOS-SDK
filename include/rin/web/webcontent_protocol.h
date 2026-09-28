@@ -172,10 +172,14 @@ enum {
     RIN_WEBCONTENT_CACHE_STORAGE_OWNER_REMOVE = 2,
     RIN_WEBCONTENT_CACHE_STORAGE_OWNER_SET_CACHE_NAME = 3,
     RIN_WEBCONTENT_CACHE_STORAGE_OWNER_REMOVE_CACHE_NAME = 4,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_READ_SNAPSHOT = 5,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_INITIALIZE = 6,
     RIN_WEBCONTENT_CACHE_STORAGE_OWNER_RESULT_REJECTED = 0,
     RIN_WEBCONTENT_CACHE_STORAGE_OWNER_RESULT_COMMITTED = 1,
     RIN_WEBCONTENT_CACHE_STORAGE_OWNER_MAX_KEY_BYTES = 16u * 1024u,
-    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_MAX_VALUE_BYTES = 16u * 1024u * 1024u
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_MAX_VALUE_BYTES = 16u * 1024u * 1024u,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_MAX_RECORDS = 1024u,
+    RIN_WEBCONTENT_CACHE_STORAGE_OWNER_MAX_SNAPSHOT_BYTES = 80u * 1024u * 1024u
 };
 
 enum {
@@ -490,9 +494,10 @@ typedef struct RinWebContentServiceWorkerOwnerResponseV1 {
 } RinWebContentServiceWorkerOwnerResponseV1;
 
 /* The request payload is this header followed by origin, storage key, then
- * value bytes.  Lengths exclude terminators.  The page id in the message
- * header and owner_generation jointly bind the mutation to the live page and
- * Browser profile generation. */
+ * value bytes. Lengths exclude terminators. READ_SNAPSHOT and INITIALIZE
+ * carry only the origin. The page id in the message header and
+ * owner_generation jointly bind each operation to the live page and Browser
+ * profile generation. */
 typedef struct RinWebContentCacheStorageOwnerRequestV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -510,6 +515,7 @@ typedef struct RinWebContentCacheStorageOwnerResponseV1 {
     uint16_t version;
     uint16_t result;
     uint64_t owner_generation;
+    /* Byte count following this header in an RCS1 snapshot response. */
     uint64_t reserved;
 } RinWebContentCacheStorageOwnerResponseV1;
 
