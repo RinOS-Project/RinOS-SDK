@@ -77,6 +77,32 @@ static int versioned(const void* value, uint32_t minimum_size) {
     return header && header->struct_size >= minimum_size &&
            header->version == RIN_SDK_STRUCT_VERSION_1;
 }
+
+/* A backend receives a fixed response_size for v1 operations.  A successful
+ * callback must therefore publish the exact response shape that the wrapper
+ * initialized; accepting a larger or wrong version header would expose an
+ * untrusted/ABI-incompatible response as success. */
+static int versioned_exact(const void* value, uint32_t expected_size) {
+    const RinVersionedV1* header = (const RinVersionedV1*)value;
+    return header && header->struct_size == expected_size &&
+           header->version == RIN_SDK_STRUCT_VERSION_1;
+}
+
+static void reset_versioned_output(void* value, uint32_t size) {
+    RinVersionedV1* header = (RinVersionedV1*)value;
+    if (!header) return;
+    rin_sdk_zero_bytes(value, size);
+    header->struct_size = size;
+    header->version = RIN_SDK_STRUCT_VERSION_1;
+}
+
+static RinResult finalize_versioned_output(RinResult result, void* value,
+                                           uint32_t size) {
+    if (result == RIN_SUCCESS && !versioned_exact(value, size))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) reset_versioned_output(value, size);
+    return result;
+}
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_CORE)
@@ -190,12 +216,7 @@ static RinResult rin_sdk_invoke_scalar_output_v1(
     request.value[3] = (d); request.value[4] = (e); request.value[5] = (f); \
     call_result = rin_sdk_invoke_v1((lib), (op), &request, sizeof(request), \
                                     (out), sizeof(*(out))); \
-    if (call_result != RIN_SUCCESS) { \
-        rin_sdk_zero_bytes((out), sizeof(*(out))); \
-        ((RinVersionedV1 *)(out))->struct_size = sizeof(*(out)); \
-        ((RinVersionedV1 *)(out))->version = RIN_SDK_STRUCT_VERSION_1; \
-    } \
-    return call_result; \
+    return finalize_versioned_output(call_result, (out), sizeof(*(out))); \
 } while (0)
 
 #define SCALAR_OUTPUT_SIMPLE_CALL(lib, op, out, a, b, c, d, e, f) do { \
@@ -234,6 +255,10 @@ RinResult rin_object_query_v1(RinObject object, RinObjectInfoV1* info) {
     query_result = rin_sdk_invoke_v1(
         RIN_SDK_LIBRARY_BASE, BASE_OBJECT_QUERY, &request, sizeof(request),
         info, sizeof(*info));
+    if (query_result == RIN_SUCCESS &&
+        (info->struct_size != sizeof(*info) ||
+         info->version != (uint16_t)RIN_SDK_STRUCT_VERSION_1))
+        query_result = RIN_ERROR_ABI_MISMATCH;
     if (query_result != RIN_SUCCESS) {
         rin_sdk_zero_bytes(info, sizeof(*info));
         info->struct_size = sizeof(*info);
@@ -324,6 +349,9 @@ RinResult rin_channel_receive_v1(RinChannel channel, RinIpcMessageV1* message) {
     receive_result = rin_sdk_invoke_v1(
         RIN_SDK_LIBRARY_IPC, IPC_CHANNEL_RECEIVE, &request, sizeof(request),
         message, sizeof(*message));
+    if (receive_result == RIN_SUCCESS &&
+        !versioned_exact(message, sizeof(*message)))
+        receive_result = RIN_ERROR_ABI_MISMATCH;
     if (receive_result != RIN_SUCCESS) {
         rin_sdk_zero_bytes(message, sizeof(*message));
         message->struct_size = sizeof(*message);
@@ -378,11 +406,8 @@ RinResult rin_wait_set_wait_v1(RinWaitSet wait_set, uint64_t timeout_ns, RinWait
     wait_result = rin_sdk_invoke_v1(RIN_SDK_LIBRARY_IPC, IPC_WAIT_SET_WAIT,
                                     &request, sizeof(request), result,
                                     sizeof(*result));
-    if (wait_result != RIN_SUCCESS) {
-        rin_sdk_zero_bytes(result, sizeof(*result));
-        result->struct_size = sizeof(*result);
-        result->version = RIN_SDK_STRUCT_VERSION_1;
-    }
+    wait_result = finalize_versioned_output(wait_result, result,
+                                            sizeof(*result));
     return wait_result;
 }
 RinResult rin_service_register_v1(RinStringV1 name, uint32_t flags, RinService* service) {
@@ -436,6 +461,9 @@ RinResult rin_directory_next_v1(RinDirectory directory, RinDirectoryEntryV1* ent
     next_result = rin_sdk_invoke_v1(
         RIN_SDK_LIBRARY_FS, FS_DIRECTORY_NEXT, &request, sizeof(request),
         entry, sizeof(*entry));
+    if (next_result == RIN_SUCCESS &&
+        !versioned_exact(entry, sizeof(*entry)))
+        next_result = RIN_ERROR_ABI_MISMATCH;
     if (next_result != RIN_SUCCESS) {
         rin_sdk_zero_bytes(entry, sizeof(*entry));
         entry->struct_size = sizeof(*entry);
@@ -509,6 +537,9 @@ RinResult rin_file_watch_next_v1(RinFileWatch watch, uint64_t timeout_ns, RinFil
     watch_result = rin_sdk_invoke_v1(
         RIN_SDK_LIBRARY_FS, FS_FILE_WATCH_NEXT, &request, sizeof(request),
         event, sizeof(*event));
+    if (watch_result == RIN_SUCCESS &&
+        !versioned_exact(event, sizeof(*event)))
+        watch_result = RIN_ERROR_ABI_MISMATCH;
     if (watch_result != RIN_SUCCESS) {
         rin_sdk_zero_bytes(event, sizeof(*event));
         event->struct_size = sizeof(*event);
@@ -545,11 +576,7 @@ RinResult rin_file_stat_v1(RinFile file, RinFileStatV1* stat) {
     stat_result = rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_FILE_STAT,
                                     &request, sizeof(request), stat,
                                     sizeof(*stat));
-    if (stat_result != RIN_SUCCESS) {
-        rin_sdk_zero_bytes(stat, sizeof(*stat));
-        stat->struct_size = sizeof(*stat);
-        stat->version = RIN_SDK_STRUCT_VERSION_1;
-    }
+    stat_result = finalize_versioned_output(stat_result, stat, sizeof(*stat));
     return stat_result;
 }
 RinResult rin_file_truncate_v1(const RinFileTruncateV1* request) {
@@ -577,11 +604,7 @@ RinResult rin_path_stat_v1(const RinFsPathRequestV1* request, RinFileStatV1* sta
     stat_result = rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PATH_STAT,
                                     request, sizeof(*request), stat,
                                     sizeof(*stat));
-    if (stat_result != RIN_SUCCESS) {
-        rin_sdk_zero_bytes(stat, sizeof(*stat));
-        stat->struct_size = sizeof(*stat);
-        stat->version = RIN_SDK_STRUCT_VERSION_1;
-    }
+    stat_result = finalize_versioned_output(stat_result, stat, sizeof(*stat));
     return stat_result;
 }
 RinResult rin_path_mkdir_v1(const RinFsPathRequestV1* request) {
