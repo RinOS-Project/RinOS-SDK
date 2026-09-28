@@ -147,7 +147,9 @@ enum {
     RIN_WEBCONTENT_CMD_GET_DOWNLOAD_EVENT_V3 = 30,
     RIN_WEBCONTENT_CMD_RESUME_DOWNLOAD_V2 = 31,
     /* Variable-sized, authenticated CacheStorage data-plane request. */
-    RIN_WEBCONTENT_CMD_CACHE_STORAGE_OWNER_V1 = 32
+    RIN_WEBCONTENT_CMD_CACHE_STORAGE_OWNER_V1 = 32,
+    /* Variable-sized HTTP Cookie profile-owner request and response. */
+    RIN_WEBCONTENT_CMD_HTTP_COOKIE_OWNER_V1 = 33
 };
 
 enum {
@@ -187,6 +189,14 @@ enum {
 };
 
 enum {
+    RIN_WEBCONTENT_HTTP_COOKIE_OWNER_GET_HEADER = 1,
+    RIN_WEBCONTENT_HTTP_COOKIE_OWNER_COMMIT_SET_COOKIE = 2,
+    RIN_WEBCONTENT_HTTP_COOKIE_OWNER_RESULT_REJECTED = 0,
+    RIN_WEBCONTENT_HTTP_COOKIE_OWNER_RESULT_COMMITTED = 1,
+    RIN_WEBCONTENT_HTTP_COOKIE_OWNER_MAX_DATA_BYTES = 64u * 1024u
+};
+
+enum {
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_REJECTED = 0,
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_COMMITTED = 1,
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_NOT_FOUND = 2,
@@ -212,7 +222,7 @@ enum {
         RIN_WEBCONTENT_SERVICE_WORKER_OWNER_CACHE_FETCH_POLICY_MODE_SAME_ORIGIN
 };
 
-/* Cookie owner policy uses update_via_cache for operations 10 and 11. */
+/* Cookie owner policy uses policy on the HTTP_COOKIE_OWNER command. */
 enum {
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_COOKIE_CREDENTIALS_INCLUDE = UINT32_C(1) << 0,
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_COOKIE_MODE_CORS = UINT32_C(1) << 1,
@@ -542,6 +552,30 @@ typedef struct RinWebContentCacheStorageOwnerResponseV1 {
     uint64_t reserved;
 } RinWebContentCacheStorageOwnerResponseV1;
 
+/* Authenticated HTTP Cookie owner payload. Trailing bytes are origin,
+ * request URL, then the newline-delimited Set-Cookie batch. GET_HEADER carries
+ * no cookie data; COMMIT_SET_COOKIE carries a bounded non-empty batch. */
+typedef struct RinWebContentHttpCookieOwnerRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t operation;
+    uint32_t policy;
+    uint32_t origin_size;
+    uint32_t request_url_size;
+    uint32_t cookie_data_size;
+    uint32_t reserved0;
+    uint32_t reserved1;
+    uint64_t reserved[2];
+} RinWebContentHttpCookieOwnerRequestV1;
+
+typedef struct RinWebContentHttpCookieOwnerResponseV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t result;
+    uint64_t generation;
+    uint64_t data_size;
+} RinWebContentHttpCookieOwnerResponseV1;
+
 /* The Browser polls a page so WebContent never writes unsolicited bytes into
  * an in-flight request/response exchange. after_request_id prevents replay of
  * an event that the Browser already consumed. */
@@ -860,6 +894,10 @@ static_assert(sizeof(RinWebContentCacheStorageOwnerRequestV1) == 48u,
               "WebContent CacheStorage owner request ABI drift");
 static_assert(sizeof(RinWebContentCacheStorageOwnerResponseV1) == 24u,
               "WebContent CacheStorage owner response ABI drift");
+static_assert(sizeof(RinWebContentHttpCookieOwnerRequestV1) == 48u,
+              "WebContent HTTP Cookie owner request ABI drift");
+static_assert(sizeof(RinWebContentHttpCookieOwnerResponseV1) == 24u,
+              "WebContent HTTP Cookie owner response ABI drift");
 static_assert(sizeof(RinWebContentWebAuthnPollV1) == 32u,
               "WebContent WebAuthn poll ABI drift");
 static_assert(sizeof(RinWebContentWebAuthnEventV1) == 4608u,
@@ -915,6 +953,10 @@ _Static_assert(sizeof(RinWebContentCacheStorageOwnerRequestV1) == 48u,
                "WebContent CacheStorage owner request ABI drift");
 _Static_assert(sizeof(RinWebContentCacheStorageOwnerResponseV1) == 24u,
                "WebContent CacheStorage owner response ABI drift");
+_Static_assert(sizeof(RinWebContentHttpCookieOwnerRequestV1) == 48u,
+               "WebContent HTTP Cookie owner request ABI drift");
+_Static_assert(sizeof(RinWebContentHttpCookieOwnerResponseV1) == 24u,
+               "WebContent HTTP Cookie owner response ABI drift");
 _Static_assert(sizeof(RinWebContentWebAuthnPollV1) == 32u,
                "WebContent WebAuthn poll ABI drift");
 _Static_assert(sizeof(RinWebContentWebAuthnEventV1) == 4608u,
