@@ -14,7 +14,17 @@
 enum {
     RIN_WORKERD_CMD_FETCH_V1 = 1,
     RIN_WORKERD_CMD_DECODE_IMAGE_V1 = 2,
-    RIN_WORKERD_CMD_CANCEL_V1 = 3
+    RIN_WORKERD_CMD_CANCEL_V1 = 3,
+    /* Product-owned certificate revocation fetch.  This command deliberately
+     * has a smaller response ABI than generic fetch: no redirects, headers,
+     * or caller-selected SHM are part of the trust boundary. */
+    RIN_WORKERD_CMD_FETCH_REVOCATION_V1 = 4
+};
+
+enum {
+    RIN_WORKERD_REVOCATION_SOURCE_OCSP = 1,
+    RIN_WORKERD_REVOCATION_SOURCE_CRL = 2,
+    RIN_WORKERD_REVOCATION_MAX_RESPONSE_BYTES = 256u * 1024u
 };
 
 enum {
@@ -92,6 +102,20 @@ typedef struct RinWorkerdFetchResponse {
     uint32_t body_storage_kind;
     RinWorkerdShmRegion body_region;
 } RinWorkerdFetchResponse;
+
+typedef struct RinWorkerdRevocationFetchRequest {
+    uint32_t timeout_ms;
+    uint32_t source;
+    uint32_t url_len;
+    uint32_t reserved;
+} RinWorkerdRevocationFetchRequest;
+
+typedef struct RinWorkerdRevocationFetchResponse {
+    int32_t status_code;
+    uint32_t transfer_complete;
+    uint32_t success;
+    uint32_t body_len;
+} RinWorkerdRevocationFetchResponse;
 
 typedef struct RinWorkerdDecodeImageRequest {
     uint32_t url_len;
