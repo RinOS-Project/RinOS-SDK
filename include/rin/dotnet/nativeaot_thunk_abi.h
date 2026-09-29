@@ -3,6 +3,7 @@
 #ifndef RIN_DOTNET_NATIVEAOT_THUNK_ABI_H
 #define RIN_DOTNET_NATIVEAOT_THUNK_ABI_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -56,8 +57,103 @@ const RinNativeAotThunkProviderV1* rin_nativeaot_thunk_provider_get_v1(void);
 #ifdef __cplusplus
 }
 
-static_assert(sizeof(RinNativeAotThunkProviderV1) >= 80,
-              "RinNativeAotThunkProviderV1 unexpectedly shrank");
+static_assert(offsetof(RinNativeAotThunkProviderV1, context) >=
+                  offsetof(RinNativeAotThunkProviderV1, capability_mask) +
+                      sizeof(uint32_t),
+              "RinNativeAotThunkProviderV1 context overlaps capability_mask");
+static_assert(offsetof(RinNativeAotThunkProviderV1, allocate_thunks_mapping) ==
+                  offsetof(RinNativeAotThunkProviderV1, context) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->context),
+              "RinNativeAotThunkProviderV1 callback layout drift");
+static_assert(offsetof(RinNativeAotThunkProviderV1, get_thunks_base) ==
+                  offsetof(RinNativeAotThunkProviderV1, allocate_thunks_mapping) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->allocate_thunks_mapping),
+              "RinNativeAotThunkProviderV1 callback layout drift");
+static_assert(offsetof(RinNativeAotThunkProviderV1, get_num_thunk_blocks_per_mapping) ==
+                  offsetof(RinNativeAotThunkProviderV1, get_thunks_base) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->get_thunks_base),
+              "RinNativeAotThunkProviderV1 callback layout drift");
+static_assert(offsetof(RinNativeAotThunkProviderV1, get_num_thunks_per_block) ==
+                  offsetof(RinNativeAotThunkProviderV1, get_num_thunk_blocks_per_mapping) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->get_num_thunk_blocks_per_mapping),
+              "RinNativeAotThunkProviderV1 callback layout drift");
+static_assert(offsetof(RinNativeAotThunkProviderV1, get_thunk_size) ==
+                  offsetof(RinNativeAotThunkProviderV1, get_num_thunks_per_block) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->get_num_thunks_per_block),
+              "RinNativeAotThunkProviderV1 callback layout drift");
+static_assert(offsetof(RinNativeAotThunkProviderV1, get_thunk_data_block_address) ==
+                  offsetof(RinNativeAotThunkProviderV1, get_thunk_size) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->get_thunk_size),
+              "RinNativeAotThunkProviderV1 callback layout drift");
+static_assert(offsetof(RinNativeAotThunkProviderV1, get_thunk_stubs_block_address) ==
+                  offsetof(RinNativeAotThunkProviderV1, get_thunk_data_block_address) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->get_thunk_data_block_address),
+              "RinNativeAotThunkProviderV1 callback layout drift");
+static_assert(offsetof(RinNativeAotThunkProviderV1, get_thunk_block_size) ==
+                  offsetof(RinNativeAotThunkProviderV1, get_thunk_stubs_block_address) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->get_thunk_stubs_block_address),
+              "RinNativeAotThunkProviderV1 callback layout drift");
+static_assert(offsetof(RinNativeAotThunkProviderV1, get_common_stub_address) ==
+                  offsetof(RinNativeAotThunkProviderV1, get_thunk_block_size) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->get_thunk_block_size),
+              "RinNativeAotThunkProviderV1 callback layout drift");
+static_assert(offsetof(RinNativeAotThunkProviderV1, get_current_thunk_context) ==
+                  offsetof(RinNativeAotThunkProviderV1, get_common_stub_address) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->get_common_stub_address),
+              "RinNativeAotThunkProviderV1 callback layout drift");
+static_assert(sizeof(RinNativeAotThunkProviderV1) ==
+                  offsetof(RinNativeAotThunkProviderV1, get_current_thunk_context) +
+                      sizeof(((RinNativeAotThunkProviderV1*)0)->get_current_thunk_context),
+              "RinNativeAotThunkProviderV1 size drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, context) >=
+                   offsetof(RinNativeAotThunkProviderV1, capability_mask) +
+                       sizeof(uint32_t),
+               "RinNativeAotThunkProviderV1 context overlaps capability_mask");
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, allocate_thunks_mapping) ==
+                   offsetof(RinNativeAotThunkProviderV1, context) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->context),
+               "RinNativeAotThunkProviderV1 callback layout drift");
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, get_thunks_base) ==
+                   offsetof(RinNativeAotThunkProviderV1, allocate_thunks_mapping) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->allocate_thunks_mapping),
+               "RinNativeAotThunkProviderV1 callback layout drift");
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, get_num_thunk_blocks_per_mapping) ==
+                   offsetof(RinNativeAotThunkProviderV1, get_thunks_base) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->get_thunks_base),
+               "RinNativeAotThunkProviderV1 callback layout drift");
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, get_num_thunks_per_block) ==
+                   offsetof(RinNativeAotThunkProviderV1, get_num_thunk_blocks_per_mapping) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->get_num_thunk_blocks_per_mapping),
+               "RinNativeAotThunkProviderV1 callback layout drift");
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, get_thunk_size) ==
+                   offsetof(RinNativeAotThunkProviderV1, get_num_thunks_per_block) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->get_num_thunks_per_block),
+               "RinNativeAotThunkProviderV1 callback layout drift");
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, get_thunk_data_block_address) ==
+                   offsetof(RinNativeAotThunkProviderV1, get_thunk_size) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->get_thunk_size),
+               "RinNativeAotThunkProviderV1 callback layout drift");
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, get_thunk_stubs_block_address) ==
+                   offsetof(RinNativeAotThunkProviderV1, get_thunk_data_block_address) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->get_thunk_data_block_address),
+               "RinNativeAotThunkProviderV1 callback layout drift");
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, get_thunk_block_size) ==
+                   offsetof(RinNativeAotThunkProviderV1, get_thunk_stubs_block_address) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->get_thunk_stubs_block_address),
+               "RinNativeAotThunkProviderV1 callback layout drift");
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, get_common_stub_address) ==
+                   offsetof(RinNativeAotThunkProviderV1, get_thunk_block_size) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->get_thunk_block_size),
+               "RinNativeAotThunkProviderV1 callback layout drift");
+_Static_assert(offsetof(RinNativeAotThunkProviderV1, get_current_thunk_context) ==
+                   offsetof(RinNativeAotThunkProviderV1, get_common_stub_address) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->get_common_stub_address),
+               "RinNativeAotThunkProviderV1 callback layout drift");
+_Static_assert(sizeof(RinNativeAotThunkProviderV1) ==
+                   offsetof(RinNativeAotThunkProviderV1, get_current_thunk_context) +
+                       sizeof(((RinNativeAotThunkProviderV1*)0)->get_current_thunk_context),
+               "RinNativeAotThunkProviderV1 size drift");
 #endif
 
 #endif
