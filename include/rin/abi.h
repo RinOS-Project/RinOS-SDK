@@ -191,6 +191,11 @@ typedef uint64_t RinDevice;
 
 #define RIN_HANDLE_INVALID UINT64_C(0)
 
+/* Set only in kernel credential snapshots for an image entered with
+ * privileged credentials. User credential mutation requests cannot set it. */
+#define RIN_CREDENTIALS_FLAG_SECURE_EXEC UINT32_C(0x00000001)
+#define RIN_CREDENTIALS_FLAGS_ALL RIN_CREDENTIALS_FLAG_SECURE_EXEC
+
 typedef struct RinCredentialsV1 {
     uint32_t struct_size;
     uint32_t version;
