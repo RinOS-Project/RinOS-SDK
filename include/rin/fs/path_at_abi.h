@@ -28,6 +28,9 @@
  * remains descriptor-based so pathname lookup cannot become ambient access. */
 #define RIN_PATH_AT_COPY_XATTRS     13u
 #define RIN_PATH_AT_COPY_FILE_FLAGS 14u
+/* Create a regular, character, block, or FIFO inode. For this operation only,
+ * RinPathAtCallV1.reserved0 carries the 8:8 POSIX device number. */
+#define RIN_PATH_AT_MKNOD           15u
 
 /* Operation-specific flag values match the public POSIX constants.  In
  * particular 0x200 is EACCESS for access and REMOVEDIR for unlink. */
@@ -49,6 +52,7 @@ typedef struct RinPathAtCallV1 {
     uint32_t mode;
     uint32_t owner;
     uint32_t group;
+    /* Zero for all operations except MKNOD, where this is the 8:8 device. */
     uint32_t reserved0;
     uint64_t path1;
     uint64_t path2;
