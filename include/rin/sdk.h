@@ -53,6 +53,7 @@
 #include "net/namespace/neighbor_abi.h"
 #include "net/namespace/route_abi.h"
 #include "net/resolved_protocol.h"
+#include "net/auth_provider_abi.h"
 #include "net/socket_abi.h"
 #include "gui/text_input.h"
 #include "gui/native_event.h"
