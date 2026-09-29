@@ -21,6 +21,9 @@ extern "C" {
 #define RIN_AUTH_PROVIDER_OK UINT32_C(0)
 #define RIN_AUTH_PROVIDER_UNAVAILABLE UINT32_C(1)
 #define RIN_AUTH_PROVIDER_ABI_MISMATCH UINT32_C(2)
+/* Callback status values are provider-local and must be translated by the
+ * native PAL before they reach the GSS ABI. */
+#define RIN_AUTH_PROVIDER_CONTINUE_NEEDED UINT32_C(3)
 
 typedef struct RinAuthProviderBufferV1 {
     uint64_t length;
