@@ -450,6 +450,10 @@
 #define RIN_SYS_INSTALL_SOURCE_PAYLOADS_QUERY 0x8071u
 #define RIN_SYS_INSTALL_SOURCE_PAYLOAD_READ 0x8072u
 #define RIN_SYS_INSTALL_SOURCE_PAYLOAD_VALIDATE 0x8073u
+/* file. */
+#define RIN_SYS_LSEEK64                     0x8074u
+#define RIN_SYS_TRUNCATE64                  0x8075u
+#define RIN_SYS_FTRUNCATE64                 0x8076u
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
