@@ -553,8 +553,10 @@ typedef struct RinWebContentCacheStorageOwnerResponseV1 {
 } RinWebContentCacheStorageOwnerResponseV1;
 
 /* Authenticated HTTP Cookie owner payload. Trailing bytes are origin,
- * request URL, then the newline-delimited Set-Cookie batch. GET_HEADER carries
- * no cookie data; COMMIT_SET_COOKIE carries a bounded non-empty batch. */
+ * request URL, then an
+ * `RSC1|same-site|top-level-safe-navigation|top-level-navigation|site` line
+ * and, for COMMIT_SET_COOKIE, the bounded newline-delimited Set-Cookie batch.
+ * The context line is present for GET_HEADER as well. */
 typedef struct RinWebContentHttpCookieOwnerRequestV1 {
     uint32_t struct_size;
     uint16_t version;
