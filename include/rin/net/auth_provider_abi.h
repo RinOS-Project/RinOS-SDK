@@ -27,6 +27,10 @@ typedef struct RinAuthProviderBufferV1 {
     uint8_t* data;
 } RinAuthProviderBufferV1;
 
+/* Buffer-producing callbacks must return provider-owned storage through this
+ * pair. The PAL releases malformed or oversized buffers before exposing them
+ * to managed code; max_token_size is therefore an enforced output bound. */
+
 /* The handles are provider-owned opaque objects. The PAL only forwards them
  * back to the same provider and never dereferences or stores their contents. */
 typedef struct RinAuthProviderV1 {
