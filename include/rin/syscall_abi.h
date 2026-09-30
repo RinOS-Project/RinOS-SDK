@@ -455,6 +455,8 @@
 #define RIN_SYS_TRUNCATE64                  0x8075u
 #define RIN_SYS_FTRUNCATE64                 0x8076u
 #define RIN_SYS_FSTAT64                     0x8077u
+/* memory. */
+#define RIN_SYS_MMAP_FD64                   0x8078u
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u

@@ -343,6 +343,7 @@
 #define SYS_TRUNCATE64                  RIN_SYS_TRUNCATE64
 #define SYS_FTRUNCATE64                 RIN_SYS_FTRUNCATE64
 #define SYS_FSTAT64                     RIN_SYS_FSTAT64
+#define SYS_MMAP_FD64                   RIN_SYS_MMAP_FD64
 
 #define SYS_CPU_TIME_ABI_VERSION        RIN_CPU_TIME_ABI_VERSION
 #define SYS_AUDIO_CTL_START             RIN_AUDIO_CTL_START
