@@ -525,7 +525,7 @@ typedef struct RinWebContentServiceWorkerOwnerResponseV1 {
     uint16_t version;
     uint16_t result;
     uint32_t state;
-    uint32_t reserved0;
+    uint32_t update_via_cache;
     uint64_t generation;
     char origin[RIN_WEBCONTENT_URL_MAX];
     char script_url[RIN_WEBCONTENT_URL_MAX];
