@@ -23,6 +23,7 @@
 #define RIN_WEBCONTENT_FILE_PICKER_NAME_MAX UINT32_C(256)
 #define RIN_WEBCONTENT_FILE_PICKER_MAX_SELECTIONS UINT32_C(8)
 #define RIN_WEBCONTENT_PERMISSION_TYPE_MAX UINT32_C(32)
+#define RIN_WEBCONTENT_PERMISSION_DOMAIN_MAX UINT32_C(256)
 #define RIN_WEBCONTENT_PERMISSION_DESCRIPTION_MAX UINT32_C(192)
 #define RIN_WEBCONTENT_ACCESSIBILITY_MAX_NODES UINT32_C(128)
 #define RIN_WEBCONTENT_ACCESSIBILITY_MAX_TEXT_BYTES UINT16_C(192)
@@ -149,7 +150,8 @@ enum {
     /* Variable-sized, authenticated CacheStorage data-plane request. */
     RIN_WEBCONTENT_CMD_CACHE_STORAGE_OWNER_V1 = 32,
     /* Variable-sized HTTP Cookie profile-owner request and response. */
-    RIN_WEBCONTENT_CMD_HTTP_COOKIE_OWNER_V1 = 33
+    RIN_WEBCONTENT_CMD_HTTP_COOKIE_OWNER_V1 = 33,
+    RIN_WEBCONTENT_CMD_REVOKE_MICROPHONE_V1 = 34
 };
 
 enum {
@@ -663,6 +665,18 @@ typedef struct RinWebContentPermissionCompleteV1 {
     uint32_t reserved2;
     uint64_t reserved[2];
 } RinWebContentPermissionCompleteV1;
+
+/* Browser-owned permission revocation. The sequence prevents a stale replay
+ * from stopping tracks created after a newer permission decision. A domain
+ * of "*" revokes every microphone track in the page. */
+typedef struct RinWebContentMicrophoneRevokeV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t sequence;
+    char domain[RIN_WEBCONTENT_PERMISSION_DOMAIN_MAX];
+    uint64_t reserved[2];
+} RinWebContentMicrophoneRevokeV1;
 
 enum {
     RIN_WEBCONTENT_FILE_PICKER_RESULT_OK = 0,
