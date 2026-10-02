@@ -172,7 +172,10 @@ enum {
     /* Read an outbound Cookie header from the Browser-owned profile. */
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_GET_HTTP_COOKIE_HEADER = 10,
     /* Commit the Set-Cookie fields of one response after Fetch CORS checks. */
-    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_COMMIT_HTTP_COOKIES = 11
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_COMMIT_HTTP_COOKIES = 11,
+    /* Commit or discard a staged ServiceWorker registration candidate. */
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_COMMIT_REGISTER = 12,
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_ABORT_REGISTER = 13
 };
 
 enum {
@@ -492,11 +495,13 @@ typedef struct RinWebContentOwnerChannelSessionV1 {
     uint64_t reserved[2];
 } RinWebContentOwnerChannelSessionV1;
 
-/* Requests on the durable owner channel.  URL strings are copied from the
- * parsed LibWeb URL objects and are validated again by the Browser owner;
- * no renderer-provided profile identifier or filesystem path crosses this
- * boundary.  Register uses client_url/script_url/scope, match uses only
- * client_url, and unregister uses origin/scope. */
+/* Requests on the durable owner channel. URL strings are copied from parsed
+ * LibWeb URL objects and validated again by the Browser owner; no renderer-
+ * provided profile identifier or filesystem path crosses this boundary.
+ * Register stages client_url/script_url/scope and returns a transaction ID in
+ * response.generation. Commit/abort use origin/scope and place that ID in
+ * update_via_cache for those operations only. Match uses client_url, and
+ * unregister uses origin/scope. */
 typedef struct RinWebContentServiceWorkerOwnerRequestV1 {
     uint32_t struct_size;
     uint16_t version;
