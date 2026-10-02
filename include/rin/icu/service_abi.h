@@ -73,6 +73,7 @@ enum {
     RIN_ICU_CMD_TIME_ZONE_RELOAD_V1 = 132,
     RIN_ICU_CMD_TIME_ZONE_AVAILABLE_REGION_V1 = 133,
     RIN_ICU_CMD_TIME_ZONE_TRANSITION_V1 = 134,
+    RIN_ICU_CMD_TIME_ZONE_LOCAL_OFFSETS_V1 = 135,
 
     RIN_ICU_CMD_DESTROY_HANDLE_V1 = 96
 };
@@ -400,6 +401,21 @@ typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneOffsetResponse {
     uint32_t in_dst;
 } RinIcuTimeZoneOffsetResponse;
 
+#define RIN_ICU_TIME_ZONE_LOCAL_OFFSET_MAX 2u
+
+/* The input is a local wall-clock epoch value, not a UTC instant.  A valid
+ * local time has one result, an overlap has two, and a gap has none. */
+typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneLocalOffsetsRequest {
+    uint32_t time_zone_len;
+    uint32_t reserved0;
+    int64_t local_epoch_ms;
+} RinIcuTimeZoneLocalOffsetsRequest;
+
+typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneLocalOffsetsResponse {
+    uint32_t count;
+    RinIcuTimeZoneOffsetResponse offsets[RIN_ICU_TIME_ZONE_LOCAL_OFFSET_MAX];
+} RinIcuTimeZoneLocalOffsetsResponse;
+
 typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneTransitionRequest {
     uint32_t time_zone_len;
     uint32_t reserved0;
@@ -467,6 +483,7 @@ static inline int rin_icu_command_known_v2(uint32_t command)
     case RIN_ICU_CMD_TIME_ZONE_RELOAD_V1:
     case RIN_ICU_CMD_TIME_ZONE_AVAILABLE_REGION_V1:
     case RIN_ICU_CMD_TIME_ZONE_TRANSITION_V1:
+    case RIN_ICU_CMD_TIME_ZONE_LOCAL_OFFSETS_V1:
     case RIN_ICU_CMD_DESTROY_HANDLE_V1:
         return 1;
     default:
@@ -556,6 +573,10 @@ RIN_ICU_STATIC_ASSERT(rin_icu_timezone_request_size_is_stable,
                       sizeof(RinIcuTimeZoneOffsetRequest) == 16u);
 RIN_ICU_STATIC_ASSERT(rin_icu_timezone_response_size_is_stable,
                       sizeof(RinIcuTimeZoneOffsetResponse) == 8u);
+RIN_ICU_STATIC_ASSERT(rin_icu_timezone_local_offsets_request_size_is_stable,
+                      sizeof(RinIcuTimeZoneLocalOffsetsRequest) == 16u);
+RIN_ICU_STATIC_ASSERT(rin_icu_timezone_local_offsets_response_size_is_stable,
+                      sizeof(RinIcuTimeZoneLocalOffsetsResponse) == 20u);
 RIN_ICU_STATIC_ASSERT(rin_icu_timezone_transition_request_size_is_stable,
                       sizeof(RinIcuTimeZoneTransitionRequest) == 28u);
 RIN_ICU_STATIC_ASSERT(rin_icu_timezone_transition_response_size_is_stable,
