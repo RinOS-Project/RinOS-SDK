@@ -175,7 +175,9 @@ enum {
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_COMMIT_HTTP_COOKIES = 11,
     /* Commit or discard a staged ServiceWorker registration candidate. */
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_COMMIT_REGISTER = 12,
-    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_ABORT_REGISTER = 13
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_ABORT_REGISTER = 13,
+    /* Enumerate an immutable, page-bound snapshot of origin registrations. */
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_LIST = 14
 };
 
 enum {
@@ -205,7 +207,9 @@ enum {
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_REJECTED = 0,
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_COMMITTED = 1,
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_NOT_FOUND = 2,
-    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_PERMISSION = 3
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_PERMISSION = 3,
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_LIST_ITEM = 4,
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_LIST_DONE = 5
 };
 
 enum {
@@ -501,7 +505,8 @@ typedef struct RinWebContentOwnerChannelSessionV1 {
  * Register stages client_url/script_url/scope and returns a transaction ID in
  * response.generation. Commit/abort use origin/scope and place that ID in
  * update_via_cache for those operations only. Match uses client_url, and
- * unregister uses origin/scope. */
+ * unregister uses origin/scope. LIST uses update_via_cache as its index and
+ * reserved[0] as a page-bound snapshot id; zero starts a new origin snapshot. */
 typedef struct RinWebContentServiceWorkerOwnerRequestV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -530,6 +535,8 @@ typedef struct RinWebContentServiceWorkerOwnerResponseV1 {
     char origin[RIN_WEBCONTENT_URL_MAX];
     char script_url[RIN_WEBCONTENT_URL_MAX];
     char scope[RIN_WEBCONTENT_URL_MAX];
+    /* LIST_ITEM only: reserved[0] is the snapshot id and reserved[1] is the
+     * next index. Every other result keeps both values zero. */
     uint64_t reserved[2];
 } RinWebContentServiceWorkerOwnerResponseV1;
 
