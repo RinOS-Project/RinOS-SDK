@@ -2,6 +2,7 @@
 #ifndef RIN_SDK_NET_AUTH_PROVIDER_ABI_H
 #define RIN_SDK_NET_AUTH_PROVIDER_ABI_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -120,15 +121,60 @@ const RinAuthProviderV1* rin_auth_provider_get_v1(void);
 #endif
 
 #if defined(__cplusplus)
-static_assert(sizeof(RinAuthProviderBufferV1) == 16u,
+#define RIN_AUTH_PROVIDER_ALIGNOF(type) alignof(type)
+#else
+#define RIN_AUTH_PROVIDER_ALIGNOF(type) _Alignof(type)
+#endif
+#define RIN_AUTH_PROVIDER_ALIGN_UP(value, alignment) \
+    (((value) + (alignment) - 1u) / (alignment) * (alignment))
+#define RIN_AUTH_PROVIDER_BUFFER_V1_EXPECTED_SIZE \
+    RIN_AUTH_PROVIDER_ALIGN_UP( \
+        sizeof(uint64_t) + sizeof(void*), \
+        RIN_AUTH_PROVIDER_ALIGNOF(RinAuthProviderBufferV1))
+#define RIN_AUTH_PROVIDER_CALLBACK_POINTER_SIZE \
+    sizeof(((RinAuthProviderV1*)0)->release_buffer)
+#define RIN_AUTH_PROVIDER_V1_EXPECTED_SIZE \
+    RIN_AUTH_PROVIDER_ALIGN_UP( \
+        offsetof(RinAuthProviderV1, release_buffer) + \
+            20u * RIN_AUTH_PROVIDER_CALLBACK_POINTER_SIZE, \
+        RIN_AUTH_PROVIDER_ALIGNOF(RinAuthProviderV1))
+
+#if defined(__cplusplus)
+static_assert(offsetof(RinAuthProviderBufferV1, length) == 0u,
+              "RinAuthProviderBufferV1.length ABI drift");
+static_assert(offsetof(RinAuthProviderBufferV1, data) == sizeof(uint64_t),
+              "RinAuthProviderBufferV1.data ABI drift");
+static_assert(sizeof(RinAuthProviderBufferV1) ==
+                  RIN_AUTH_PROVIDER_BUFFER_V1_EXPECTED_SIZE,
               "RinAuthProviderBufferV1 ABI drift");
-static_assert(sizeof(RinAuthProviderV1) == 184u,
+static_assert(offsetof(RinAuthProviderV1, context) == 16u,
+              "RinAuthProviderV1.context ABI drift");
+static_assert(offsetof(RinAuthProviderV1, release_buffer) ==
+                  16u + sizeof(void*),
+              "RinAuthProviderV1 callback table ABI drift");
+static_assert(sizeof(RinAuthProviderV1) == RIN_AUTH_PROVIDER_V1_EXPECTED_SIZE,
               "RinAuthProviderV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinAuthProviderBufferV1) == 16u,
+_Static_assert(offsetof(RinAuthProviderBufferV1, length) == 0u,
+               "RinAuthProviderBufferV1.length ABI drift");
+_Static_assert(offsetof(RinAuthProviderBufferV1, data) == sizeof(uint64_t),
+               "RinAuthProviderBufferV1.data ABI drift");
+_Static_assert(sizeof(RinAuthProviderBufferV1) ==
+                   RIN_AUTH_PROVIDER_BUFFER_V1_EXPECTED_SIZE,
                "RinAuthProviderBufferV1 ABI drift");
-_Static_assert(sizeof(RinAuthProviderV1) == 184u,
+_Static_assert(offsetof(RinAuthProviderV1, context) == 16u,
+               "RinAuthProviderV1.context ABI drift");
+_Static_assert(offsetof(RinAuthProviderV1, release_buffer) ==
+                   16u + sizeof(void*),
+               "RinAuthProviderV1 callback table ABI drift");
+_Static_assert(sizeof(RinAuthProviderV1) == RIN_AUTH_PROVIDER_V1_EXPECTED_SIZE,
                "RinAuthProviderV1 ABI drift");
 #endif
+
+#undef RIN_AUTH_PROVIDER_ALIGNOF
+#undef RIN_AUTH_PROVIDER_ALIGN_UP
+#undef RIN_AUTH_PROVIDER_BUFFER_V1_EXPECTED_SIZE
+#undef RIN_AUTH_PROVIDER_CALLBACK_POINTER_SIZE
+#undef RIN_AUTH_PROVIDER_V1_EXPECTED_SIZE
 
 #endif /* RIN_SDK_NET_AUTH_PROVIDER_ABI_H */
