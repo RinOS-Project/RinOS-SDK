@@ -13,6 +13,9 @@
 #define RINRUNTIME_AUDIO_POLICY_INPUT_BIT UINT32_C(0x00000002)
 #define RINRUNTIME_AUDIO_POLICY_FLAGS_MASK \
     (RINRUNTIME_AUDIO_POLICY_OUTPUT_BIT | RINRUNTIME_AUDIO_POLICY_INPUT_BIT)
+/* A stable application rule uses generation zero and follows every process
+ * generation belonging to that authenticated application identity. */
+#define RINRUNTIME_AUDIO_POLICY_ANY_GENERATION UINT64_C(0)
 
 typedef struct RinRuntimeAudioApplicationPolicyV1 {
     uint32_t struct_size;
@@ -67,8 +70,6 @@ static inline int rinruntime_audio_application_policy_valid(
     return policy != NULL && policy->struct_size == sizeof(*policy) &&
            policy->version == RINRUNTIME_AUDIO_APPLICATION_POLICY_VERSION &&
            policy->application_id != 0u &&
-           policy->application_generation != 0u &&
-           policy->flags != 0u &&
            (policy->flags & ~RINRUNTIME_AUDIO_POLICY_FLAGS_MASK) == 0u &&
            policy->max_output_volume <= 100u && policy->reserved0 == 0u &&
            policy->reserved1 == 0u;
@@ -80,7 +81,7 @@ static inline int rinruntime_audio_policy_catalog_valid(
     uint32_t index;
     if (catalog == NULL || catalog->struct_size != sizeof(*catalog) ||
         catalog->version != RINRUNTIME_AUDIO_APPLICATION_POLICY_VERSION ||
-        catalog->generation == 0u || catalog->policy_count == 0u ||
+        catalog->generation == 0u ||
         catalog->policy_count > RINRUNTIME_AUDIO_APPLICATION_POLICY_MAX ||
         catalog->reserved != 0u)
         return 0;
@@ -120,7 +121,9 @@ static inline int rinruntime_audio_policy_select(
         const RinRuntimeAudioApplicationPolicyV1* policy =
             &catalog->policies[index];
         if (policy->application_id == application_id &&
-            policy->application_generation == application_generation) {
+            (policy->application_generation ==
+                 RINRUNTIME_AUDIO_POLICY_ANY_GENERATION ||
+             policy->application_generation == application_generation)) {
             output->struct_size = sizeof(*output);
             output->version = RINRUNTIME_AUDIO_APPLICATION_POLICY_VERSION;
             output->catalog_generation = catalog->generation;
@@ -143,7 +146,7 @@ static inline int rinruntime_audio_policy_admit_output(
     if (selection == NULL || selection->struct_size != sizeof(*selection) ||
         selection->version != RINRUNTIME_AUDIO_APPLICATION_POLICY_VERSION ||
         selection->catalog_generation == 0u || selection->application_id == 0u ||
-        selection->application_generation == 0u || selection->flags == 0u ||
+        selection->application_generation == 0u ||
         (selection->flags & ~RINRUNTIME_AUDIO_POLICY_FLAGS_MASK) != 0u ||
         selection->max_output_volume > 100u)
         return -1;

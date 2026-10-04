@@ -104,6 +104,7 @@ enum {
     RIN_AUDIO_SERVICE_OP_ENUMERATE_APPLICATIONS = 26u,
     RIN_AUDIO_SERVICE_OP_SET_APPLICATION_VOLUME_FOR = 27u,
     RIN_AUDIO_SERVICE_OP_SET_APPLICATION_MUTE_FOR = 28u,
+    RIN_AUDIO_SERVICE_OP_GET_POLICY_GENERATION = 29u,
 };
 
 enum {
@@ -422,6 +423,22 @@ typedef struct RinAudioServiceDiagnosticsV1 {
     uint32_t reserved1;
 } RinAudioServiceDiagnosticsV1;
 
+typedef struct RinAudioServicePolicyGenerationV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t generation;
+    uint64_t reserved0;
+} RinAudioServicePolicyGenerationV1;
+
+static inline int rin_audio_service_policy_generation_valid(
+    const RinAudioServicePolicyGenerationV1* generation)
+{
+    return generation != NULL &&
+           generation->struct_size == sizeof(*generation) &&
+           generation->version == RIN_AUDIO_SERVICE_PROTOCOL_VERSION &&
+           generation->reserved0 == 0u;
+}
+
 static inline int rin_audio_service_status_valid(
     const RinAudioServiceStatusV1* status)
 {
@@ -685,6 +702,8 @@ static_assert(sizeof(RinAudioServiceDeviceListV1) == 992u,
               "audio service device list ABI drift");
 static_assert(sizeof(RinAudioServiceDiagnosticsV1) == 104u,
               "audio service diagnostics ABI drift");
+static_assert(sizeof(RinAudioServicePolicyGenerationV1) == 24u,
+              "audio service policy generation ABI drift");
 static_assert(sizeof(RinAudioServiceApplicationSnapshotV1) == 208u,
               "audio service application ABI drift");
 static_assert(sizeof(RinAudioServiceApplicationSnapshotListV1) == 3352u,
@@ -714,6 +733,8 @@ _Static_assert(sizeof(RinAudioServiceDeviceListV1) == 992u,
                "audio service device list ABI drift");
 _Static_assert(sizeof(RinAudioServiceDiagnosticsV1) == 104u,
                "audio service diagnostics ABI drift");
+_Static_assert(sizeof(RinAudioServicePolicyGenerationV1) == 24u,
+               "audio service policy generation ABI drift");
 _Static_assert(sizeof(RinAudioServiceApplicationSnapshotV1) == 208u,
                "audio service application ABI drift");
 _Static_assert(sizeof(RinAudioServiceApplicationSnapshotListV1) == 3352u,
