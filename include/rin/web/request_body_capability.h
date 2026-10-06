@@ -61,6 +61,11 @@ static inline int rin_request_body_capability_token_nonzero(
     return aggregate != 0u;
 }
 
+static inline int rin_request_body_capability_identity_valid(uint64_t value)
+{
+    return value != 0u && value != UINT64_MAX;
+}
+
 static inline int rin_request_body_capability_valid(
     const RinRequestBodyCapabilityV1* capability)
 {
@@ -69,9 +74,11 @@ static inline int rin_request_body_capability_valid(
     if (capability == NULL ||
         capability->struct_size != sizeof(*capability) ||
         capability->version != RIN_REQUEST_BODY_CAPABILITY_VERSION ||
-        capability->request_id == 0u ||
-        capability->connection_generation == 0u ||
-        capability->capability_generation == 0u ||
+        !rin_request_body_capability_identity_valid(capability->request_id) ||
+        !rin_request_body_capability_identity_valid(
+            capability->connection_generation) ||
+        !rin_request_body_capability_identity_valid(
+            capability->capability_generation) ||
         capability->byte_length == 0u ||
         capability->byte_length > RIN_REQUEST_BODY_CAPABILITY_MAX_BYTES ||
         capability->byte_offset > RIN_REQUEST_BODY_CAPABILITY_MAX_OFFSET ||
@@ -92,7 +99,8 @@ static inline int rin_request_body_capability_bound_to(
     uint64_t connection_generation)
 {
     return rin_request_body_capability_valid(capability) &&
-           request_id != 0u && connection_generation != 0u &&
+           rin_request_body_capability_identity_valid(request_id) &&
+           rin_request_body_capability_identity_valid(connection_generation) &&
            capability->request_id == request_id &&
            capability->connection_generation == connection_generation;
 }
