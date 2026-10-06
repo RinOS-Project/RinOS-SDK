@@ -177,7 +177,11 @@ enum {
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_COMMIT_REGISTER = 12,
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_ABORT_REGISTER = 13,
     /* Enumerate an immutable, page-bound snapshot of origin registrations. */
-    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_LIST = 14
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_LIST = 14,
+    /* Display one permission-checked Window notification. The request uses
+     * client_url for the requesting document URL, script_url for title, and
+     * scope for body; this reuses the existing bounded owner message. */
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_SHOW_NOTIFICATION = 15
 };
 
 enum {
@@ -209,7 +213,8 @@ enum {
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_NOT_FOUND = 2,
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_PERMISSION = 3,
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_LIST_ITEM = 4,
-    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_LIST_DONE = 5
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_LIST_DONE = 5,
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_NOTIFICATION_POSTED = 6
 };
 
 enum {
