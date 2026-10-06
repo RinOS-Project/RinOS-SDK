@@ -40,6 +40,7 @@
 #define RIN_PATH_AT_SYMLINK_FOLLOW   0x0400u
 #define RIN_PATH_AT_NO_AUTOMOUNT      0x0800u
 #define RIN_PATH_AT_EMPTY_PATH       0x1000u
+#define RIN_PATH_AT_RENAME_NOREPLACE 0x0001u
 
 typedef struct RinPathAtCallV1 {
     uint32_t struct_size;
