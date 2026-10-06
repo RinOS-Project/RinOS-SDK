@@ -19,6 +19,11 @@ static inline int rin_sdk_nonzero_bytes_valid(const void* value, size_t size)
     return size != 0u && aggregate != 0u;
 }
 
+static inline int rin_sdk_live_identity(uint64_t value)
+{
+    return value != 0u && value != UINT64_MAX;
+}
+
 /* Session identity is a transport-visible, versioned value rather than a
  * POSIX credential.  Keep its exact layout available to SDK clients that use
  * peer-session socket metadata without importing the OS-Core API header. */
@@ -181,9 +186,9 @@ static inline int rin_unix_peer_identity_valid(
 {
     return identity != NULL && identity->struct_size == sizeof(*identity) &&
            identity->version == RIN_UNIX_PEER_IDENTITY_VERSION &&
-           identity->process_id != 0u &&
-           identity->process_instance_cookie != 0u &&
-           identity->connection_id != 0u &&
+           rin_sdk_live_identity(identity->process_id) &&
+           rin_sdk_live_identity(identity->process_instance_cookie) &&
+           rin_sdk_live_identity(identity->connection_id) &&
            identity->flags == RIN_UNIX_PEER_IDENTITY_FLAG_CONNECTED;
 }
 
@@ -199,9 +204,9 @@ static inline int rin_unix_peer_app_identity_valid(
 {
     return identity != NULL && identity->struct_size == sizeof(*identity) &&
            identity->version == RIN_UNIX_PEER_APP_IDENTITY_VERSION &&
-           identity->process_id != 0u &&
-           identity->process_instance_cookie != 0u &&
-           identity->connection_id != 0u &&
+           rin_sdk_live_identity(identity->process_id) &&
+           rin_sdk_live_identity(identity->process_instance_cookie) &&
+           rin_sdk_live_identity(identity->connection_id) &&
            identity->flags ==
                (RIN_UNIX_PEER_APP_IDENTITY_FLAG_CONNECTED |
                 RIN_UNIX_PEER_APP_IDENTITY_FLAG_AUTHENTICATED) &&
@@ -216,7 +221,7 @@ static inline int rin_unix_peer_session_identity_valid(
            identity->version == RIN_UNIX_PEER_SESSION_IDENTITY_VERSION &&
            identity->reserved[0] == 0u && identity->reserved[1] == 0u &&
            identity->session_id != 0u && identity->uid != 0u &&
-           identity->instance_cookie != 0u;
+           rin_sdk_live_identity(identity->instance_cookie);
 }
 
 static inline int rin_unix_peer_session_state_valid(
@@ -237,8 +242,9 @@ static inline int rin_unix_peer_package_identity_valid(
         identity->struct_size != sizeof(*identity) ||
         identity->version != RIN_UNIX_PEER_PACKAGE_IDENTITY_VERSION ||
         identity->flags != RIN_UNIX_PEER_APP_IDENTITY_FLAG_AUTHENTICATED ||
-        identity->process_id == 0u || identity->process_instance_cookie == 0u ||
-        identity->package_generation == 0u ||
+        !rin_sdk_live_identity(identity->process_id) ||
+        !rin_sdk_live_identity(identity->process_instance_cookie) ||
+        !rin_sdk_live_identity(identity->package_generation) ||
         identity->reserved[0] != 0u || identity->reserved[1] != 0u) {
         return 0;
     }
@@ -277,8 +283,8 @@ static inline int rin_unix_peer_application_metadata_valid(
            metadata->flags ==
                (RIN_UNIX_PEER_APP_IDENTITY_FLAG_CONNECTED |
                 RIN_UNIX_PEER_APP_IDENTITY_FLAG_AUTHENTICATED) &&
-           metadata->process_id != 0u &&
-           metadata->process_instance_cookie != 0u &&
+           rin_sdk_live_identity(metadata->process_id) &&
+           rin_sdk_live_identity(metadata->process_instance_cookie) &&
            rin_unix_application_id_valid(metadata->application_id) &&
            rin_unix_application_name_valid(metadata->display_name) &&
            metadata->reserved[0] == 0u && metadata->reserved[1] == 0u;
@@ -293,9 +299,9 @@ static inline int rin_unix_peer_application_image_path_valid(
            image->flags ==
                (RIN_UNIX_PEER_APP_IDENTITY_FLAG_CONNECTED |
                 RIN_UNIX_PEER_APP_IDENTITY_FLAG_AUTHENTICATED) &&
-           image->process_id != 0u &&
-           image->process_instance_cookie != 0u &&
-           image->package_generation != 0u &&
+           rin_sdk_live_identity(image->process_id) &&
+           rin_sdk_live_identity(image->process_instance_cookie) &&
+           rin_sdk_live_identity(image->package_generation) &&
            rin_unix_application_id_valid(image->application_id) &&
            rin_unix_application_image_path_valid(image->image_path) &&
            image->reserved[0] == 0u && image->reserved[1] == 0u;
