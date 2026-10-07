@@ -402,6 +402,20 @@ typedef struct RinNetIPv6Info {
     uint8_t link_local[16];
 } RinNetIPv6Info;
 
+/* A fixed-size snapshot of configured non-link-local unicast addresses.
+ * Keeping this separate from RinNetIPv6Info preserves its 36-byte syscall
+ * contract for existing callers. */
+#define RIN_NET_IPV6_ADDRESS_LIST_VERSION 1u
+#define RIN_NET_IPV6_ADDRESS_LIST_CAPACITY 5u
+typedef struct RinNetIPv6AddressListV1 {
+    uint32_t version;
+    uint32_t struct_size;
+    uint32_t ndp_generation;
+    uint16_t device_generation;
+    uint16_t address_count;
+    uint8_t addresses[RIN_NET_IPV6_ADDRESS_LIST_CAPACITY][16];
+} RinNetIPv6AddressListV1;
+
 #define RIN_NET_IPV6_INFO_VERSION             1u
 #define RIN_NET_IPV6_INFO_FLAG_LINK_LOCAL     0x01u
 #define RIN_NET_IPV6_INFO_FLAG_MANAGED         0x02u
@@ -435,6 +449,8 @@ static_assert(sizeof(RinIPv6Config) == 120u,
               "RinIPv6Config ABI drift");
 static_assert(sizeof(RinNetIPv6Info) == 36u,
               "RinNetIPv6Info ABI drift");
+static_assert(sizeof(RinNetIPv6AddressListV1) == 96u,
+              "RinNetIPv6AddressListV1 ABI drift");
 #else
 _Static_assert(sizeof(RinNetPrimaryInfo) == 52u,
                "RinNetPrimaryInfo ABI drift");
@@ -462,6 +478,8 @@ _Static_assert(sizeof(RinIPv6Config) == 120u,
                "RinIPv6Config ABI drift");
 _Static_assert(sizeof(RinNetIPv6Info) == 36u,
                "RinNetIPv6Info ABI drift");
+_Static_assert(sizeof(RinNetIPv6AddressListV1) == 96u,
+               "RinNetIPv6AddressListV1 ABI drift");
 #endif
 
 int rin_net_get_interface_statistics(RinNetInterfaceStatisticsV1* out);
