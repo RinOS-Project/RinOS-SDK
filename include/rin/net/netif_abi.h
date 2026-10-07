@@ -416,6 +416,27 @@ typedef struct RinNetIPv6AddressListV1 {
     uint8_t addresses[RIN_NET_IPV6_ADDRESS_LIST_CAPACITY][16];
 } RinNetIPv6AddressListV1;
 
+/* Per-interface IPv6 address details for POSIX-shaped address enumeration.
+ * Unlike the Settings list above, this record includes link-local addresses
+ * and keeps the NDP prefix length paired with each address. */
+#define RIN_NET_IPV6_INTERFACE_ADDRESS_LIST_VERSION 1u
+#define RIN_NET_IPV6_INTERFACE_ADDRESS_CAPACITY 6u
+typedef struct RinNetIPv6InterfaceAddressV1 {
+    uint8_t address[16];
+    uint8_t prefix_length;
+    uint8_t reserved[3];
+} RinNetIPv6InterfaceAddressV1;
+
+typedef struct RinNetIPv6InterfaceAddressListV1 {
+    uint32_t version;
+    uint32_t struct_size;
+    uint32_t ndp_generation;
+    uint16_t device_generation;
+    uint16_t address_count;
+    RinNetIPv6InterfaceAddressV1
+        addresses[RIN_NET_IPV6_INTERFACE_ADDRESS_CAPACITY];
+} RinNetIPv6InterfaceAddressListV1;
+
 #define RIN_NET_IPV6_INFO_VERSION             1u
 #define RIN_NET_IPV6_INFO_FLAG_LINK_LOCAL     0x01u
 #define RIN_NET_IPV6_INFO_FLAG_MANAGED         0x02u
@@ -451,6 +472,10 @@ static_assert(sizeof(RinNetIPv6Info) == 36u,
               "RinNetIPv6Info ABI drift");
 static_assert(sizeof(RinNetIPv6AddressListV1) == 96u,
               "RinNetIPv6AddressListV1 ABI drift");
+static_assert(sizeof(RinNetIPv6InterfaceAddressV1) == 20u,
+              "RinNetIPv6InterfaceAddressV1 ABI drift");
+static_assert(sizeof(RinNetIPv6InterfaceAddressListV1) == 136u,
+              "RinNetIPv6InterfaceAddressListV1 ABI drift");
 #else
 _Static_assert(sizeof(RinNetPrimaryInfo) == 52u,
                "RinNetPrimaryInfo ABI drift");
@@ -480,6 +505,10 @@ _Static_assert(sizeof(RinNetIPv6Info) == 36u,
                "RinNetIPv6Info ABI drift");
 _Static_assert(sizeof(RinNetIPv6AddressListV1) == 96u,
                "RinNetIPv6AddressListV1 ABI drift");
+_Static_assert(sizeof(RinNetIPv6InterfaceAddressV1) == 20u,
+               "RinNetIPv6InterfaceAddressV1 ABI drift");
+_Static_assert(sizeof(RinNetIPv6InterfaceAddressListV1) == 136u,
+               "RinNetIPv6InterfaceAddressListV1 ABI drift");
 #endif
 
 int rin_net_get_interface_statistics(RinNetInterfaceStatisticsV1* out);

@@ -459,6 +459,7 @@
 #define RIN_SYS_MMAP_FD64                   0x8078u
 /* network. */
 #define RIN_SYS_NET_IPV6_ADDRESSES          0x807Bu
+#define RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES 0x807Cu
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
