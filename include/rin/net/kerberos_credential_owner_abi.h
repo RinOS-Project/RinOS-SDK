@@ -3,7 +3,6 @@
 #define RIN_SDK_NET_KERBEROS_CREDENTIAL_OWNER_ABI_H
 
 #include <stddef.h>
-#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
