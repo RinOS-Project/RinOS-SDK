@@ -193,9 +193,10 @@ static RinResult rin_sdk_invoke_scalar_output_v1(
 static RinResult rin_sdk_invoke_handle_output_v1(
     uint32_t library_id, uint32_t operation, const void* request,
     uint32_t request_size, RinHandle* response) {
+    if (!response) return RIN_ERROR_INVALID_ARGUMENT;
     RinResult result = rin_sdk_invoke_scalar_output_v1(
         library_id, operation, request, request_size, response,
-        response ? sizeof(*response) : 0u);
+        sizeof(*response));
     if (result == RIN_SUCCESS && response && *response == RIN_HANDLE_INVALID)
         result = RIN_ERROR_ABI_MISMATCH;
     if (result != RIN_SUCCESS && response) *response = RIN_HANDLE_INVALID;
@@ -350,15 +351,9 @@ RinResult rin_channel_create_v1(RinChannel* first, RinChannel* second) {
     return result;
 }
 RinResult rin_channel_send_v1(RinChannel channel, const RinIpcMessageV1* message) {
-    struct { RinVersionedV1 header; RinChannel channel; RinIpcMessageV1 message; } request;
     if (!versioned(message, sizeof(*message))) return RIN_ERROR_ABI_MISMATCH;
-    rin_sdk_zero_bytes(&request, sizeof(request));
-    request.header.struct_size = sizeof(request);
-    request.header.version = RIN_SDK_STRUCT_VERSION_1;
-    request.channel = channel;
-    rin_sdk_copy_bytes(&request.message, message, sizeof(request.message));
-    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_IPC, IPC_CHANNEL_SEND,
-                             &request, sizeof(request), NULL, 0u);
+    SIMPLE_CALL(RIN_SDK_LIBRARY_IPC, IPC_CHANNEL_SEND, (RinResult*)0,
+                channel, (uint64_t)(uintptr_t)message, 0u, 0u, 0u, 0u);
 }
 RinResult rin_channel_receive_v1(RinChannel channel, RinIpcMessageV1* message) {
     RinSliceV1 bytes;
