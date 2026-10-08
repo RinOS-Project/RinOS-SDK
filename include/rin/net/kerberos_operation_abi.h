@@ -97,7 +97,8 @@ typedef struct RinKerberosProviderMessagePairInputV1 {
     uint16_t kind;
     uint32_t first_size;
     uint32_t second_size;
-    uint32_t reserved;
+    /* RIN_KERBEROS_OPERATION_FLAG_ENCRYPT is meaningful for WRAP only. */
+    uint32_t flags;
 } RinKerberosProviderMessagePairInputV1;
 
 typedef struct RinKerberosOperationRequestV1 {
