@@ -20,6 +20,10 @@ extern "C" {
     (RIN_GPU_CROSS_PROCESS_RIGHT_READ | RIN_GPU_CROSS_PROCESS_RIGHT_WRITE | \
      RIN_GPU_CROSS_PROCESS_RIGHT_PRESENT)
 
+/* The capability service can distinguish an unsupported mapping from a
+ * malformed request or transport failure. */
+#define RIN_GPU_CROSS_PROCESS_UNSUPPORTED INT32_C(-8)
+
 enum RinGpuCapabilityIpcOpcode {
     RIN_GPU_CAPABILITY_IPC_ISSUE = 1,
     RIN_GPU_CAPABILITY_IPC_VALIDATE = 2,
@@ -28,7 +32,8 @@ enum RinGpuCapabilityIpcOpcode {
     RIN_GPU_CAPABILITY_IPC_ISSUE_V2 = 5,
     RIN_GPU_CAPABILITY_IPC_ACQUIRE_V2 = 6,
     RIN_GPU_CAPABILITY_IPC_RELEASE_LEASE_V2 = 7,
-    RIN_GPU_CAPABILITY_IPC_REVOKE_V2 = 8
+    RIN_GPU_CAPABILITY_IPC_REVOKE_V2 = 8,
+    RIN_GPU_CAPABILITY_IPC_MAP_READABLE_LEASE_V1 = 9
 };
 
 typedef struct RinGpuCapabilityIpcHeaderV1 {
@@ -128,6 +133,37 @@ typedef struct RinGpuCrossProcessCapabilityReleaseLeaseV2 {
     uint32_t reserved[2];
 } RinGpuCrossProcessCapabilityReleaseLeaseV2;
 
+/* Explicit CPU-readable import for a consumer that composes an image in its
+ * own address space. This is not a GPUVA/IOVA export or a scanout mapping.
+ * The request names an already acquired V2 lease; the kernel derives both
+ * process identities from the authenticated channel message. The mapping is
+ * released together with that same V2 lease. Allocations that are not
+ * CPU-visible return UNSUPPORTED and remain unmapped. */
+#define RIN_GPU_CROSS_PROCESS_MAPPED_READABLE_V1_VERSION UINT32_C(1)
+#define RIN_GPU_CROSS_PROCESS_MAPPED_ACCESS_CPU_READ UINT32_C(1)
+typedef struct RinGpuCrossProcessCapabilityMapReadableLeaseRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t token;
+    uint64_t lease_id;
+    uint64_t device_generation;
+    uint64_t reserved[2];
+} RinGpuCrossProcessCapabilityMapReadableLeaseRequestV1;
+
+typedef struct RinGpuCrossProcessCapabilityMappedReadableLeaseV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t token;
+    uint64_t lease_id;
+    uint64_t resource_id;
+    uint64_t device_generation;
+    uint64_t address_in_recipient;
+    uint64_t allocation_size;
+    uint32_t rights;
+    uint32_t access;
+    uint64_t reserved[2];
+} RinGpuCrossProcessCapabilityMappedReadableLeaseV1;
+
 typedef struct RinGpuCrossProcessCapabilityRevokeResponseV2 {
     uint32_t outstanding_lease_count;
     uint32_t reserved[3];
@@ -167,6 +203,10 @@ static_assert(sizeof(RinGpuCrossProcessCapabilityLeaseV2) == 56u,
               "RinGpuCrossProcessCapabilityLeaseV2 ABI drift");
 static_assert(sizeof(RinGpuCrossProcessCapabilityReleaseLeaseV2) == 40u,
               "RinGpuCrossProcessCapabilityReleaseLeaseV2 ABI drift");
+static_assert(sizeof(RinGpuCrossProcessCapabilityMapReadableLeaseRequestV1) == 48u,
+              "RinGpuCrossProcessCapabilityMapReadableLeaseRequestV1 ABI drift");
+static_assert(sizeof(RinGpuCrossProcessCapabilityMappedReadableLeaseV1) == 80u,
+              "RinGpuCrossProcessCapabilityMappedReadableLeaseV1 ABI drift");
 static_assert(sizeof(RinGpuCrossProcessCapabilityRevokeResponseV2) == 16u,
               "RinGpuCrossProcessCapabilityRevokeResponseV2 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
@@ -188,6 +228,10 @@ _Static_assert(sizeof(RinGpuCrossProcessCapabilityLeaseV2) == 56u,
                "RinGpuCrossProcessCapabilityLeaseV2 ABI drift");
 _Static_assert(sizeof(RinGpuCrossProcessCapabilityReleaseLeaseV2) == 40u,
                "RinGpuCrossProcessCapabilityReleaseLeaseV2 ABI drift");
+_Static_assert(sizeof(RinGpuCrossProcessCapabilityMapReadableLeaseRequestV1) == 48u,
+               "RinGpuCrossProcessCapabilityMapReadableLeaseRequestV1 ABI drift");
+_Static_assert(sizeof(RinGpuCrossProcessCapabilityMappedReadableLeaseV1) == 80u,
+               "RinGpuCrossProcessCapabilityMappedReadableLeaseV1 ABI drift");
 _Static_assert(sizeof(RinGpuCrossProcessCapabilityRevokeResponseV2) == 16u,
                "RinGpuCrossProcessCapabilityRevokeResponseV2 ABI drift");
 #endif
