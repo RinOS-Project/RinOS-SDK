@@ -29,6 +29,10 @@ extern "C" {
 #define RIN_AUTH_PROVIDER_CONTINUE_NEEDED UINT32_C(3)
 #define RIN_AUTH_PROVIDER_CONTEXT_EXPIRED UINT32_C(4)
 #define RIN_AUTH_PROVIDER_BAD_BINDINGS UINT32_C(5)
+/* RFC 2743 GSS_S_DEFECTIVE_TOKEN: the provider rejected an input token
+ * because its bounded framing/consistency checks failed.  This is distinct
+ * from UNAVAILABLE (missing service/credential) and BAD_BINDINGS. */
+#define RIN_AUTH_PROVIDER_DEFECTIVE_TOKEN UINT32_C(6)
 
 typedef struct RinAuthProviderBufferV1 {
     uint64_t length;
