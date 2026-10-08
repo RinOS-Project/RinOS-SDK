@@ -19,11 +19,17 @@ extern "C" {
 #define RIN_GPU_ALLOCATION_GPU_WRITE UINT32_C(0x00000002)
 #define RIN_GPU_ALLOCATION_CPU_VISIBLE UINT32_C(0x00000004)
 #define RIN_GPU_ALLOCATION_ZEROED UINT32_C(0x00000008)
+#define RIN_GPU_SYNC_CPU_TO_DEVICE UINT32_C(1)
+#define RIN_GPU_SYNC_DEVICE_TO_CPU UINT32_C(2)
+#define RIN_GPU_MEMORY_MAX_TRANSFER_BYTES UINT64_C(1048576)
 
 enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_MEMORY_ALLOCATE = 1,
     RIN_GPU_SDK_MEMORY_QUERY = 2,
-    RIN_GPU_SDK_MEMORY_DESTROY = 3
+    RIN_GPU_SDK_MEMORY_DESTROY = 3,
+    RIN_GPU_SDK_MEMORY_SYNC = 4,
+    RIN_GPU_SDK_MEMORY_UPLOAD = 5,
+    RIN_GPU_SDK_MEMORY_READBACK = 6
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -71,6 +77,22 @@ RIN_SDK_API RinResult rin_gpu_memory_query_v1(
 RIN_SDK_API RinResult rin_gpu_memory_destroy_v1(
     uint64_t device_id, uint64_t device_generation,
     RinGpuAllocationV1 allocation);
+/* Transfers are bounded to 1 MiB per call. Upload/readback use kernel-copied
+ * buffers rather than mapping a physical backing into the process. A failed
+ * multi-chunk transfer may have completed a prefix; retry the full range when
+ * the reported result permits it. */
+RIN_SDK_API RinResult rin_gpu_memory_sync_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuAllocationV1 allocation, uint32_t action, uint64_t offset,
+    uint64_t length);
+RIN_SDK_API RinResult rin_gpu_memory_upload_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuAllocationV1 allocation, uint64_t offset,
+    const void* source, uint64_t length);
+RIN_SDK_API RinResult rin_gpu_memory_readback_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuAllocationV1 allocation, uint64_t offset,
+    void* destination, uint64_t length);
 #endif
 
 #if defined(__cplusplus)

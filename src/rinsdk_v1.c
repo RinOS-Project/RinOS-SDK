@@ -902,6 +902,52 @@ RinResult rin_gpu_memory_destroy_v1(
                 (RinResult*)0, device_id, device_generation, allocation,
                 0, 0, 0);
 }
+
+RinResult rin_gpu_memory_sync_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuAllocationV1 allocation, uint32_t action, uint64_t offset,
+    uint64_t length) {
+    if (device_id == 0u || device_generation == 0u || allocation == 0u ||
+        (action != RIN_GPU_SYNC_CPU_TO_DEVICE &&
+         action != RIN_GPU_SYNC_DEVICE_TO_CPU) ||
+        length == 0u || length - 1u > UINT64_MAX - offset)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_SYNC,
+                (RinResult*)0, device_id, device_generation, allocation,
+                action, offset, length);
+}
+
+RinResult rin_gpu_memory_upload_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuAllocationV1 allocation, uint64_t offset, const void* source,
+    uint64_t length) {
+    uintptr_t address = (uintptr_t)source;
+    if (device_id == 0u || device_generation == 0u || allocation == 0u ||
+        !source || length == 0u ||
+        length > RIN_GPU_MEMORY_MAX_TRANSFER_BYTES ||
+        length - 1u > UINT64_MAX - offset ||
+        length - 1u > (uint64_t)UINTPTR_MAX - address)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_UPLOAD,
+                (RinResult*)0, device_id, device_generation, allocation,
+                offset, length, (uint64_t)address);
+}
+
+RinResult rin_gpu_memory_readback_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuAllocationV1 allocation, uint64_t offset, void* destination,
+    uint64_t length) {
+    uintptr_t address = (uintptr_t)destination;
+    if (device_id == 0u || device_generation == 0u || allocation == 0u ||
+        !destination || length == 0u ||
+        length > RIN_GPU_MEMORY_MAX_TRANSFER_BYTES ||
+        length - 1u > UINT64_MAX - offset ||
+        length - 1u > (uint64_t)UINTPTR_MAX - address)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_READBACK,
+                (RinResult*)0, device_id, device_generation, allocation,
+                offset, length, (uint64_t)address);
+}
 #endif
 
 #undef SIMPLE_CALL
