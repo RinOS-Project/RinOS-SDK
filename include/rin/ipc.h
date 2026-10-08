@@ -15,6 +15,18 @@ typedef struct RinIpcMessageV1 {
     uint64_t reserved[3];
 } RinIpcMessageV1;
 
+/* Channel calls are non-blocking. Empty receive and queue-full send return
+ * RIN_ERROR_WOULD_BLOCK; wait for RIN_WAIT_EVENT_READABLE/WRITABLE with
+ * rin_wait_many_v1 or a wait set before retrying. Bulk payloads should be
+ * shared-memory objects transferred in `handles`, not large inline messages.
+ * A too-small receive buffer returns RIN_ERROR_BUFFER_TOO_SMALL without
+ * consuming the queued message. Handle transfer preserves the source handle's
+ * exact rights and requires RIN_OBJECT_RIGHT_DUPLICATE. */
+#define RIN_CHANNEL_MAX_MESSAGE_BYTES UINT32_C(65536)
+#define RIN_CHANNEL_MAX_TRANSFER_HANDLES UINT32_C(16)
+#define RIN_CHANNEL_MAX_QUEUED_MESSAGES UINT32_C(32)
+#define RIN_CHANNEL_MAX_QUEUED_BYTES UINT32_C(262144)
+
 typedef struct RinWaitItemV1 {
     RinHandle handle;
     uint32_t events;
