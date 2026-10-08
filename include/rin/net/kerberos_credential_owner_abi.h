@@ -17,10 +17,12 @@ extern "C" {
  * sourcing it from the authenticated credential store; it must not synthesize
  * an identity or use a fixed token.
  *
- * The handle is provider-owned.  Neither the PAL nor managed code dereferences
- * it, and no ccache/keytab bytes cross this ABI.  A provider may use the
- * handle to drive its RFC 4120/RFC 4121 implementation and must release it
- * through the owner before the provider handle becomes unreachable.
+ * The handle is provider-owned opaque state.  It may be a non-dereferenceable
+ * generation-bound capability token; neither the PAL nor managed code may
+ * dereference or reinterpret it, and no ccache/keytab bytes cross this ABI.
+ * A provider may use the handle only through its owner/provider contract to
+ * drive its RFC 4120/RFC 4121 implementation and must release it through the
+ * owner before the provider handle becomes unreachable.
  */
 #define RIN_KERBEROS_CREDENTIAL_OWNER_ABI_VERSION UINT16_C(1)
 #define RIN_KERBEROS_CREDENTIAL_OWNER_CAP_SESSION_INITIATOR \
