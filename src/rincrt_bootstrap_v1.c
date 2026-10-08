@@ -326,6 +326,22 @@ void rin_cpp_exception_unregister_cleanup(
     rincrt_cpp_exception_cleanup_fatal();
 }
 
+void rin_cpp_exception_register_current_cleanup(
+    RinCrtCppExceptionCleanup callback, void* object)
+{
+    RinCrtCppExceptionFrame* frame = rincrt_cpp_exception_top;
+    if (!callback || !object) rincrt_cpp_exception_cleanup_fatal();
+    if (frame) rin_cpp_exception_register_cleanup(frame, callback, object);
+}
+
+void rin_cpp_exception_unregister_current_cleanup(
+    RinCrtCppExceptionCleanup callback, void* object)
+{
+    RinCrtCppExceptionFrame* frame = rincrt_cpp_exception_top;
+    if (!callback || !object) rincrt_cpp_exception_cleanup_fatal();
+    if (frame) rin_cpp_exception_unregister_cleanup(frame, callback, object);
+}
+
 void rin_cpp_exception_install(RinCrtCppExceptionFrame* frame)
 {
     if (!frame) {
