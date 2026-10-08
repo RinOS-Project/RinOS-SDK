@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "kerberos_credential_owner_abi.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
