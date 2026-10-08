@@ -335,12 +335,18 @@ RinResult rin_thread_join_v1(RinThread thread, uint64_t timeout_ns, int32_t* exi
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_IPC)
 RinResult rin_channel_create_v1(RinChannel* first, RinChannel* second) {
-    RinChannel pair[2] = {0, 0}; RinResult result;
+    RinChannel pair[2] = {0, 0};
+    RinSdkArgsV1 request;
+    RinResult result;
     if (!first || !second) return RIN_ERROR_INVALID_ARGUMENT;
     *first = RIN_HANDLE_INVALID;
     *second = RIN_HANDLE_INVALID;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
     result = rin_sdk_invoke_scalar_output_v1(
-        RIN_SDK_LIBRARY_IPC, IPC_CHANNEL_CREATE, NULL, 0u, pair, sizeof(pair));
+        RIN_SDK_LIBRARY_IPC, IPC_CHANNEL_CREATE, &request, sizeof(request),
+        pair, sizeof(pair));
     if (result == RIN_SUCCESS &&
         (pair[0] == RIN_HANDLE_INVALID || pair[1] == RIN_HANDLE_INVALID)) {
         pair[0] = RIN_HANDLE_INVALID;
