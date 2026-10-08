@@ -13,6 +13,11 @@
 #define RIN_ICU_SERVICE_ID "rinicu"
 #define RIN_ICU_MAGIC 0x52495631u /* "RIV1" */
 #define RIN_ICU_VERSION 2u /* wire protocol version; never a library ABI */
+/* The PAL exposes this product-owned collation snapshot version through
+ * GlobalizationNative_GetSortVersion.  Keep it independent from the wire
+ * protocol: changing request framing must not invalidate persisted .NET sort
+ * versions, while changing collation ordering must. */
+#define RIN_ICU_COLLATION_VERSION UINT32_C(0x00010000)
 #define RIN_ICU_MAX_INLINE_PAYLOAD 65536u
 #define RIN_ICU_MAX_BULK_ITEMS 4096u
 #define RIN_ICU_MSG_FLAGS_KNOWN 0u
