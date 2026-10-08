@@ -410,6 +410,7 @@
 /* time. */
 #define RIN_SYS_TIMEZONE_GET                0x8058u
 #define RIN_SYS_TIMEZONE_SET                0x8059u
+#define RIN_SYS_TIMEZONE_GET_EFFECTIVE       0x8080u
 #define RIN_SYS_TIMER_POLL                  0x805Au
 /* process. */
 #define RIN_SYS_RESOURCE_LIMIT_CALL         0x805Bu
