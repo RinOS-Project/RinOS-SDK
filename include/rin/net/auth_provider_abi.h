@@ -37,6 +37,12 @@ extern "C" {
  * remains distinct from local defective-token framing so the PAL can preserve
  * the protocol error token for the GSS caller. */
 #define RIN_AUTH_PROVIDER_KRB_ERROR UINT32_C(7)
+/* Preserve the credential-owner distinction between an invalid opaque
+ * handle and credentials whose lifetime has elapsed.  The PAL maps these
+ * values to RFC 2744 GSS_S_DEFECTIVE_CREDENTIAL and
+ * GSS_S_CREDENTIALS_EXPIRED instead of collapsing them to UNAVAILABLE. */
+#define RIN_AUTH_PROVIDER_DEFECTIVE_CREDENTIAL UINT32_C(8)
+#define RIN_AUTH_PROVIDER_CREDENTIALS_EXPIRED UINT32_C(9)
 
 typedef struct RinAuthProviderBufferV1 {
     uint64_t length;
