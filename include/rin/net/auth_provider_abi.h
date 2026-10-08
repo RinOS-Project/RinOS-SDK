@@ -108,6 +108,11 @@ typedef struct RinAuthProviderV1 {
                            void* security_context, uint8_t* input,
                            int32_t input_length, uint8_t* token,
                            int32_t token_length);
+    /* These callbacks are required only when package_mask advertises NTLM.
+     * A Kerberos-only or Negotiate provider must not be forced to implement
+     * an unrelated NTLM/password capability.  The PAL returns unavailable if
+     * a caller requests password acquisition from a provider without the
+     * optional callback. */
     uint32_t (*initiate_cred_with_password)(
         void* context, uint32_t* minor_status, int32_t package_type,
         void* desired_name, char* password, uint32_t password_length,
