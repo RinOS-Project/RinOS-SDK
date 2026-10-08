@@ -50,7 +50,9 @@ typedef enum RinKeyringOpcode {
     RIN_KEYRING_OP_STATUS = 4,
     RIN_KEYRING_OP_ACQUIRE_HANDLE = 5,
     RIN_KEYRING_OP_GET_HANDLE = 6,
-    RIN_KEYRING_OP_REMOVE_HANDLE = 7
+    RIN_KEYRING_OP_REMOVE_HANDLE = 7,
+    /* Private authenticated Kerberos provider operation envelope. */
+    RIN_KEYRING_OP_KERBEROS_OPERATION = 13
 } RinKeyringOpcode;
 
 #define RIN_KEYRING_HANDLE_SIZE 72u
