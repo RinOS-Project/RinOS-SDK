@@ -312,7 +312,8 @@ enum {
     RIN_SDK_LIBRARY_MEDIA = 6,
     RIN_SDK_LIBRARY_CONFIG = 7,
     RIN_SDK_LIBRARY_PKG = 8,
-    RIN_SDK_LIBRARY_DEVICE = 9
+    RIN_SDK_LIBRARY_DEVICE = 9,
+    RIN_SDK_LIBRARY_GPU = 10
 };
 
 RIN_SDK_API RinResult rin_sdk_bind_backend_v1(const RinSdkBackendV1* backend);

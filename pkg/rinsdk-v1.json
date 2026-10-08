@@ -13,6 +13,7 @@
     "rinmedia": {"archive": "librinmedia.ra", "shared": "rinmedia.rll", "define": "RINSDK_BUILD_MEDIA", "dependencies": ["rincrt", "rinbase"]},
     "rinconfig": {"archive": "librinconfig.ra", "shared": "rinconfig.rll", "define": "RINSDK_BUILD_CONFIG", "dependencies": ["rincrt", "rinbase"]},
     "rinpkg": {"archive": "librinpkg.ra", "shared": "rinpkg.rll", "define": "RINSDK_BUILD_PKG", "dependencies": ["rincrt", "rinbase", "rinipc"]},
-    "rindevice": {"archive": "librindevice.ra", "shared": "rindevice.rll", "define": "RINSDK_BUILD_DEVICE", "dependencies": ["rincrt", "rinbase"]}
+    "rindevice": {"archive": "librindevice.ra", "shared": "rindevice.rll", "define": "RINSDK_BUILD_DEVICE", "dependencies": ["rincrt", "rinbase"]},
+    "ringpumem": {"archive": "libringpumem.ra", "shared": "ringpumem.rll", "define": "RINSDK_BUILD_GPU", "dependencies": ["rincrt", "rinbase"]}
   }
 }

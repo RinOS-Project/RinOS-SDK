@@ -10,6 +10,7 @@
 #include "config.h"
 #include "pkg.h"
 #include "device.h"
+#include "gpu.h"
 #include "service.h"
 #include "keyring.h"
 #include "syscall_abi.h"

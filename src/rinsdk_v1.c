@@ -14,7 +14,8 @@ static void rin_sdk_copy_bytes(void* destination, const void* source,
     defined(RINSDK_BUILD_IPC) || defined(RINSDK_BUILD_FS) || \
     defined(RINSDK_BUILD_NET) || defined(RINSDK_BUILD_GUI) || \
     defined(RINSDK_BUILD_MEDIA) || defined(RINSDK_BUILD_CONFIG) || \
-    defined(RINSDK_BUILD_PKG) || defined(RINSDK_BUILD_DEVICE)
+    defined(RINSDK_BUILD_PKG) || defined(RINSDK_BUILD_DEVICE) || \
+    defined(RINSDK_BUILD_GPU)
 static void rin_sdk_zero_bytes(void* destination, uint64_t size) {
     uint8_t* out = (uint8_t*)destination;
     while (size-- > 0u) *out++ = 0u;
@@ -71,7 +72,7 @@ enum {
     defined(RINSDK_BUILD_IPC) || defined(RINSDK_BUILD_FS) || \
     defined(RINSDK_BUILD_NET) || defined(RINSDK_BUILD_GUI) || \
     defined(RINSDK_BUILD_MEDIA) || defined(RINSDK_BUILD_PKG) || \
-    defined(RINSDK_BUILD_DEVICE)
+    defined(RINSDK_BUILD_DEVICE) || defined(RINSDK_BUILD_GPU)
 static int versioned(const void* value, uint32_t minimum_size) {
     const RinVersionedV1* header = (const RinVersionedV1*)value;
     return header && header->struct_size >= minimum_size &&
@@ -163,7 +164,7 @@ RinResult rin_sdk_invoke_v1(uint32_t library_id, uint32_t operation,
     if (__atomic_load_n(&g_backend_state, __ATOMIC_ACQUIRE) != 2u) {
         return RIN_ERROR_NOT_SUPPORTED;
     }
-    if (library_id < RIN_SDK_LIBRARY_BASE || library_id > RIN_SDK_LIBRARY_DEVICE ||
+    if (library_id < RIN_SDK_LIBRARY_BASE || library_id > RIN_SDK_LIBRARY_GPU ||
         operation == 0u || (request_size && !request) || (response_size && !response)) {
         return RIN_ERROR_INVALID_ARGUMENT;
     }
@@ -177,7 +178,8 @@ RinResult rin_sdk_invoke_v1(uint32_t library_id, uint32_t operation,
     defined(RINSDK_BUILD_IPC) || defined(RINSDK_BUILD_FS) || \
     defined(RINSDK_BUILD_NET) || defined(RINSDK_BUILD_GUI) || \
     defined(RINSDK_BUILD_MEDIA) || defined(RINSDK_BUILD_CONFIG) || \
-    defined(RINSDK_BUILD_PKG) || defined(RINSDK_BUILD_DEVICE)
+    defined(RINSDK_BUILD_PKG) || defined(RINSDK_BUILD_DEVICE) || \
+    defined(RINSDK_BUILD_GPU)
 static RinResult rin_sdk_invoke_scalar_output_v1(
     uint32_t library_id, uint32_t operation, const void* request,
     uint32_t request_size, void* response, uint32_t response_size) {
@@ -190,6 +192,10 @@ static RinResult rin_sdk_invoke_scalar_output_v1(
     return result;
 }
 
+#if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE) || \
+    defined(RINSDK_BUILD_IPC) || defined(RINSDK_BUILD_NET) || \
+    defined(RINSDK_BUILD_GUI) || defined(RINSDK_BUILD_MEDIA) || \
+    defined(RINSDK_BUILD_PKG) || defined(RINSDK_BUILD_DEVICE)
 static RinResult rin_sdk_invoke_handle_output_v1(
     uint32_t library_id, uint32_t operation, const void* request,
     uint32_t request_size, RinHandle* response) {
@@ -202,6 +208,7 @@ static RinResult rin_sdk_invoke_handle_output_v1(
     if (result != RIN_SUCCESS && response) *response = RIN_HANDLE_INVALID;
     return result;
 }
+#endif
 #endif
 
 #define SIMPLE_CALL(lib, op, out, a, b, c, d, e, f) do { \
@@ -828,6 +835,73 @@ RinResult rin_device_enumerate_v1(uint32_t device_class,uint64_t index,RinDevice
 RinResult rin_device_open_v1(uint64_t device_id,uint32_t rights,RinDevice* device) { HANDLE_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_DEVICE,DEVICE_OPEN,device,device_id,rights,0,0,0,0); }
 RinResult rin_device_control_v1(RinDevice device,uint32_t operation,RinSliceV1 input,RinSliceV1 output,uint64_t* transferred) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_DEVICE,DEVICE_CONTROL,transferred,device,operation,input.address,input.size,output.address,output.size); }
 RinResult rin_device_query_v1(RinDevice device,RinDeviceInfoV1* info) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_DEVICE,DEVICE_QUERY,info,device,0,0,0,0,0); }
+#endif
+
+#if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GPU)
+RinResult rin_gpu_memory_allocate_v1(
+    uint64_t device_id, uint64_t device_generation,
+    const RinGpuAllocationDescV1* descriptor,
+    RinGpuAllocationV1* allocation_out) {
+    RinSdkArgsV1 request;
+    RinResult result;
+
+    if (allocation_out) *allocation_out = 0u;
+    if (device_id == 0u || device_generation == 0u || !descriptor ||
+        descriptor->struct_size != sizeof(*descriptor) ||
+        descriptor->version != RIN_GPU_ALLOCATION_DESC_VERSION_V1 ||
+        descriptor->heap < RIN_GPU_HEAP_LOCAL ||
+        descriptor->heap > RIN_GPU_HEAP_SYSTEM ||
+        (descriptor->flags & ~(RIN_GPU_ALLOCATION_GPU_READ |
+                               RIN_GPU_ALLOCATION_GPU_WRITE |
+                               RIN_GPU_ALLOCATION_CPU_VISIBLE |
+                               RIN_GPU_ALLOCATION_ZEROED)) != 0u ||
+        (descriptor->flags & (RIN_GPU_ALLOCATION_GPU_READ |
+                              RIN_GPU_ALLOCATION_GPU_WRITE)) == 0u ||
+        descriptor->size_bytes == 0u ||
+        !allocation_out)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    for (uint32_t index = 0u; index < 4u; ++index)
+        if (descriptor->reserved[index] != 0u)
+            return RIN_ERROR_INVALID_ARGUMENT;
+
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = descriptor->heap;
+    request.value[3] = descriptor->flags;
+    request.value[4] = descriptor->size_bytes;
+    request.value[5] = descriptor->alignment;
+    result = rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_ALLOCATE,
+        &request, sizeof(request), allocation_out, sizeof(*allocation_out));
+    if (result == RIN_SUCCESS && *allocation_out == 0u)
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) *allocation_out = 0u;
+    return result;
+}
+
+RinResult rin_gpu_memory_query_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuAllocationV1 allocation, RinGpuAllocationInfoV1* info_out) {
+    if (!info_out || device_id == 0u || device_generation == 0u ||
+        allocation == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    VERSIONED_OUTPUT_SIMPLE_CALL(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_QUERY, info_out,
+        device_id, device_generation, allocation, 0, 0, 0);
+}
+
+RinResult rin_gpu_memory_destroy_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuAllocationV1 allocation) {
+    if (device_id == 0u || device_generation == 0u || allocation == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_DESTROY,
+                (RinResult*)0, device_id, device_generation, allocation,
+                0, 0, 0);
+}
 #endif
 
 #undef SIMPLE_CALL
