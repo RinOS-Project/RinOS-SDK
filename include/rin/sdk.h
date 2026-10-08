@@ -55,6 +55,7 @@
 #include "net/namespace/route_abi.h"
 #include "net/resolved_protocol.h"
 #include "net/auth_provider_abi.h"
+#include "net/kerberos_operation_owner_abi.h"
 #include "dotnet/nativeaot_thunk_abi.h"
 #include "net/socket_abi.h"
 #include "gui/text_input.h"
