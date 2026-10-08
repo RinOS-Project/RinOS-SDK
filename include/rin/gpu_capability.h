@@ -24,7 +24,11 @@ enum RinGpuCapabilityIpcOpcode {
     RIN_GPU_CAPABILITY_IPC_ISSUE = 1,
     RIN_GPU_CAPABILITY_IPC_VALIDATE = 2,
     RIN_GPU_CAPABILITY_IPC_RELEASE = 3,
-    RIN_GPU_CAPABILITY_IPC_REVOKE_PROCESS = 4
+    RIN_GPU_CAPABILITY_IPC_REVOKE_PROCESS = 4,
+    RIN_GPU_CAPABILITY_IPC_ISSUE_V2 = 5,
+    RIN_GPU_CAPABILITY_IPC_ACQUIRE_V2 = 6,
+    RIN_GPU_CAPABILITY_IPC_RELEASE_LEASE_V2 = 7,
+    RIN_GPU_CAPABILITY_IPC_REVOKE_V2 = 8
 };
 
 typedef struct RinGpuCapabilityIpcHeaderV1 {
@@ -68,6 +72,67 @@ typedef struct RinGpuCrossProcessCapabilityRequestV1 {
     uint32_t reserved[3];
 } RinGpuCrossProcessCapabilityRequestV1;
 
+/* V2 grants bind an allocation to the recipient process instance. The
+ * issuing service obtains the owner identity from kernel-authenticated IPC;
+ * callers must not supply an owner identity in this descriptor. */
+typedef struct RinGpuCrossProcessCapabilityGrantDescV2 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t rights;
+    uint32_t flags;
+    uint64_t device_generation;
+    uint64_t resource_id;
+    uint64_t recipient_process_id;
+    uint64_t recipient_process_instance_cookie;
+    uint64_t reserved[2];
+} RinGpuCrossProcessCapabilityGrantDescV2;
+
+typedef struct RinGpuCrossProcessCapabilityTokenV2 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t token;
+    uint64_t device_generation;
+    uint32_t rights;
+    uint32_t reserved[3];
+} RinGpuCrossProcessCapabilityTokenV2;
+
+typedef struct RinGpuCrossProcessCapabilityAcquireRequestV2 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t token;
+    uint64_t device_generation;
+    uint32_t required_rights;
+    uint32_t reserved[3];
+} RinGpuCrossProcessCapabilityAcquireRequestV2;
+
+/* A successful acquire creates one independently releasable consumer lease.
+ * The resource identity is returned only after matching the kernel peer to
+ * the recipient bound when the grant was issued. */
+typedef struct RinGpuCrossProcessCapabilityLeaseV2 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t token;
+    uint64_t lease_id;
+    uint64_t resource_id;
+    uint64_t device_generation;
+    uint32_t rights;
+    uint32_t reserved[3];
+} RinGpuCrossProcessCapabilityLeaseV2;
+
+typedef struct RinGpuCrossProcessCapabilityReleaseLeaseV2 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t token;
+    uint64_t lease_id;
+    uint64_t device_generation;
+    uint32_t reserved[2];
+} RinGpuCrossProcessCapabilityReleaseLeaseV2;
+
+typedef struct RinGpuCrossProcessCapabilityRevokeResponseV2 {
+    uint32_t outstanding_lease_count;
+    uint32_t reserved[3];
+} RinGpuCrossProcessCapabilityRevokeResponseV2;
+
 typedef struct RinGpuCapabilityValidateResponseV1 {
     uint64_t resource_id;
     uint32_t rights;
@@ -92,6 +157,18 @@ static_assert(sizeof(RinGpuCrossProcessCapabilityTokenV1) == 48u,
               "RinGpuCrossProcessCapabilityTokenV1 ABI drift");
 static_assert(sizeof(RinGpuCrossProcessCapabilityRequestV1) == 48u,
               "RinGpuCrossProcessCapabilityRequestV1 ABI drift");
+static_assert(sizeof(RinGpuCrossProcessCapabilityGrantDescV2) == 64u,
+              "RinGpuCrossProcessCapabilityGrantDescV2 ABI drift");
+static_assert(sizeof(RinGpuCrossProcessCapabilityTokenV2) == 40u,
+              "RinGpuCrossProcessCapabilityTokenV2 ABI drift");
+static_assert(sizeof(RinGpuCrossProcessCapabilityAcquireRequestV2) == 40u,
+              "RinGpuCrossProcessCapabilityAcquireRequestV2 ABI drift");
+static_assert(sizeof(RinGpuCrossProcessCapabilityLeaseV2) == 56u,
+              "RinGpuCrossProcessCapabilityLeaseV2 ABI drift");
+static_assert(sizeof(RinGpuCrossProcessCapabilityReleaseLeaseV2) == 40u,
+              "RinGpuCrossProcessCapabilityReleaseLeaseV2 ABI drift");
+static_assert(sizeof(RinGpuCrossProcessCapabilityRevokeResponseV2) == 16u,
+              "RinGpuCrossProcessCapabilityRevokeResponseV2 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinGpuCapabilityIpcHeaderV1) == 32u,
                "RinGpuCapabilityIpcHeaderV1 ABI drift");
@@ -101,6 +178,18 @@ _Static_assert(sizeof(RinGpuCrossProcessCapabilityTokenV1) == 48u,
                "RinGpuCrossProcessCapabilityTokenV1 ABI drift");
 _Static_assert(sizeof(RinGpuCrossProcessCapabilityRequestV1) == 48u,
                "RinGpuCrossProcessCapabilityRequestV1 ABI drift");
+_Static_assert(sizeof(RinGpuCrossProcessCapabilityGrantDescV2) == 64u,
+               "RinGpuCrossProcessCapabilityGrantDescV2 ABI drift");
+_Static_assert(sizeof(RinGpuCrossProcessCapabilityTokenV2) == 40u,
+               "RinGpuCrossProcessCapabilityTokenV2 ABI drift");
+_Static_assert(sizeof(RinGpuCrossProcessCapabilityAcquireRequestV2) == 40u,
+               "RinGpuCrossProcessCapabilityAcquireRequestV2 ABI drift");
+_Static_assert(sizeof(RinGpuCrossProcessCapabilityLeaseV2) == 56u,
+               "RinGpuCrossProcessCapabilityLeaseV2 ABI drift");
+_Static_assert(sizeof(RinGpuCrossProcessCapabilityReleaseLeaseV2) == 40u,
+               "RinGpuCrossProcessCapabilityReleaseLeaseV2 ABI drift");
+_Static_assert(sizeof(RinGpuCrossProcessCapabilityRevokeResponseV2) == 16u,
+               "RinGpuCrossProcessCapabilityRevokeResponseV2 ABI drift");
 #endif
 
 #ifdef __cplusplus
