@@ -54,7 +54,10 @@ typedef enum RinKeyringOpcode {
     /* Private authenticated Kerberos provider operation envelope. */
     RIN_KEYRING_OP_KERBEROS_OPERATION = 13,
     /* Return only the primary principal for a generation-bound ccache. */
-    RIN_KEYRING_OP_KERBEROS_PRINCIPAL = 14
+    RIN_KEYRING_OP_KERBEROS_PRINCIPAL = 14,
+    /* Private session-manager import; raw material never becomes a public
+     * GET/GET_HANDLE result and is accepted only for the two exact scopes. */
+    RIN_KEYRING_OP_IMPORT_KERBEROS_CREDENTIAL = 15
 } RinKeyringOpcode;
 
 #define RIN_KEYRING_HANDLE_SIZE 72u
@@ -110,6 +113,17 @@ typedef struct RinKeyringKerberosPrincipalResponseV1 {
     uint32_t reserved;
 } RinKeyringKerberosPrincipalResponseV1;
 
+/* The authenticated RinOS session credential producer uses this private
+ * frame to install validated MIT FILE ccache v3/v4 or keytab v2 material.
+ * The server derives the scope from the exact name and never exposes the
+ * imported bytes through the public keyring GET interfaces. */
+typedef struct RinKeyringImportKerberosCredentialRequestV1 {
+    uint64_t expected_generation;
+    uint32_t secret_name_size;
+    uint32_t credential_size;
+    uint32_t reserved;
+} RinKeyringImportKerberosCredentialRequestV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinKeyringHandleV1) == 72u,
               "RinKeyring handle ABI drift");
@@ -127,6 +141,8 @@ static_assert(sizeof(RinKeyringSecretResponseV1) == 16u,
               "RinKeyring response ABI drift");
 static_assert(sizeof(RinKeyringKerberosPrincipalResponseV1) == 16u,
               "RinKeyring Kerberos principal response ABI drift");
+static_assert(sizeof(RinKeyringImportKerberosCredentialRequestV1) == 24u,
+              "RinKeyring Kerberos import request ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinKeyringHandleV1) == 72u,
                "RinKeyring handle ABI drift");
@@ -144,6 +160,8 @@ _Static_assert(sizeof(RinKeyringSecretResponseV1) == 16u,
                "RinKeyring response ABI drift");
 _Static_assert(sizeof(RinKeyringKerberosPrincipalResponseV1) == 16u,
                "RinKeyring Kerberos principal response ABI drift");
+_Static_assert(sizeof(RinKeyringImportKerberosCredentialRequestV1) == 24u,
+               "RinKeyring Kerberos import request ABI drift");
 #endif
 
 #endif /* RIN_SDK_KEYRING_H */
