@@ -44,6 +44,7 @@ extern "C" {
  * this value lets the provider distinguish an established context whose
  * ticket lifetime has elapsed. */
 #define RIN_KERBEROS_CREDENTIAL_OWNER_CONTEXT_EXPIRED UINT32_C(4)
+#define RIN_KERBEROS_CREDENTIAL_OWNER_BAD_BINDINGS UINT32_C(5)
 
 typedef struct RinKerberosCredentialOwnerV1 {
     uint32_t struct_size;

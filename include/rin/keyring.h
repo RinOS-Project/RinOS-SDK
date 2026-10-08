@@ -43,7 +43,10 @@ typedef enum RinKeyringResult {
     RIN_KEYRING_NOT_SUPPORTED = -11,
     /* Private Kerberos operation result: an authenticated context exceeded
      * its ticket lifetime plus the RFC 4120 clock-skew allowance. */
-    RIN_KEYRING_CONTEXT_EXPIRED = -12
+    RIN_KEYRING_CONTEXT_EXPIRED = -12,
+    /* Private Kerberos operation result: the authenticated GSS channel
+     * binding does not match the established context. */
+    RIN_KEYRING_BAD_BINDINGS = -13
 } RinKeyringResult;
 
 typedef enum RinKeyringOpcode {
