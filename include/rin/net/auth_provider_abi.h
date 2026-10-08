@@ -62,6 +62,10 @@ typedef struct RinAuthProviderV1 {
                              void** input);
     uint32_t (*acquire_acceptor_cred)(void* context, uint32_t* minor_status,
                                       void** output);
+    /* desired_name may be NULL for GSS_C_NO_NAME. In that case the provider
+     * must acquire the current session's initiator credential from the
+     * RinOS credential owner. It must not synthesize a username, password,
+     * fixed token, or successful handle. */
     uint32_t (*initiate_cred_spnego)(void* context, uint32_t* minor_status,
                                      void* desired_name, void** output);
     uint32_t (*release_cred)(void* context, uint32_t* minor_status,
