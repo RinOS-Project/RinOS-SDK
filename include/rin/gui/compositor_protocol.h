@@ -441,8 +441,16 @@ typedef struct RinCompositorPollInputV2 {
 #define RIN_COMPOSITOR_GPU_PRESENT_FLAG_FULL_DAMAGE UINT32_C(0x00000001)
 
 /* A GPU image view is an opaque, generation-bound view of the existing
- * caller-owned SHM buffer.  It is a real software presentation resource; a
- * physical VRAM/scanout handle is deliberately a separate backend contract. */
+ * caller-owned SHM buffer. It is a real software presentation resource; a
+ * physical VRAM/scanout handle is deliberately a separate backend contract.
+ * In this V1 SHM contract, export.acquire_fence is the latest frame sequence
+ * whose Compositor reads of this slot have ended. Before writing/reusing a
+ * slot, the producer compares it with that slot's last submitted sequence;
+ * if they differ, it keeps the slot unchanged and re-exports later. Present
+ * echoes the observed acquire_fence and sets release_fence == frame_sequence.
+ * The latter is the submitted software sequence, not a kernel/GPU fence
+ * handle. A producer must wait for export.acquire_fence to advance before
+ * reusing the slot. */
 typedef struct RinCompositorGpuExportImageV1 {
     uint32_t struct_size;
     uint32_t version;
