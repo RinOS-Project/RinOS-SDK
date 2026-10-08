@@ -948,6 +948,60 @@ RinResult rin_gpu_memory_readback_v1(
                 (RinResult*)0, device_id, device_generation, allocation,
                 offset, length, (uint64_t)address);
 }
+
+RinResult rin_gpu_memory_map_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuAllocationV1 allocation, uint32_t access,
+    RinGpuMemoryMappingV1* mapping_out) {
+    RinSdkArgsV1 request;
+    RinResult result;
+
+    if (!mapping_out || device_id == 0u || device_generation == 0u ||
+        allocation == 0u ||
+        (access & ~(RIN_GPU_MAP_CPU_READ | RIN_GPU_MAP_CPU_WRITE)) != 0u ||
+        access == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (!versioned(mapping_out, sizeof(*mapping_out)))
+        return RIN_ERROR_ABI_MISMATCH;
+    rin_sdk_zero_bytes(mapping_out, sizeof(*mapping_out));
+    mapping_out->struct_size = sizeof(*mapping_out);
+    mapping_out->version = RIN_SDK_STRUCT_VERSION_1;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = allocation;
+    request.value[3] = access;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_MAP, &request,
+        sizeof(request), mapping_out, sizeof(*mapping_out));
+    if (result == RIN_SUCCESS &&
+        (mapping_out->struct_size != sizeof(*mapping_out) ||
+         mapping_out->version != RIN_SDK_STRUCT_VERSION_1 ||
+         mapping_out->access != access || mapping_out->reserved0 != 0u ||
+         mapping_out->allocation != allocation || mapping_out->address == 0u ||
+         mapping_out->address > (uint64_t)UINTPTR_MAX ||
+         mapping_out->size_bytes == 0u ||
+         mapping_out->size_bytes - 1u > UINT64_MAX - mapping_out->address ||
+         mapping_out->mapping == 0u ||
+         mapping_out->device_generation != device_generation ||
+         mapping_out->reserved != 0u))
+        result = RIN_ERROR_ABI_MISMATCH;
+    return finalize_versioned_output(result, mapping_out,
+                                     sizeof(*mapping_out));
+}
+
+RinResult rin_gpu_memory_unmap_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuAllocationV1 allocation, uint64_t mapping) {
+    if (device_id == 0u || device_generation == 0u || allocation == 0u ||
+        mapping == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_UNMAP,
+                (RinResult*)0, device_id, device_generation, allocation,
+                mapping, 0, 0);
+}
 #endif
 
 #undef SIMPLE_CALL
