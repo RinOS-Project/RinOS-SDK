@@ -40,6 +40,10 @@ extern "C" {
 #define RIN_KERBEROS_CREDENTIAL_OWNER_UNAVAILABLE UINT32_C(1)
 #define RIN_KERBEROS_CREDENTIAL_OWNER_INVALID_SESSION UINT32_C(2)
 #define RIN_KERBEROS_CREDENTIAL_OWNER_EXPIRED UINT32_C(3)
+/* Operation-only result. Credential acquisition failures retain EXPIRED;
+ * this value lets the provider distinguish an established context whose
+ * ticket lifetime has elapsed. */
+#define RIN_KERBEROS_CREDENTIAL_OWNER_CONTEXT_EXPIRED UINT32_C(4)
 
 typedef struct RinKerberosCredentialOwnerV1 {
     uint32_t struct_size;

@@ -40,7 +40,10 @@ typedef enum RinKeyringResult {
     RIN_KEYRING_ENTROPY_UNAVAILABLE = -8,
     RIN_KEYRING_TOO_LARGE = -9,
     RIN_KEYRING_REPLAY = -10,
-    RIN_KEYRING_NOT_SUPPORTED = -11
+    RIN_KEYRING_NOT_SUPPORTED = -11,
+    /* Private Kerberos operation result: an authenticated context exceeded
+     * its ticket lifetime plus the RFC 4120 clock-skew allowance. */
+    RIN_KEYRING_CONTEXT_EXPIRED = -12
 } RinKeyringResult;
 
 typedef enum RinKeyringOpcode {
