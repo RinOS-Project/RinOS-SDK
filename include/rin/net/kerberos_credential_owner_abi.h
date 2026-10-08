@@ -24,7 +24,10 @@ extern "C" {
  * drive its RFC 4120/RFC 4121 implementation and must release it through the
  * owner before the provider handle becomes unreachable.
  */
-#define RIN_KERBEROS_CREDENTIAL_OWNER_ABI_VERSION UINT16_C(1)
+/* Version 2 adds authenticated principal inquiry for an acquired initiator
+ * credential.  Version 1 owners are not advertised because the runtime must
+ * not substitute a local username for a session principal. */
+#define RIN_KERBEROS_CREDENTIAL_OWNER_ABI_VERSION UINT16_C(2)
 #define RIN_KERBEROS_CREDENTIAL_OWNER_CAP_SESSION_INITIATOR \
     UINT32_C(0x00000001)
 #define RIN_KERBEROS_CREDENTIAL_OWNER_CAP_ACCEPTOR_KEYTAB \
@@ -60,6 +63,16 @@ typedef struct RinKerberosCredentialOwnerV1 {
     /* Releases an owner handle through the same owner that issued it. */
     uint32_t (*release_credential)(
         void* context, uint32_t* minor_status, void** input);
+
+    /* Returns the primary principal from the authenticated initiator
+     * credential in bounded escaped Kerberos principal-string form.  The owner
+     * keeps
+     * ccache/keytab bytes private; only this non-secret identity is returned.
+     * Acceptor credentials and unbound/stale handles must fail closed. */
+    uint32_t (*get_session_principal)(
+        void* context, uint32_t* minor_status, void* credential,
+        uint8_t* output, uint32_t output_capacity, uint32_t* output_size,
+        uint64_t* generation);
 } RinKerberosCredentialOwnerV1;
 
 /* Product security owns this symbol.  A missing weak symbol means that the
@@ -75,18 +88,18 @@ static_assert(offsetof(RinKerberosCredentialOwnerV1, context) == 16u,
               "RinKerberosCredentialOwnerV1 context ABI drift");
 static_assert(sizeof(RinKerberosCredentialOwnerV1) ==
                   offsetof(RinKerberosCredentialOwnerV1,
-                           release_credential) +
+                           get_session_principal) +
                       sizeof(((RinKerberosCredentialOwnerV1*)0)->
-                                 release_credential),
+                                 get_session_principal),
               "RinKerberosCredentialOwnerV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(offsetof(RinKerberosCredentialOwnerV1, context) == 16u,
                "RinKerberosCredentialOwnerV1 context ABI drift");
 _Static_assert(sizeof(RinKerberosCredentialOwnerV1) ==
                    offsetof(RinKerberosCredentialOwnerV1,
-                            release_credential) +
+                            get_session_principal) +
                        sizeof(((RinKerberosCredentialOwnerV1*)0)->
-                                  release_credential),
+                                  get_session_principal),
                "RinKerberosCredentialOwnerV1 ABI drift");
 #endif
 

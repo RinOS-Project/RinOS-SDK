@@ -52,7 +52,9 @@ typedef enum RinKeyringOpcode {
     RIN_KEYRING_OP_GET_HANDLE = 6,
     RIN_KEYRING_OP_REMOVE_HANDLE = 7,
     /* Private authenticated Kerberos provider operation envelope. */
-    RIN_KEYRING_OP_KERBEROS_OPERATION = 13
+    RIN_KEYRING_OP_KERBEROS_OPERATION = 13,
+    /* Return only the primary principal for a generation-bound ccache. */
+    RIN_KEYRING_OP_KERBEROS_PRINCIPAL = 14
 } RinKeyringOpcode;
 
 #define RIN_KEYRING_HANDLE_SIZE 72u
@@ -102,6 +104,12 @@ typedef struct RinKeyringSecretResponseV1 {
     uint32_t reserved;
 } RinKeyringSecretResponseV1;
 
+typedef struct RinKeyringKerberosPrincipalResponseV1 {
+    uint64_t generation;
+    uint32_t principal_size;
+    uint32_t reserved;
+} RinKeyringKerberosPrincipalResponseV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinKeyringHandleV1) == 72u,
               "RinKeyring handle ABI drift");
@@ -117,6 +125,8 @@ static_assert(sizeof(RinKeyringRemoveRequestV1) == 16u,
               "RinKeyring remove request ABI drift");
 static_assert(sizeof(RinKeyringSecretResponseV1) == 16u,
               "RinKeyring response ABI drift");
+static_assert(sizeof(RinKeyringKerberosPrincipalResponseV1) == 16u,
+              "RinKeyring Kerberos principal response ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinKeyringHandleV1) == 72u,
                "RinKeyring handle ABI drift");
@@ -132,6 +142,8 @@ _Static_assert(sizeof(RinKeyringRemoveRequestV1) == 16u,
                "RinKeyring remove request ABI drift");
 _Static_assert(sizeof(RinKeyringSecretResponseV1) == 16u,
                "RinKeyring response ABI drift");
+_Static_assert(sizeof(RinKeyringKerberosPrincipalResponseV1) == 16u,
+               "RinKeyring Kerberos principal response ABI drift");
 #endif
 
 #endif /* RIN_SDK_KEYRING_H */
