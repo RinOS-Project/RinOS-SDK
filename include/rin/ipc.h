@@ -15,6 +15,25 @@ typedef struct RinIpcMessageV1 {
     uint64_t reserved[3];
 } RinIpcMessageV1;
 
+/* Kernel-authenticated identity of the process that sent one channel message.
+ * This is returned only by rin_channel_receive_with_peer_v1; callers must
+ * not substitute process IDs carried in message bytes for this identity. */
+typedef struct RinIpcPeerIdentityV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t process_id;
+    uint64_t process_instance_cookie;
+    uint64_t reserved;
+} RinIpcPeerIdentityV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinIpcPeerIdentityV1) == 32u,
+              "RinIpcPeerIdentityV1 ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinIpcPeerIdentityV1) == 32u,
+               "RinIpcPeerIdentityV1 ABI drift");
+#endif
+
 /* Channel calls are non-blocking. Empty receive and queue-full send return
  * RIN_ERROR_WOULD_BLOCK; wait for RIN_WAIT_EVENT_READABLE/WRITABLE with
  * rin_wait_many_v1 or a wait set before retrying. Bulk payloads should be
@@ -59,6 +78,9 @@ typedef struct RinWaitResultV1 {
 RIN_SDK_API RinResult rin_channel_create_v1(RinChannel* first, RinChannel* second);
 RIN_SDK_API RinResult rin_channel_send_v1(RinChannel channel, const RinIpcMessageV1* message);
 RIN_SDK_API RinResult rin_channel_receive_v1(RinChannel channel, RinIpcMessageV1* message);
+RIN_SDK_API RinResult rin_channel_receive_with_peer_v1(
+    RinChannel channel, RinIpcMessageV1* message,
+    RinIpcPeerIdentityV1* peer_identity_out);
 RIN_SDK_API RinResult rin_event_create_v1(uint32_t flags, RinEvent* event);
 RIN_SDK_API RinResult rin_event_signal_v1(RinEvent event, uint64_t value);
 RIN_SDK_API RinResult rin_wait_many_v1(RinSliceV1 items, uint64_t timeout_ns, uint32_t* index);

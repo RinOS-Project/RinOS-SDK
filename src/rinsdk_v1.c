@@ -35,7 +35,7 @@ enum {
     IPC_EVENT_CREATE, IPC_EVENT_SIGNAL, IPC_WAIT_MANY,
     IPC_SHARED_MEMORY_CREATE, IPC_SERVICE_CONNECT, IPC_WAIT_SET_CREATE,
     IPC_WAIT_SET_SET_ITEMS, IPC_WAIT_SET_WAIT, IPC_SERVICE_REGISTER,
-    IPC_SERVICE_ACCEPT,
+    IPC_SERVICE_ACCEPT, IPC_CHANNEL_RECEIVE_WITH_PEER = 14,
     FS_FILE_OPEN = 1, FS_FILE_READ, FS_FILE_WRITE, FS_FILE_FLUSH,
     FS_DIRECTORY_NEXT, FS_PATH_NORMALIZE, FS_FILE_WATCH,
     FS_FILE_READ_ASYNC, FS_FILE_WRITE_ASYNC, FS_FILE_IO_RESULT,
@@ -390,6 +390,53 @@ RinResult rin_channel_receive_v1(RinChannel channel, RinIpcMessageV1* message) {
         message->version = RIN_SDK_STRUCT_VERSION_1;
         message->bytes = bytes;
         message->handles = handles;
+    }
+    return receive_result;
+}
+RinResult rin_channel_receive_with_peer_v1(
+    RinChannel channel, RinIpcMessageV1* message,
+    RinIpcPeerIdentityV1* peer_identity_out) {
+    RinSliceV1 bytes;
+    RinSliceV1 handles;
+    RinSdkArgsV1 request;
+    RinResult receive_result;
+    if (!versioned(message, sizeof(*message)) ||
+        !versioned(peer_identity_out, sizeof(*peer_identity_out)))
+        return RIN_ERROR_ABI_MISMATCH;
+    bytes = message->bytes;
+    handles = message->handles;
+    rin_sdk_zero_bytes(message, sizeof(*message));
+    message->struct_size = sizeof(*message);
+    message->version = RIN_SDK_STRUCT_VERSION_1;
+    message->bytes = bytes;
+    message->handles = handles;
+    rin_sdk_zero_bytes(peer_identity_out, sizeof(*peer_identity_out));
+    peer_identity_out->struct_size = sizeof(*peer_identity_out);
+    peer_identity_out->version = RIN_SDK_STRUCT_VERSION_1;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = channel;
+    request.value[1] = (uint64_t)(uintptr_t)peer_identity_out;
+    receive_result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_IPC, IPC_CHANNEL_RECEIVE_WITH_PEER, &request,
+        sizeof(request), message, sizeof(*message));
+    if (receive_result == RIN_SUCCESS &&
+        (!versioned_exact(message, sizeof(*message)) ||
+         !versioned_exact(peer_identity_out, sizeof(*peer_identity_out)) ||
+         peer_identity_out->process_id == 0u ||
+         peer_identity_out->process_instance_cookie == 0u ||
+         peer_identity_out->reserved != 0u))
+        receive_result = RIN_ERROR_ABI_MISMATCH;
+    if (receive_result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(message, sizeof(*message));
+        message->struct_size = sizeof(*message);
+        message->version = RIN_SDK_STRUCT_VERSION_1;
+        message->bytes = bytes;
+        message->handles = handles;
+        rin_sdk_zero_bytes(peer_identity_out, sizeof(*peer_identity_out));
+        peer_identity_out->struct_size = sizeof(*peer_identity_out);
+        peer_identity_out->version = RIN_SDK_STRUCT_VERSION_1;
     }
     return receive_result;
 }
