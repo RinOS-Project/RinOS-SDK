@@ -12,6 +12,7 @@ extern "C" {
 #define RIN_GPU_ALLOCATION_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_ALLOCATION_INFO_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_ALLOCATION_STATE_ACTIVE_V1 UINT32_C(1)
+#define RIN_GPU_ALLOCATION_MAX_LEASES_V1 UINT32_C(64)
 
 #define RIN_GPU_HEAP_LOCAL UINT32_C(1)
 #define RIN_GPU_HEAP_SYSTEM UINT32_C(2)
@@ -59,9 +60,9 @@ typedef struct RinGpuAllocationDescV1 {
 
 /* A successful query echoes the requested allocation handle, reports a
  * supported heap/access shape and active allocation, and returns aligned
- * address geometry with allocation_size_bytes >= requested_size_bytes. The
- * reserved field must be zero; the SDK rejects responses outside this
- * contract. */
+ * address geometry with allocation_size_bytes >= requested_size_bytes,
+ * nonzero device/IOMMU generations, and a bounded lease count. The reserved
+ * field must be zero; the SDK rejects responses outside this contract. */
 typedef struct RinGpuAllocationInfoV1 {
     uint32_t struct_size;
     uint32_t version;

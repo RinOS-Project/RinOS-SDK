@@ -859,6 +859,8 @@ static int gpu_allocation_info_valid(
         (info->alignment & (info->alignment - 1u)) != 0u ||
         info->gpu_virtual_address % info->alignment != 0u ||
         info->heap_offset % info->alignment != 0u ||
+        info->iommu_map_generation == 0u || info->device_epoch == 0u ||
+        info->lease_count > RIN_GPU_ALLOCATION_MAX_LEASES_V1 ||
         info->state != RIN_GPU_ALLOCATION_STATE_ACTIVE_V1)
         return 0;
     return 1;
