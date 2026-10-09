@@ -34,7 +34,10 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_MEMORY_UPLOAD = 5,
     RIN_GPU_SDK_MEMORY_READBACK = 6,
     RIN_GPU_SDK_MEMORY_MAP = 7,
-    RIN_GPU_SDK_MEMORY_UNMAP = 8
+    RIN_GPU_SDK_MEMORY_UNMAP = 8,
+    /* Service-only broker dispatch; the kernel admits this operation only
+     * for the exact signed ringpu-capability system service. */
+    RIN_GPU_SDK_CAPABILITY_DISPATCH = 9
 };
 
 typedef uint64_t RinGpuAllocationV1;
