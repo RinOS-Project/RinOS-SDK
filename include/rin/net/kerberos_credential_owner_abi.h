@@ -45,6 +45,10 @@ extern "C" {
  * ticket lifetime has elapsed. */
 #define RIN_KERBEROS_CREDENTIAL_OWNER_CONTEXT_EXPIRED UINT32_C(4)
 #define RIN_KERBEROS_CREDENTIAL_OWNER_BAD_BINDINGS UINT32_C(5)
+/* The established context rejected a well-framed per-message token because
+ * its cryptographic integrity check failed.  This is distinct from malformed
+ * framing and from an unavailable/invalid credential. */
+#define RIN_KERBEROS_CREDENTIAL_OWNER_BAD_SIGNATURE UINT32_C(6)
 
 typedef struct RinKerberosCredentialOwnerV1 {
     uint32_t struct_size;

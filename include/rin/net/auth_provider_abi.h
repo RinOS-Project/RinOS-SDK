@@ -43,6 +43,9 @@ extern "C" {
  * GSS_S_CREDENTIALS_EXPIRED instead of collapsing them to UNAVAILABLE. */
 #define RIN_AUTH_PROVIDER_DEFECTIVE_CREDENTIAL UINT32_C(8)
 #define RIN_AUTH_PROVIDER_CREDENTIALS_EXPIRED UINT32_C(9)
+/* RFC 2743 GSS_S_BAD_SIG: a well-framed per-message token failed its
+ * mechanism integrity check.  This must not be used for malformed framing. */
+#define RIN_AUTH_PROVIDER_BAD_SIGNATURE UINT32_C(10)
 
 typedef struct RinAuthProviderBufferV1 {
     uint64_t length;
