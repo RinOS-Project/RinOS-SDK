@@ -56,6 +56,8 @@ typedef struct RinGpuAllocationDescV1 {
     uint64_t reserved[4];
 } RinGpuAllocationDescV1;
 
+/* A successful query echoes the requested allocation handle. The reserved
+ * field must be zero; the SDK rejects a response that violates either rule. */
 typedef struct RinGpuAllocationInfoV1 {
     uint32_t struct_size;
     uint32_t version;

@@ -885,12 +885,28 @@ RinResult rin_gpu_memory_allocate_v1(
 RinResult rin_gpu_memory_query_v1(
     uint64_t device_id, uint64_t device_generation,
     RinGpuAllocationV1 allocation, RinGpuAllocationInfoV1* info_out) {
+    RinSdkArgsV1 request;
+    RinResult result;
     if (!info_out || device_id == 0u || device_generation == 0u ||
         allocation == 0u)
         return RIN_ERROR_INVALID_ARGUMENT;
-    VERSIONED_OUTPUT_SIMPLE_CALL(
-        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_QUERY, info_out,
-        device_id, device_generation, allocation, 0, 0, 0);
+    if (!versioned(info_out, sizeof(*info_out)))
+        return RIN_ERROR_ABI_MISMATCH;
+
+    reset_versioned_output(info_out, sizeof(*info_out));
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = allocation;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_QUERY, &request,
+        sizeof(request), info_out, sizeof(*info_out));
+    if (result == RIN_SUCCESS &&
+        (info_out->allocation != allocation || info_out->reserved != 0u))
+        result = RIN_ERROR_ABI_MISMATCH;
+    return finalize_versioned_output(result, info_out, sizeof(*info_out));
 }
 
 RinResult rin_gpu_memory_destroy_v1(
