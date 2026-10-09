@@ -838,6 +838,32 @@ RinResult rin_device_query_v1(RinDevice device,RinDeviceInfoV1* info) { VERSIONE
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GPU)
+static int gpu_allocation_info_valid(
+    const RinGpuAllocationInfoV1* info, RinGpuAllocationV1 allocation) {
+    const uint32_t known_flags = RIN_GPU_ALLOCATION_GPU_READ |
+                                 RIN_GPU_ALLOCATION_GPU_WRITE |
+                                 RIN_GPU_ALLOCATION_CPU_VISIBLE |
+                                 RIN_GPU_ALLOCATION_ZEROED;
+
+    if (!info || info->struct_size != sizeof(*info) ||
+        info->version != RIN_GPU_ALLOCATION_INFO_VERSION_V1 ||
+        (info->heap != RIN_GPU_HEAP_LOCAL &&
+         info->heap != RIN_GPU_HEAP_SYSTEM) ||
+        (info->flags & ~known_flags) != 0u ||
+        (info->flags & (RIN_GPU_ALLOCATION_GPU_READ |
+                        RIN_GPU_ALLOCATION_GPU_WRITE)) == 0u ||
+        info->allocation != allocation || info->reserved != 0u ||
+        info->requested_size_bytes == 0u ||
+        info->allocation_size_bytes < info->requested_size_bytes ||
+        info->alignment == 0u ||
+        (info->alignment & (info->alignment - 1u)) != 0u ||
+        info->gpu_virtual_address % info->alignment != 0u ||
+        info->heap_offset % info->alignment != 0u ||
+        info->state != RIN_GPU_ALLOCATION_STATE_ACTIVE_V1)
+        return 0;
+    return 1;
+}
+
 RinResult rin_gpu_memory_allocate_v1(
     uint64_t device_id, uint64_t device_generation,
     const RinGpuAllocationDescV1* descriptor,
@@ -904,7 +930,7 @@ RinResult rin_gpu_memory_query_v1(
         RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_MEMORY_QUERY, &request,
         sizeof(request), info_out, sizeof(*info_out));
     if (result == RIN_SUCCESS &&
-        (info_out->allocation != allocation || info_out->reserved != 0u))
+        !gpu_allocation_info_valid(info_out, allocation))
         result = RIN_ERROR_ABI_MISMATCH;
     return finalize_versioned_output(result, info_out, sizeof(*info_out));
 }
