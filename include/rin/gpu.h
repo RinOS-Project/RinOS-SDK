@@ -116,7 +116,12 @@ RIN_SDK_API RinResult rin_gpu_memory_readback_v1(
     void* destination, uint64_t length);
 /* Map CPU-visible allocation backing into this process. The mapping is
  * process-instance and device-generation bound; release it with unmap before
- * destroying the allocation. Process exit also revokes outstanding maps. */
+ * destroying the allocation. Process exit also revokes outstanding maps.
+ * If a successful kernel response contains a malformed mapping record, the
+ * wrapper attempts immediate unmap. When cleanup fails, map returns that
+ * cleanup error and mapping_out retains only its allocation, device
+ * generation, and mapping token (address and size remain zero), so the caller
+ * can retry unmap without using an unvalidated CPU address. */
 RIN_SDK_API RinResult rin_gpu_memory_map_v1(
     uint64_t device_id, uint64_t device_generation,
     RinGpuAllocationV1 allocation, uint32_t access,

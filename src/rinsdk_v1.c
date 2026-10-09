@@ -955,6 +955,7 @@ RinResult rin_gpu_memory_map_v1(
     RinGpuMemoryMappingV1* mapping_out) {
     RinSdkArgsV1 request;
     RinResult result;
+    uint64_t mapping_lease;
 
     if (!mapping_out || device_id == 0u || device_generation == 0u ||
         allocation == 0u ||
@@ -987,8 +988,26 @@ RinResult rin_gpu_memory_map_v1(
              (uint64_t)UINTPTR_MAX - mapping_out->address ||
          mapping_out->mapping == 0u ||
          mapping_out->device_generation != device_generation ||
-         mapping_out->reserved != 0u))
+         mapping_out->reserved != 0u)) {
+        mapping_lease = mapping_out->mapping;
+        if (mapping_lease != 0u) {
+            RinResult cleanup_result = rin_gpu_memory_unmap_v1(
+                device_id, device_generation, allocation, mapping_lease);
+            if (cleanup_result != RIN_SUCCESS) {
+                /* Never expose a possibly invalid CPU address. Keep only the
+                 * owner-bound token so the caller can retry cleanup. */
+                rin_sdk_zero_bytes(mapping_out, sizeof(*mapping_out));
+                mapping_out->struct_size = sizeof(*mapping_out);
+                mapping_out->version = RIN_SDK_STRUCT_VERSION_1;
+                mapping_out->access = access;
+                mapping_out->allocation = allocation;
+                mapping_out->mapping = mapping_lease;
+                mapping_out->device_generation = device_generation;
+                return cleanup_result;
+            }
+        }
         result = RIN_ERROR_ABI_MISMATCH;
+    }
     return finalize_versioned_output(result, mapping_out,
                                      sizeof(*mapping_out));
 }
