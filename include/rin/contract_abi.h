@@ -184,8 +184,6 @@ typedef int32_t RinResultCode;
 #define RIN_LOCALE_INFO_FLAG_SYSTEM_DEFAULT 1u
 #define RIN_TIME_ZONE_INFO_FLAG_SYSTEM_DEFAULT 1u
 #define RIN_TIME_ZONE_INFO_FLAG_FALLBACK_UTC 2u
-/* Returned by GET_EFFECTIVE when the caller's account has an override. */
-#define RIN_TIME_ZONE_INFO_FLAG_USER_OVERRIDE 4u
 #define RIN_TIME_ZONE_ID_MAX                127u
 #define RIN_GUI_EVENT_LOCALE_CHANGED        9u
 #define RIN_GUI_EVENT_TEXT_INPUT            10u

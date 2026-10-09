@@ -410,7 +410,6 @@
 /* time. */
 #define RIN_SYS_TIMEZONE_GET                0x8058u
 #define RIN_SYS_TIMEZONE_SET                0x8059u
-#define RIN_SYS_TIMEZONE_GET_EFFECTIVE       0x8080u
 #define RIN_SYS_TIMER_POLL                  0x805Au
 /* process. */
 #define RIN_SYS_RESOURCE_LIMIT_CALL         0x805Bu
@@ -458,9 +457,9 @@
 #define RIN_SYS_FSTAT64                     0x8077u
 /* memory. */
 #define RIN_SYS_MMAP_FD64                   0x8078u
-/* network. */
-#define RIN_SYS_NET_IPV6_ADDRESSES          0x807Bu
-#define RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES 0x807Cu
+/* diagnostic. */
+#define RIN_SYS_PERFORMANCE_TRACE_MARK_V1   0x8079u
+#define RIN_SYS_PERFORMANCE_TRACE_READ_V1   0x807Au
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
