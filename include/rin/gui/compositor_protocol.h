@@ -15,6 +15,7 @@
 #include "compositor_abi.h"
 #include "native_event.h"
 #include "compositor_input_ring.h"
+#include "../gpu_capability.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,6 +48,7 @@ extern "C" {
 #define RIN_COMPOSITOR_FEATURE_FRAME_CALLBACK UINT64_C(0x00002000)
 #define RIN_COMPOSITOR_FEATURE_PRESENT_FEEDBACK UINT64_C(0x00004000)
 #define RIN_COMPOSITOR_FEATURE_GPU_SURFACE_ABI UINT64_C(0x00008000)
+#define RIN_COMPOSITOR_FEATURE_GPU_READBACK_LEASE UINT64_C(0x00010000)
 
 #define RIN_COMPOSITOR_SURFACE_FLAG_CURSOR  UINT32_C(0x00000001)
 #define RIN_COMPOSITOR_SURFACE_FLAG_OVERLAY UINT32_C(0x00000002)
@@ -141,6 +143,7 @@ enum RinCompositorMsgType {
     RIN_COMPOSITOR_INJECT_INPUT = 40,
     RIN_COMPOSITOR_EXPORT_GPU_IMAGE = 41,
     RIN_COMPOSITOR_PRESENT_GPU_IMAGE = 42,
+    RIN_COMPOSITOR_PRESENT_GPU_READBACK_LEASE = 43,
 };
 
 typedef struct RinCompositorHeader {
@@ -436,6 +439,9 @@ typedef struct RinCompositorPollInputV2 {
 } RinCompositorPollInputV2;
 
 #define RIN_COMPOSITOR_GPU_SURFACE_ABI_VERSION UINT32_C(1)
+#define RIN_COMPOSITOR_GPU_READBACK_LEASE_VERSION UINT32_C(1)
+#define RIN_COMPOSITOR_GPU_READBACK_FORMAT_BGRA8 UINT32_C(0)
+#define RIN_COMPOSITOR_GPU_READBACK_FORMAT_RGBA8 UINT32_C(1)
 #define RIN_COMPOSITOR_GPU_IMAGE_FLAG_SOFTWARE_SHM UINT32_C(0x00000001)
 #define RIN_COMPOSITOR_GPU_IMAGE_FLAG_PRESENTABLE UINT32_C(0x00000002)
 #define RIN_COMPOSITOR_GPU_PRESENT_FLAG_FULL_DAMAGE UINT32_C(0x00000001)
@@ -502,6 +508,39 @@ typedef struct RinCompositorGpuPresentV1 {
     RinCompositorGpuDamageRectV1
         damage[RIN_COMPOSITOR_GPU_MAX_DAMAGE_RECTS];
 } RinCompositorGpuPresentV1;
+
+/* Explicit CPU-readable staging-image handoff for an ordinary native window.
+ * The producer must complete the GPU copy and make CPU reads visible before
+ * sending this request. The Compositor acquires the recipient-bound READ
+ * lease and copies the declared range to private CPU staging, releases that
+ * exact lease, then imports and commits the staged pixels into an available
+ * SHM slot. This is neither a GPU-address import nor a VK_KHR_display
+ * scanout request. */
+typedef struct RinCompositorGpuReadbackLeasePresentV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t surface_id;
+    uint32_t format;
+    uint64_t expected_surface_generation;
+    uint64_t frame_sequence;
+    uint64_t allocation_offset;
+    uint64_t bytes;
+    RinGpuCrossProcessCapabilityTokenV2 capability;
+    uint32_t width;
+    uint32_t height;
+    uint32_t row_pitch;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinCompositorGpuReadbackLeasePresentV1;
+
+typedef struct RinCompositorGpuReadbackLeaseResultV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t surface_id;
+    uint32_t buffer_slot;
+    uint64_t surface_generation;
+    uint64_t frame_sequence;
+} RinCompositorGpuReadbackLeaseResultV1;
 
 typedef struct RinCompositorInputEventV1 {
     uint32_t struct_size;
@@ -657,6 +696,10 @@ static_assert(sizeof(RinCompositorGpuImageV1) == 80u,
               "compositor GPU image size");
 static_assert(sizeof(RinCompositorGpuPresentV1) == 200u,
               "compositor GPU present size");
+static_assert(sizeof(RinCompositorGpuReadbackLeasePresentV1) == 120u,
+              "compositor GPU readback lease present size");
+static_assert(sizeof(RinCompositorGpuReadbackLeaseResultV1) == 32u,
+              "compositor GPU readback lease result size");
 static_assert(sizeof(RinCompositorWindowDescriptorV1) == 404u,
               "compositor window descriptor size");
 static_assert(sizeof(RinCompositorWindowListV1) == 6488u,
@@ -714,6 +757,10 @@ _Static_assert(sizeof(RinCompositorGpuImageV1) == 80u,
                "compositor GPU image size");
 _Static_assert(sizeof(RinCompositorGpuPresentV1) == 200u,
                "compositor GPU present size");
+_Static_assert(sizeof(RinCompositorGpuReadbackLeasePresentV1) == 120u,
+               "compositor GPU readback lease present size");
+_Static_assert(sizeof(RinCompositorGpuReadbackLeaseResultV1) == 32u,
+               "compositor GPU readback lease result size");
 _Static_assert(sizeof(RinCompositorWindowDescriptorV1) == 404u,
                "compositor window descriptor size");
 _Static_assert(sizeof(RinCompositorWindowListV1) == 6488u,
