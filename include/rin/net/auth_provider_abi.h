@@ -33,9 +33,9 @@ extern "C" {
  * because its bounded framing/consistency checks failed.  This is distinct
  * from UNAVAILABLE (missing service/credential) and BAD_BINDINGS. */
 #define RIN_AUTH_PROVIDER_DEFECTIVE_TOKEN UINT32_C(6)
-/* The acceptor returned a standards-shaped RFC 4120 KRB-ERROR token.  This
- * remains distinct from local defective-token framing so the PAL can preserve
- * the protocol error token for the GSS caller. */
+/* The initiator or acceptor returned a standards-shaped RFC 4120 KRB-ERROR
+ * token.  This remains distinct from local defective-token framing so the PAL
+ * can preserve the protocol error token for the GSS caller. */
 #define RIN_AUTH_PROVIDER_KRB_ERROR UINT32_C(7)
 /* Preserve the credential-owner distinction between an invalid opaque
  * handle and credentials whose lifetime has elapsed.  The PAL maps these
