@@ -49,6 +49,10 @@ extern "C" {
  * its cryptographic integrity check failed.  This is distinct from malformed
  * framing and from an unavailable/invalid credential. */
 #define RIN_KERBEROS_CREDENTIAL_OWNER_BAD_SIGNATURE UINT32_C(6)
+/* The requested credential scope is valid, but no authenticated credential
+ * exists in that scope.  This is distinct from an unavailable owner or a
+ * transport/keyring failure and maps to GSS_S_NO_CRED. */
+#define RIN_KERBEROS_CREDENTIAL_OWNER_NO_CREDENTIAL UINT32_C(7)
 
 typedef struct RinKerberosCredentialOwnerV1 {
     uint32_t struct_size;

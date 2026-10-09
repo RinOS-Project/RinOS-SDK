@@ -46,6 +46,10 @@ extern "C" {
 /* RFC 2743 GSS_S_BAD_SIG: a well-framed per-message token failed its
  * mechanism integrity check.  This must not be used for malformed framing. */
 #define RIN_AUTH_PROVIDER_BAD_SIGNATURE UINT32_C(10)
+/* The authenticated session has no credential for the requested scope.
+ * This is the provider form of RFC 2743 GSS_S_NO_CRED; it must not be
+ * replaced with a username, fixed token, or successful placeholder handle. */
+#define RIN_AUTH_PROVIDER_NO_CREDENTIAL UINT32_C(11)
 
 typedef struct RinAuthProviderBufferV1 {
     uint64_t length;
