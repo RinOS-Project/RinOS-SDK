@@ -983,7 +983,8 @@ RinResult rin_gpu_memory_map_v1(
          mapping_out->allocation != allocation || mapping_out->address == 0u ||
          mapping_out->address > (uint64_t)UINTPTR_MAX ||
          mapping_out->size_bytes == 0u ||
-         mapping_out->size_bytes - 1u > UINT64_MAX - mapping_out->address ||
+         mapping_out->size_bytes - 1u >
+             (uint64_t)UINTPTR_MAX - mapping_out->address ||
          mapping_out->mapping == 0u ||
          mapping_out->device_generation != device_generation ||
          mapping_out->reserved != 0u))
