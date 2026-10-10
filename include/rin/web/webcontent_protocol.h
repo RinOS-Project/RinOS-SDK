@@ -85,6 +85,7 @@ enum {
 #define RIN_WEBCONTENT_CAPABILITY_PERMISSIONS_V1 (UINT64_C(1) << 1)
 #define RIN_WEBCONTENT_CAPABILITY_SERVICE_WORKER_OWNER_V1 (UINT64_C(1) << 2)
 #define RIN_WEBCONTENT_CAPABILITY_SERIAL_PORTAL_V1 (UINT64_C(1) << 3)
+#define RIN_WEBCONTENT_CAPABILITY_CAMERA_CAPTURE_OWNER_V1 (UINT64_C(1) << 4)
 
 #define RIN_WEBCONTENT_PERMISSION_EXTENSION_ABI_VERSION 1u
 
@@ -151,8 +152,104 @@ enum {
     RIN_WEBCONTENT_CMD_CACHE_STORAGE_OWNER_V1 = 32,
     /* Variable-sized HTTP Cookie profile-owner request and response. */
     RIN_WEBCONTENT_CMD_HTTP_COOKIE_OWNER_V1 = 33,
-    RIN_WEBCONTENT_CMD_REVOKE_MICROPHONE_V1 = 34
+    RIN_WEBCONTENT_CMD_REVOKE_MICROPHONE_V1 = 34,
+    RIN_WEBCONTENT_CMD_CAMERA_CAPTURE_OWNER_V1 = 35,
+    RIN_WEBCONTENT_CMD_REVOKE_CAMERA_V1 = 36
 };
+
+enum {
+    RIN_WEBCONTENT_CAMERA_CAPTURE_OPEN = 1u,
+    RIN_WEBCONTENT_CAMERA_CAPTURE_READ_CHUNK = 2u,
+    RIN_WEBCONTENT_CAMERA_CAPTURE_CLOSE = 3u
+};
+
+enum {
+    RIN_WEBCONTENT_CAMERA_CAPTURE_RESULT_CLOSED = 0u,
+    RIN_WEBCONTENT_CAMERA_CAPTURE_RESULT_OPEN = 1u,
+    RIN_WEBCONTENT_CAMERA_CAPTURE_RESULT_CHUNK = 2u,
+    RIN_WEBCONTENT_CAMERA_CAPTURE_RESULT_WOULD_BLOCK = 3u
+};
+
+#define RIN_WEBCONTENT_CAMERA_CAPTURE_MAX_CHUNK_BYTES UINT32_C(65536)
+#define RIN_WEBCONTENT_CAMERA_CAPTURE_MAX_FRAME_BYTES UINT32_C(268435456)
+
+enum {
+    RIN_WEBCONTENT_CAMERA_FORMAT_RGBX8888 = 0x00000100u,
+    RIN_WEBCONTENT_CAMERA_FORMAT_NV12 = 0x00000101u,
+    RIN_WEBCONTENT_CAMERA_FORMAT_MJPEG = 0x00000102u
+};
+
+enum {
+    RIN_WEBCONTENT_CAMERA_CHUNK_FRAME_START = 0x00000001u,
+    RIN_WEBCONTENT_CAMERA_CHUNK_FRAME_END = 0x00000002u,
+    RIN_WEBCONTENT_CAMERA_CHUNK_DROPPED_BEFORE = 0x00000004u
+};
+
+/* Public wire description of the bounded kernel capture profile. It mirrors
+ * only the public media geometry; private driver/session types stay in
+ * src/api and never cross the SDK boundary. */
+typedef struct RinWebContentCameraCaptureProfileV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t stream_id;
+    uint32_t format;
+    uint32_t max_frame_size;
+    uint32_t width;
+    uint32_t height;
+    uint32_t sample_rate;
+    uint32_t channels;
+    uint32_t flags;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinWebContentCameraCaptureProfileV1;
+
+typedef struct RinWebContentCameraCaptureChunkV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t sequence;
+    uint64_t monotonic_time_ns;
+    uint32_t total_size;
+    uint32_t offset;
+    uint32_t payload_size;
+    uint32_t format;
+    uint32_t flags;
+    uint32_t width;
+    uint32_t height;
+    uint32_t sample_rate;
+    uint32_t channels;
+    uint32_t reserved0;
+} RinWebContentCameraCaptureChunkV1;
+
+typedef struct RinWebContentCameraCaptureOwnerRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t operation;
+    uint64_t session_id;
+    char origin[RIN_WEBCONTENT_URL_MAX];
+    uint64_t reserved[2];
+} RinWebContentCameraCaptureOwnerRequestV1;
+
+typedef struct RinWebContentCameraCaptureOwnerResponseV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t result;
+    uint64_t session_id;
+    RinWebContentCameraCaptureProfileV1 profile;
+    uint32_t data_size;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinWebContentCameraCaptureOwnerResponseV1;
+
+/* Camera revocation reaches hidden and active renderer pages. The sequence
+ * rejects replay and "*" revokes every camera track in that page. */
+typedef struct RinWebContentCameraRevokeV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t sequence;
+    char domain[RIN_WEBCONTENT_PERMISSION_DOMAIN_MAX];
+    uint64_t reserved[2];
+} RinWebContentCameraRevokeV1;
 
 enum {
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_REGISTER = 1,
@@ -931,6 +1028,16 @@ static_assert(sizeof(RinWebContentHttpCookieOwnerRequestV1) == 48u,
               "WebContent HTTP Cookie owner request ABI drift");
 static_assert(sizeof(RinWebContentHttpCookieOwnerResponseV1) == 24u,
               "WebContent HTTP Cookie owner response ABI drift");
+static_assert(sizeof(RinWebContentCameraCaptureProfileV1) == 64u,
+              "WebContent camera profile ABI drift");
+static_assert(sizeof(RinWebContentCameraCaptureChunkV1) == 64u,
+              "WebContent camera chunk ABI drift");
+static_assert(sizeof(RinWebContentCameraCaptureOwnerRequestV1) == 2080u,
+              "WebContent camera owner request ABI drift");
+static_assert(sizeof(RinWebContentCameraCaptureOwnerResponseV1) == 104u,
+              "WebContent camera owner response ABI drift");
+static_assert(sizeof(RinWebContentCameraRevokeV1) == 288u,
+              "WebContent camera revoke ABI drift");
 static_assert(sizeof(RinWebContentWebAuthnPollV1) == 32u,
               "WebContent WebAuthn poll ABI drift");
 static_assert(sizeof(RinWebContentWebAuthnEventV1) == 4608u,
@@ -990,6 +1097,16 @@ _Static_assert(sizeof(RinWebContentHttpCookieOwnerRequestV1) == 48u,
                "WebContent HTTP Cookie owner request ABI drift");
 _Static_assert(sizeof(RinWebContentHttpCookieOwnerResponseV1) == 24u,
                "WebContent HTTP Cookie owner response ABI drift");
+_Static_assert(sizeof(RinWebContentCameraCaptureProfileV1) == 64u,
+               "WebContent camera profile ABI drift");
+_Static_assert(sizeof(RinWebContentCameraCaptureChunkV1) == 64u,
+               "WebContent camera chunk ABI drift");
+_Static_assert(sizeof(RinWebContentCameraCaptureOwnerRequestV1) == 2080u,
+               "WebContent camera owner request ABI drift");
+_Static_assert(sizeof(RinWebContentCameraCaptureOwnerResponseV1) == 104u,
+               "WebContent camera owner response ABI drift");
+_Static_assert(sizeof(RinWebContentCameraRevokeV1) == 288u,
+               "WebContent camera revoke ABI drift");
 _Static_assert(sizeof(RinWebContentWebAuthnPollV1) == 32u,
                "WebContent WebAuthn poll ABI drift");
 _Static_assert(sizeof(RinWebContentWebAuthnEventV1) == 4608u,
