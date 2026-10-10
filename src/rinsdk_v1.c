@@ -1254,6 +1254,39 @@ RinResult rin_gpu_process_resource_unbind_v1(
                 (RinResult*)0, device_id, device_generation,
                 resource_cookie, 0, 0, 0);
 }
+
+RinResult rin_gpu_process_shader_module_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t shader_module_token, const void* rin_shader_ir,
+    uint64_t shader_ir_size) {
+    RinSdkArgsV1 request;
+
+    if (device_id == 0u || device_generation == 0u ||
+        shader_module_token == 0u || !rin_shader_ir ||
+        shader_ir_size == 0u ||
+        shader_ir_size > RIN_GPU_PROCESS_SHADER_MAX_BYTES_V1)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = shader_module_token;
+    request.value[3] = (uint64_t)(uintptr_t)rin_shader_ir;
+    request.value[4] = shader_ir_size;
+    return rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_SHADER_MODULE_CREATE,
+        &request, sizeof(request), (void*)0, 0u);
+}
+
+RinResult rin_gpu_process_object_destroy_v1(
+    uint64_t device_id, uint64_t device_generation, uint64_t object_token) {
+    if (device_id == 0u || device_generation == 0u || object_token == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_OBJECT_DESTROY,
+                (RinResult*)0, device_id, device_generation, object_token,
+                0, 0, 0);
+}
 #endif
 
 #undef SIMPLE_CALL

@@ -34,6 +34,7 @@ extern "C" {
 #define RIN_GPU_PROCESS_MAX_COMMANDS_V1 UINT32_C(1024)
 #define RIN_GPU_PROCESS_MAX_RESOURCES_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
+#define RIN_GPU_PROCESS_SHADER_MAX_BYTES_V1 UINT64_C(1048640)
 /* RinGpuBackendCommandV1's canonical packed record size. The kernel pins this
  * SDK value to sizeof(RinGpuBackendCommandV1) at its dispatch boundary. */
 #define RIN_GPU_PROCESS_COMMAND_RECORD_SIZE_V1 UINT32_C(872)
@@ -55,7 +56,9 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_SUBMIT = 12,
     RIN_GPU_SDK_PROCESS_QUEUE_TIMELINE_QUERY = 13,
     RIN_GPU_SDK_PROCESS_RESOURCE_BIND = 14,
-    RIN_GPU_SDK_PROCESS_RESOURCE_UNBIND = 15
+    RIN_GPU_SDK_PROCESS_RESOURCE_UNBIND = 15,
+    RIN_GPU_SDK_PROCESS_SHADER_MODULE_CREATE = 16,
+    RIN_GPU_SDK_PROCESS_OBJECT_DESTROY = 17
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -249,6 +252,16 @@ RIN_SDK_API RinResult rin_gpu_process_resource_bind_v1(
 RIN_SDK_API RinResult rin_gpu_process_resource_unbind_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t resource_cookie);
+/* Create a process-owned RSH1 module. The kernel copies and validates the
+ * bounded byte slice before any backend callback; the token is never a
+ * backend cookie. Destroy is BUSY while a pipeline or submission depends on
+ * the object. */
+RIN_SDK_API RinResult rin_gpu_process_shader_module_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t shader_module_token, const void* rin_shader_ir,
+    uint64_t shader_ir_size);
+RIN_SDK_API RinResult rin_gpu_process_object_destroy_v1(
+    uint64_t device_id, uint64_t device_generation, uint64_t object_token);
 #endif
 
 #if defined(__cplusplus)
