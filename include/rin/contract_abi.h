@@ -1065,6 +1065,10 @@ typedef struct RinManagementSummaryV1 {
     uint64_t reserved[4];
 } RinManagementSummaryV1;
 
+#define RIN_MANAGEMENT_SUMMARY_FLAG_SYSTEM_SCOPE_ONLY UINT32_C(0x00000001)
+#define RIN_MANAGEMENT_SUMMARY_FLAG_MASK \
+    RIN_MANAGEMENT_SUMMARY_FLAG_SYSTEM_SCOPE_ONLY
+
 typedef struct RinManagementDeviceInfoV1 {
     uint32_t struct_size;
     uint16_t version;

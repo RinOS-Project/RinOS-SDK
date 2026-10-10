@@ -57,11 +57,17 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define SO_RIN_UNIX_PEER_APPLICATION_METADATA 0x5009
 #define SO_RIN_UNIX_PEER_APPLICATION_IMAGE_PATH 0x500A
 
+#define RIN_UNIX_SCOPE_SYSTEM UINT16_C(1)
+#define RIN_UNIX_SCOPE_USER UINT16_C(2)
+
 #define RIN_UNIX_SERVICE_IDENTITY_FLAG_PUBLISHED UINT16_C(0x0001)
 #define RIN_UNIX_PEER_IDENTITY_VERSION 1u
 #define RIN_UNIX_PEER_APP_IDENTITY_VERSION 1u
 #define RIN_UNIX_PEER_SESSION_IDENTITY_VERSION 1u
-#define RIN_UNIX_PEER_SESSION_STATE_VERSION 1u
+#define RIN_UNIX_PEER_SESSION_STATE_VERSION_1 1u
+#define RIN_UNIX_PEER_SESSION_STATE_VERSION_2 2u
+#define RIN_UNIX_PEER_SESSION_STATE_VERSION \
+    RIN_UNIX_PEER_SESSION_STATE_VERSION_2
 #define RIN_UNIX_PEER_PACKAGE_IDENTITY_VERSION 1u
 #define RIN_UNIX_PEER_APPLICATION_METADATA_VERSION 1u
 #define RIN_UNIX_PEER_APPLICATION_IMAGE_PATH_VERSION 1u
@@ -74,6 +80,9 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define RIN_UNIX_SESSION_STATE_LOGGING_OUT UINT32_C(6)
 #define RIN_UNIX_SESSION_STATE_TERMINATING UINT32_C(7)
 #define RIN_UNIX_SESSION_STATE_DEAD UINT32_C(8)
+#define RIN_UNIX_PEER_SESSION_STATE_FLAG_ADMINISTRATOR UINT16_C(0x0001)
+#define RIN_UNIX_PEER_SESSION_STATE_FLAG_MASK \
+    RIN_UNIX_PEER_SESSION_STATE_FLAG_ADMINISTRATOR
 #define RIN_UNIX_PEER_IDENTITY_FLAG_CONNECTED UINT32_C(0x00000001)
 #define RIN_UNIX_PEER_APP_IDENTITY_FLAG_CONNECTED       UINT32_C(0x00000001)
 #define RIN_UNIX_PEER_APP_IDENTITY_FLAG_AUTHENTICATED   UINT32_C(0x00000002)
@@ -228,8 +237,13 @@ static inline int rin_unix_peer_session_state_valid(
     const rin_unix_peer_session_state_v1* state)
 {
     return state != NULL && state->struct_size == sizeof(*state) &&
-           state->version == RIN_UNIX_PEER_SESSION_STATE_VERSION &&
-           state->flags == 0u && state->state != 0u &&
+           (state->version == RIN_UNIX_PEER_SESSION_STATE_VERSION_1 ||
+            state->version == RIN_UNIX_PEER_SESSION_STATE_VERSION_2) &&
+           (state->version == RIN_UNIX_PEER_SESSION_STATE_VERSION_1
+                ? state->flags == 0u
+                : (state->flags & (uint16_t)~
+                       RIN_UNIX_PEER_SESSION_STATE_FLAG_MASK) == 0u) &&
+           state->state != 0u &&
            state->foreground <= 1u &&
            rin_unix_peer_session_identity_valid(&state->identity) &&
            state->reserved[0] == 0u && state->reserved[1] == 0u;
