@@ -31,6 +31,12 @@
 /* Create a regular, character, block, or FIFO inode. For this operation only,
  * RinPathAtCallV1.reserved0 carries the 8:8 POSIX device number. */
 #define RIN_PATH_AT_MKNOD           15u
+/* Secure directory owners need the created inode pinned before another
+ * thread can replace its name, and need removal tied to that exact inode. */
+#define RIN_PATH_AT_MKDIR_OPEN      16u
+#define RIN_PATH_AT_RMDIR_MATCH     17u
+
+#define RIN_PATH_AT_O_CLOEXEC       0x0200u
 
 /* Operation-specific flag values match the public POSIX constants.  In
  * particular 0x200 is EACCESS for access and REMOVEDIR for unlink. */
