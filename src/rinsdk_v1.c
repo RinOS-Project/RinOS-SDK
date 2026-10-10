@@ -1123,7 +1123,8 @@ RinResult rin_gpu_process_submit_v1(
         descriptor->version != RIN_GPU_PROCESS_SUBMIT_DESC_VERSION_V1 ||
         descriptor->reserved != 0u || descriptor->command_count == 0u ||
         descriptor->command_count > RIN_GPU_PROCESS_MAX_COMMANDS_V1 ||
-        descriptor->command_record_size == 0u ||
+        descriptor->command_record_size !=
+            RIN_GPU_PROCESS_COMMAND_RECORD_SIZE_V1 ||
         descriptor->resource_count > RIN_GPU_PROCESS_MAX_RESOURCES_V1 ||
         descriptor->command_count >
             UINT64_MAX / descriptor->command_record_size)

@@ -33,6 +33,9 @@ extern "C" {
 #define RIN_GPU_PROCESS_MAX_COMMANDS_V1 UINT32_C(1024)
 #define RIN_GPU_PROCESS_MAX_RESOURCES_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
+/* RinGpuBackendCommandV1's canonical packed record size. The kernel pins this
+ * SDK value to sizeof(RinGpuBackendCommandV1) at its dispatch boundary. */
+#define RIN_GPU_PROCESS_COMMAND_RECORD_SIZE_V1 UINT32_C(872)
 
 enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_MEMORY_ALLOCATE = 1,
@@ -64,9 +67,10 @@ typedef struct RinGpuProcessResourceV1 {
 } RinGpuProcessResourceV1;
 
 /* `commands` is a byte slice of canonical public RinGpuBackendCommandV1
- * records (record size is checked by the kernel). The descriptor and both
- * slices are copied by the syscall before submit; their addresses are never
- * retained as command cookies. */
+ * records; command_record_size must equal
+ * RIN_GPU_PROCESS_COMMAND_RECORD_SIZE_V1. The descriptor and both slices are
+ * copied by the syscall before submit; their addresses are never retained as
+ * command cookies. */
 typedef struct RinGpuProcessSubmitDescV1 {
     uint32_t struct_size;
     uint32_t version;
