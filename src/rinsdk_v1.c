@@ -1216,6 +1216,44 @@ RinResult rin_gpu_process_queue_query_timeline_v1(
     }
     return result;
 }
+
+RinResult rin_gpu_process_resource_bind_v1(
+    uint64_t device_id, uint64_t device_generation,
+    const RinGpuProcessResourceBindingV1* binding) {
+    RinGpuProcessResourceBindingV1 request_binding;
+    RinSdkArgsV1 request;
+
+    if (device_id == 0u || device_generation == 0u || !binding ||
+        binding->struct_size != sizeof(*binding) ||
+        binding->version != RIN_GPU_PROCESS_RESOURCE_BINDING_VERSION_V1 ||
+        binding->resource_cookie == 0u || binding->allocation == 0u ||
+        binding->size_bytes == 0u || binding->reserved != 0u ||
+        binding->allocation_offset > UINT64_MAX - binding->size_bytes ||
+        binding->required_gpu_access == 0u ||
+        (binding->required_gpu_access &
+         ~(RIN_GPU_ALLOCATION_GPU_READ | RIN_GPU_ALLOCATION_GPU_WRITE)) != 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    request_binding = *binding;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = (uint64_t)(uintptr_t)&request_binding;
+    return rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_RESOURCE_BIND,
+        &request, sizeof(request), (void*)0, 0u);
+}
+
+RinResult rin_gpu_process_resource_unbind_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t resource_cookie) {
+    if (device_id == 0u || device_generation == 0u || resource_cookie == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_RESOURCE_UNBIND,
+                (RinResult*)0, device_id, device_generation,
+                resource_cookie, 0, 0, 0);
+}
 #endif
 
 #undef SIMPLE_CALL

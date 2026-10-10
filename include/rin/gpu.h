@@ -30,6 +30,7 @@ extern "C" {
 #define RIN_GPU_PROCESS_SUBMIT_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_QUEUE_TIMELINE_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_RESOURCE_BINDING_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_MAX_COMMANDS_V1 UINT32_C(1024)
 #define RIN_GPU_PROCESS_MAX_RESOURCES_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
@@ -52,7 +53,9 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_QUEUE_BIND = 10,
     RIN_GPU_SDK_PROCESS_QUEUE_RELEASE = 11,
     RIN_GPU_SDK_PROCESS_SUBMIT = 12,
-    RIN_GPU_SDK_PROCESS_QUEUE_TIMELINE_QUERY = 13
+    RIN_GPU_SDK_PROCESS_QUEUE_TIMELINE_QUERY = 13,
+    RIN_GPU_SDK_PROCESS_RESOURCE_BIND = 14,
+    RIN_GPU_SDK_PROCESS_RESOURCE_UNBIND = 15
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -65,6 +68,21 @@ typedef struct RinGpuProcessResourceV1 {
     uint32_t required_gpu_access;
     uint32_t reserved;
 } RinGpuProcessResourceV1;
+
+/* Associates an opaque process-local API resource cookie with an exact range
+ * of a process-owned allocation. The kernel keeps a memory lease until
+ * unbind or process exit. Offsets are allocation-relative; this record never
+ * carries a GPU virtual address. */
+typedef struct RinGpuProcessResourceBindingV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t resource_cookie;
+    RinGpuAllocationV1 allocation;
+    uint64_t allocation_offset;
+    uint64_t size_bytes;
+    uint32_t required_gpu_access;
+    uint32_t reserved;
+} RinGpuProcessResourceBindingV1;
 
 /* `commands` is a byte slice of canonical public RinGpuBackendCommandV1
  * records; command_record_size must equal
@@ -219,6 +237,14 @@ RIN_SDK_API RinResult rin_gpu_process_queue_query_timeline_v1(
     RinGpuProcessQueueV1 queue, uint64_t expected_device_epoch,
     uint64_t expected_iommu_map_generation,
     RinGpuProcessQueueTimelineV1* timeline_out);
+/* The cookie is an opaque API object identity chosen by the process. Binding
+ * and unbinding are authenticated to the current process instance. */
+RIN_SDK_API RinResult rin_gpu_process_resource_bind_v1(
+    uint64_t device_id, uint64_t device_generation,
+    const RinGpuProcessResourceBindingV1* binding);
+RIN_SDK_API RinResult rin_gpu_process_resource_unbind_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t resource_cookie);
 #endif
 
 #if defined(__cplusplus)
@@ -236,6 +262,8 @@ static_assert(sizeof(RinGpuProcessSubmitReceiptV1) == 64u,
               "RinGpuProcessSubmitReceiptV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueueTimelineV1) == 40u,
               "RinGpuProcessQueueTimelineV1 ABI drift");
+static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
+              "RinGpuProcessResourceBindingV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinGpuAllocationDescV1) == 64u,
                "RinGpuAllocationDescV1 ABI drift");
@@ -251,6 +279,8 @@ _Static_assert(sizeof(RinGpuProcessSubmitReceiptV1) == 64u,
                "RinGpuProcessSubmitReceiptV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueueTimelineV1) == 40u,
                "RinGpuProcessQueueTimelineV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
+               "RinGpuProcessResourceBindingV1 ABI drift");
 #endif
 
 #ifdef __cplusplus
