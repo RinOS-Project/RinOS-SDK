@@ -1173,6 +1173,48 @@ RinResult rin_gpu_process_submit_v1(
     }
     return result;
 }
+
+RinResult rin_gpu_process_queue_query_timeline_v1(
+    RinGpuProcessQueueV1 queue, uint64_t expected_device_epoch,
+    uint64_t expected_iommu_map_generation,
+    RinGpuProcessQueueTimelineV1* timeline_out) {
+    RinSdkArgsV1 request;
+    RinResult result;
+
+    if (timeline_out) {
+        rin_sdk_zero_bytes(timeline_out, sizeof(*timeline_out));
+        timeline_out->struct_size = sizeof(*timeline_out);
+        timeline_out->version = RIN_GPU_PROCESS_QUEUE_TIMELINE_VERSION_V1;
+    }
+    if (!timeline_out || queue == 0u || expected_device_epoch == 0u ||
+        expected_iommu_map_generation == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = queue;
+    request.value[1] = expected_device_epoch;
+    request.value[2] = expected_iommu_map_generation;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_QUEUE_TIMELINE_QUERY,
+        &request, sizeof(request), timeline_out, sizeof(*timeline_out));
+    if (result == RIN_SUCCESS &&
+        (timeline_out->struct_size != sizeof(*timeline_out) ||
+         timeline_out->version !=
+             RIN_GPU_PROCESS_QUEUE_TIMELINE_VERSION_V1 ||
+         timeline_out->queue_id >= RIN_GPU_PROCESS_MAX_QUEUES_V1 ||
+         timeline_out->reserved0 != 0u ||
+         timeline_out->device_epoch != expected_device_epoch ||
+         timeline_out->iommu_map_generation !=
+             expected_iommu_map_generation))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(timeline_out, sizeof(*timeline_out));
+        timeline_out->struct_size = sizeof(*timeline_out);
+        timeline_out->version = RIN_GPU_PROCESS_QUEUE_TIMELINE_VERSION_V1;
+    }
+    return result;
+}
 #endif
 
 #undef SIMPLE_CALL

@@ -29,6 +29,7 @@ extern "C" {
 #define RIN_GPU_MEMORY_MAPPING_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SUBMIT_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_QUEUE_TIMELINE_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_MAX_COMMANDS_V1 UINT32_C(1024)
 #define RIN_GPU_PROCESS_MAX_RESOURCES_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
@@ -47,7 +48,8 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_CAPABILITY_DISPATCH = 9,
     RIN_GPU_SDK_PROCESS_QUEUE_BIND = 10,
     RIN_GPU_SDK_PROCESS_QUEUE_RELEASE = 11,
-    RIN_GPU_SDK_PROCESS_SUBMIT = 12
+    RIN_GPU_SDK_PROCESS_SUBMIT = 12,
+    RIN_GPU_SDK_PROCESS_QUEUE_TIMELINE_QUERY = 13
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -87,6 +89,20 @@ typedef struct RinGpuProcessSubmitReceiptV1 {
     uint64_t iommu_map_generation;
     uint64_t reserved[2];
 } RinGpuProcessSubmitReceiptV1;
+
+/* Nonblocking snapshot of the real, monotonically completed backend timeline
+ * for one authenticated process queue. The caller supplies the device and
+ * IOMMU generations from its submit receipt; a reset/rebind is reported as
+ * stale instead of making an old timeline appear complete. */
+typedef struct RinGpuProcessQueueTimelineV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t queue_id;
+    uint32_t reserved0;
+    uint64_t completed_value;
+    uint64_t device_epoch;
+    uint64_t iommu_map_generation;
+} RinGpuProcessQueueTimelineV1;
 
 /* Device identity comes from RinDeviceInfoV1. The generation is mandatory so
  * an allocation cannot silently bind to a replacement device with a reused
@@ -195,6 +211,10 @@ RIN_SDK_API RinResult rin_gpu_process_queue_release_v1(
 RIN_SDK_API RinResult rin_gpu_process_submit_v1(
     RinGpuProcessQueueV1 queue, const RinGpuProcessSubmitDescV1* descriptor,
     RinGpuProcessSubmitReceiptV1* receipt_out);
+RIN_SDK_API RinResult rin_gpu_process_queue_query_timeline_v1(
+    RinGpuProcessQueueV1 queue, uint64_t expected_device_epoch,
+    uint64_t expected_iommu_map_generation,
+    RinGpuProcessQueueTimelineV1* timeline_out);
 #endif
 
 #if defined(__cplusplus)
@@ -210,6 +230,8 @@ static_assert(sizeof(RinGpuProcessSubmitDescV1) == 56u,
               "RinGpuProcessSubmitDescV1 ABI drift");
 static_assert(sizeof(RinGpuProcessSubmitReceiptV1) == 64u,
               "RinGpuProcessSubmitReceiptV1 ABI drift");
+static_assert(sizeof(RinGpuProcessQueueTimelineV1) == 40u,
+              "RinGpuProcessQueueTimelineV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinGpuAllocationDescV1) == 64u,
                "RinGpuAllocationDescV1 ABI drift");
@@ -223,6 +245,8 @@ _Static_assert(sizeof(RinGpuProcessSubmitDescV1) == 56u,
                "RinGpuProcessSubmitDescV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessSubmitReceiptV1) == 64u,
                "RinGpuProcessSubmitReceiptV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessQueueTimelineV1) == 40u,
+               "RinGpuProcessQueueTimelineV1 ABI drift");
 #endif
 
 #ifdef __cplusplus
