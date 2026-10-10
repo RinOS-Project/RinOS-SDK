@@ -27,6 +27,11 @@ extern "C" {
 #define RIN_GPU_MAP_CPU_WRITE UINT32_C(0x00000002)
 #define RIN_GPU_MEMORY_MAX_TRANSFER_BYTES UINT64_C(1048576)
 #define RIN_GPU_MEMORY_MAPPING_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_SUBMIT_DESC_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_MAX_COMMANDS_V1 UINT32_C(1024)
+#define RIN_GPU_PROCESS_MAX_RESOURCES_V1 UINT32_C(8)
+#define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
 
 enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_MEMORY_ALLOCATE = 1,
@@ -39,10 +44,49 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_MEMORY_UNMAP = 8,
     /* Service-only broker dispatch; the kernel admits this operation only
      * for the exact signed ringpu-capability system service. */
-    RIN_GPU_SDK_CAPABILITY_DISPATCH = 9
+    RIN_GPU_SDK_CAPABILITY_DISPATCH = 9,
+    RIN_GPU_SDK_PROCESS_QUEUE_BIND = 10,
+    RIN_GPU_SDK_PROCESS_QUEUE_RELEASE = 11,
+    RIN_GPU_SDK_PROCESS_SUBMIT = 12
 };
 
 typedef uint64_t RinGpuAllocationV1;
+/* An authenticated process-local queue token, not a RingGPU implementation
+ * handle or a physical queue register value. */
+typedef uint64_t RinGpuProcessQueueV1;
+
+typedef struct RinGpuProcessResourceV1 {
+    uint64_t allocation;
+    uint32_t required_gpu_access;
+    uint32_t reserved;
+} RinGpuProcessResourceV1;
+
+/* `commands` is a byte slice of canonical public RinGpuBackendCommandV1
+ * records (record size is checked by the kernel). The descriptor and both
+ * slices are copied by the syscall before submit; their addresses are never
+ * retained as command cookies. */
+typedef struct RinGpuProcessSubmitDescV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinSliceV1 commands;
+    uint32_t command_count;
+    uint32_t command_record_size;
+    RinSliceV1 resources;
+    uint32_t resource_count;
+    uint32_t reserved;
+} RinGpuProcessSubmitDescV1;
+
+typedef struct RinGpuProcessSubmitReceiptV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t queue_id;
+    uint32_t reserved0;
+    uint64_t sequence;
+    uint64_t completion_value;
+    uint64_t device_epoch;
+    uint64_t iommu_map_generation;
+    uint64_t reserved[2];
+} RinGpuProcessSubmitReceiptV1;
 
 /* Device identity comes from RinDeviceInfoV1. The generation is mandatory so
  * an allocation cannot silently bind to a replacement device with a reused
@@ -136,6 +180,21 @@ RIN_SDK_API RinResult rin_gpu_memory_map_v1(
 RIN_SDK_API RinResult rin_gpu_memory_unmap_v1(
     uint64_t device_id, uint64_t device_generation,
     RinGpuAllocationV1 allocation, uint64_t mapping);
+/* Bind a process-owned token to an admitted backend queue index. The queue
+ * index is validated against the exact device generation and later checked
+ * against the engine actually selected by command preparation. */
+RIN_SDK_API RinResult rin_gpu_process_queue_bind_v1(
+    uint64_t device_id, uint64_t device_generation, uint32_t queue_id,
+    RinGpuProcessQueueV1* queue_out);
+RIN_SDK_API RinResult rin_gpu_process_queue_release_v1(
+    RinGpuProcessQueueV1 queue);
+/* Submit canonical API-independent command records. Resources are exact
+ * process-owned allocation handles with explicit GPU access; the kernel
+ * copies and validates all records before the physical driver receives them.
+ * Accepted work remains owned by PID+process-instance until real completion. */
+RIN_SDK_API RinResult rin_gpu_process_submit_v1(
+    RinGpuProcessQueueV1 queue, const RinGpuProcessSubmitDescV1* descriptor,
+    RinGpuProcessSubmitReceiptV1* receipt_out);
 #endif
 
 #if defined(__cplusplus)
@@ -145,6 +204,12 @@ static_assert(sizeof(RinGpuAllocationInfoV1) == 96u,
               "RinGpuAllocationInfoV1 ABI drift");
 static_assert(sizeof(RinGpuMemoryMappingV1) == 64u,
               "RinGpuMemoryMappingV1 ABI drift");
+static_assert(sizeof(RinGpuProcessResourceV1) == 16u,
+              "RinGpuProcessResourceV1 ABI drift");
+static_assert(sizeof(RinGpuProcessSubmitDescV1) == 56u,
+              "RinGpuProcessSubmitDescV1 ABI drift");
+static_assert(sizeof(RinGpuProcessSubmitReceiptV1) == 64u,
+              "RinGpuProcessSubmitReceiptV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinGpuAllocationDescV1) == 64u,
                "RinGpuAllocationDescV1 ABI drift");
@@ -152,6 +217,12 @@ _Static_assert(sizeof(RinGpuAllocationInfoV1) == 96u,
                "RinGpuAllocationInfoV1 ABI drift");
 _Static_assert(sizeof(RinGpuMemoryMappingV1) == 64u,
                "RinGpuMemoryMappingV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessResourceV1) == 16u,
+               "RinGpuProcessResourceV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessSubmitDescV1) == 56u,
+               "RinGpuProcessSubmitDescV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessSubmitReceiptV1) == 64u,
+               "RinGpuProcessSubmitReceiptV1 ABI drift");
 #endif
 
 #ifdef __cplusplus

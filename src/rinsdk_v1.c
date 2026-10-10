@@ -1066,6 +1066,113 @@ RinResult rin_gpu_memory_unmap_v1(
                 (RinResult*)0, device_id, device_generation, allocation,
                 mapping, 0, 0);
 }
+
+static int gpu_process_slice_valid(RinSliceV1 slice) {
+    return slice.address != 0u && slice.size != 0u &&
+           slice.address <= (uint64_t)UINTPTR_MAX &&
+           slice.size - 1u <= (uint64_t)UINTPTR_MAX - slice.address;
+}
+
+RinResult rin_gpu_process_queue_bind_v1(
+    uint64_t device_id, uint64_t device_generation, uint32_t queue_id,
+    RinGpuProcessQueueV1* queue_out) {
+    RinSdkArgsV1 request;
+    RinResult result;
+
+    if (queue_out) *queue_out = 0u;
+    if (!queue_out || device_id == 0u || device_generation == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = queue_id;
+    result = rin_sdk_invoke_scalar_output_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_QUEUE_BIND,
+        &request, sizeof(request), queue_out, sizeof(*queue_out));
+    if (result == RIN_SUCCESS && *queue_out == 0u)
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) *queue_out = 0u;
+    return result;
+}
+
+RinResult rin_gpu_process_queue_release_v1(RinGpuProcessQueueV1 queue) {
+    if (queue == 0u) return RIN_ERROR_INVALID_ARGUMENT;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_QUEUE_RELEASE,
+                (RinResult*)0, queue, 0, 0, 0, 0, 0);
+}
+
+RinResult rin_gpu_process_submit_v1(
+    RinGpuProcessQueueV1 queue,
+    const RinGpuProcessSubmitDescV1* descriptor,
+    RinGpuProcessSubmitReceiptV1* receipt_out) {
+    RinGpuProcessSubmitDescV1 request_desc;
+    RinSdkArgsV1 request;
+    RinResult result;
+    uint64_t expected_commands_size;
+    uint64_t expected_resources_size;
+
+    if (receipt_out) {
+        rin_sdk_zero_bytes(receipt_out, sizeof(*receipt_out));
+        receipt_out->struct_size = sizeof(*receipt_out);
+        receipt_out->version = RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1;
+    }
+    if (!receipt_out || queue == 0u || !descriptor ||
+        descriptor->struct_size != sizeof(*descriptor) ||
+        descriptor->version != RIN_GPU_PROCESS_SUBMIT_DESC_VERSION_V1 ||
+        descriptor->reserved != 0u || descriptor->command_count == 0u ||
+        descriptor->command_count > RIN_GPU_PROCESS_MAX_COMMANDS_V1 ||
+        descriptor->command_record_size == 0u ||
+        descriptor->resource_count > RIN_GPU_PROCESS_MAX_RESOURCES_V1 ||
+        descriptor->command_count >
+            UINT64_MAX / descriptor->command_record_size)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    expected_commands_size = (uint64_t)descriptor->command_count *
+                             descriptor->command_record_size;
+    if (!gpu_process_slice_valid(descriptor->commands) ||
+        descriptor->commands.size != expected_commands_size)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (descriptor->resource_count == 0u) {
+        if (descriptor->resources.address != 0u ||
+            descriptor->resources.size != 0u)
+            return RIN_ERROR_INVALID_ARGUMENT;
+    } else {
+        expected_resources_size =
+            (uint64_t)descriptor->resource_count *
+            sizeof(RinGpuProcessResourceV1);
+        if (!gpu_process_slice_valid(descriptor->resources) ||
+            descriptor->resources.size != expected_resources_size)
+            return RIN_ERROR_INVALID_ARGUMENT;
+    }
+
+    request_desc = *descriptor;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = queue;
+    request.value[1] = (uint64_t)(uintptr_t)&request_desc;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_SUBMIT,
+        &request, sizeof(request), receipt_out, sizeof(*receipt_out));
+    if (result == RIN_SUCCESS &&
+        (receipt_out->struct_size != sizeof(*receipt_out) ||
+         receipt_out->version != RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1 ||
+         receipt_out->queue_id >= RIN_GPU_PROCESS_MAX_QUEUES_V1 ||
+         receipt_out->reserved0 != 0u || receipt_out->sequence == 0u ||
+         receipt_out->completion_value == 0u ||
+         receipt_out->device_epoch == 0u ||
+         receipt_out->iommu_map_generation == 0u ||
+         receipt_out->reserved[0] != 0u ||
+         receipt_out->reserved[1] != 0u))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(receipt_out, sizeof(*receipt_out));
+        receipt_out->struct_size = sizeof(*receipt_out);
+        receipt_out->version = RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1;
+    }
+    return result;
+}
 #endif
 
 #undef SIMPLE_CALL
