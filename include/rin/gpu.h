@@ -227,9 +227,13 @@ RIN_SDK_API RinResult rin_gpu_process_queue_bind_v1(
 RIN_SDK_API RinResult rin_gpu_process_queue_release_v1(
     RinGpuProcessQueueV1 queue);
 /* Submit canonical API-independent command records. Resources are exact
- * process-owned allocation handles with explicit GPU access; the kernel
- * copies and validates all records before the physical driver receives them.
- * Accepted work remains owned by PID+process-instance until real completion. */
+ * process-owned allocation handles with explicit GPU access. Direct buffer
+ * and image cookies used by commands must first be bound with
+ * rin_gpu_process_resource_bind_v1(), and their backing allocations must be
+ * listed here with access covering the command. The kernel copies the records
+ * and checks the binding, byte range where present, and allocation declaration
+ * before the physical driver receives them. Accepted work remains owned by
+ * PID+process-instance until real completion. */
 RIN_SDK_API RinResult rin_gpu_process_submit_v1(
     RinGpuProcessQueueV1 queue, const RinGpuProcessSubmitDescV1* descriptor,
     RinGpuProcessSubmitReceiptV1* receipt_out);
