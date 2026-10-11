@@ -80,6 +80,8 @@ typedef enum RinFirewallNetworkProfileV1 {
 /* Authenticated system ALLOW rules carrying this bit are infrastructure
  * exceptions that may pass a container policy guard (for example NDP). */
 #define RIN_FIREWALL_RULE_FLAG_POLICY_BYPASS UINT16_C(0x0200)
+/* Record matching packets even when global allowed-traffic logging is off. */
+#define RIN_FIREWALL_RULE_FLAG_LOG UINT16_C(0x0400)
 #define RIN_FIREWALL_RULE_KNOWN_FLAGS \
     (RIN_FIREWALL_RULE_FLAG_ENABLED | RIN_FIREWALL_RULE_FLAG_MATCH_INTERFACE | \
      RIN_FIREWALL_RULE_FLAG_MATCH_NAMESPACE | \
@@ -89,7 +91,8 @@ typedef enum RinFirewallNetworkProfileV1 {
      RIN_FIREWALL_RULE_FLAG_MATCH_PROCESS | \
      RIN_FIREWALL_RULE_FLAG_ORPHANED | \
      RIN_FIREWALL_RULE_FLAG_POLICY_GUARD | \
-     RIN_FIREWALL_RULE_FLAG_POLICY_BYPASS)
+     RIN_FIREWALL_RULE_FLAG_POLICY_BYPASS | \
+     RIN_FIREWALL_RULE_FLAG_LOG)
 
 #define RIN_FIREWALL_PACKET_FLAG_FRAGMENT UINT16_C(0x0001)
 #define RIN_FIREWALL_PACKET_FLAG_PROCESS_IDENTITY UINT16_C(0x0002)
