@@ -56,7 +56,8 @@ typedef struct RinFirewallServiceStatusV1 {
     uint64_t log_sequence;
     uint64_t profile_generation;
     uint32_t allow_log;
-    uint8_t reserved1[12];
+    uint32_t safe_mode;
+    uint8_t reserved1[8];
 } RinFirewallServiceStatusV1;
 
 typedef struct RinFirewallServiceLogEventV1 {
