@@ -128,6 +128,7 @@ typedef struct RinKeyringImportKerberosCredentialRequestV1 {
     uint32_t secret_name_size;
     uint32_t credential_size;
     uint32_t reserved;
+    uint32_t reserved2;
 } RinKeyringImportKerberosCredentialRequestV1;
 
 #if defined(__cplusplus)
