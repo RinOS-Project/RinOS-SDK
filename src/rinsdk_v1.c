@@ -1287,6 +1287,18 @@ RinResult rin_gpu_process_object_destroy_v1(
                 (RinResult*)0, device_id, device_generation, object_token,
                 0, 0, 0);
 }
+
+RinResult rin_gpu_process_compute_pipeline_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t pipeline_token, uint64_t shader_module_token) {
+    if (device_id == 0u || device_generation == 0u || pipeline_token == 0u ||
+        shader_module_token == 0u || pipeline_token == shader_module_token)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_GPU,
+                RIN_GPU_SDK_PROCESS_COMPUTE_PIPELINE_CREATE,
+                (RinResult*)0, device_id, device_generation, pipeline_token,
+                shader_module_token, 0, 0);
+}
 #endif
 
 #undef SIMPLE_CALL

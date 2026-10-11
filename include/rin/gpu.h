@@ -58,7 +58,8 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_RESOURCE_BIND = 14,
     RIN_GPU_SDK_PROCESS_RESOURCE_UNBIND = 15,
     RIN_GPU_SDK_PROCESS_SHADER_MODULE_CREATE = 16,
-    RIN_GPU_SDK_PROCESS_OBJECT_DESTROY = 17
+    RIN_GPU_SDK_PROCESS_OBJECT_DESTROY = 17,
+    RIN_GPU_SDK_PROCESS_COMPUTE_PIPELINE_CREATE = 18
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -262,6 +263,11 @@ RIN_SDK_API RinResult rin_gpu_process_shader_module_create_v1(
     uint64_t shader_ir_size);
 RIN_SDK_API RinResult rin_gpu_process_object_destroy_v1(
     uint64_t device_id, uint64_t device_generation, uint64_t object_token);
+/* Create a process-owned compute pipeline from a live compute shader module.
+ * Opaque process tokens never expose RingGPU/backend object cookies. */
+RIN_SDK_API RinResult rin_gpu_process_compute_pipeline_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t pipeline_token, uint64_t shader_module_token);
 #endif
 
 #if defined(__cplusplus)
