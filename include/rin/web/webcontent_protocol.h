@@ -278,7 +278,10 @@ enum {
     /* Display one permission-checked Window notification. The request uses
      * client_url for the requesting document URL, script_url for title, and
      * scope for body; this reuses the existing bounded owner message. */
-    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_SHOW_NOTIFICATION = 15
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_SHOW_NOTIFICATION = 15,
+    /* Revoke an engine-assigned Document identity when its active Document
+     * starts unloading or is destroyed. */
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RETIRE_DOCUMENT = 16
 };
 
 enum {
@@ -311,7 +314,8 @@ enum {
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_PERMISSION = 3,
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_LIST_ITEM = 4,
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_LIST_DONE = 5,
-    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_NOTIFICATION_POSTED = 6
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_NOTIFICATION_POSTED = 6,
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RESULT_CONTEXT_UPDATED = 7
 };
 
 enum {
@@ -609,10 +613,10 @@ typedef struct RinWebContentOwnerChannelSessionV1 {
  * update_via_cache for those operations only. Match uses client_url, and
  * unregister uses origin/scope. LIST uses update_via_cache as its index and
  * reserved[0] as a page-bound snapshot id; zero starts a new origin snapshot.
- * reserved[1] carries the engine-assigned active Document identity for
- * frame-bound operations (zero for Notification owner operations). The
- * Browser binds that identity to the frame origin, top-level site, profile,
- * and page on first use and rejects reuse with changed context. */
+ * reserved[1] carries the engine-assigned Document identity for frame-bound
+ * operations, including Window Notification requests and retirement signals.
+ * The Browser binds active Documents to origin, top-level site, profile, and
+ * page on first use, then rejects an identity after its retirement signal. */
 typedef struct RinWebContentServiceWorkerOwnerRequestV1 {
     uint32_t struct_size;
     uint16_t version;
