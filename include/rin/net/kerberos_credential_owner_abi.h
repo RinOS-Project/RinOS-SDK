@@ -59,6 +59,7 @@ typedef struct RinKerberosCredentialOwnerV1 {
     uint16_t version;
     uint16_t reserved0;
     uint32_t capability_mask;
+    uint32_t reserved1;
     void* context;
 
     /* Returns an opaque credential handle for the current authenticated
@@ -99,6 +100,8 @@ rin_kerberos_credential_owner_get_v1(void);
 
 static_assert(offsetof(RinKerberosCredentialOwnerV1, context) == 16u,
               "RinKerberosCredentialOwnerV1 context ABI drift");
+static_assert(offsetof(RinKerberosCredentialOwnerV1, reserved1) == 12u,
+              "RinKerberosCredentialOwnerV1 reserved ABI drift");
 static_assert(sizeof(RinKerberosCredentialOwnerV1) ==
                   offsetof(RinKerberosCredentialOwnerV1,
                            get_session_principal) +
@@ -108,6 +111,8 @@ static_assert(sizeof(RinKerberosCredentialOwnerV1) ==
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(offsetof(RinKerberosCredentialOwnerV1, context) == 16u,
                "RinKerberosCredentialOwnerV1 context ABI drift");
+_Static_assert(offsetof(RinKerberosCredentialOwnerV1, reserved1) == 12u,
+               "RinKerberosCredentialOwnerV1 reserved ABI drift");
 _Static_assert(sizeof(RinKerberosCredentialOwnerV1) ==
                    offsetof(RinKerberosCredentialOwnerV1,
                             get_session_principal) +
