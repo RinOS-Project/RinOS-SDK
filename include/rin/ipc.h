@@ -1,6 +1,19 @@
 #ifndef RIN_SDK_IPC_H
 #define RIN_SDK_IPC_H
 #include "abi.h"
+#include "ipc_peer_abi.h"
+
+/* Kernel code imports IPC wire contracts while intentionally suppressing the
+ * public convenience aliases in abi.h. Keep this header independently
+ * includable without introducing aliases that collide with kernel types. */
+#if defined(RIN_SDK_KERNEL_INTERNAL_ABI)
+#define RIN_IPC_HANDLE_TYPE uint64_t
+#define RIN_IPC_RESULT_TYPE int32_t
+#else
+#define RIN_IPC_HANDLE_TYPE RinHandle
+#define RIN_IPC_RESULT_TYPE RinResult
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,25 +28,6 @@ typedef struct RinIpcMessageV1 {
     uint64_t reserved[3];
 } RinIpcMessageV1;
 
-/* Kernel-authenticated identity of the process that sent one channel message.
- * This is returned only by rin_channel_receive_with_peer_v1; callers must
- * not substitute process IDs carried in message bytes for this identity. */
-typedef struct RinIpcPeerIdentityV1 {
-    uint32_t struct_size;
-    uint32_t version;
-    uint64_t process_id;
-    uint64_t process_instance_cookie;
-    uint64_t reserved;
-} RinIpcPeerIdentityV1;
-
-#if defined(__cplusplus)
-static_assert(sizeof(RinIpcPeerIdentityV1) == 32u,
-              "RinIpcPeerIdentityV1 ABI drift");
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinIpcPeerIdentityV1) == 32u,
-               "RinIpcPeerIdentityV1 ABI drift");
-#endif
-
 /* Channel calls are non-blocking. Empty receive and queue-full send return
  * RIN_ERROR_WOULD_BLOCK; wait for RIN_WAIT_EVENT_READABLE/WRITABLE with
  * rin_wait_many_v1 or a wait set before retrying. Bulk payloads should be
@@ -47,7 +41,7 @@ _Static_assert(sizeof(RinIpcPeerIdentityV1) == 32u,
 #define RIN_CHANNEL_MAX_QUEUED_BYTES UINT32_C(262144)
 
 typedef struct RinWaitItemV1 {
-    RinHandle handle;
+    RIN_IPC_HANDLE_TYPE handle;
     uint32_t events;
     uint32_t observed;
     uint64_t user_tag;
@@ -75,24 +69,26 @@ typedef struct RinWaitResultV1 {
     uint64_t reserved[3];
 } RinWaitResultV1;
 
-RIN_SDK_API RinResult rin_channel_create_v1(RinChannel* first, RinChannel* second);
-RIN_SDK_API RinResult rin_channel_send_v1(RinChannel channel, const RinIpcMessageV1* message);
-RIN_SDK_API RinResult rin_channel_receive_v1(RinChannel channel, RinIpcMessageV1* message);
-RIN_SDK_API RinResult rin_channel_receive_with_peer_v1(
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_channel_create_v1(RinChannel* first, RinChannel* second);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_channel_send_v1(RinChannel channel, const RinIpcMessageV1* message);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_channel_receive_v1(RinChannel channel, RinIpcMessageV1* message);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_channel_receive_with_peer_v1(
     RinChannel channel, RinIpcMessageV1* message,
     RinIpcPeerIdentityV1* peer_identity_out);
-RIN_SDK_API RinResult rin_event_create_v1(uint32_t flags, RinEvent* event);
-RIN_SDK_API RinResult rin_event_signal_v1(RinEvent event, uint64_t value);
-RIN_SDK_API RinResult rin_wait_many_v1(RinSliceV1 items, uint64_t timeout_ns, uint32_t* index);
-RIN_SDK_API RinResult rin_shared_memory_create_v1(uint64_t size, uint32_t flags, RinSharedMemory* memory);
-RIN_SDK_API RinResult rin_service_connect_v1(RinStringV1 name, RinChannel* channel);
-RIN_SDK_API RinResult rin_wait_set_create_v1(uint32_t flags, RinWaitSet* wait_set);
-RIN_SDK_API RinResult rin_wait_set_set_items_v1(RinWaitSet wait_set, RinSliceV1 items);
-RIN_SDK_API RinResult rin_wait_set_wait_v1(RinWaitSet wait_set, uint64_t timeout_ns, RinWaitResultV1* result);
-RIN_SDK_API RinResult rin_service_register_v1(RinStringV1 name, uint32_t flags, RinService* service);
-RIN_SDK_API RinResult rin_service_accept_v1(RinService service, uint64_t timeout_ns, RinChannel* channel);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_event_create_v1(uint32_t flags, RinEvent* event);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_event_signal_v1(RinEvent event, uint64_t value);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_wait_many_v1(RinSliceV1 items, uint64_t timeout_ns, uint32_t* index);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_shared_memory_create_v1(uint64_t size, uint32_t flags, RinSharedMemory* memory);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_service_connect_v1(RinStringV1 name, RinChannel* channel);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_wait_set_create_v1(uint32_t flags, RinWaitSet* wait_set);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_wait_set_set_items_v1(RinWaitSet wait_set, RinSliceV1 items);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_wait_set_wait_v1(RinWaitSet wait_set, uint64_t timeout_ns, RinWaitResultV1* result);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_service_register_v1(RinStringV1 name, uint32_t flags, RinService* service);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_service_accept_v1(RinService service, uint64_t timeout_ns, RinChannel* channel);
 
 #ifdef __cplusplus
 }
 #endif
+#undef RIN_IPC_HANDLE_TYPE
+#undef RIN_IPC_RESULT_TYPE
 #endif
