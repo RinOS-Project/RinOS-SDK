@@ -37,6 +37,12 @@ extern "C" {
 #define RIN_GPU_PROCESS_MAX_COMPUTE_BINDINGS_V1 UINT32_C(64)
 #define RIN_GPU_PROCESS_COMPUTE_BINDING_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SHADER_MAX_BYTES_V1 UINT64_C(1048640)
+#define RIN_GPU_PROCESS_QUERY_DESC_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_QUERY_RESULT_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_QUERY_VALUE_COUNT_V1 UINT32_C(8)
+#define RIN_GPU_PROCESS_QUERY_TIMESTAMP_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_QUERY_OCCLUSION_V1 UINT32_C(2)
+#define RIN_GPU_PROCESS_QUERY_PIPELINE_STATISTICS_V1 UINT32_C(3)
 /* RinGpuBackendCommandV1's canonical packed record size. The kernel pins this
  * SDK value to sizeof(RinGpuBackendCommandV1) at its dispatch boundary. */
 #define RIN_GPU_PROCESS_COMMAND_RECORD_SIZE_V1 UINT32_C(872)
@@ -62,7 +68,9 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_SHADER_MODULE_CREATE = 16,
     RIN_GPU_SDK_PROCESS_OBJECT_DESTROY = 17,
     RIN_GPU_SDK_PROCESS_COMPUTE_PIPELINE_CREATE = 18,
-    RIN_GPU_SDK_PROCESS_COMPUTE_BIND_GROUP_CREATE = 19
+    RIN_GPU_SDK_PROCESS_COMPUTE_BIND_GROUP_CREATE = 19,
+    RIN_GPU_SDK_PROCESS_QUERY_CREATE = 20,
+    RIN_GPU_SDK_PROCESS_QUERY_RESULT = 21
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -102,6 +110,27 @@ typedef struct RinGpuProcessComputeBindingV1 {
     uint32_t access;
     uint32_t reserved;
 } RinGpuProcessComputeBindingV1;
+
+/* Query descriptions and results use RingPU's bounded timestamp, occlusion,
+ * and pipeline-statistics query types. The token remains process-owned. */
+typedef struct RinGpuProcessQueryDescV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t query_type;
+    uint32_t flags;
+    uint32_t reserved0;
+    uint32_t reserved1;
+} RinGpuProcessQueryDescV1;
+
+typedef struct RinGpuProcessQueryResultV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t query_type;
+    uint32_t available;
+    uint32_t reserved0;
+    uint32_t reserved1;
+    uint64_t values[RIN_GPU_PROCESS_QUERY_VALUE_COUNT_V1];
+} RinGpuProcessQueryResultV1;
 
 /* `commands` is a byte slice of canonical public RinGpuBackendCommandV1
  * records; command_record_size must equal
@@ -289,6 +318,14 @@ RIN_SDK_API RinResult rin_gpu_process_compute_bind_group_create_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t bind_group_token, uint64_t pipeline_token,
     const RinGpuProcessComputeBindingV1* bindings, uint32_t binding_count);
+/* Query creation and result retrieval use an opaque process token. Results
+ * return successfully with `available == 0` while submitted work is pending. */
+RIN_SDK_API RinResult rin_gpu_process_query_create_v1(
+    uint64_t device_id, uint64_t device_generation, uint64_t query_token,
+    const RinGpuProcessQueryDescV1* descriptor);
+RIN_SDK_API RinResult rin_gpu_process_query_result_v1(
+    uint64_t device_id, uint64_t device_generation, uint64_t query_token,
+    RinGpuProcessQueryResultV1* result_out);
 #endif
 
 #if defined(__cplusplus)
@@ -310,6 +347,10 @@ static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
               "RinGpuProcessResourceBindingV1 ABI drift");
 static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
               "RinGpuProcessComputeBindingV1 ABI drift");
+static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
+              "RinGpuProcessQueryDescV1 ABI drift");
+static_assert(sizeof(RinGpuProcessQueryResultV1) == 88u,
+              "RinGpuProcessQueryResultV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinGpuAllocationDescV1) == 64u,
                "RinGpuAllocationDescV1 ABI drift");
@@ -329,6 +370,10 @@ _Static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
                "RinGpuProcessResourceBindingV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
                "RinGpuProcessComputeBindingV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
+               "RinGpuProcessQueryDescV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessQueryResultV1) == 88u,
+               "RinGpuProcessQueryResultV1 ABI drift");
 #endif
 
 #ifdef __cplusplus
