@@ -3,6 +3,7 @@
 #ifndef RIN_SDK_COMPOSITOR_INPUT_RING_H
 #define RIN_SDK_COMPOSITOR_INPUT_RING_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include "native_event.h"
 #include "../latency_abi.h"
