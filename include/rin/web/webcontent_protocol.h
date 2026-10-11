@@ -608,7 +608,11 @@ typedef struct RinWebContentOwnerChannelSessionV1 {
  * response.generation. Commit/abort use origin/scope and place that ID in
  * update_via_cache for those operations only. Match uses client_url, and
  * unregister uses origin/scope. LIST uses update_via_cache as its index and
- * reserved[0] as a page-bound snapshot id; zero starts a new origin snapshot. */
+ * reserved[0] as a page-bound snapshot id; zero starts a new origin snapshot.
+ * reserved[1] carries the engine-assigned active Document identity for
+ * frame-bound operations (zero for Notification owner operations). The
+ * Browser binds that identity to the frame origin, top-level site, profile,
+ * and page on first use and rejects reuse with changed context. */
 typedef struct RinWebContentServiceWorkerOwnerRequestV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -642,11 +646,12 @@ typedef struct RinWebContentServiceWorkerOwnerResponseV1 {
     uint64_t reserved[2];
 } RinWebContentServiceWorkerOwnerResponseV1;
 
-/* The request payload is this header followed by origin, storage key, then
- * value bytes. Lengths exclude terminators. READ_SNAPSHOT and INITIALIZE
- * carry only the origin. The page id in the message header and
- * owner_generation jointly bind each operation to the live page and Browser
- * profile generation. */
+/* The request payload is this header followed by origin, top-level site,
+ * storage key, then value bytes. Lengths exclude terminators; reserved[0]
+ * carries the engine-assigned active Document identity and reserved[1] is the
+ * top-level-site byte count. READ_SNAPSHOT and INITIALIZE carry only origin
+ * and top-level site. The page id in the message header and owner_generation
+ * jointly bind each operation to the live page and Browser profile generation. */
 typedef struct RinWebContentCacheStorageOwnerRequestV1 {
     uint32_t struct_size;
     uint16_t version;
