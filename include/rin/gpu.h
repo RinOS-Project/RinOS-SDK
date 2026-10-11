@@ -34,6 +34,8 @@ extern "C" {
 #define RIN_GPU_PROCESS_MAX_COMMANDS_V1 UINT32_C(1024)
 #define RIN_GPU_PROCESS_MAX_RESOURCES_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
+#define RIN_GPU_PROCESS_MAX_COMPUTE_BINDINGS_V1 UINT32_C(64)
+#define RIN_GPU_PROCESS_COMPUTE_BINDING_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SHADER_MAX_BYTES_V1 UINT64_C(1048640)
 /* RinGpuBackendCommandV1's canonical packed record size. The kernel pins this
  * SDK value to sizeof(RinGpuBackendCommandV1) at its dispatch boundary. */
@@ -59,7 +61,8 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_RESOURCE_UNBIND = 15,
     RIN_GPU_SDK_PROCESS_SHADER_MODULE_CREATE = 16,
     RIN_GPU_SDK_PROCESS_OBJECT_DESTROY = 17,
-    RIN_GPU_SDK_PROCESS_COMPUTE_PIPELINE_CREATE = 18
+    RIN_GPU_SDK_PROCESS_COMPUTE_PIPELINE_CREATE = 18,
+    RIN_GPU_SDK_PROCESS_COMPUTE_BIND_GROUP_CREATE = 19
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -87,6 +90,18 @@ typedef struct RinGpuProcessResourceBindingV1 {
     uint32_t required_gpu_access;
     uint32_t reserved;
 } RinGpuProcessResourceBindingV1;
+
+/* A process-owned compute bind-group entry. The range is relative to the
+ * process resource cookie, not a GPUVA or physical address. */
+typedef struct RinGpuProcessComputeBindingV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t resource_cookie;
+    uint64_t offset;
+    uint64_t size_bytes;
+    uint32_t access;
+    uint32_t reserved;
+} RinGpuProcessComputeBindingV1;
 
 /* `commands` is a byte slice of canonical public RinGpuBackendCommandV1
  * records; command_record_size must equal
@@ -268,6 +283,12 @@ RIN_SDK_API RinResult rin_gpu_process_object_destroy_v1(
 RIN_SDK_API RinResult rin_gpu_process_compute_pipeline_create_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t pipeline_token, uint64_t shader_module_token);
+/* Bind-group creation retains the authenticated process resource bindings
+ * until the process object is destroyed. */
+RIN_SDK_API RinResult rin_gpu_process_compute_bind_group_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t bind_group_token, uint64_t pipeline_token,
+    const RinGpuProcessComputeBindingV1* bindings, uint32_t binding_count);
 #endif
 
 #if defined(__cplusplus)
@@ -287,6 +308,8 @@ static_assert(sizeof(RinGpuProcessQueueTimelineV1) == 40u,
               "RinGpuProcessQueueTimelineV1 ABI drift");
 static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
               "RinGpuProcessResourceBindingV1 ABI drift");
+static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
+              "RinGpuProcessComputeBindingV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinGpuAllocationDescV1) == 64u,
                "RinGpuAllocationDescV1 ABI drift");
@@ -304,6 +327,8 @@ _Static_assert(sizeof(RinGpuProcessQueueTimelineV1) == 40u,
                "RinGpuProcessQueueTimelineV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
                "RinGpuProcessResourceBindingV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
+               "RinGpuProcessComputeBindingV1 ABI drift");
 #endif
 
 #ifdef __cplusplus

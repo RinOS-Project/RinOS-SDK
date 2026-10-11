@@ -1299,6 +1299,47 @@ RinResult rin_gpu_process_compute_pipeline_create_v1(
                 (RinResult*)0, device_id, device_generation, pipeline_token,
                 shader_module_token, 0, 0);
 }
+
+RinResult rin_gpu_process_compute_bind_group_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t bind_group_token, uint64_t pipeline_token,
+    const RinGpuProcessComputeBindingV1* bindings, uint32_t binding_count) {
+    RinGpuProcessComputeBindingV1 binding_copy[
+        RIN_GPU_PROCESS_MAX_COMPUTE_BINDINGS_V1];
+    RinSdkArgsV1 request;
+
+    if (device_id == 0u || device_generation == 0u ||
+        bind_group_token == 0u || pipeline_token == 0u ||
+        bind_group_token == pipeline_token || !bindings || binding_count == 0u ||
+        binding_count > RIN_GPU_PROCESS_MAX_COMPUTE_BINDINGS_V1)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    for (uint32_t index = 0u; index < binding_count; ++index) {
+        const RinGpuProcessComputeBindingV1* binding = &bindings[index];
+        if (binding->struct_size != sizeof(*binding) ||
+            binding->version != RIN_GPU_PROCESS_COMPUTE_BINDING_VERSION_V1 ||
+            binding->resource_cookie == 0u || binding->size_bytes == 0u ||
+            binding->offset > UINT64_MAX - binding->size_bytes ||
+            binding->access == 0u ||
+            (binding->access & ~(RIN_GPU_ALLOCATION_GPU_READ |
+                                 RIN_GPU_ALLOCATION_GPU_WRITE)) != 0u ||
+            binding->reserved != 0u)
+            return RIN_ERROR_INVALID_ARGUMENT;
+        binding_copy[index] = *binding;
+    }
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = bind_group_token;
+    request.value[3] = pipeline_token;
+    request.value[4] = (uint64_t)(uintptr_t)binding_copy;
+    request.value[5] = binding_count;
+    return rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU,
+        RIN_GPU_SDK_PROCESS_COMPUTE_BIND_GROUP_CREATE, &request,
+        sizeof(request), (void*)0, 0u);
+}
 #endif
 
 #undef SIMPLE_CALL
