@@ -154,7 +154,8 @@ enum {
     RIN_WEBCONTENT_CMD_HTTP_COOKIE_OWNER_V1 = 33,
     RIN_WEBCONTENT_CMD_REVOKE_MICROPHONE_V1 = 34,
     RIN_WEBCONTENT_CMD_CAMERA_CAPTURE_OWNER_V1 = 35,
-    RIN_WEBCONTENT_CMD_REVOKE_CAMERA_V1 = 36
+    RIN_WEBCONTENT_CMD_REVOKE_CAMERA_V1 = 36,
+    RIN_WEBCONTENT_CMD_REVOKE_LOCATION_V1 = 39
 };
 
 enum {
@@ -250,6 +251,17 @@ typedef struct RinWebContentCameraRevokeV1 {
     char domain[RIN_WEBCONTENT_PERMISSION_DOMAIN_MAX];
     uint64_t reserved[2];
 } RinWebContentCameraRevokeV1;
+
+/* Location revocation cancels pending position requests for the selected
+ * origin in every retained page. A sequence rejects stale replays. */
+typedef struct RinWebContentLocationRevokeV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t sequence;
+    char domain[RIN_WEBCONTENT_PERMISSION_DOMAIN_MAX];
+    uint64_t reserved[2];
+} RinWebContentLocationRevokeV1;
 
 enum {
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_REGISTER = 1,
@@ -1047,6 +1059,8 @@ static_assert(sizeof(RinWebContentCameraCaptureOwnerResponseV1) == 104u,
               "WebContent camera owner response ABI drift");
 static_assert(sizeof(RinWebContentCameraRevokeV1) == 288u,
               "WebContent camera revoke ABI drift");
+static_assert(sizeof(RinWebContentLocationRevokeV1) == 288u,
+              "WebContent location revoke ABI drift");
 static_assert(sizeof(RinWebContentWebAuthnPollV1) == 32u,
               "WebContent WebAuthn poll ABI drift");
 static_assert(sizeof(RinWebContentWebAuthnEventV1) == 4608u,
@@ -1116,6 +1130,8 @@ _Static_assert(sizeof(RinWebContentCameraCaptureOwnerResponseV1) == 104u,
                "WebContent camera owner response ABI drift");
 _Static_assert(sizeof(RinWebContentCameraRevokeV1) == 288u,
                "WebContent camera revoke ABI drift");
+_Static_assert(sizeof(RinWebContentLocationRevokeV1) == 288u,
+               "WebContent location revoke ABI drift");
 _Static_assert(sizeof(RinWebContentWebAuthnPollV1) == 32u,
                "WebContent WebAuthn poll ABI drift");
 _Static_assert(sizeof(RinWebContentWebAuthnEventV1) == 4608u,
