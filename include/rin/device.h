@@ -4,6 +4,20 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Values accepted by rin_device_enumerate_v1(). Keep these in lockstep with
+ * the public RinOS device-class ABI; the SDK prefix avoids colliding with
+ * kernel RinBus declarations in mixed kernel translation units. */
+#define RIN_SDK_DEVICE_CLASS_ANY UINT32_C(0)
+#define RIN_SDK_DEVICE_CLASS_STORAGE UINT32_C(1)
+#define RIN_SDK_DEVICE_CLASS_NETWORK UINT32_C(2)
+#define RIN_SDK_DEVICE_CLASS_AUDIO UINT32_C(3)
+#define RIN_SDK_DEVICE_CLASS_GPU UINT32_C(4)
+#define RIN_SDK_DEVICE_CLASS_INPUT UINT32_C(5)
+#define RIN_SDK_DEVICE_CLASS_USB_CONTROLLER UINT32_C(6)
+#define RIN_SDK_DEVICE_CLASS_BUS UINT32_C(7)
+#define RIN_SDK_DEVICE_CLASS_POWER UINT32_C(8)
+
 typedef struct RinDeviceInfoV1 {
     uint32_t struct_size;
     uint32_t version;

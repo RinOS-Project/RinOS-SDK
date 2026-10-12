@@ -14,7 +14,17 @@ extern "C" {
 #define RIN_GPU_CAPABILITY_SERVICE_NAME "ringpu-capability"
 #define RIN_GPU_CROSS_PROCESS_CAPABILITY_MAX 64u
 #define RIN_GPU_CAPABILITY_IPC_MAX_REQUEST_BYTES 96u
-#define RIN_GPU_CAPABILITY_IPC_MAX_RESPONSE_BYTES 112u
+#define RIN_GPU_CAPABILITY_IPC_MAX_RESPONSE_BYTES 1024u
+
+/* The authenticated capability service also transports the admitted
+ * OS-Core Vulkan physical profile to a normal process. The profile is an
+ * opaque, pointer-free V2 ABI record; Vulkan consumers validate its size and
+ * version before interpreting it. Queue routes are explicit and are never
+ * reconstructed from queue counts. */
+#define RIN_GPU_VULKAN_CATALOG_QUERY_V1_VERSION UINT32_C(1)
+#define RIN_GPU_VULKAN_CATALOG_SNAPSHOT_V1_VERSION UINT32_C(1)
+#define RIN_GPU_VULKAN_CATALOG_PROFILE_V2_SIZE UINT32_C(576)
+#define RIN_GPU_VULKAN_CATALOG_MAX_QUEUE_ROUTES UINT32_C(8)
 
 #define RIN_GPU_CROSS_PROCESS_RIGHT_READ    UINT32_C(0x00000001)
 #define RIN_GPU_CROSS_PROCESS_RIGHT_WRITE   UINT32_C(0x00000002)
@@ -36,7 +46,8 @@ enum RinGpuCapabilityIpcOpcode {
     RIN_GPU_CAPABILITY_IPC_ACQUIRE_V2 = 6,
     RIN_GPU_CAPABILITY_IPC_RELEASE_LEASE_V2 = 7,
     RIN_GPU_CAPABILITY_IPC_REVOKE_V2 = 8,
-    RIN_GPU_CAPABILITY_IPC_MAP_READABLE_LEASE_V1 = 9
+    RIN_GPU_CAPABILITY_IPC_MAP_READABLE_LEASE_V1 = 9,
+    RIN_GPU_CAPABILITY_IPC_QUERY_VULKAN_CATALOG_V1 = 10
 };
 
 typedef struct RinGpuCapabilityIpcHeaderV1 {
@@ -167,6 +178,37 @@ typedef struct RinGpuCrossProcessCapabilityMappedReadableLeaseV1 {
     uint64_t reserved[2];
 } RinGpuCrossProcessCapabilityMappedReadableLeaseV1;
 
+typedef struct RinGpuVulkanCatalogQueryRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t device_id;
+    uint64_t device_generation;
+    uint64_t reserved[2];
+} RinGpuVulkanCatalogQueryRequestV1;
+
+typedef struct RinGpuVulkanQueueRouteIpcV1 {
+    uint32_t queue_family_index;
+    uint32_t queue_index;
+    uint32_t physical_queue_id;
+    uint32_t reserved;
+} RinGpuVulkanQueueRouteIpcV1;
+
+typedef struct RinGpuVulkanCatalogSnapshotV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t device_id;
+    uint64_t device_generation;
+    uint64_t device_epoch;
+    uint32_t profile_size;
+    uint32_t profile_version;
+    uint32_t route_count;
+    uint32_t route_struct_size;
+    uint64_t reserved[2];
+    uint8_t profile[RIN_GPU_VULKAN_CATALOG_PROFILE_V2_SIZE];
+    RinGpuVulkanQueueRouteIpcV1
+        routes[RIN_GPU_VULKAN_CATALOG_MAX_QUEUE_ROUTES];
+} RinGpuVulkanCatalogSnapshotV1;
+
 typedef struct RinGpuCrossProcessCapabilityRevokeResponseV2 {
     uint32_t outstanding_lease_count;
     uint32_t reserved[3];
@@ -212,6 +254,12 @@ static_assert(sizeof(RinGpuCrossProcessCapabilityMappedReadableLeaseV1) == 80u,
               "RinGpuCrossProcessCapabilityMappedReadableLeaseV1 ABI drift");
 static_assert(sizeof(RinGpuCrossProcessCapabilityRevokeResponseV2) == 16u,
               "RinGpuCrossProcessCapabilityRevokeResponseV2 ABI drift");
+static_assert(sizeof(RinGpuVulkanCatalogQueryRequestV1) == 40u,
+              "RinGpuVulkanCatalogQueryRequestV1 ABI drift");
+static_assert(sizeof(RinGpuVulkanQueueRouteIpcV1) == 16u,
+              "RinGpuVulkanQueueRouteIpcV1 ABI drift");
+static_assert(sizeof(RinGpuVulkanCatalogSnapshotV1) == 768u,
+              "RinGpuVulkanCatalogSnapshotV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinGpuCapabilityIpcHeaderV1) == 32u,
                "RinGpuCapabilityIpcHeaderV1 ABI drift");
@@ -237,6 +285,12 @@ _Static_assert(sizeof(RinGpuCrossProcessCapabilityMappedReadableLeaseV1) == 80u,
                "RinGpuCrossProcessCapabilityMappedReadableLeaseV1 ABI drift");
 _Static_assert(sizeof(RinGpuCrossProcessCapabilityRevokeResponseV2) == 16u,
                "RinGpuCrossProcessCapabilityRevokeResponseV2 ABI drift");
+_Static_assert(sizeof(RinGpuVulkanCatalogQueryRequestV1) == 40u,
+               "RinGpuVulkanCatalogQueryRequestV1 ABI drift");
+_Static_assert(sizeof(RinGpuVulkanQueueRouteIpcV1) == 16u,
+               "RinGpuVulkanQueueRouteIpcV1 ABI drift");
+_Static_assert(sizeof(RinGpuVulkanCatalogSnapshotV1) == 768u,
+               "RinGpuVulkanCatalogSnapshotV1 ABI drift");
 #endif
 
 #ifdef __cplusplus
