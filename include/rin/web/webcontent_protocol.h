@@ -293,7 +293,10 @@ enum {
     RIN_WEBCONTENT_SERVICE_WORKER_OWNER_SHOW_NOTIFICATION = 15,
     /* Revoke an engine-assigned Document identity when its active Document
      * starts unloading or is destroyed. */
-    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RETIRE_DOCUMENT = 16
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_RETIRE_DOCUMENT = 16,
+    /* Register the engine-assigned identity and origin of an activated
+     * Document before its script can use Browser-owned PWA services. */
+    RIN_WEBCONTENT_SERVICE_WORKER_OWNER_REGISTER_DOCUMENT = 17
 };
 
 enum {
