@@ -1410,6 +1410,88 @@ RinResult rin_gpu_process_query_result_v1(
     }
     return result;
 }
+
+RinResult rin_gpu_process_product_get_status_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuProcessProductStatusV1* status_out)
+{
+    RinSdkArgsV1 request;
+    RinResult result;
+
+    if (!status_out || device_id == 0u || device_generation == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (!versioned(status_out, sizeof(*status_out)))
+        return RIN_ERROR_ABI_MISMATCH;
+    rin_sdk_zero_bytes(status_out, sizeof(*status_out));
+    status_out->struct_size = sizeof(*status_out);
+    status_out->version = RIN_GPU_PROCESS_PRODUCT_STATUS_VERSION_V1;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_PRODUCT_GET_STATUS,
+        &request, sizeof(request), status_out, sizeof(*status_out));
+    if (result == RIN_SUCCESS &&
+        (status_out->struct_size != sizeof(*status_out) ||
+         status_out->version != RIN_GPU_PROCESS_PRODUCT_STATUS_VERSION_V1 ||
+         status_out->flags == 0u ||
+         (status_out->flags & ~RIN_GPU_PROCESS_PRODUCT_STATUS_KNOWN_V1) != 0u ||
+         status_out->queue_count == 0u ||
+         status_out->queue_count > RIN_GPU_PROCESS_MAX_QUEUES_V1 ||
+         status_out->iommu_domain_cookie == 0u ||
+         status_out->iommu_map_generation == 0u ||
+         status_out->device_epoch == 0u ||
+         status_out->max_resources_per_submission !=
+             RIN_GPU_PROCESS_MAX_RESOURCES_V1))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(status_out, sizeof(*status_out));
+        status_out->struct_size = sizeof(*status_out);
+        status_out->version = RIN_GPU_PROCESS_PRODUCT_STATUS_VERSION_V1;
+    }
+    return result;
+}
+
+RinResult rin_gpu_process_product_poll_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuProcessProductReportV1* report_out)
+{
+    RinSdkArgsV1 request;
+    RinResult result;
+
+    if (!report_out || device_id == 0u || device_generation == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (!versioned(report_out, sizeof(*report_out)))
+        return RIN_ERROR_ABI_MISMATCH;
+    rin_sdk_zero_bytes(report_out, sizeof(*report_out));
+    report_out->struct_size = sizeof(*report_out);
+    report_out->version = RIN_GPU_PROCESS_PRODUCT_REPORT_VERSION_V1;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_PRODUCT_POLL, &request,
+        sizeof(request), report_out, sizeof(*report_out));
+    if (result == RIN_SUCCESS &&
+        (report_out->struct_size != sizeof(*report_out) ||
+         report_out->version != RIN_GPU_PROCESS_PRODUCT_REPORT_VERSION_V1 ||
+         (report_out->flags &
+          ~RIN_GPU_PROCESS_PRODUCT_REPORT_KNOWN_V1) != 0u ||
+         report_out->device_epoch == 0u ||
+         report_out->iommu_domain_cookie == 0u ||
+         report_out->iommu_map_generation == 0u))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(report_out, sizeof(*report_out));
+        report_out->struct_size = sizeof(*report_out);
+        report_out->version = RIN_GPU_PROCESS_PRODUCT_REPORT_VERSION_V1;
+    }
+    return result;
+}
 #endif
 
 #undef SIMPLE_CALL

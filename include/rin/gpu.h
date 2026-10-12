@@ -39,10 +39,24 @@ extern "C" {
 #define RIN_GPU_PROCESS_SHADER_MAX_BYTES_V1 UINT64_C(1048640)
 #define RIN_GPU_PROCESS_QUERY_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_QUERY_RESULT_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_PRODUCT_STATUS_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_PRODUCT_REPORT_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_QUERY_VALUE_COUNT_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_QUERY_TIMESTAMP_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_QUERY_OCCLUSION_V1 UINT32_C(2)
 #define RIN_GPU_PROCESS_QUERY_PIPELINE_STATISTICS_V1 UINT32_C(3)
+#define RIN_GPU_PROCESS_PRODUCT_STATUS_READY_V1 UINT32_C(0x00000001)
+#define RIN_GPU_PROCESS_PRODUCT_STATUS_SUSPENDED_V1 UINT32_C(0x00000002)
+#define RIN_GPU_PROCESS_PRODUCT_STATUS_RECOVERY_REQUIRED_V1 \
+    UINT32_C(0x00000004)
+#define RIN_GPU_PROCESS_PRODUCT_STATUS_LOST_V1 UINT32_C(0x00000008)
+#define RIN_GPU_PROCESS_PRODUCT_STATUS_KNOWN_V1 UINT32_C(0x0000000f)
+#define RIN_GPU_PROCESS_PRODUCT_REPORT_RESET_V1 UINT32_C(0x00000001)
+#define RIN_GPU_PROCESS_PRODUCT_REPORT_WATCHDOG_V1 UINT32_C(0x00000002)
+#define RIN_GPU_PROCESS_PRODUCT_REPORT_DEVICE_FAULT_V1 UINT32_C(0x00000004)
+#define RIN_GPU_PROCESS_PRODUCT_REPORT_MEMORY_REBOUND_V1 \
+    UINT32_C(0x00000008)
+#define RIN_GPU_PROCESS_PRODUCT_REPORT_KNOWN_V1 UINT32_C(0x0000000f)
 /* RinGpuBackendCommandV1's canonical packed record size. The kernel pins this
  * SDK value to sizeof(RinGpuBackendCommandV1) at its dispatch boundary. */
 #define RIN_GPU_PROCESS_COMMAND_RECORD_SIZE_V1 UINT32_C(872)
@@ -70,7 +84,9 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_COMPUTE_PIPELINE_CREATE = 18,
     RIN_GPU_SDK_PROCESS_COMPUTE_BIND_GROUP_CREATE = 19,
     RIN_GPU_SDK_PROCESS_QUERY_CREATE = 20,
-    RIN_GPU_SDK_PROCESS_QUERY_RESULT = 21
+    RIN_GPU_SDK_PROCESS_QUERY_RESULT = 21,
+    RIN_GPU_SDK_PROCESS_PRODUCT_GET_STATUS = 22,
+    RIN_GPU_SDK_PROCESS_PRODUCT_POLL = 23
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -173,6 +189,42 @@ typedef struct RinGpuProcessQueueTimelineV1 {
     uint64_t device_epoch;
     uint64_t iommu_map_generation;
 } RinGpuProcessQueueTimelineV1;
+
+/* API-neutral snapshot of the live RinGPU product runtime. Counts and queue
+ * completion values are copied from the generation-bound kernel runtime; the
+ * record contains no Vulkan types or physical/display addresses. */
+typedef struct RinGpuProcessProductStatusV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t flags;
+    uint32_t queue_count;
+    uint64_t iommu_domain_cookie;
+    uint64_t iommu_map_generation;
+    uint64_t device_epoch;
+    uint32_t pending_submission_count;
+    uint32_t active_resource_lease_count;
+    uint32_t active_allocation_count;
+    uint32_t cleanup_pending_count;
+    uint32_t reset_count;
+    uint32_t max_resources_per_submission;
+    uint64_t completed_values[RIN_GPU_PROCESS_MAX_QUEUES_V1];
+} RinGpuProcessProductStatusV1;
+
+typedef struct RinGpuProcessProductReportV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t flags;
+    uint32_t completed_count;
+    uint32_t failed_count;
+    uint32_t pending_submission_count;
+    uint32_t active_resource_lease_count;
+    uint32_t reset_count;
+    uint64_t device_epoch;
+    uint64_t iommu_domain_cookie;
+    uint64_t iommu_map_generation;
+    uint64_t observed_monotonic_ns;
+    uint64_t completed_values[RIN_GPU_PROCESS_MAX_QUEUES_V1];
+} RinGpuProcessProductReportV1;
 
 /* Device identity comes from RinDeviceInfoV1. The generation is mandatory so
  * an allocation cannot silently bind to a replacement device with a reused
@@ -326,6 +378,12 @@ RIN_SDK_API RinResult rin_gpu_process_query_create_v1(
 RIN_SDK_API RinResult rin_gpu_process_query_result_v1(
     uint64_t device_id, uint64_t device_generation, uint64_t query_token,
     RinGpuProcessQueryResultV1* result_out);
+RIN_SDK_API RinResult rin_gpu_process_product_get_status_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuProcessProductStatusV1* status_out);
+RIN_SDK_API RinResult rin_gpu_process_product_poll_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuProcessProductReportV1* report_out);
 #endif
 
 #if defined(__cplusplus)
@@ -343,6 +401,10 @@ static_assert(sizeof(RinGpuProcessSubmitReceiptV1) == 64u,
               "RinGpuProcessSubmitReceiptV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueueTimelineV1) == 40u,
               "RinGpuProcessQueueTimelineV1 ABI drift");
+static_assert(sizeof(RinGpuProcessProductStatusV1) == 128u,
+              "RinGpuProcessProductStatusV1 ABI drift");
+static_assert(sizeof(RinGpuProcessProductReportV1) == 128u,
+              "RinGpuProcessProductReportV1 ABI drift");
 static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
               "RinGpuProcessResourceBindingV1 ABI drift");
 static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
@@ -366,6 +428,10 @@ _Static_assert(sizeof(RinGpuProcessSubmitReceiptV1) == 64u,
                "RinGpuProcessSubmitReceiptV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueueTimelineV1) == 40u,
                "RinGpuProcessQueueTimelineV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessProductStatusV1) == 128u,
+               "RinGpuProcessProductStatusV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessProductReportV1) == 128u,
+               "RinGpuProcessProductReportV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
                "RinGpuProcessResourceBindingV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
