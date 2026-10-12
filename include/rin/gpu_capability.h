@@ -25,6 +25,7 @@ extern "C" {
 #define RIN_GPU_VULKAN_CATALOG_SNAPSHOT_V1_VERSION UINT32_C(1)
 #define RIN_GPU_VULKAN_CATALOG_PROFILE_V2_SIZE UINT32_C(576)
 #define RIN_GPU_VULKAN_CATALOG_MAX_QUEUE_ROUTES UINT32_C(8)
+#define RIN_GPU_CAPABILITY_PRESENT_RESOURCE_BIND_V1_VERSION UINT32_C(1)
 
 #define RIN_GPU_CROSS_PROCESS_RIGHT_READ    UINT32_C(0x00000001)
 #define RIN_GPU_CROSS_PROCESS_RIGHT_WRITE   UINT32_C(0x00000002)
@@ -47,7 +48,8 @@ enum RinGpuCapabilityIpcOpcode {
     RIN_GPU_CAPABILITY_IPC_RELEASE_LEASE_V2 = 7,
     RIN_GPU_CAPABILITY_IPC_REVOKE_V2 = 8,
     RIN_GPU_CAPABILITY_IPC_MAP_READABLE_LEASE_V1 = 9,
-    RIN_GPU_CAPABILITY_IPC_QUERY_VULKAN_CATALOG_V1 = 10
+    RIN_GPU_CAPABILITY_IPC_QUERY_VULKAN_CATALOG_V1 = 10,
+    RIN_GPU_CAPABILITY_IPC_BIND_PRESENT_RESOURCE_V1 = 11
 };
 
 typedef struct RinGpuCapabilityIpcHeaderV1 {
@@ -178,6 +180,24 @@ typedef struct RinGpuCrossProcessCapabilityMappedReadableLeaseV1 {
     uint64_t reserved[2];
 } RinGpuCrossProcessCapabilityMappedReadableLeaseV1;
 
+/* Bind an exact allocation-relative range into the authenticated recipient's
+ * GPU resource namespace under an acquired PRESENT lease. Only GPU_READ is
+ * admitted by this operation. The resource cookie is process-local; no GPU
+ * virtual, I/O virtual, or scanout address is carried by this wire record.
+ * Releasing the same capability lease retires the binding. */
+typedef struct RinGpuCapabilityPresentResourceBindV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t token;
+    uint64_t lease_id;
+    uint64_t device_generation;
+    uint64_t resource_cookie;
+    uint64_t allocation_offset;
+    uint64_t size_bytes;
+    uint32_t required_gpu_access;
+    uint32_t reserved;
+} RinGpuCapabilityPresentResourceBindV1;
+
 typedef struct RinGpuVulkanCatalogQueryRequestV1 {
     uint32_t struct_size;
     uint32_t version;
@@ -252,6 +272,8 @@ static_assert(sizeof(RinGpuCrossProcessCapabilityMapReadableLeaseRequestV1) == 4
               "RinGpuCrossProcessCapabilityMapReadableLeaseRequestV1 ABI drift");
 static_assert(sizeof(RinGpuCrossProcessCapabilityMappedReadableLeaseV1) == 80u,
               "RinGpuCrossProcessCapabilityMappedReadableLeaseV1 ABI drift");
+static_assert(sizeof(RinGpuCapabilityPresentResourceBindV1) == 64u,
+              "RinGpuCapabilityPresentResourceBindV1 ABI drift");
 static_assert(sizeof(RinGpuCrossProcessCapabilityRevokeResponseV2) == 16u,
               "RinGpuCrossProcessCapabilityRevokeResponseV2 ABI drift");
 static_assert(sizeof(RinGpuVulkanCatalogQueryRequestV1) == 40u,
@@ -283,6 +305,8 @@ _Static_assert(sizeof(RinGpuCrossProcessCapabilityMapReadableLeaseRequestV1) == 
                "RinGpuCrossProcessCapabilityMapReadableLeaseRequestV1 ABI drift");
 _Static_assert(sizeof(RinGpuCrossProcessCapabilityMappedReadableLeaseV1) == 80u,
                "RinGpuCrossProcessCapabilityMappedReadableLeaseV1 ABI drift");
+_Static_assert(sizeof(RinGpuCapabilityPresentResourceBindV1) == 64u,
+               "RinGpuCapabilityPresentResourceBindV1 ABI drift");
 _Static_assert(sizeof(RinGpuCrossProcessCapabilityRevokeResponseV2) == 16u,
                "RinGpuCrossProcessCapabilityRevokeResponseV2 ABI drift");
 _Static_assert(sizeof(RinGpuVulkanCatalogQueryRequestV1) == 40u,
