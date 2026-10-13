@@ -106,6 +106,7 @@
 #define RIN_SYS_SENDMSG                     84u
 #define RIN_SYS_RECVMSG                     85u
 #define RIN_SYS_SOCK_SHUTDOWN               86u
+#define RIN_SYS_ACCEPT4                     87u
 /* system. */
 #define RIN_SYS_REBOOT                      90u
 #define RIN_SYS_SHUTDOWN                    91u

@@ -82,6 +82,7 @@
 [RIN_SYS_SENDMSG] = "sendmsg",
 [RIN_SYS_RECVMSG] = "recvmsg",
 [RIN_SYS_SOCK_SHUTDOWN] = "sock_shutdown",
+[RIN_SYS_ACCEPT4] = "accept4",
 [RIN_SYS_REBOOT] = "reboot",
 [RIN_SYS_SHUTDOWN] = "shutdown",
 [RIN_SYS_SYSINFO] = "sysinfo",

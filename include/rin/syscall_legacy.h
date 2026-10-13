@@ -89,6 +89,7 @@
 #define SYS_SENDMSG                     RIN_SYS_SENDMSG
 #define SYS_RECVMSG                     RIN_SYS_RECVMSG
 #define SYS_SOCK_SHUTDOWN               RIN_SYS_SOCK_SHUTDOWN
+#define SYS_ACCEPT4                     RIN_SYS_ACCEPT4
 #define SYS_REBOOT                      RIN_SYS_REBOOT
 #define SYS_SHUTDOWN                    RIN_SYS_SHUTDOWN
 #define SYS_SYSINFO                     RIN_SYS_SYSINFO
