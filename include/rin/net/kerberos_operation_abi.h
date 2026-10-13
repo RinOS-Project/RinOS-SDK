@@ -46,6 +46,16 @@ extern "C" {
 #define RIN_KERBEROS_OPERATION_MAX_INPUT_SIZE UINT32_C(65536)
 #define RIN_KERBEROS_OPERATION_MAX_OUTPUT_SIZE UINT32_C(65536)
 
+/*
+ * A provider-generated RFC 4120 KRB-ERROR is returned through the GSS
+ * provider's minor-status value.  Reserve the sign bit as the namespace tag
+ * and carry the non-negative Kerberos protocol error code in the remaining
+ * bits.  This is transport metadata only; it does not turn an unknown code
+ * into a guessed GSS success or credential status.
+ */
+#define RIN_KERBEROS_OPERATION_MINOR_PROTOCOL_ERROR UINT32_C(0x80000000)
+#define RIN_KERBEROS_OPERATION_MINOR_ERROR_CODE_MASK UINT32_C(0x7fffffff)
+
 /* Request flags are deliberately limited to operation semantics. Credential
  * material and GSS tokens remain service-owned/opaque. */
 #define RIN_KERBEROS_OPERATION_FLAG_ENCRYPT UINT32_C(0x00000001)
