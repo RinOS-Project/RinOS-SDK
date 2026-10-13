@@ -86,6 +86,20 @@ extern "C" {
 #define RIN_KERBEROS_OPERATION_RETURN_FLAG_DELEG_POLICY UINT32_C(0x00008000)
 #define RIN_KERBEROS_OPERATION_KNOWN_RETURN_FLAGS UINT32_C(0x0000f1ff)
 
+/*
+ * Flags that the connected RFC 4120/4121 operation can negotiate and carry
+ * through the authenticated context.  Delegation, identity and the other
+ * GSS context modes remain fail-closed until their RinOS session policy and
+ * owner lifecycle are implemented; they must not be advertised merely
+ * because they are part of the wider GSS flag namespace.
+ */
+#define RIN_KERBEROS_OPERATION_SUPPORTED_CONTEXT_FLAGS \
+    (RIN_KERBEROS_OPERATION_RETURN_FLAG_MUTUAL | \
+     RIN_KERBEROS_OPERATION_RETURN_FLAG_REPLAY | \
+     RIN_KERBEROS_OPERATION_RETURN_FLAG_SEQUENCE | \
+     RIN_KERBEROS_OPERATION_RETURN_FLAG_CONFIDENTIALITY | \
+     RIN_KERBEROS_OPERATION_RETURN_FLAG_INTEGRITY)
+
 /* Provider input envelopes carry GSS-side inputs, not the ccache/keytab. */
 #define RIN_KERBEROS_PROVIDER_INPUT_ABI_VERSION UINT16_C(1)
 #define RIN_KERBEROS_PROVIDER_INPUT_SEC_CONTEXT UINT16_C(1)
