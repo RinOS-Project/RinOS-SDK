@@ -15,6 +15,20 @@ typedef enum RinWifiAwdlTransportOperationV1 {
     RIN_WIFI_AWDL_TRANSPORT_AUTHORIZE_AND_PROGRAM_CHANNEL = 3
 } RinWifiAwdlTransportOperationV1;
 
+/* Values match the existing RinOS Wi-Fi band and channel-width contracts. */
+typedef enum RinWifiAwdlBandV1 {
+    RIN_WIFI_AWDL_BAND_2_4_GHZ = 1,
+    RIN_WIFI_AWDL_BAND_5_GHZ = 2,
+    RIN_WIFI_AWDL_BAND_6_GHZ = 3
+} RinWifiAwdlBandV1;
+
+typedef enum RinWifiAwdlChannelWidthV1 {
+    RIN_WIFI_AWDL_CHANNEL_WIDTH_20_MHZ = 20,
+    RIN_WIFI_AWDL_CHANNEL_WIDTH_40_MHZ = 40,
+    RIN_WIFI_AWDL_CHANNEL_WIDTH_80_MHZ = 80,
+    RIN_WIFI_AWDL_CHANNEL_WIDTH_160_MHZ = 160
+} RinWifiAwdlChannelWidthV1;
+
 /* The caller obtains interface identity and generations from the network
  * interface snapshot ABI. RX timestamps are kernel monotonic dequeue times,
  * not fabricated radio or TSF timestamps. The request requires the network
@@ -66,8 +80,18 @@ static inline int rin_wifi_awdl_transport_request_v1_valid(
     case RIN_WIFI_AWDL_TRANSPORT_AUTHORIZE_AND_PROGRAM_CHANNEL:
         return request->frame_buffer == 0u && request->frame_size == 0u &&
                request->frame_capacity == 0u &&
-               request->rx_dequeue_time_us == 0u && request->band != 0u &&
-               request->channel != 0u && request->channel_width_mhz != 0u;
+               request->rx_dequeue_time_us == 0u &&
+               request->band >= RIN_WIFI_AWDL_BAND_2_4_GHZ &&
+               request->band <= RIN_WIFI_AWDL_BAND_6_GHZ &&
+               request->channel != 0u &&
+               (request->channel_width_mhz ==
+                    RIN_WIFI_AWDL_CHANNEL_WIDTH_20_MHZ ||
+                request->channel_width_mhz ==
+                    RIN_WIFI_AWDL_CHANNEL_WIDTH_40_MHZ ||
+                request->channel_width_mhz ==
+                    RIN_WIFI_AWDL_CHANNEL_WIDTH_80_MHZ ||
+                request->channel_width_mhz ==
+                    RIN_WIFI_AWDL_CHANNEL_WIDTH_160_MHZ);
     default:
         return 0;
     }
