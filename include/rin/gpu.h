@@ -57,6 +57,23 @@ extern "C" {
 #define RIN_GPU_PROCESS_PRODUCT_REPORT_MEMORY_REBOUND_V1 \
     UINT32_C(0x00000008)
 #define RIN_GPU_PROCESS_PRODUCT_REPORT_KNOWN_V1 UINT32_C(0x0000000f)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_REQUEST_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_RESPONSE_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_STATUS_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_IMAGE_LAYOUT_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_DISPLAYS_V1 UINT32_C(16)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_MODES_V1 UINT32_C(64)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_PLANES_V1 UINT32_C(16)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_LAYOUT_PLANES_V1 UINT32_C(4)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_NAME_SIZE_V1 UINT32_C(64)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_FORMATS_V1 UINT32_C(16)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_PRESENT_MODES_V1 UINT32_C(8)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_LAYOUT_UNKNOWN_V1 UINT32_C(0)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_LAYOUT_LINEAR_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_FIFO_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_PENDING_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_COMPLETE_V1 UINT32_C(2)
 /* RinGpuBackendCommandV1's canonical packed record size. The kernel pins this
  * SDK value to sizeof(RinGpuBackendCommandV1) at its dispatch boundary. */
 #define RIN_GPU_PROCESS_COMMAND_RECORD_SIZE_V1 UINT32_C(872)
@@ -86,7 +103,8 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_QUERY_CREATE = 20,
     RIN_GPU_SDK_PROCESS_QUERY_RESULT = 21,
     RIN_GPU_SDK_PROCESS_PRODUCT_GET_STATUS = 22,
-    RIN_GPU_SDK_PROCESS_PRODUCT_POLL = 23
+    RIN_GPU_SDK_PROCESS_PRODUCT_POLL = 23,
+    RIN_GPU_SDK_PROCESS_DIRECT_DISPLAY_DISPATCH = 24
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -225,6 +243,231 @@ typedef struct RinGpuProcessProductReportV1 {
     uint64_t observed_monotonic_ns;
     uint64_t completed_values[RIN_GPU_PROCESS_MAX_QUEUES_V1];
 } RinGpuProcessProductReportV1;
+
+/* API-neutral OS-Core direct-display wire protocol. These records describe
+ * output geometry and allocation-relative image storage; they contain no
+ * Vulkan types, process pointers, GPU virtual addresses, IOVAs, or scanout
+ * addresses. Every request is bound by the kernel to its authenticated
+ * process instance. The present allocation must be owned by that process and
+ * remains leased until its returned token is completed or cancelled. */
+enum RinGpuProcessDirectDisplayOperationV1 {
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_DISPLAYS_V1 = 1,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_MODES_V1 = 2,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_PLANES_V1 = 3,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_PLANE_DISPLAYS_V1 = 4,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_PLANE_CAPABILITIES_V1 = 5,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_QUEUE_SUPPORT_V1 = 6,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_SURFACE_PROPERTIES_V1 = 7,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_V1 = 8,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_POLL_V1 = 9,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_CANCEL_V1 = 10
+};
+
+enum RinGpuProcessDirectDisplayResultV1 {
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_OK_V1 = 0,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_INCOMPLETE_V1 = 1,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_NOT_READY_V1 = 2,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_OUT_OF_DATE_V1 = 3,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_DEVICE_LOST_V1 = 4,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_UNSUPPORTED_V1 = 5,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_BACKEND_V1 = 6,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_INVALID_ARGUMENT_V1 = 7,
+    RIN_GPU_PROCESS_DIRECT_DISPLAY_LIMIT_V1 = 8
+};
+
+typedef struct RinGpuProcessDirectDisplayImagePlaneV1 {
+    uint64_t offset_bytes;
+    uint64_t row_pitch_bytes;
+    uint64_t size_bytes;
+} RinGpuProcessDirectDisplayImagePlaneV1;
+
+typedef struct RinGpuProcessDirectDisplayImageLayoutV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t kind;
+    uint32_t plane_count;
+    uint64_t modifier;
+    RinGpuProcessDirectDisplayImagePlaneV1 planes[
+        RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_LAYOUT_PLANES_V1];
+    uint64_t reserved[2];
+} RinGpuProcessDirectDisplayImageLayoutV1;
+
+typedef struct RinGpuProcessDirectDisplayPresentRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t display_cookie;
+    uint64_t mode_cookie;
+    RinGpuAllocationV1 allocation;
+    uint64_t allocation_offset;
+    uint64_t allocation_size;
+    uint64_t output_generation;
+    uint64_t device_generation;
+    uint64_t frame_id;
+    uint32_t image_index;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pixel_format;
+    uint32_t present_schedule;
+    uint32_t flags;
+    RinGpuProcessDirectDisplayImageLayoutV1 image_layout;
+    uint64_t reserved[2];
+} RinGpuProcessDirectDisplayPresentRequestV1;
+
+typedef struct RinGpuProcessDirectDisplayV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t display_cookie;
+    uint64_t output_generation;
+    uint64_t device_generation;
+    uint64_t current_mode_cookie;
+    uint32_t width;
+    uint32_t height;
+    uint32_t refresh_millihertz;
+    uint32_t pixel_format;
+    uint32_t physical_width_mm;
+    uint32_t physical_height_mm;
+    uint32_t flags;
+    uint32_t plane_count;
+    uint32_t mode_count;
+    char display_name[RIN_GPU_PROCESS_DIRECT_DISPLAY_NAME_SIZE_V1];
+    uint64_t reserved[2];
+} RinGpuProcessDirectDisplayV1;
+
+typedef struct RinGpuProcessDirectDisplayModeV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t display_cookie;
+    uint64_t mode_cookie;
+    uint64_t output_generation;
+    uint32_t width;
+    uint32_t height;
+    uint32_t refresh_millihertz;
+    uint32_t pixel_format;
+    uint32_t flags;
+    uint64_t reserved;
+} RinGpuProcessDirectDisplayModeV1;
+
+typedef struct RinGpuProcessDirectDisplayPlaneV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t plane_index;
+    uint32_t current_stack_index;
+    uint64_t current_display_cookie;
+    uint64_t output_generation;
+    uint64_t device_generation;
+    uint32_t flags;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinGpuProcessDirectDisplayPlaneV1;
+
+typedef struct RinGpuProcessDirectDisplayPlaneCapabilitiesV1 {
+    uint32_t supported_alpha;
+    int32_t min_src_x;
+    int32_t min_src_y;
+    int32_t max_src_x;
+    int32_t max_src_y;
+    uint32_t min_src_width;
+    uint32_t min_src_height;
+    uint32_t max_src_width;
+    uint32_t max_src_height;
+    int32_t min_dst_x;
+    int32_t min_dst_y;
+    int32_t max_dst_x;
+    int32_t max_dst_y;
+    uint32_t min_dst_width;
+    uint32_t min_dst_height;
+    uint32_t max_dst_width;
+    uint32_t max_dst_height;
+} RinGpuProcessDirectDisplayPlaneCapabilitiesV1;
+
+typedef struct RinGpuProcessDirectDisplaySurfaceFormatV1 {
+    int32_t pixel_format;
+    int32_t color_encoding;
+} RinGpuProcessDirectDisplaySurfaceFormatV1;
+
+typedef struct RinGpuProcessDirectDisplaySurfacePropertiesV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t min_image_count;
+    uint32_t max_image_count;
+    uint32_t current_extent_width;
+    uint32_t current_extent_height;
+    uint32_t min_image_extent_width;
+    uint32_t min_image_extent_height;
+    uint32_t max_image_extent_width;
+    uint32_t max_image_extent_height;
+    uint32_t max_image_array_layers;
+    uint32_t supported_transforms;
+    uint32_t current_transform;
+    uint32_t supported_composite_alpha;
+    uint32_t supported_usage_flags;
+    uint32_t format_count;
+    uint32_t present_schedule_count;
+    uint32_t reserved0[2];
+    RinGpuProcessDirectDisplaySurfaceFormatV1 formats[
+        RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_FORMATS_V1];
+    int32_t present_schedules[
+        RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_PRESENT_MODES_V1];
+    uint32_t reserved[4];
+} RinGpuProcessDirectDisplaySurfacePropertiesV1;
+
+typedef struct RinGpuProcessDirectDisplayPresentStatusV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t state;
+    uint32_t reserved0;
+    uint64_t output_generation;
+    uint64_t device_generation;
+    uint64_t reserved[2];
+} RinGpuProcessDirectDisplayPresentStatusV1;
+
+/* Unused request fields and all reserved fields must be zero. `capacity` is
+ * the maximum record count for bounded query operations and zero otherwise. */
+typedef struct RinGpuProcessDirectDisplayRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t operation;
+    uint32_t capacity;
+    uint64_t device_id;
+    uint64_t device_generation;
+    uint64_t display_cookie;
+    uint64_t output_generation;
+    uint64_t mode_cookie;
+    uint64_t present_token;
+    uint32_t plane_index;
+    uint32_t queue_family_index;
+    uint32_t queue_flags;
+    uint32_t queue_count;
+    RinGpuProcessDirectDisplayPresentRequestV1 present;
+    uint64_t reserved[2];
+} RinGpuProcessDirectDisplayRequestV1;
+
+typedef union RinGpuProcessDirectDisplayDataV1 {
+    RinGpuProcessDirectDisplayV1 displays[
+        RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_DISPLAYS_V1];
+    RinGpuProcessDirectDisplayModeV1 modes[
+        RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_MODES_V1];
+    RinGpuProcessDirectDisplayPlaneV1 planes[
+        RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_PLANES_V1];
+    uint64_t display_cookies[
+        RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_DISPLAYS_V1];
+    RinGpuProcessDirectDisplayPlaneCapabilitiesV1 plane_capabilities;
+    RinGpuProcessDirectDisplaySurfacePropertiesV1 surface_properties;
+    uint32_t queue_supported;
+    uint64_t present_token;
+    RinGpuProcessDirectDisplayPresentStatusV1 present_status;
+} RinGpuProcessDirectDisplayDataV1;
+
+typedef struct RinGpuProcessDirectDisplayResponseV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t operation;
+    uint32_t result;
+    uint32_t count;
+    uint32_t reserved0;
+    RinGpuProcessDirectDisplayDataV1 data;
+    uint64_t reserved[2];
+} RinGpuProcessDirectDisplayResponseV1;
 
 /* Device identity comes from RinDeviceInfoV1. The generation is mandatory so
  * an allocation cannot silently bind to a replacement device with a reused
@@ -384,6 +627,12 @@ RIN_SDK_API RinResult rin_gpu_process_product_get_status_v1(
 RIN_SDK_API RinResult rin_gpu_process_product_poll_v1(
     uint64_t device_id, uint64_t device_generation,
     RinGpuProcessProductReportV1* report_out);
+/* Dispatch one authenticated OS-Core direct-display query/present operation.
+ * Array queries are bounded by `capacity`; present uses an explicit,
+ * allocation-relative image layout and returns a process-local token. */
+RIN_SDK_API RinResult rin_gpu_process_direct_display_dispatch_v1(
+    const RinGpuProcessDirectDisplayRequestV1* request,
+    RinGpuProcessDirectDisplayResponseV1* response_out);
 #endif
 
 #if defined(__cplusplus)
@@ -405,6 +654,28 @@ static_assert(sizeof(RinGpuProcessProductStatusV1) == 128u,
               "RinGpuProcessProductStatusV1 ABI drift");
 static_assert(sizeof(RinGpuProcessProductReportV1) == 128u,
               "RinGpuProcessProductReportV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayImagePlaneV1) == 24u,
+              "RinGpuProcessDirectDisplayImagePlaneV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayImageLayoutV1) == 136u,
+              "RinGpuProcessDirectDisplayImageLayoutV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayPresentRequestV1) == 248u,
+              "RinGpuProcessDirectDisplayPresentRequestV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayV1) == 160u,
+              "RinGpuProcessDirectDisplayV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayModeV1) == 64u,
+              "RinGpuProcessDirectDisplayModeV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayPlaneV1) == 64u,
+              "RinGpuProcessDirectDisplayPlaneV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayPlaneCapabilitiesV1) == 68u,
+              "RinGpuProcessDirectDisplayPlaneCapabilitiesV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplaySurfacePropertiesV1) == 252u,
+              "RinGpuProcessDirectDisplaySurfacePropertiesV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayPresentStatusV1) == 48u,
+              "RinGpuProcessDirectDisplayPresentStatusV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayRequestV1) == 344u,
+              "RinGpuProcessDirectDisplayRequestV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayResponseV1) == 4136u,
+              "RinGpuProcessDirectDisplayResponseV1 ABI drift");
 static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
               "RinGpuProcessResourceBindingV1 ABI drift");
 static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
@@ -432,6 +703,28 @@ _Static_assert(sizeof(RinGpuProcessProductStatusV1) == 128u,
                "RinGpuProcessProductStatusV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessProductReportV1) == 128u,
                "RinGpuProcessProductReportV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayImagePlaneV1) == 24u,
+               "RinGpuProcessDirectDisplayImagePlaneV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayImageLayoutV1) == 136u,
+               "RinGpuProcessDirectDisplayImageLayoutV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayPresentRequestV1) == 248u,
+               "RinGpuProcessDirectDisplayPresentRequestV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayV1) == 160u,
+               "RinGpuProcessDirectDisplayV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayModeV1) == 64u,
+               "RinGpuProcessDirectDisplayModeV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayPlaneV1) == 64u,
+               "RinGpuProcessDirectDisplayPlaneV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayPlaneCapabilitiesV1) == 68u,
+               "RinGpuProcessDirectDisplayPlaneCapabilitiesV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplaySurfacePropertiesV1) == 252u,
+               "RinGpuProcessDirectDisplaySurfacePropertiesV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayPresentStatusV1) == 48u,
+               "RinGpuProcessDirectDisplayPresentStatusV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayRequestV1) == 344u,
+               "RinGpuProcessDirectDisplayRequestV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayResponseV1) == 4136u,
+               "RinGpuProcessDirectDisplayResponseV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
                "RinGpuProcessResourceBindingV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,

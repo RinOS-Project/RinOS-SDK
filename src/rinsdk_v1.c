@@ -1492,6 +1492,287 @@ RinResult rin_gpu_process_product_poll_v1(
     }
     return result;
 }
+
+static int gpu_direct_display_bytes_zero(const void* value, uint64_t size) {
+    const uint8_t* bytes = (const uint8_t*)value;
+    uint64_t index;
+    if (!value) return 0;
+    for (index = 0u; index < size; ++index)
+        if (bytes[index] != 0u) return 0;
+    return 1;
+}
+
+static int gpu_direct_display_range_valid(const void* pointer, size_t size) {
+    const uintptr_t start = (uintptr_t)pointer;
+    return pointer && size != 0u && size - 1u <= UINTPTR_MAX - start;
+}
+
+static int gpu_direct_display_ranges_overlap(
+    const void* first, size_t first_size, const void* second,
+    size_t second_size) {
+    const uintptr_t first_start = (uintptr_t)first;
+    const uintptr_t second_start = (uintptr_t)second;
+    if (!gpu_direct_display_range_valid(first, first_size) ||
+        !gpu_direct_display_range_valid(second, second_size))
+        return 1;
+    return first_start <= second_start
+               ? second_start - first_start < first_size
+               : first_start - second_start < second_size;
+}
+
+static int gpu_direct_display_request_valid(
+    const RinGpuProcessDirectDisplayRequestV1* request) {
+    uint32_t operation;
+    uint32_t maximum_capacity = 0u;
+
+    if (!request) return 0;
+    operation = request->operation;
+    if (request->struct_size != sizeof(*request) ||
+        request->version !=
+            RIN_GPU_PROCESS_DIRECT_DISPLAY_REQUEST_VERSION_V1 ||
+        operation < RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_DISPLAYS_V1 ||
+        operation > RIN_GPU_PROCESS_DIRECT_DISPLAY_CANCEL_V1 ||
+        request->device_id == 0u || request->device_generation == 0u ||
+        !gpu_direct_display_bytes_zero(request->reserved,
+                                       sizeof(request->reserved)))
+        return 0;
+
+    switch (operation) {
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_DISPLAYS_V1:
+        maximum_capacity = RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_DISPLAYS_V1;
+        if (request->display_cookie != 0u ||
+            request->output_generation != 0u || request->mode_cookie != 0u ||
+            request->present_token != 0u || request->plane_index != 0u ||
+            request->queue_family_index != 0u || request->queue_flags != 0u ||
+            request->queue_count != 0u ||
+            !gpu_direct_display_bytes_zero(&request->present,
+                                            sizeof(request->present)))
+            return 0;
+        break;
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_MODES_V1:
+        maximum_capacity = RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_MODES_V1;
+        if (request->display_cookie == 0u ||
+            request->output_generation == 0u || request->mode_cookie != 0u ||
+            request->present_token != 0u || request->plane_index != 0u ||
+            request->queue_family_index != 0u || request->queue_flags != 0u ||
+            request->queue_count != 0u ||
+            !gpu_direct_display_bytes_zero(&request->present,
+                                            sizeof(request->present)))
+            return 0;
+        break;
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_PLANES_V1:
+        maximum_capacity = RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_PLANES_V1;
+        if (request->display_cookie != 0u ||
+            request->output_generation != 0u || request->mode_cookie != 0u ||
+            request->present_token != 0u || request->plane_index != 0u ||
+            request->queue_family_index != 0u || request->queue_flags != 0u ||
+            request->queue_count != 0u ||
+            !gpu_direct_display_bytes_zero(&request->present,
+                                            sizeof(request->present)))
+            return 0;
+        break;
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_PLANE_DISPLAYS_V1:
+        maximum_capacity = RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_DISPLAYS_V1;
+        if (request->display_cookie != 0u ||
+            request->output_generation != 0u || request->mode_cookie != 0u ||
+            request->present_token != 0u ||
+            request->queue_family_index != 0u || request->queue_flags != 0u ||
+            request->queue_count != 0u ||
+            !gpu_direct_display_bytes_zero(&request->present,
+                                            sizeof(request->present)))
+            return 0;
+        break;
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_PLANE_CAPABILITIES_V1:
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_SURFACE_PROPERTIES_V1:
+        if (request->capacity != 0u || request->display_cookie == 0u ||
+            request->output_generation == 0u || request->mode_cookie == 0u ||
+            request->present_token != 0u ||
+            request->queue_family_index != 0u || request->queue_flags != 0u ||
+            request->queue_count != 0u ||
+            !gpu_direct_display_bytes_zero(&request->present,
+                                            sizeof(request->present)))
+            return 0;
+        break;
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_QUEUE_SUPPORT_V1:
+        if (request->capacity != 0u || request->display_cookie == 0u ||
+            request->output_generation == 0u || request->mode_cookie == 0u ||
+            request->present_token != 0u || request->queue_count == 0u ||
+            !gpu_direct_display_bytes_zero(&request->present,
+                                            sizeof(request->present)))
+            return 0;
+        break;
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_V1: {
+        const RinGpuProcessDirectDisplayPresentRequestV1* present =
+            &request->present;
+        const RinGpuProcessDirectDisplayImageLayoutV1* layout =
+            &present->image_layout;
+        uint32_t index;
+        if (request->capacity != 0u || request->display_cookie != 0u ||
+            request->output_generation != 0u || request->mode_cookie != 0u ||
+            request->present_token != 0u || request->plane_index != 0u ||
+            request->queue_family_index != 0u || request->queue_flags != 0u ||
+            request->queue_count != 0u ||
+            present->struct_size != sizeof(*present) ||
+            present->version !=
+                RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V1 ||
+            present->display_cookie == 0u || present->mode_cookie == 0u ||
+            present->allocation == 0u || present->allocation_size == 0u ||
+            present->allocation_offset >
+                UINT64_MAX - present->allocation_size ||
+            present->output_generation == 0u ||
+            present->device_generation != request->device_generation ||
+            present->frame_id == 0u || present->width == 0u ||
+            present->height == 0u || present->pixel_format == 0u ||
+            present->present_schedule !=
+                RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_FIFO_V1 ||
+            present->flags != 0u ||
+            !gpu_direct_display_bytes_zero(present->reserved,
+                                            sizeof(present->reserved)) ||
+            layout->struct_size != sizeof(*layout) ||
+            layout->version !=
+                RIN_GPU_PROCESS_DIRECT_DISPLAY_IMAGE_LAYOUT_VERSION_V1 ||
+            layout->kind != RIN_GPU_PROCESS_DIRECT_DISPLAY_LAYOUT_LINEAR_V1 ||
+            layout->plane_count != 1u || layout->modifier != 0u ||
+            !gpu_direct_display_bytes_zero(layout->reserved,
+                                            sizeof(layout->reserved)) ||
+            layout->planes[0].row_pitch_bytes == 0u ||
+            layout->planes[0].size_bytes == 0u ||
+            layout->planes[0].offset_bytes > present->allocation_size ||
+            layout->planes[0].size_bytes >
+                present->allocation_size - layout->planes[0].offset_bytes ||
+            present->height > UINT64_MAX /
+                                  layout->planes[0].row_pitch_bytes ||
+            layout->planes[0].row_pitch_bytes * present->height !=
+                layout->planes[0].size_bytes)
+            return 0;
+        for (index = 1u;
+             index < RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_LAYOUT_PLANES_V1;
+             ++index)
+            if (!gpu_direct_display_bytes_zero(&layout->planes[index],
+                                                sizeof(layout->planes[index])))
+                return 0;
+        break;
+    }
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_POLL_V1:
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_CANCEL_V1:
+        if (request->capacity != 0u || request->display_cookie == 0u ||
+            request->present_token == 0u ||
+            request->output_generation != 0u || request->mode_cookie != 0u ||
+            request->plane_index != 0u ||
+            request->queue_family_index != 0u || request->queue_flags != 0u ||
+            request->queue_count != 0u ||
+            !gpu_direct_display_bytes_zero(&request->present,
+                                            sizeof(request->present)))
+            return 0;
+        break;
+    default:
+        return 0;
+    }
+    return request->capacity <= maximum_capacity;
+}
+
+static int gpu_direct_display_response_valid(
+    const RinGpuProcessDirectDisplayRequestV1* request,
+    const RinGpuProcessDirectDisplayResponseV1* response) {
+    if (!response || response->struct_size != sizeof(*response) ||
+        response->version !=
+            RIN_GPU_PROCESS_DIRECT_DISPLAY_RESPONSE_VERSION_V1 ||
+        response->operation != request->operation ||
+        response->result > RIN_GPU_PROCESS_DIRECT_DISPLAY_LIMIT_V1 ||
+        response->reserved0 != 0u ||
+        !gpu_direct_display_bytes_zero(response->reserved,
+                                       sizeof(response->reserved)))
+        return 0;
+    switch (request->operation) {
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_DISPLAYS_V1:
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_MODES_V1:
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_PLANES_V1:
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_PLANE_DISPLAYS_V1:
+        if (response->count > request->capacity) return 0;
+        break;
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_V1:
+        if (response->count != 0u ||
+            (response->result == RIN_GPU_PROCESS_DIRECT_DISPLAY_OK_V1
+                 ? response->data.present_token == 0u
+                 : response->data.present_token != 0u))
+            return 0;
+        break;
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_POLL_V1:
+        if (response->count != 0u ||
+            (response->result == RIN_GPU_PROCESS_DIRECT_DISPLAY_OK_V1 &&
+             (response->data.present_status.struct_size !=
+                  sizeof(response->data.present_status) ||
+              response->data.present_status.version !=
+                  RIN_GPU_PROCESS_DIRECT_DISPLAY_RESPONSE_VERSION_V1 ||
+              (response->data.present_status.state !=
+                   RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_PENDING_V1 &&
+               response->data.present_status.state !=
+                   RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_COMPLETE_V1) ||
+              response->data.present_status.output_generation == 0u ||
+              response->data.present_status.device_generation !=
+                  request->device_generation ||
+              response->data.present_status.reserved0 != 0u ||
+              !gpu_direct_display_bytes_zero(
+                  response->data.present_status.reserved,
+                  sizeof(response->data.present_status.reserved)))))
+            return 0;
+        break;
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_QUEUE_SUPPORT_V1:
+        if (response->count != 0u || response->data.queue_supported > 1u)
+            return 0;
+        break;
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_PLANE_CAPABILITIES_V1:
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_QUERY_SURFACE_PROPERTIES_V1:
+    case RIN_GPU_PROCESS_DIRECT_DISPLAY_CANCEL_V1:
+        if (response->count != 0u) return 0;
+        break;
+    default:
+        return 0;
+    }
+    return 1;
+}
+
+RinResult rin_gpu_process_direct_display_dispatch_v1(
+    const RinGpuProcessDirectDisplayRequestV1* request,
+    RinGpuProcessDirectDisplayResponseV1* response_out) {
+    RinSdkArgsV1 syscall_request;
+    RinResult result;
+
+    if (!request || !response_out ||
+        !gpu_direct_display_range_valid(request, sizeof(*request)) ||
+        !gpu_direct_display_range_valid(response_out, sizeof(*response_out)) ||
+        gpu_direct_display_ranges_overlap(request, sizeof(*request),
+                                          response_out,
+                                          sizeof(*response_out)) ||
+        !gpu_direct_display_request_valid(request))
+        return RIN_ERROR_INVALID_ARGUMENT;
+
+    rin_sdk_zero_bytes(response_out, sizeof(*response_out));
+    response_out->struct_size = sizeof(*response_out);
+    response_out->version =
+        RIN_GPU_PROCESS_DIRECT_DISPLAY_RESPONSE_VERSION_V1;
+    response_out->operation = request->operation;
+    rin_sdk_zero_bytes(&syscall_request, sizeof(syscall_request));
+    syscall_request.struct_size = sizeof(syscall_request);
+    syscall_request.version = RIN_SDK_STRUCT_VERSION_1;
+    syscall_request.value[0] = (uint64_t)(uintptr_t)request;
+    syscall_request.value[1] = sizeof(*request);
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_DIRECT_DISPLAY_DISPATCH,
+        &syscall_request, sizeof(syscall_request), response_out,
+        sizeof(*response_out));
+    if (result == RIN_SUCCESS &&
+        !gpu_direct_display_response_valid(request, response_out))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(response_out, sizeof(*response_out));
+        response_out->struct_size = sizeof(*response_out);
+        response_out->version =
+            RIN_GPU_PROCESS_DIRECT_DISPLAY_RESPONSE_VERSION_V1;
+        response_out->operation = request->operation;
+    }
+    return result;
+}
 #endif
 
 #undef SIMPLE_CALL
