@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
-/* Producer-owned compositor input ring ABI. */
+/* Producer-owned compositor input ring ABI. Version 2 tags events with the
+ * active focus generation while preserving the header and event sizes. */
 #ifndef RIN_SDK_COMPOSITOR_INPUT_RING_H
 #define RIN_SDK_COMPOSITOR_INPUT_RING_H
 
@@ -8,12 +9,13 @@
 #include "native_event.h"
 #include "../latency_abi.h"
 
-#define RIN_COMPOSITOR_INPUT_RING_VERSION UINT16_C(1)
+#define RIN_COMPOSITOR_INPUT_RING_VERSION UINT16_C(2)
 #define RIN_COMPOSITOR_INPUT_RING_DEFAULT_CAPACITY UINT32_C(64)
 #define RIN_COMPOSITOR_INPUT_RING_MAX_CAPACITY UINT32_C(256)
 #define RIN_COMPOSITOR_INPUT_RING_FLAG_SERVER_PRODUCER UINT16_C(0x0001)
 #define RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_POINTER_MOTION UINT16_C(0x0001)
 #define RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_CRITICAL UINT16_C(0x0002)
+#define RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_FOCUS_GENERATION UINT16_C(0x0004)
 
 #pragma pack(push, 8)
 typedef struct RinCompositorInputRingHeaderV1 {
@@ -28,7 +30,8 @@ typedef struct RinCompositorInputRingHeaderV1 {
     uint64_t wake_sequence;
     uint64_t dropped_pointer_motion;
     uint64_t dropped_critical;
-    uint64_t reserved[2];
+    uint64_t focus_generation;
+    uint64_t dropped_focus_events;
 } RinCompositorInputRingHeaderV1;
 
 #pragma pack(pop)
@@ -38,13 +41,17 @@ typedef struct RinCompositorInputRingEventV1 {
     uint16_t version;
     uint16_t flags;
     uint32_t surface_id;
-    /* v1 reserved word promoted to a logical seat id without changing the
-     * fixed event size.  Values 0..3 are currently defined. */
+    /* The former v1 reserved word is the logical seat id. Values 0..3 are
+     * currently defined. */
     uint32_t seat_id;
     uint64_t sequence;
     RinGuiNativeEventV1 event;
     RinLatencyTraceV1 trace;
-    uint32_t reserved[2];
+    /* Reuses the former final two reserved words. */
+    union {
+        uint64_t focus_generation;
+        uint32_t reserved[2];
+    };
 } RinCompositorInputRingEventV1;
 
 typedef struct RinCompositorInputRingSetupV1 {
@@ -103,21 +110,36 @@ static inline int rin_compositor_input_ring_event_is_motion(
 
 static inline int rin_compositor_input_ring_event_valid(
     const RinCompositorInputRingEventV1* item) {
+    const uint16_t known_flags =
+        RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_POINTER_MOTION |
+        RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_CRITICAL |
+        RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_FOCUS_GENERATION;
     if (!item || item->struct_size != sizeof(*item) ||
         item->version != RIN_COMPOSITOR_INPUT_RING_VERSION ||
-        (item->flags & ~(RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_POINTER_MOTION |
-                         RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_CRITICAL)) != 0u ||
+        (item->flags & ~known_flags) != 0u ||
         item->surface_id == 0u || item->seat_id >= 4u ||
         item->event.struct_size != sizeof(item->event) ||
         item->event.version != RIN_GUI_NATIVE_EVENT_VERSION ||
         item->trace.struct_size != sizeof(item->trace) ||
         item->trace.version != RIN_LATENCY_TRACE_VERSION ||
-        item->trace.sequence == 0u || item->reserved[0] != 0u ||
-        item->reserved[1] != 0u)
+        item->trace.sequence == 0u ||
+        (((item->flags & RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_FOCUS_GENERATION) != 0u) !=
+         (item->focus_generation != 0u)))
         return 0;
     if (item->event.type == RIN_GUI_NATIVE_EVENT_POINTER_MOVE)
         return (item->flags & RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_POINTER_MOTION) != 0u;
     return (item->flags & RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_CRITICAL) != 0u;
+}
+
+static inline int rin_compositor_input_ring_event_current(
+    const RinCompositorInputRingHeaderV1* header,
+    const RinCompositorInputRingEventV1* event) {
+    if (!header || !event) return 0;
+    if ((event->flags &
+         RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_FOCUS_GENERATION) == 0u)
+        return header->focus_generation == 0u;
+    return event->focus_generation == __atomic_load_n(
+        &header->focus_generation, __ATOMIC_ACQUIRE);
 }
 
 /* Returns 0 for a new record, 1 for a coalesced record, and a negative value
@@ -131,13 +153,19 @@ static inline int rin_compositor_input_ring_publish(
     if (!event || !rin_compositor_input_ring_event_valid(event) ||
         !rin_compositor_input_ring_header_valid(header, mapped_bytes))
         return -1;
+    if (!rin_compositor_input_ring_event_current(header, event)) {
+        __atomic_add_fetch(&header->dropped_focus_events, 1u,
+                           __ATOMIC_RELAXED);
+        return 1;
+    }
     producer = __atomic_load_n(&header->producer_sequence, __ATOMIC_RELAXED);
     consumer = __atomic_load_n(&header->consumer_sequence, __ATOMIC_ACQUIRE);
     if (producer - consumer >= header->capacity) {
         if (rin_compositor_input_ring_event_is_motion(event) && producer != consumer) {
             slot = rin_compositor_input_ring_slot(header, producer - 1u);
             if (rin_compositor_input_ring_event_is_motion(slot) &&
-                slot->surface_id == event->surface_id) {
+                slot->surface_id == event->surface_id &&
+                slot->focus_generation == event->focus_generation) {
                 RinCompositorInputRingEventV1 replacement = *event;
                 replacement.trace.coalesced_count =
                     slot->trace.coalesced_count + event->trace.coalesced_count;
@@ -169,13 +197,19 @@ static inline int rin_compositor_input_ring_pop(
         return -1;
     producer = __atomic_load_n(&header->producer_sequence, __ATOMIC_ACQUIRE);
     consumer = __atomic_load_n(&header->consumer_sequence, __ATOMIC_RELAXED);
-    if (consumer == producer) return 0;
     if (producer - consumer > header->capacity) return -1;
-    slot = rin_compositor_input_ring_slot(header, consumer);
-    *event = *slot;
-    __atomic_store_n(&header->consumer_sequence, consumer + 1u,
-                     __ATOMIC_RELEASE);
-    return rin_compositor_input_ring_event_valid(event) ? 1 : -1;
+    while (consumer < producer) {
+        slot = rin_compositor_input_ring_slot(header, consumer);
+        *event = *slot;
+        ++consumer;
+        __atomic_store_n(&header->consumer_sequence, consumer,
+                         __ATOMIC_RELEASE);
+        if (!rin_compositor_input_ring_event_valid(event)) return -1;
+        if (rin_compositor_input_ring_event_current(header, event)) return 1;
+        __atomic_add_fetch(&header->dropped_focus_events, 1u,
+                           __ATOMIC_RELAXED);
+    }
+    return 0;
 }
 
 /* Dequeue at most `capacity` records with one producer/consumer index
@@ -188,31 +222,37 @@ static inline int rin_compositor_input_ring_pop_batch(
     uint64_t producer;
     uint64_t consumer;
     uint64_t available;
-    uint32_t count;
+    uint64_t consumed = 0u;
+    uint32_t count = 0u;
     if (count_out != NULL) *count_out = 0u;
     if (!header || !events || capacity == 0u || count_out == NULL ||
         !rin_compositor_input_ring_header_valid(header, mapped_bytes))
         return -1;
     producer = __atomic_load_n(&header->producer_sequence, __ATOMIC_ACQUIRE);
     consumer = __atomic_load_n(&header->consumer_sequence, __ATOMIC_RELAXED);
-    if (consumer == producer) return 0;
     if (producer - consumer > header->capacity) return -1;
     available = producer - consumer;
-    count = available < capacity ? (uint32_t)available : capacity;
-    for (uint32_t index = 0u; index < count; ++index) {
-        events[index] = *rin_compositor_input_ring_slot(header,
-                                                         consumer + index);
-        if (!rin_compositor_input_ring_event_valid(&events[index])) {
+    while (consumed < available && count < capacity) {
+        RinCompositorInputRingEventV1 item =
+            *rin_compositor_input_ring_slot(header, consumer + consumed);
+        ++consumed;
+        if (!rin_compositor_input_ring_event_valid(&item)) {
             __atomic_store_n(&header->consumer_sequence,
-                             consumer + index + 1u, __ATOMIC_RELEASE);
-            *count_out = index + 1u;
+                             consumer + consumed, __ATOMIC_RELEASE);
+            *count_out = count;
             return -1;
         }
+        if (!rin_compositor_input_ring_event_current(header, &item)) {
+            __atomic_add_fetch(&header->dropped_focus_events, 1u,
+                               __ATOMIC_RELAXED);
+            continue;
+        }
+        events[count++] = item;
     }
-    __atomic_store_n(&header->consumer_sequence, consumer + count,
+    __atomic_store_n(&header->consumer_sequence, consumer + consumed,
                      __ATOMIC_RELEASE);
     *count_out = count;
-    return 1;
+    return count == 0u ? 0 : 1;
 }
 
 #ifdef __cplusplus
