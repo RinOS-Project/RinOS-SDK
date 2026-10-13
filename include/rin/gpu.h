@@ -330,6 +330,8 @@ typedef struct RinGpuProcessDirectDisplayV1 {
     uint32_t plane_count;
     uint32_t mode_count;
     char display_name[RIN_GPU_PROCESS_DIRECT_DISPLAY_NAME_SIZE_V1];
+    /* Keep the following 64-bit fields at the same offsets on i386 and x86_64. */
+    uint32_t reserved0;
     uint64_t reserved[2];
 } RinGpuProcessDirectDisplayV1;
 
@@ -344,6 +346,8 @@ typedef struct RinGpuProcessDirectDisplayModeV1 {
     uint32_t refresh_millihertz;
     uint32_t pixel_format;
     uint32_t flags;
+    /* Explicit padding keeps the 64-bit reserved field ABI-stable on i386. */
+    uint32_t reserved0;
     uint64_t reserved;
 } RinGpuProcessDirectDisplayModeV1;
 
