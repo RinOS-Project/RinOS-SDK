@@ -466,6 +466,7 @@
 /* network. */
 #define RIN_SYS_NET_IPV6_ADDRESSES          0x807Du
 #define RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES 0x807Eu
+#define RIN_SYS_WIFI_AWDL_TRANSPORT         0x807Fu
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
