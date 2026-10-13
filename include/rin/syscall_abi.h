@@ -257,6 +257,7 @@
 /* library. */
 #define RIN_SYS_DLADDR                      276u
 #define RIN_SYS_DLOPEN_FLAGS                277u
+#define RIN_SYS_DLINVENTORY_UNWIND          278u
 /* storage. */
 #define RIN_SYS_RINFS_FORMAT                300u
 #define RIN_SYS_RINFS_MOUNT                 301u

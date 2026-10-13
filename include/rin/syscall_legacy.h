@@ -212,6 +212,7 @@
 #define SYS_CPU_TIME_GET                RIN_SYS_CPU_TIME_GET
 #define SYS_DLADDR                      RIN_SYS_DLADDR
 #define SYS_DLOPEN_FLAGS                RIN_SYS_DLOPEN_FLAGS
+#define SYS_DLINVENTORY_UNWIND          RIN_SYS_DLINVENTORY_UNWIND
 #define SYS_RINFS_FORMAT                RIN_SYS_RINFS_FORMAT
 #define SYS_RINFS_MOUNT                 RIN_SYS_RINFS_MOUNT
 #define SYS_RINFS_UNMOUNT               RIN_SYS_RINFS_UNMOUNT
