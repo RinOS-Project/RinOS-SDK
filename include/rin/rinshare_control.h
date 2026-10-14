@@ -16,6 +16,7 @@ extern "C" {
 #define RIN_SHARE_CONTROL_VERSION_2 2u
 #define RIN_SHARE_CONTROL_VERSION_3 3u
 #define RIN_SHARE_CONTROL_VERSION_4 4u
+#define RIN_SHARE_CONTROL_VERSION_5 5u
 #define RIN_SHARE_CONTROL_SERVICE_ID "rinshare-control"
 #define RIN_SHARE_CONTROL_SOCKET_PATH "/run/rin/rinshare-control.sock"
 #define RIN_SHARE_CONTROL_MAGIC UINT32_C(0x31435352) /* RSC1 */
@@ -31,7 +32,8 @@ enum RinShareControlOpcode {
     RIN_SHARE_CONTROL_LIST_DEVICE = 8u,
     RIN_SHARE_CONTROL_GET_HISTORY = 9u,
     RIN_SHARE_CONTROL_LIST_PEERS = 10u,
-    RIN_SHARE_CONTROL_SEND_FILES = 11u
+    RIN_SHARE_CONTROL_SEND_FILES = 11u,
+    RIN_SHARE_CONTROL_PROVISION_IDENTITY = 12u
 };
 
 enum RinShareControlVisibilityV1 {
@@ -246,6 +248,122 @@ typedef struct __attribute__((packed)) RinShareControlSendRequestV1 {
     RinShareControlSendFileV1 files[RIN_SHARE_CONTROL_MAX_SEND_FILES];
     uint64_t reserved[2];
 } RinShareControlSendRequestV1;
+
+/* User-consented first-run provisioning. Each token must be a distinct,
+ * read-only File Portal object issued to the exact authenticated rinshared
+ * process. The private-key descriptor is forwarded directly to keyringd;
+ * this request carries no private-key bytes. */
+typedef struct __attribute__((packed)) RinShareControlProvisionIdentityV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinFilePortalTokenV1 private_key;
+    RinFilePortalTokenV1 certificate_list;
+    RinFilePortalTokenV1 trust_bundle;
+    uint64_t reserved[2];
+} RinShareControlProvisionIdentityV1;
+
+typedef struct __attribute__((packed)) RinShareControlResponseV5 {
+    uint32_t struct_size;
+    uint32_t version;
+    int32_t result;
+    uint32_t reserved0;
+    uint64_t generation;
+    uint64_t reserved[2];
+} RinShareControlResponseV5;
+
+static inline int rin_share_control_provision_token_valid(
+    const RinFilePortalTokenV1* token)
+{
+    uint8_t nonce_nonzero = 0u;
+    uint8_t tag_nonzero = 0u;
+    uint8_t publisher_nonzero = 0u;
+    uint8_t name_terminated = 0u;
+    size_t index;
+    if (token == NULL || token->magic != RIN_FILE_PORTAL_TOKEN_MAGIC ||
+        token->version != RIN_FILE_PORTAL_TOKEN_VERSION ||
+        token->token_size != RIN_FILE_PORTAL_TOKEN_SIZE ||
+        token->rights != RIN_FILE_PORTAL_RIGHT_READ || token->flags != 0u ||
+        token->file_object_id == 0u ||
+        token->file_object_id == UINT64_MAX ||
+        token->not_before_epoch == UINT64_MAX ||
+        token->expires_at_epoch == 0u ||
+        token->expires_at_epoch == UINT64_MAX ||
+        token->expires_at_epoch <= token->not_before_epoch ||
+        token->policy_generation == 0u ||
+        token->policy_generation == UINT64_MAX ||
+        token->identity.publisher_key_generation == 0u ||
+        token->identity.package_name[0] == '\0')
+        return 0;
+    for (index = 0u; index < sizeof(token->identity.package_name); ++index) {
+        const unsigned char value =
+            (unsigned char)token->identity.package_name[index];
+        if (value == '\0') {
+            if (index == 0u) return 0;
+            name_terminated = 1u;
+            for (++index; index < sizeof(token->identity.package_name); ++index)
+                if (token->identity.package_name[index] != '\0') return 0;
+            break;
+        }
+        if (value < 0x20u || value == 0x7fu || value == '/' ||
+            value == '\\' || value == ':')
+            return 0;
+    }
+    if (name_terminated == 0u) return 0;
+    for (index = 0u; index < sizeof(token->identity.publisher_key_id); ++index)
+        publisher_nonzero |= token->identity.publisher_key_id[index];
+    if (publisher_nonzero == 0u) return 0;
+    for (index = 0u; index < sizeof(token->reserved); ++index)
+        if (token->reserved[index] != 0u) return 0;
+    for (index = 0u; index < sizeof(token->nonce); ++index)
+        nonce_nonzero |= token->nonce[index];
+    for (index = 0u; index < sizeof(token->authentication_tag); ++index)
+        tag_nonzero |= token->authentication_tag[index];
+    return nonce_nonzero != 0u && tag_nonzero != 0u;
+}
+
+static inline int rin_share_control_provision_identity_v1_valid(
+    const RinShareControlProvisionIdentityV1* request)
+{
+    const uint8_t* first_identity;
+    const uint8_t* certificate_identity;
+    const uint8_t* trust_identity;
+    uint8_t identity_difference = 0u;
+    size_t index;
+    if (request == NULL || request->struct_size != sizeof(*request) ||
+        request->version != 1u ||
+        !rin_share_control_provision_token_valid(&request->private_key) ||
+        !rin_share_control_provision_token_valid(&request->certificate_list) ||
+        !rin_share_control_provision_token_valid(&request->trust_bundle) ||
+        request->private_key.file_object_id ==
+            request->certificate_list.file_object_id ||
+        request->private_key.file_object_id ==
+            request->trust_bundle.file_object_id ||
+        request->certificate_list.file_object_id ==
+            request->trust_bundle.file_object_id ||
+        request->reserved[0] != 0u || request->reserved[1] != 0u)
+        return 0;
+    first_identity = (const uint8_t*)&request->private_key.identity;
+    certificate_identity =
+        (const uint8_t*)&request->certificate_list.identity;
+    trust_identity = (const uint8_t*)&request->trust_bundle.identity;
+    for (index = 0u; index < sizeof(request->private_key.identity); ++index)
+        identity_difference |=
+            (first_identity[index] ^ certificate_identity[index]) |
+            (first_identity[index] ^ trust_identity[index]);
+    if (identity_difference != 0u) return 0;
+    return 1;
+}
+
+static inline int rin_share_control_response_v5_valid(
+    const RinShareControlResponseV5* response)
+{
+    return response != NULL && response->struct_size == sizeof(*response) &&
+           response->version == RIN_SHARE_CONTROL_VERSION_5 &&
+           response->result == 0 && response->reserved0 == 0u &&
+           response->generation != 0u &&
+           response->generation != UINT64_MAX &&
+           response->reserved[0] == 0u && response->reserved[1] == 0u;
+}
 
 static inline int rin_share_control_dns_name_valid(const char* name,
                                                     size_t capacity)
@@ -462,6 +580,10 @@ static_assert(sizeof(RinShareControlSendFileV1) == 472u,
               "RinShareControlSendFileV1 ABI drift");
 static_assert(sizeof(RinShareControlSendRequestV1) == 15720u,
               "RinShareControlSendRequestV1 ABI drift");
+static_assert(sizeof(RinShareControlProvisionIdentityV1) == 648u,
+              "RinShareControlProvisionIdentityV1 ABI drift");
+static_assert(sizeof(RinShareControlResponseV5) == 40u,
+              "RinShareControlResponseV5 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinShareControlMessageV1) == 112u,
                "RinShareControlMessageV1 ABI drift");
@@ -489,6 +611,10 @@ _Static_assert(sizeof(RinShareControlSendFileV1) == 472u,
                "RinShareControlSendFileV1 ABI drift");
 _Static_assert(sizeof(RinShareControlSendRequestV1) == 15720u,
                "RinShareControlSendRequestV1 ABI drift");
+_Static_assert(sizeof(RinShareControlProvisionIdentityV1) == 648u,
+               "RinShareControlProvisionIdentityV1 ABI drift");
+_Static_assert(sizeof(RinShareControlResponseV5) == 40u,
+               "RinShareControlResponseV5 ABI drift");
 #endif
 
 #ifdef __cplusplus
