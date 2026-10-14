@@ -158,6 +158,12 @@ typedef struct RinSerialSignalsV1 {
     uint8_t reserved0;
 } RinSerialSignalsV1;
 
+/* Request a timed UART break through a serial character device. */
+typedef struct RinSerialBreakRequestV1 {
+    uint32_t duration_ms;
+    uint32_t reserved0;
+} RinSerialBreakRequestV1;
+
 /* Encoded CHAR ioctl requests used by the V2 serial driver.  The size and
  * direction bits are intentional: the kernel's bounded ioctl marshaller can
  * therefore copy exactly the pointer-free ABI object for either native or
@@ -177,6 +183,9 @@ typedef struct RinSerialSignalsV1 {
 #define RIN_SERIAL_IOCTL_WAIT \
     RIN_SERIAL_IOCTL_ENCODE(RIN_SERIAL_IOCTL_READ | RIN_SERIAL_IOCTL_WRITE, \
                             sizeof(RinSerialWaitRequestV1), 9u)
+#define RIN_SERIAL_IOCTL_SEND_BREAK \
+    RIN_SERIAL_IOCTL_ENCODE(RIN_SERIAL_IOCTL_WRITE, \
+                            sizeof(RinSerialBreakRequestV1), 10u)
 
 #if defined(__cplusplus)
 static_assert(sizeof(RinSerialStatusV1) == 56u, "serial status ABI drift");
@@ -184,6 +193,8 @@ static_assert(sizeof(RinSerialDeviceInfoV1) == 328u,
               "serial device info ABI drift");
 static_assert(sizeof(RinSerialCapabilityV1) == 16u, "serial capability ABI drift");
 static_assert(sizeof(RinSerialWaitRequestV1) == 32u, "serial wait ABI drift");
+static_assert(sizeof(RinSerialBreakRequestV1) == 8u,
+              "serial break request ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinSerialStatusV1) == 56u, "serial status ABI drift");
 _Static_assert(sizeof(RinSerialDeviceInfoV1) == 328u,
@@ -191,6 +202,8 @@ _Static_assert(sizeof(RinSerialDeviceInfoV1) == 328u,
 _Static_assert(sizeof(RinSerialCapabilityV1) == 16u, "serial capability ABI drift");
 _Static_assert(sizeof(RinSerialSignalsV1) == 4u, "serial signals ABI drift");
 _Static_assert(sizeof(RinSerialWaitRequestV1) == 32u, "serial wait ABI drift");
+_Static_assert(sizeof(RinSerialBreakRequestV1) == 8u,
+               "serial break request ABI drift");
 #endif
 
 #endif /* RIN_SDK_SERIAL_ABI_H */
