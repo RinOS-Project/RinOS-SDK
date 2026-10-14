@@ -17,6 +17,7 @@ extern "C" {
 #define RIN_SHARE_CONTROL_VERSION_3 3u
 #define RIN_SHARE_CONTROL_VERSION_4 4u
 #define RIN_SHARE_CONTROL_VERSION_5 5u
+#define RIN_SHARE_CONTROL_VERSION_6 6u
 #define RIN_SHARE_CONTROL_SERVICE_ID "rinshare-control"
 #define RIN_SHARE_CONTROL_SOCKET_PATH "/run/rin/rinshare-control.sock"
 #define RIN_SHARE_CONTROL_MAGIC UINT32_C(0x31435352) /* RSC1 */
@@ -270,6 +271,99 @@ typedef struct __attribute__((packed)) RinShareControlResponseV5 {
     uint64_t generation;
     uint64_t reserved[2];
 } RinShareControlResponseV5;
+
+static inline int rin_share_control_file_portal_token_valid(
+    const RinFilePortalTokenV1* token, uint32_t required_rights)
+{
+    uint8_t nonce_nonzero = 0u;
+    uint8_t tag_nonzero = 0u;
+    uint8_t publisher_nonzero = 0u;
+    size_t name_length = 0u;
+    size_t index;
+    if (required_rights == 0u ||
+        (required_rights & ~RIN_FILE_PORTAL_RIGHT_ALL) != 0u ||
+        token == NULL || token->magic != RIN_FILE_PORTAL_TOKEN_MAGIC ||
+        token->version != RIN_FILE_PORTAL_TOKEN_VERSION ||
+        token->token_size != RIN_FILE_PORTAL_TOKEN_SIZE ||
+        token->rights != required_rights || token->flags != 0u ||
+        token->file_object_id == 0u ||
+        token->file_object_id == UINT64_MAX ||
+        token->not_before_epoch == UINT64_MAX ||
+        token->expires_at_epoch == 0u ||
+        token->expires_at_epoch == UINT64_MAX ||
+        token->expires_at_epoch <= token->not_before_epoch ||
+        token->policy_generation == 0u ||
+        token->policy_generation == UINT64_MAX ||
+        token->identity.publisher_key_generation == 0u)
+        return 0;
+    for (index = 0u; index < sizeof(token->identity.package_name); ++index) {
+        const unsigned char value =
+            (unsigned char)token->identity.package_name[index];
+        if (value == '\0') break;
+        if (value < 0x20u || value > 0x7eu || value == '/' ||
+            value == '\\' || value == ':')
+            return 0;
+        ++name_length;
+    }
+    if (index == 0u || index == sizeof(token->identity.package_name) ||
+        (name_length == 1u && token->identity.package_name[0] == '.') ||
+        (name_length == 2u && token->identity.package_name[0] == '.' &&
+         token->identity.package_name[1] == '.'))
+        return 0;
+    for (++index; index < sizeof(token->identity.package_name); ++index)
+        if (token->identity.package_name[index] != '\0') return 0;
+    for (index = 0u; index < sizeof(token->identity.publisher_key_id); ++index)
+        publisher_nonzero |= token->identity.publisher_key_id[index];
+    if (publisher_nonzero == 0u) return 0;
+    for (index = 0u; index < sizeof(token->reserved); ++index)
+        if (token->reserved[index] != 0u) return 0;
+    for (index = 0u; index < sizeof(token->nonce); ++index)
+        nonce_nonzero |= token->nonce[index];
+    for (index = 0u; index < sizeof(token->authentication_tag); ++index)
+        tag_nonzero |= token->authentication_tag[index];
+    return nonce_nonzero != 0u && tag_nonzero != 0u;
+}
+
+/* Version 6 consumes the one-shot File Portal token itself.  It deliberately
+ * does not carry a durable-grant ID: the token is bound to the exact live
+ * rinshared process and OPEN returns a directory descriptor capability. */
+typedef struct __attribute__((packed)) RinShareControlSetDirectoryGrantV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinFilePortalTokenV1 token;
+    uint64_t reserved[2];
+} RinShareControlSetDirectoryGrantV1;
+
+typedef struct __attribute__((packed)) RinShareControlResponseV6 {
+    uint32_t struct_size;
+    uint32_t version;
+    int32_t result;
+    uint32_t reserved0;
+    uint64_t generation;
+    uint64_t reserved[2];
+} RinShareControlResponseV6;
+
+static inline int rin_share_control_set_directory_grant_v1_valid(
+    const RinShareControlSetDirectoryGrantV1* request)
+{
+    if (request == NULL || request->struct_size != sizeof(*request) ||
+        request->version != 1u || request->reserved[0] != 0u ||
+        request->reserved[1] != 0u)
+        return 0;
+    return rin_share_control_file_portal_token_valid(
+        &request->token, RIN_FILE_PORTAL_RIGHT_ALL);
+}
+
+static inline int rin_share_control_response_v6_valid(
+    const RinShareControlResponseV6* response)
+{
+    return response != NULL && response->struct_size == sizeof(*response) &&
+           response->version == RIN_SHARE_CONTROL_VERSION_6 &&
+           response->result == 0 && response->reserved0 == 0u &&
+           response->generation != 0u &&
+           response->generation != UINT64_MAX &&
+           response->reserved[0] == 0u && response->reserved[1] == 0u;
+}
 
 static inline int rin_share_control_provision_token_valid(
     const RinFilePortalTokenV1* token)
@@ -584,6 +678,10 @@ static_assert(sizeof(RinShareControlProvisionIdentityV1) == 648u,
               "RinShareControlProvisionIdentityV1 ABI drift");
 static_assert(sizeof(RinShareControlResponseV5) == 40u,
               "RinShareControlResponseV5 ABI drift");
+static_assert(sizeof(RinShareControlSetDirectoryGrantV1) == 232u,
+              "RinShareControlSetDirectoryGrantV1 ABI drift");
+static_assert(sizeof(RinShareControlResponseV6) == 40u,
+              "RinShareControlResponseV6 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinShareControlMessageV1) == 112u,
                "RinShareControlMessageV1 ABI drift");
@@ -615,6 +713,10 @@ _Static_assert(sizeof(RinShareControlProvisionIdentityV1) == 648u,
                "RinShareControlProvisionIdentityV1 ABI drift");
 _Static_assert(sizeof(RinShareControlResponseV5) == 40u,
                "RinShareControlResponseV5 ABI drift");
+_Static_assert(sizeof(RinShareControlSetDirectoryGrantV1) == 232u,
+               "RinShareControlSetDirectoryGrantV1 ABI drift");
+_Static_assert(sizeof(RinShareControlResponseV6) == 40u,
+               "RinShareControlResponseV6 ABI drift");
 #endif
 
 #ifdef __cplusplus
