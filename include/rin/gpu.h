@@ -28,6 +28,7 @@ extern "C" {
 #define RIN_GPU_MEMORY_MAX_TRANSFER_BYTES UINT64_C(1048576)
 #define RIN_GPU_MEMORY_MAPPING_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SUBMIT_DESC_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_SUBMIT_DESC_VERSION_V2 UINT32_C(2)
 #define RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_QUEUE_TIMELINE_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_RESOURCE_BINDING_VERSION_V1 UINT32_C(1)
@@ -110,7 +111,10 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_QUERY_RESULT = 21,
     RIN_GPU_SDK_PROCESS_PRODUCT_GET_STATUS = 22,
     RIN_GPU_SDK_PROCESS_PRODUCT_POLL = 23,
-    RIN_GPU_SDK_PROCESS_DIRECT_DISPLAY_DISPATCH = 24
+    RIN_GPU_SDK_PROCESS_DIRECT_DISPLAY_DISPATCH = 24,
+    /* V2 derives its exact allocation lease set from authenticated command
+     * resource cookies; callers never need a foreign allocation handle. */
+    RIN_GPU_SDK_PROCESS_SUBMIT_V2 = 25
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -187,6 +191,20 @@ typedef struct RinGpuProcessSubmitDescV1 {
     uint32_t resource_count;
     uint32_t reserved;
 } RinGpuProcessSubmitDescV1;
+
+/* V2 omits allocation handles. The kernel copies the commands, resolves every
+ * resource cookie through the authenticated process-resource namespace, and
+ * derives exact allocation/range/access leases before submit. This supports
+ * capability-bound resources without exposing the allocation owner's handle.
+ */
+typedef struct RinGpuProcessSubmitDescV2 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinSliceV1 commands;
+    uint32_t command_count;
+    uint32_t command_record_size;
+    uint64_t reserved[2];
+} RinGpuProcessSubmitDescV2;
 
 typedef struct RinGpuProcessSubmitReceiptV1 {
     uint32_t struct_size;
@@ -607,6 +625,9 @@ RIN_SDK_API RinResult rin_gpu_process_queue_release_v1(
 RIN_SDK_API RinResult rin_gpu_process_submit_v1(
     RinGpuProcessQueueV1 queue, const RinGpuProcessSubmitDescV1* descriptor,
     RinGpuProcessSubmitReceiptV1* receipt_out);
+RIN_SDK_API RinResult rin_gpu_process_submit_v2(
+    RinGpuProcessQueueV1 queue, const RinGpuProcessSubmitDescV2* descriptor,
+    RinGpuProcessSubmitReceiptV1* receipt_out);
 RIN_SDK_API RinResult rin_gpu_process_queue_query_timeline_v1(
     RinGpuProcessQueueV1 queue, uint64_t expected_device_epoch,
     uint64_t expected_iommu_map_generation,
@@ -673,6 +694,8 @@ static_assert(sizeof(RinGpuProcessResourceV1) == 16u,
               "RinGpuProcessResourceV1 ABI drift");
 static_assert(sizeof(RinGpuProcessSubmitDescV1) == 56u,
               "RinGpuProcessSubmitDescV1 ABI drift");
+static_assert(sizeof(RinGpuProcessSubmitDescV2) == 48u,
+              "RinGpuProcessSubmitDescV2 ABI drift");
 static_assert(sizeof(RinGpuProcessSubmitReceiptV1) == 64u,
               "RinGpuProcessSubmitReceiptV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueueTimelineV1) == 40u,
@@ -722,6 +745,8 @@ _Static_assert(sizeof(RinGpuProcessResourceV1) == 16u,
                "RinGpuProcessResourceV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessSubmitDescV1) == 56u,
                "RinGpuProcessSubmitDescV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessSubmitDescV2) == 48u,
+               "RinGpuProcessSubmitDescV2 ABI drift");
 _Static_assert(sizeof(RinGpuProcessSubmitReceiptV1) == 64u,
                "RinGpuProcessSubmitReceiptV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueueTimelineV1) == 40u,
