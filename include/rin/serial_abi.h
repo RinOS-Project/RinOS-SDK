@@ -130,6 +130,26 @@ typedef struct RinSerialDeviceInfoV1 {
     uint8_t reserved_tail[4];
 } RinSerialDeviceInfoV1;
 
+/* Compact identity snapshot returned by a character-device owner.  Unlike
+ * RinSerialDeviceInfoV1 this record fits the kernel's bounded legacy ioctl
+ * marshaller, so userland can bind a tty path to its live Serial Core
+ * capability without trusting the node number. */
+typedef struct RinSerialDeviceIdentityV1 {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint64_t object_id;
+    uint64_t generation;
+    uint32_t stable_instance;
+    uint32_t flags;
+    uint32_t capabilities;
+    uint16_t vendor_id;
+    uint16_t product_id;
+    uint8_t transport;
+    uint8_t device_class;
+    uint8_t reserved0[2];
+    uint8_t reserved_tail[4];
+} RinSerialDeviceIdentityV1;
+
 typedef struct RinSerialCapabilityV1 {
     uint64_t object_id;
     uint64_t generation;
@@ -186,11 +206,16 @@ typedef struct RinSerialBreakRequestV1 {
 #define RIN_SERIAL_IOCTL_SEND_BREAK \
     RIN_SERIAL_IOCTL_ENCODE(RIN_SERIAL_IOCTL_WRITE, \
                             sizeof(RinSerialBreakRequestV1), 10u)
+#define RIN_SERIAL_IOCTL_GET_IDENTITY \
+    RIN_SERIAL_IOCTL_ENCODE(RIN_SERIAL_IOCTL_READ, \
+                            sizeof(RinSerialDeviceIdentityV1), 11u)
 
 #if defined(__cplusplus)
 static_assert(sizeof(RinSerialStatusV1) == 56u, "serial status ABI drift");
 static_assert(sizeof(RinSerialDeviceInfoV1) == 328u,
               "serial device info ABI drift");
+static_assert(sizeof(RinSerialDeviceIdentityV1) == 48u,
+              "serial device identity ABI drift");
 static_assert(sizeof(RinSerialCapabilityV1) == 16u, "serial capability ABI drift");
 static_assert(sizeof(RinSerialWaitRequestV1) == 32u, "serial wait ABI drift");
 static_assert(sizeof(RinSerialBreakRequestV1) == 8u,
@@ -199,6 +224,8 @@ static_assert(sizeof(RinSerialBreakRequestV1) == 8u,
 _Static_assert(sizeof(RinSerialStatusV1) == 56u, "serial status ABI drift");
 _Static_assert(sizeof(RinSerialDeviceInfoV1) == 328u,
                "serial device info ABI drift");
+_Static_assert(sizeof(RinSerialDeviceIdentityV1) == 48u,
+               "serial device identity ABI drift");
 _Static_assert(sizeof(RinSerialCapabilityV1) == 16u, "serial capability ABI drift");
 _Static_assert(sizeof(RinSerialSignalsV1) == 4u, "serial signals ABI drift");
 _Static_assert(sizeof(RinSerialWaitRequestV1) == 32u, "serial wait ABI drift");
