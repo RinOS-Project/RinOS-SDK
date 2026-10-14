@@ -41,4 +41,32 @@ typedef struct RinLegacyDriverV2CharOps {
                  uint32_t buffer_size);
 } RinLegacyDriverV2CharOps;
 
+/* Optional CHAR2 extension for drivers that need one Core owner per VFS
+ * public open.  Every operation receives the kernel-generated public-open
+ * cookie; it is never supplied by the driver image or userspace.  This table
+ * is registered through CAR1.reserved and does not change the CHAR2 table. */
+#define RIN_LEGACY_DRIVER_V2_CHAR_PER_OPEN_ABI_VERSION UINT32_C(1)
+typedef struct RinLegacyDriverV2CharPerOpenOpsV1 {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    int (*open)(void* device, uint64_t public_open_cookie);
+    int (*close)(void* device, uint64_t public_open_cookie);
+    int (*read)(void* device, uint64_t public_open_cookie,
+                void* buffer, uint32_t buffer_size);
+    int (*write)(void* device, uint64_t public_open_cookie,
+                 const void* buffer, uint32_t buffer_size);
+    int (*ioctl)(void* device, uint64_t public_open_cookie,
+                 uint32_t request, void* buffer, uint32_t buffer_size);
+} RinLegacyDriverV2CharPerOpenOpsV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinLegacyDriverV2CharPerOpenOpsV1) ==
+                  8u + 5u * sizeof(void*),
+              "legacy v2 per-open CHAR ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinLegacyDriverV2CharPerOpenOpsV1) ==
+                   8u + 5u * sizeof(void*),
+               "legacy v2 per-open CHAR ABI drift");
+#endif
+
 #endif /* RIN_API_RIN_LEGACY_DRIVER_V2_CHAR_ABI_H */
