@@ -1635,6 +1635,7 @@ static int gpu_direct_display_request_valid(
             layout->plane_count != 1u || layout->modifier != 0u ||
             !gpu_direct_display_bytes_zero(layout->reserved,
                                             sizeof(layout->reserved)) ||
+            !rin_gpu_process_direct_display_row_pitch_valid_v1(present) ||
             layout->planes[0].row_pitch_bytes == 0u ||
             layout->planes[0].size_bytes == 0u ||
             layout->planes[0].offset_bytes > present->allocation_size ||

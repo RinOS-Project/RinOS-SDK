@@ -319,6 +319,23 @@ typedef struct RinGpuProcessDirectDisplayPresentRequestV1 {
     uint64_t reserved[2];
 } RinGpuProcessDirectDisplayPresentRequestV1;
 
+/* Validate the row-pitch lower bound for pixel formats defined by this SDK
+ * contract. Unknown formats retain the generic nonzero-pitch requirement and
+ * are left for the backend to report as unsupported. */
+static inline int rin_gpu_process_direct_display_row_pitch_valid_v1(
+    const RinGpuProcessDirectDisplayPresentRequestV1* present) {
+    uint64_t minimum_row_pitch;
+    uint64_t row_pitch;
+    if (!present || present->width == 0u) return 0;
+    row_pitch = present->image_layout.planes[0].row_pitch_bytes;
+    if (row_pitch == 0u) return 0;
+    if (present->pixel_format !=
+        RIN_GPU_PROCESS_DIRECT_DISPLAY_PIXEL_FORMAT_RGBA8_UNORM_V1)
+        return 1;
+    minimum_row_pitch = (uint64_t)present->width * UINT64_C(4);
+    return row_pitch >= minimum_row_pitch;
+}
+
 typedef struct RinGpuProcessDirectDisplayV1 {
     uint32_t struct_size;
     uint32_t version;
