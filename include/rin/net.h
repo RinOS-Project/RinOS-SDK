@@ -1,6 +1,7 @@
 #ifndef RIN_SDK_NET_H
 #define RIN_SDK_NET_H
 #include "abi.h"
+#include "bluetooth/hci_control.h"
 #include "net/wifi_awdl_transport.h"
 #ifdef __cplusplus
 extern "C" {
