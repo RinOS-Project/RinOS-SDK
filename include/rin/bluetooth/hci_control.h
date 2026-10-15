@@ -3,6 +3,7 @@
 #ifndef RIN_SDK_BLUETOOTH_HCI_CONTROL_H
 #define RIN_SDK_BLUETOOTH_HCI_CONTROL_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <rin/syscall_abi.h>
 
@@ -37,7 +38,7 @@ typedef struct RinBluetoothHciControllerInfoV1 {
 
 /* Pointer-free copy of the bounded LE report retained by the kernel HCI
  * controller. report_generation detects replacement between list/get calls. */
-typedef struct RinBluetoothHciReportV1 {
+typedef struct __attribute__((aligned(8))) RinBluetoothHciReportV1 {
     uint32_t struct_size;
     uint32_t version;
     uint32_t report_generation;
@@ -60,9 +61,12 @@ typedef struct RinBluetoothHciReportV1 {
     uint8_t direct_address_type;
     uint8_t direct_address_present;
     uint8_t direct_address[6];
+    /* Keep the timestamp at offset 48 on both 32-bit and 64-bit targets. */
+    uint32_t reserved0;
     uint64_t last_seen_ms;
     uint8_t data[RIN_BLUETOOTH_HCI_CONTROL_MAX_REPORT_DATA];
     char name[RIN_BLUETOOTH_HCI_CONTROL_MAX_REPORT_NAME];
+    uint8_t reserved1[6];
 } RinBluetoothHciReportV1;
 
 typedef union RinBluetoothHciControlPayloadV1 {
@@ -281,6 +285,10 @@ static inline int rin_bluetooth_hci_control_request_v1_valid(
 #if defined(__cplusplus)
 static_assert(sizeof(RinBluetoothHciReportV1) == 1776u,
               "Bluetooth HCI report ABI drift");
+static_assert(alignof(RinBluetoothHciReportV1) == 8u,
+              "Bluetooth HCI report alignment ABI drift");
+static_assert(offsetof(RinBluetoothHciReportV1, last_seen_ms) == 48u,
+              "Bluetooth HCI report timestamp ABI drift");
 static_assert(sizeof(RinBluetoothHciControllerInfoV1) == 32u,
               "Bluetooth HCI controller info ABI drift");
 static_assert(sizeof(RinBluetoothHciControlRequestV1) <=
@@ -289,6 +297,10 @@ static_assert(sizeof(RinBluetoothHciControlRequestV1) <=
 #else
 _Static_assert(sizeof(RinBluetoothHciReportV1) == 1776u,
                "Bluetooth HCI report ABI drift");
+_Static_assert(_Alignof(RinBluetoothHciReportV1) == 8u,
+               "Bluetooth HCI report alignment ABI drift");
+_Static_assert(offsetof(RinBluetoothHciReportV1, last_seen_ms) == 48u,
+               "Bluetooth HCI report timestamp ABI drift");
 _Static_assert(sizeof(RinBluetoothHciControllerInfoV1) == 32u,
                "Bluetooth HCI controller info ABI drift");
 _Static_assert(sizeof(RinBluetoothHciControlRequestV1) <=
