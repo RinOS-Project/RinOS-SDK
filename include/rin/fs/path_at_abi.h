@@ -47,6 +47,25 @@
 #define RIN_PATH_AT_NO_AUTOMOUNT      0x0800u
 #define RIN_PATH_AT_EMPTY_PATH       0x1000u
 #define RIN_PATH_AT_RENAME_NOREPLACE 0x0001u
+/* Require RENAME to match the device and inode inspected by the caller. */
+#define RIN_PATH_AT_RENAME_EXPECT_SOURCE_IDENTITY 0x0002u
+#define RIN_PATH_AT_EXPECTED_SOURCE_IDENTITY_VERSION 1u
+
+typedef struct RinPathAtExpectedSourceIdentityV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    uint64_t device;
+    uint64_t inode;
+} RinPathAtExpectedSourceIdentityV1;
+
+#if defined(__cplusplus) && !defined(MIDL_PASS)
+static_assert(sizeof(RinPathAtExpectedSourceIdentityV1) == 24u,
+              "expected source identity ABI size");
+#elif !defined(MIDL_PASS)
+_Static_assert(sizeof(RinPathAtExpectedSourceIdentityV1) == 24u,
+               "expected source identity ABI size");
+#endif
 
 typedef struct RinPathAtCallV1 {
     uint32_t struct_size;
