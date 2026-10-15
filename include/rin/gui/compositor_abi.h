@@ -150,6 +150,7 @@ _Static_assert(sizeof(RinCompositorInputPollV3) == 528u,
 #define RIN_COMPOSITOR_SURFACE_EFFECT_BACKDROP_BLUR UINT32_C(1)
 #define RIN_COMPOSITOR_SURFACE_EFFECT_MAX_BLUR_RADIUS_PX UINT32_C(32)
 #define RIN_COMPOSITOR_SURFACE_EFFECT_MAX_OPACITY UINT16_C(255)
+#define RIN_COMPOSITOR_SURFACE_GENERATION_VERSION_V1 UINT16_C(1)
 
 typedef struct RinCompositorSurfaceEffectRectV1 {
     int32_t x;
@@ -173,6 +174,45 @@ typedef struct RinCompositorSurfaceEffectRequestV1 {
     uint64_t expected_surface_generation;
     uint32_t reserved[2];
 } RinCompositorSurfaceEffectRequestV1;
+
+/* Surface generations are opaque to clients. Query after creating/attaching
+ * a surface before issuing generation-bound effect requests. */
+typedef struct RinCompositorSurfaceGenerationRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    uint32_t surface_id;
+    uint32_t reserved1;
+} RinCompositorSurfaceGenerationRequestV1;
+
+typedef struct RinCompositorSurfaceGenerationInfoV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    uint32_t surface_id;
+    uint32_t reserved1;
+    uint64_t generation;
+} RinCompositorSurfaceGenerationInfoV1;
+
+static inline int rin_compositor_surface_generation_request_valid(
+    const RinCompositorSurfaceGenerationRequestV1* request) {
+    return request &&
+           request->struct_size == sizeof(*request) &&
+           request->version == RIN_COMPOSITOR_SURFACE_GENERATION_VERSION_V1 &&
+           request->reserved0 == 0u && request->surface_id != 0u &&
+           request->reserved1 == 0u;
+}
+
+static inline int rin_compositor_surface_generation_info_valid(
+    const RinCompositorSurfaceGenerationInfoV1* info,
+    uint32_t expected_surface_id) {
+    return info &&
+           info->struct_size == sizeof(*info) &&
+           info->version == RIN_COMPOSITOR_SURFACE_GENERATION_VERSION_V1 &&
+           info->reserved0 == 0u &&
+           info->surface_id == expected_surface_id && expected_surface_id != 0u &&
+           info->reserved1 == 0u && info->generation != 0u;
+}
 
 static inline int rin_compositor_surface_effect_request_valid(
     const RinCompositorSurfaceEffectRequestV1* request,
@@ -232,6 +272,10 @@ static_assert(sizeof(RinCompositorSurfaceEffectRequestV1) == 64u,
 static_assert(offsetof(RinCompositorSurfaceEffectRequestV1,
                        expected_surface_generation) == 48u,
               "RinCompositorSurfaceEffectRequestV1 generation offset drift");
+static_assert(sizeof(RinCompositorSurfaceGenerationRequestV1) == 16u,
+              "RinCompositorSurfaceGenerationRequestV1 ABI drift");
+static_assert(sizeof(RinCompositorSurfaceGenerationInfoV1) == 24u,
+              "RinCompositorSurfaceGenerationInfoV1 ABI drift");
 #else
 _Static_assert(sizeof(RinCompositorSurfaceEffectRectV1) == 16u,
                "RinCompositorSurfaceEffectRectV1 ABI drift");
@@ -240,6 +284,10 @@ _Static_assert(sizeof(RinCompositorSurfaceEffectRequestV1) == 64u,
 _Static_assert(offsetof(RinCompositorSurfaceEffectRequestV1,
                         expected_surface_generation) == 48u,
                "RinCompositorSurfaceEffectRequestV1 generation offset drift");
+_Static_assert(sizeof(RinCompositorSurfaceGenerationRequestV1) == 16u,
+               "RinCompositorSurfaceGenerationRequestV1 ABI drift");
+_Static_assert(sizeof(RinCompositorSurfaceGenerationInfoV1) == 24u,
+               "RinCompositorSurfaceGenerationInfoV1 ABI drift");
 #endif
 
 #endif /* RIN_SDK_COMPOSITOR_ABI_H */
