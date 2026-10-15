@@ -15,6 +15,11 @@
 #define RIN_BLUETOOTH_HCI_CONTROL_MAX_LEGACY_ADV_DATA UINT32_C(31)
 #define RIN_BLUETOOTH_HCI_CONTROL_REQUEST_MAX_BYTES UINT32_C(2048)
 
+/* The HCI control syscall maps RIN_RESULT_DEVICE_LOST to -ESTALE. Keep the
+ * established RinOS errno value in this ABI header so portable clients can
+ * handle a stale report generation without depending on host errno headers. */
+#define RIN_BLUETOOTH_HCI_CONTROL_ERRNO_STALE UINT32_C(116)
+
 typedef enum RinBluetoothHciControlOperationV1 {
     RIN_BLUETOOTH_HCI_CONTROL_LIST = 1,
     RIN_BLUETOOTH_HCI_CONTROL_START_SCAN = 2,
