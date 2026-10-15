@@ -51,11 +51,15 @@ extern "C" {
 #define RIN_COMPOSITOR_FEATURE_GPU_READBACK_LEASE UINT64_C(0x00010000)
 #define RIN_COMPOSITOR_FEATURE_SURFACE_EFFECTS UINT64_C(0x00020000)
 #define RIN_COMPOSITOR_FEATURE_WORKSPACES UINT64_C(0x00040000)
+#define RIN_COMPOSITOR_FEATURE_PROTECTED_CONTENT UINT64_C(0x00080000)
 #define RIN_COMPOSITOR_MAX_WORKSPACES 32u
 
 #define RIN_COMPOSITOR_SURFACE_FLAG_CURSOR  UINT32_C(0x00000001)
 #define RIN_COMPOSITOR_SURFACE_FLAG_OVERLAY UINT32_C(0x00000002)
 #define RIN_COMPOSITOR_SURFACE_FLAG_OPAQUE  UINT32_C(0x00000004)
+/* Do not sample this surface in a higher-Z Glass backdrop effect. This does
+ * not by itself provide secure display or general screen-capture protection. */
+#define RIN_COMPOSITOR_SURFACE_FLAG_PROTECTED_CONTENT UINT32_C(0x00000008)
 #define RIN_COMPOSITOR_SURFACE_ROLE_SHIFT 8u
 #define RIN_COMPOSITOR_SURFACE_ROLE_MASK UINT32_C(0x00000f00)
 
@@ -178,7 +182,7 @@ typedef struct RinCompositorCreateSurface {
     uint32_t format; /* 0=BGRA32, 1=RGBA32 */
     int32_t x;
     int32_t y;
-    uint32_t flags; /* bit0: cursor, bit1: overlay */
+    uint32_t flags; /* cursor, overlay, opaque, and protected-content flags */
 } RinCompositorCreateSurface;
 
 typedef struct RinCompositorDamage {
