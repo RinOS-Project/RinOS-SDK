@@ -2,6 +2,7 @@
 #ifndef RIN_SDK_COMPOSITOR_ABI_H
 #define RIN_SDK_COMPOSITOR_ABI_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include "native_event.h"
 #include "text_input.h"
@@ -136,6 +137,109 @@ static_assert(sizeof(RinCompositorInputPollV3) == 528u,
 #else
 _Static_assert(sizeof(RinCompositorInputPollV3) == 528u,
                "RinCompositorInputPollV3 ABI drift");
+#endif
+
+/* Surface effects are copied into compositor-owned state.  The request has
+ * no caller pointers, is bound to the live surface generation, and uses a
+ * surface-local clip rectangle.  An all-zero clip means the full surface. */
+#define RIN_COMPOSITOR_SURFACE_EFFECT_VERSION_V1 UINT16_C(1)
+#define RIN_COMPOSITOR_SURFACE_EFFECT_FLAG_ENABLED UINT16_C(0x0001)
+#define RIN_COMPOSITOR_SURFACE_EFFECT_FLAG_KNOWN_MASK \
+    RIN_COMPOSITOR_SURFACE_EFFECT_FLAG_ENABLED
+#define RIN_COMPOSITOR_SURFACE_EFFECT_NONE UINT32_C(0)
+#define RIN_COMPOSITOR_SURFACE_EFFECT_BACKDROP_BLUR UINT32_C(1)
+#define RIN_COMPOSITOR_SURFACE_EFFECT_MAX_BLUR_RADIUS_PX UINT32_C(32)
+#define RIN_COMPOSITOR_SURFACE_EFFECT_MAX_OPACITY UINT16_C(255)
+
+typedef struct RinCompositorSurfaceEffectRectV1 {
+    int32_t x;
+    int32_t y;
+    uint32_t w;
+    uint32_t h;
+} RinCompositorSurfaceEffectRectV1;
+
+typedef struct RinCompositorSurfaceEffectRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t surface_id;
+    uint32_t effect_kind;
+    uint32_t blur_radius_px;
+    uint32_t tint_argb;
+    uint16_t opacity;
+    uint16_t reserved0;
+    uint32_t corner_radius_px;
+    RinCompositorSurfaceEffectRectV1 clip;
+    uint64_t expected_surface_generation;
+    uint32_t reserved[2];
+} RinCompositorSurfaceEffectRequestV1;
+
+static inline int rin_compositor_surface_effect_request_valid(
+    const RinCompositorSurfaceEffectRequestV1* request,
+    uint32_t surface_width, uint32_t surface_height,
+    uint64_t surface_generation) {
+    uint32_t clip_width;
+    uint32_t clip_height;
+    if (!request || request->struct_size != sizeof(*request) ||
+        request->version != RIN_COMPOSITOR_SURFACE_EFFECT_VERSION_V1 ||
+        (request->flags &
+         (uint16_t)~RIN_COMPOSITOR_SURFACE_EFFECT_FLAG_KNOWN_MASK) != 0u ||
+        request->surface_id == 0u || surface_width == 0u ||
+        surface_height == 0u || surface_generation == 0u ||
+        request->expected_surface_generation != surface_generation ||
+        request->reserved0 != 0u || request->reserved[0] != 0u ||
+        request->reserved[1] != 0u) {
+        return 0;
+    }
+    if ((request->flags & RIN_COMPOSITOR_SURFACE_EFFECT_FLAG_ENABLED) == 0u) {
+        return request->effect_kind == RIN_COMPOSITOR_SURFACE_EFFECT_NONE &&
+               request->blur_radius_px == 0u && request->tint_argb == 0u &&
+               request->opacity == 0u && request->corner_radius_px == 0u &&
+               request->clip.x == 0 && request->clip.y == 0 &&
+               request->clip.w == 0u && request->clip.h == 0u;
+    }
+    if (request->effect_kind != RIN_COMPOSITOR_SURFACE_EFFECT_BACKDROP_BLUR ||
+        request->opacity > RIN_COMPOSITOR_SURFACE_EFFECT_MAX_OPACITY ||
+        request->blur_radius_px >
+            RIN_COMPOSITOR_SURFACE_EFFECT_MAX_BLUR_RADIUS_PX) {
+        return 0;
+    }
+    if (request->clip.x == 0 && request->clip.y == 0 &&
+        request->clip.w == 0u && request->clip.h == 0u) {
+        clip_width = surface_width;
+        clip_height = surface_height;
+    } else {
+        if (request->clip.x < 0 || request->clip.y < 0 ||
+            request->clip.w == 0u || request->clip.h == 0u ||
+            (uint32_t)request->clip.x >= surface_width ||
+            (uint32_t)request->clip.y >= surface_height ||
+            request->clip.w > surface_width - (uint32_t)request->clip.x ||
+            request->clip.h > surface_height - (uint32_t)request->clip.y) {
+            return 0;
+        }
+        clip_width = request->clip.w;
+        clip_height = request->clip.h;
+    }
+    return request->corner_radius_px <=
+           (clip_width < clip_height ? clip_width : clip_height) / 2u;
+}
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinCompositorSurfaceEffectRectV1) == 16u,
+              "RinCompositorSurfaceEffectRectV1 ABI drift");
+static_assert(sizeof(RinCompositorSurfaceEffectRequestV1) == 64u,
+              "RinCompositorSurfaceEffectRequestV1 ABI drift");
+static_assert(offsetof(RinCompositorSurfaceEffectRequestV1,
+                       expected_surface_generation) == 48u,
+              "RinCompositorSurfaceEffectRequestV1 generation offset drift");
+#else
+_Static_assert(sizeof(RinCompositorSurfaceEffectRectV1) == 16u,
+               "RinCompositorSurfaceEffectRectV1 ABI drift");
+_Static_assert(sizeof(RinCompositorSurfaceEffectRequestV1) == 64u,
+               "RinCompositorSurfaceEffectRequestV1 ABI drift");
+_Static_assert(offsetof(RinCompositorSurfaceEffectRequestV1,
+                        expected_surface_generation) == 48u,
+               "RinCompositorSurfaceEffectRequestV1 generation offset drift");
 #endif
 
 #endif /* RIN_SDK_COMPOSITOR_ABI_H */
