@@ -82,6 +82,8 @@ typedef struct RinPathAtCallV1 {
     uint32_t reserved0;
     uint64_t path1;
     uint64_t path2;
+    /* For RENAME_EXPECT_SOURCE_IDENTITY, this references the expected source
+     * identity record and buffer_size must equal its structure size. */
     uint64_t buffer;
     uint64_t buffer_size;
 } RinPathAtCallV1;
