@@ -38,7 +38,11 @@ extern "C" {
  * capabilities before the runtime will dispatch to it. The release callback
  * is an append-only ABI-v1 extension: providers that advertise
  * RIN_NATIVEAOT_THUNK_CAP_MAPPING_RELEASE must include it and implement
- * mapping ownership release. Providers without that capability remain
+ * mapping ownership release. The provider table, its context, and every
+ * callback remain valid until all mappings returned by that provider have
+ * been released; PortableRuntime retains the allocating provider per mapping
+ * so a transient discovery failure or provider replacement cannot redirect a
+ * release to a different owner. Providers without that capability remain
  * allocation-only and PortableRuntime fails closed on release.
  */
 typedef struct RinNativeAotThunkProviderV1 {
