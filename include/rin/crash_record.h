@@ -132,6 +132,24 @@ typedef struct RinCrashRegistersX86 {
     uint32_t cr2;
 } RinCrashRegistersX86;
 
+typedef struct RinCrashOwnerSessionV1 {
+    uint32_t session_id;
+    uint32_t owner_uid;
+    uint64_t instance_cookie;
+} RinCrashOwnerSessionV1;
+
+static inline int rin_crash_owner_session_valid(
+    const RinCrashOwnerSessionV1* session, uint32_t owner_uid)
+{
+    return session != NULL &&
+           ((session->session_id == 0u && session->owner_uid == 0u &&
+             session->instance_cookie == 0u) ||
+            (session->session_id != 0u && session->owner_uid != 0u &&
+             session->owner_uid == owner_uid &&
+             session->instance_cookie != 0u &&
+             session->instance_cookie != UINT64_MAX));
+}
+
 typedef struct RinCrashProcessInfo {
     uint64_t image_base;
     uint64_t image_size;
@@ -147,10 +165,16 @@ typedef struct RinCrashProcessInfo {
     uint64_t process_instance_cookie;
     uint32_t owner_uid;
     uint32_t reserved;
+    /* Exact authenticated login session captured with this process, when
+     * the process was session-bound. A zero record is allowed for legacy
+     * launches and kernel-generated summaries. */
+    RinCrashOwnerSessionV1 owner_session;
 } RinCrashProcessInfo;
 
 #define RIN_CRASH_PROCESS_INFO_LEGACY_SIZE \
     ((uint32_t)offsetof(RinCrashProcessInfo, process_instance_cookie))
+#define RIN_CRASH_PROCESS_INFO_PRE_SESSION_SIZE \
+    ((uint32_t)offsetof(RinCrashProcessInfo, owner_session))
 
 /* Pointer-free scheduler evidence captured at the crash boundary.  The
  * bounded CPU array mirrors the platform's supported scheduler CPU bound;
@@ -212,14 +236,18 @@ RinCrashRecordResult rin_crash_record_validate(
     const void* record, uint32_t available_size, int require_committed);
 
 #if defined(__cplusplus)
-static_assert(sizeof(RinCrashProcessInfo) == 168u,
+static_assert(sizeof(RinCrashOwnerSessionV1) == 16u,
+              "RinCrashOwnerSessionV1 ABI drift");
+static_assert(sizeof(RinCrashProcessInfo) == 184u,
               "RinCrashProcessInfo ABI drift");
 static_assert(sizeof(RinCrashRecordHeader) == 88u,
               "RinCrashRecordHeader ABI drift");
 static_assert(sizeof(RinCrashSectionHeader) == 16u,
               "RinCrashSectionHeader ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinCrashProcessInfo) == 168u,
+_Static_assert(sizeof(RinCrashOwnerSessionV1) == 16u,
+               "RinCrashOwnerSessionV1 ABI drift");
+_Static_assert(sizeof(RinCrashProcessInfo) == 184u,
                "RinCrashProcessInfo ABI drift");
 _Static_assert(sizeof(RinCrashRecordHeader) == 88u,
                "RinCrashRecordHeader ABI drift");

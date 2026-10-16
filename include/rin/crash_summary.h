@@ -7,12 +7,12 @@
 
 #include <rin/crash_record.h>
 
-#define RIN_CRASH_SUMMARY_VERSION UINT16_C(1)
+#define RIN_CRASH_SUMMARY_VERSION UINT16_C(2)
 #define RIN_CRASH_SUMMARY_POLICY_LOCAL_ONLY UINT32_C(1)
-#define RIN_CRASH_HISTORY_QUERY_VERSION UINT16_C(1)
+#define RIN_CRASH_HISTORY_QUERY_VERSION UINT16_C(2)
 #define RIN_CRASH_HISTORY_ACK_VERSION UINT16_C(1)
 #define RIN_CRASH_HISTORY_MAX_RECORDS UINT16_C(2)
-#define RIN_CRASH_PENDING_QUERY_VERSION UINT16_C(1)
+#define RIN_CRASH_PENDING_QUERY_VERSION UINT16_C(2)
 #define RIN_CRASH_PENDING_MAX_RECORDS UINT16_C(1)
 
 /* Pointer-free, bounded model for a future local diagnostic viewer. This
@@ -114,26 +114,26 @@ int rin_crash_history_ack_local(uint64_t sequence);
 #endif
 
 #if UINTPTR_MAX == UINT64_MAX && defined(__cplusplus)
-static_assert(sizeof(RinCrashSummaryV1) == 2200u,
+static_assert(sizeof(RinCrashSummaryV1) == 2216u,
               "RinCrashSummaryV1 ABI drift");
-static_assert(sizeof(RinCrashHistoryQueryV1) == 4424u,
+static_assert(sizeof(RinCrashHistoryQueryV1) == 4456u,
               "RinCrashHistoryQueryV1 ABI drift");
 static_assert(sizeof(RinCrashHistoryAckV1) == 16u,
               "RinCrashHistoryAckV1 ABI drift");
-static_assert(sizeof(RinCrashPendingMinidumpV1) == 2208u,
+static_assert(sizeof(RinCrashPendingMinidumpV1) == 2224u,
               "RinCrashPendingMinidumpV1 ABI drift");
-static_assert(sizeof(RinCrashPendingQueryV1) == 2232u,
+static_assert(sizeof(RinCrashPendingQueryV1) == 2248u,
               "RinCrashPendingQueryV1 ABI drift");
 #elif UINTPTR_MAX == UINT64_MAX && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinCrashSummaryV1) == 2200u,
+_Static_assert(sizeof(RinCrashSummaryV1) == 2216u,
                "RinCrashSummaryV1 ABI drift");
-_Static_assert(sizeof(RinCrashHistoryQueryV1) == 4424u,
+_Static_assert(sizeof(RinCrashHistoryQueryV1) == 4456u,
                "RinCrashHistoryQueryV1 ABI drift");
 _Static_assert(sizeof(RinCrashHistoryAckV1) == 16u,
                "RinCrashHistoryAckV1 ABI drift");
-_Static_assert(sizeof(RinCrashPendingMinidumpV1) == 2208u,
+_Static_assert(sizeof(RinCrashPendingMinidumpV1) == 2224u,
                "RinCrashPendingMinidumpV1 ABI drift");
-_Static_assert(sizeof(RinCrashPendingQueryV1) == 2232u,
+_Static_assert(sizeof(RinCrashPendingQueryV1) == 2248u,
                "RinCrashPendingQueryV1 ABI drift");
 #endif
 
