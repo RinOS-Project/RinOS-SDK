@@ -287,6 +287,8 @@ typedef int32_t RinResultCode;
 #define RIN_MANAGEMENT_OPERATION_DEVICE_DIAGNOSTIC_GET 261u
 #define RIN_MANAGEMENT_OPERATION_DEVICE_IDENTITY_GET 262u
 #define RIN_MANAGEMENT_OPERATION_DEVICE_FIRMWARE_GET 263u
+#define RIN_MANAGEMENT_OPERATION_DEVICE_FIRMWARE_GET_V2 264u
+#define RIN_MANAGEMENT_DEVICE_FIRMWARE_V2_VERSION 2u
 #define RIN_MANAGEMENT_OPERATION_SERVICE_GET 384u
 #define RIN_MANAGEMENT_OPERATION_SERVICE_CONTROL 385u
 #define RIN_MANAGEMENT_OPERATION_SERVICE_RESOURCE_GET 386u
@@ -1097,6 +1099,27 @@ typedef struct RinManagementDeviceInfoV1 {
     uint8_t driver[64];
     uint8_t location[32];
 } RinManagementDeviceInfoV1;
+
+/* V2 preserves the fixed V1 response and adds the authenticated firmware
+ * signer identity in a separately versioned record. */
+typedef struct RinManagementDeviceFirmwareV2 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t reserved0;
+    uint32_t reserved_alignment;
+    uint64_t device_id;
+    uint64_t generation;
+    uint64_t revision;
+    uint64_t firmware_version;
+    uint64_t firmware_generation;
+    uint64_t image_size;
+    uint32_t firmware_family;
+    uint32_t reserved1;
+    uint8_t content_hash[32];
+    uint8_t trusted_key_id[32];
+    uint64_t reserved[3];
+} RinManagementDeviceFirmwareV2;
 
 typedef struct RinManagementServiceInfoV1 {
     uint32_t struct_size;
@@ -1913,6 +1936,24 @@ static_assert(offsetof(RinManagementDeviceInfoV1, bus) == 64, "RinManagementDevi
 static_assert(offsetof(RinManagementDeviceInfoV1, name) == 96, "RinManagementDeviceInfoV1.name ABI drift");
 static_assert(offsetof(RinManagementDeviceInfoV1, driver) == 160, "RinManagementDeviceInfoV1.driver ABI drift");
 static_assert(offsetof(RinManagementDeviceInfoV1, location) == 224, "RinManagementDeviceInfoV1.location ABI drift");
+static_assert(sizeof(RinManagementDeviceFirmwareV2) == 160, "RinManagementDeviceFirmwareV2 ABI drift");
+static_assert(sizeof(RinManagementDeviceFirmwareV2) <= sizeof(((RinManagementRequestV1*)0)->payload), "firmware V2 no longer fits management request");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, struct_size) == 0, "RinManagementDeviceFirmwareV2.struct_size ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, version) == 4, "RinManagementDeviceFirmwareV2.version ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, flags) == 6, "RinManagementDeviceFirmwareV2.flags ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, reserved0) == 8, "RinManagementDeviceFirmwareV2.reserved0 ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, reserved_alignment) == 12, "RinManagementDeviceFirmwareV2.reserved_alignment ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, device_id) == 16, "RinManagementDeviceFirmwareV2.device_id ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, generation) == 24, "RinManagementDeviceFirmwareV2.generation ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, revision) == 32, "RinManagementDeviceFirmwareV2.revision ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, firmware_version) == 40, "RinManagementDeviceFirmwareV2.firmware_version ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, firmware_generation) == 48, "RinManagementDeviceFirmwareV2.firmware_generation ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, image_size) == 56, "RinManagementDeviceFirmwareV2.image_size ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, firmware_family) == 64, "RinManagementDeviceFirmwareV2.firmware_family ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, reserved1) == 68, "RinManagementDeviceFirmwareV2.reserved1 ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, content_hash) == 72, "RinManagementDeviceFirmwareV2.content_hash ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, trusted_key_id) == 104, "RinManagementDeviceFirmwareV2.trusted_key_id ABI drift");
+static_assert(offsetof(RinManagementDeviceFirmwareV2, reserved) == 136, "RinManagementDeviceFirmwareV2.reserved ABI drift");
 static_assert(sizeof(RinManagementServiceInfoV1) == 384, "RinManagementServiceInfoV1 ABI drift");
 static_assert(offsetof(RinManagementServiceInfoV1, struct_size) == 0, "RinManagementServiceInfoV1.struct_size ABI drift");
 static_assert(offsetof(RinManagementServiceInfoV1, version) == 4, "RinManagementServiceInfoV1.version ABI drift");
@@ -2684,6 +2725,24 @@ _Static_assert(offsetof(RinManagementDeviceInfoV1, bus) == 64, "RinManagementDev
 _Static_assert(offsetof(RinManagementDeviceInfoV1, name) == 96, "RinManagementDeviceInfoV1.name ABI drift");
 _Static_assert(offsetof(RinManagementDeviceInfoV1, driver) == 160, "RinManagementDeviceInfoV1.driver ABI drift");
 _Static_assert(offsetof(RinManagementDeviceInfoV1, location) == 224, "RinManagementDeviceInfoV1.location ABI drift");
+_Static_assert(sizeof(RinManagementDeviceFirmwareV2) == 160, "RinManagementDeviceFirmwareV2 ABI drift");
+_Static_assert(sizeof(RinManagementDeviceFirmwareV2) <= sizeof(((RinManagementRequestV1*)0)->payload), "firmware V2 no longer fits management request");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, struct_size) == 0, "RinManagementDeviceFirmwareV2.struct_size ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, version) == 4, "RinManagementDeviceFirmwareV2.version ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, flags) == 6, "RinManagementDeviceFirmwareV2.flags ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, reserved0) == 8, "RinManagementDeviceFirmwareV2.reserved0 ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, reserved_alignment) == 12, "RinManagementDeviceFirmwareV2.reserved_alignment ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, device_id) == 16, "RinManagementDeviceFirmwareV2.device_id ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, generation) == 24, "RinManagementDeviceFirmwareV2.generation ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, revision) == 32, "RinManagementDeviceFirmwareV2.revision ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, firmware_version) == 40, "RinManagementDeviceFirmwareV2.firmware_version ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, firmware_generation) == 48, "RinManagementDeviceFirmwareV2.firmware_generation ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, image_size) == 56, "RinManagementDeviceFirmwareV2.image_size ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, firmware_family) == 64, "RinManagementDeviceFirmwareV2.firmware_family ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, reserved1) == 68, "RinManagementDeviceFirmwareV2.reserved1 ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, content_hash) == 72, "RinManagementDeviceFirmwareV2.content_hash ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, trusted_key_id) == 104, "RinManagementDeviceFirmwareV2.trusted_key_id ABI drift");
+_Static_assert(offsetof(RinManagementDeviceFirmwareV2, reserved) == 136, "RinManagementDeviceFirmwareV2.reserved ABI drift");
 _Static_assert(sizeof(RinManagementServiceInfoV1) == 384, "RinManagementServiceInfoV1 ABI drift");
 _Static_assert(offsetof(RinManagementServiceInfoV1, struct_size) == 0, "RinManagementServiceInfoV1.struct_size ABI drift");
 _Static_assert(offsetof(RinManagementServiceInfoV1, version) == 4, "RinManagementServiceInfoV1.version ABI drift");
