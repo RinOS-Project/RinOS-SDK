@@ -272,6 +272,13 @@ typedef struct __attribute__((packed)) RinShareControlResponseV5 {
     uint64_t reserved[2];
 } RinShareControlResponseV5;
 
+/* PROVISION_IDENTITY result values. Existing v5 clients already treat every
+ * nonzero result as failure; the distinct rollback value lets updated clients
+ * warn that cleanup could not be completed without changing the wire layout. */
+#define RIN_SHARE_CONTROL_PROVISION_RESULT_OK 0
+#define RIN_SHARE_CONTROL_PROVISION_RESULT_FAILED (-1)
+#define RIN_SHARE_CONTROL_PROVISION_RESULT_ROLLBACK_INCOMPLETE (-2)
+
 static inline int rin_share_control_file_portal_token_valid(
     const RinFilePortalTokenV1* token, uint32_t required_rights)
 {
@@ -456,6 +463,18 @@ static inline int rin_share_control_response_v5_valid(
            response->result == 0 && response->reserved0 == 0u &&
            response->generation != 0u &&
            response->generation != UINT64_MAX &&
+           response->reserved[0] == 0u && response->reserved[1] == 0u;
+}
+
+static inline int rin_share_control_response_v5_failure_valid(
+    const RinShareControlResponseV5* response)
+{
+    return response != NULL && response->struct_size == sizeof(*response) &&
+           response->version == RIN_SHARE_CONTROL_VERSION_5 &&
+           (response->result == RIN_SHARE_CONTROL_PROVISION_RESULT_FAILED ||
+            response->result ==
+                RIN_SHARE_CONTROL_PROVISION_RESULT_ROLLBACK_INCOMPLETE) &&
+           response->reserved0 == 0u && response->generation == 0u &&
            response->reserved[0] == 0u && response->reserved[1] == 0u;
 }
 
