@@ -448,6 +448,7 @@ typedef int32_t RinResultCode;
 #define RIN_RESULT_VERSION_MISMATCH         ((RinResultCode)(-18))
 #define RIN_RESULT_LIMIT_EXCEEDED           ((RinResultCode)(-19))
 #define RIN_RESULT_DEVICE_LOST              ((RinResultCode)(-20))
+#define RIN_RESULT_COMMIT_UNKNOWN           ((RinResultCode)(-21))
 
 /* Common event envelope types and readiness flags. */
 #define RIN_EVENT_TYPE_NONE                 0u
