@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
-#ifndef RIN_DRIVER_ABI_V3_H
-#define RIN_DRIVER_ABI_V3_H
+#ifndef RIN_DRIVER_IMAGE_ABI_V3_H
+#define RIN_DRIVER_IMAGE_ABI_V3_H
 
 #include <stdint.h>
 
@@ -162,4 +162,4 @@ _Static_assert(sizeof(RinDriverLifecycleV3) == 64u,
                "RinDriverLifecycleV3 ABI drift");
 #endif
 
-#endif /* RIN_DRIVER_ABI_V3_H */
+#endif /* RIN_DRIVER_IMAGE_ABI_V3_H */

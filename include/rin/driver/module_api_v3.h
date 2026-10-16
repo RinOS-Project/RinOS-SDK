@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-#ifndef RIN_DRIVER_RUNTIME_API_V3_H
-#define RIN_DRIVER_RUNTIME_API_V3_H
+#ifndef RIN_DRIVER_MODULE_API_V3_H
+#define RIN_DRIVER_MODULE_API_V3_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -32,12 +32,19 @@
 #define RIN_DRIVER_V3_CAP_PCI_CONFIG    UINT64_C(0x0000000000000040)
 #define RIN_DRIVER_V3_CAP_DMA_START      UINT64_C(0x0000000000000080)
 #define RIN_DRIVER_V3_CAP_DMA_CONTIGUOUS UINT64_C(0x0000000000000100)
+#define RIN_DRIVER_V3_CAP_IOPORT          UINT64_C(0x0000000000000200)
+#define RIN_DRIVER_V3_CAP_IRQ_EVENTS       UINT64_C(0x0000000000000400)
+#define RIN_DRIVER_V3_CAP_FIRMWARE         UINT64_C(0x0000000000000800)
+#define RIN_DRIVER_V3_CAP_CHILD_DEVICE     UINT64_C(0x0000000000001000)
+#define RIN_DRIVER_V3_CAP_DEVICE_PROPERTIES UINT64_C(0x0000000000002000)
 #define RIN_DRIVER_V3_CAPABILITY_MASK                                   \
     (RIN_DRIVER_V3_CAP_DMA_ISOLATED | RIN_DRIVER_V3_CAP_BAR |            \
      RIN_DRIVER_V3_CAP_MSI | RIN_DRIVER_V3_CAP_MSIX |                    \
      RIN_DRIVER_V3_CAP_TIMER | RIN_DRIVER_V3_CAP_REGISTER |              \
      RIN_DRIVER_V3_CAP_PCI_CONFIG | RIN_DRIVER_V3_CAP_DMA_START |          \
-     RIN_DRIVER_V3_CAP_DMA_CONTIGUOUS)
+     RIN_DRIVER_V3_CAP_DMA_CONTIGUOUS | RIN_DRIVER_V3_CAP_IOPORT |       \
+     RIN_DRIVER_V3_CAP_IRQ_EVENTS | RIN_DRIVER_V3_CAP_FIRMWARE |          \
+     RIN_DRIVER_V3_CAP_CHILD_DEVICE | RIN_DRIVER_V3_CAP_DEVICE_PROPERTIES)
 
 #define RIN_DRIVER_V3_DEVICE_BLOCK   UINT32_C(1)
 #define RIN_DRIVER_V3_DEVICE_NET     UINT32_C(2)
@@ -45,6 +52,9 @@
 #define RIN_DRIVER_V3_DEVICE_DISPLAY UINT32_C(4)
 #define RIN_DRIVER_V3_DEVICE_AUDIO   UINT32_C(5)
 #define RIN_DRIVER_V3_DEVICE_USB_CONTROLLER UINT32_C(6)
+#define RIN_DRIVER_V3_DEVICE_SERIAL   UINT32_C(7)
+#define RIN_DRIVER_V3_DEVICE_BLUETOOTH_HCI UINT32_C(8)
+#define RIN_DRIVER_V3_DEVICE_WIFI     UINT32_C(9)
 
 #define RIN_DRIVER_V3_OPS_VERSION UINT32_C(0x00010000)
 
@@ -123,6 +133,10 @@ typedef enum RinDriverV3DmaSyncAction {
 #define RIN_DRIVER_V3_TIMER_EVENT_FLAG_ONE_SHOT UINT32_C(0x00000001)
 #define RIN_DRIVER_V3_TIMER_EVENT_FLAG_PERIODIC UINT32_C(0x00000002)
 #define RIN_DRIVER_V3_TIMER_EVENT_FLAG_COALESCED UINT32_C(0x00000004)
+#define RIN_DRIVER_V3_TIMER_EVENT_FLAG_MASK \
+    (RIN_DRIVER_V3_TIMER_EVENT_FLAG_ONE_SHOT | \
+     RIN_DRIVER_V3_TIMER_EVENT_FLAG_PERIODIC | \
+     RIN_DRIVER_V3_TIMER_EVENT_FLAG_COALESCED)
 
 /* Timer delivery is an explicit bounded poll.  The kernel owns the deadline
  * and returns the current device generation with every event; a driver must
@@ -240,6 +254,28 @@ typedef struct RinDriverV3DisplayMode {
     uint32_t refresh_millihz;
     uint32_t flags;
 } RinDriverV3DisplayMode;
+
+#define RIN_DRIVER_V3_DISPLAY_EVENT_VERSION UINT32_C(0x00010000)
+#define RIN_DRIVER_V3_DISPLAY_EVENT_CONNECTED UINT32_C(1)
+#define RIN_DRIVER_V3_DISPLAY_EVENT_DISCONNECTED UINT32_C(2)
+#define RIN_DRIVER_V3_DISPLAY_EVENT_MODE_CHANGED UINT32_C(3)
+#define RIN_DRIVER_V3_DISPLAY_EVENT_FLAG_MASK UINT32_C(0)
+#define RIN_DRIVER_V3_DISPLAY_EDID_BLOCK_SIZE UINT32_C(128)
+#define RIN_DRIVER_V3_DISPLAY_EDID_MAX_BLOCKS UINT32_C(4)
+typedef struct RinDriverV3DisplayEvent {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t type;
+    uint32_t flags;
+    uint64_t device_generation;
+    RinDriverV3DisplayMode mode;
+    uint64_t reserved[2];
+} RinDriverV3DisplayEvent;
+
+#define RIN_DRIVER_V3_DISPLAY_PIXEL_RGBX8888 UINT32_C(1)
+#define RIN_DRIVER_V3_DISPLAY_PIXEL_BGRX8888 UINT32_C(2)
+#define RIN_DRIVER_V3_DISPLAY_PIXEL_RGB565 UINT32_C(3)
+#define RIN_DRIVER_V3_DISPLAY_PIXEL_XRGB2101010 UINT32_C(4)
 
 typedef struct RinDriverV3InputEvent {
     uint64_t timestamp_ns;
@@ -581,6 +617,16 @@ typedef RinDriverV3Result (*RinDriverV3DisplayDamageFn)(
     uint32_t rectangle_count);
 typedef RinDriverV3Result (*RinDriverV3DisplayCursorFn)(
     uint64_t driver_context, int32_t x, int32_t y, uint32_t visible);
+typedef RinDriverV3Result (*RinDriverV3DisplaySetModeFn)(
+    uint64_t driver_context, const RinDriverV3DisplayMode* mode);
+typedef RinDriverV3Result (*RinDriverV3DisplayPollEventsFn)(
+    uint64_t driver_context, RinDriverV3DisplayEvent* events,
+    uint32_t capacity, uint32_t* event_count);
+/* Reads one complete, validated 128-byte EDID block. UNSUPPORTED means the
+ * display link has no EDID source. The driver retains no caller buffer. */
+typedef RinDriverV3Result (*RinDriverV3DisplayGetEdidBlockFn)(
+    uint64_t driver_context, uint32_t block_index,
+    uint8_t output[RIN_DRIVER_V3_DISPLAY_EDID_BLOCK_SIZE]);
 typedef RinDriverV3Result (*RinDriverV3InputReadFn)(
     uint64_t driver_context, RinDriverV3InputEvent* events,
     uint32_t capacity, uint32_t* event_count);
@@ -664,11 +710,29 @@ typedef struct RinDriverV3BlockOps {
     uint32_t struct_size;
     uint32_t version;
     RinDriverV3BlockGetGeometryFn get_geometry;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t get_geometry_padding;
+#endif
     RinDriverV3BlockSubmitFn submit;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t submit_padding;
+#endif
     RinDriverV3BlockPollFn poll;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t poll_padding;
+#endif
     RinDriverV3BlockCancelFn cancel;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t cancel_padding;
+#endif
     RinDriverV3BlockResetFn reset;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t reset_padding;
+#endif
     RinDriverV3DeviceRemoveFn remove;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t remove_padding;
+#endif
     uint64_t reserved[4];
 } RinDriverV3BlockOps;
 
@@ -676,17 +740,111 @@ typedef struct RinDriverV3DisplayOps {
     uint32_t struct_size;
     uint32_t version;
     RinDriverV3DisplayGetModeFn get_mode;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t get_mode_padding;
+#endif
     RinDriverV3DisplayDamageFn damage;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t damage_padding;
+#endif
     RinDriverV3DisplayCursorFn cursor;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t cursor_padding;
+#endif
     RinDriverV3DeviceRemoveFn remove;
-    uint64_t reserved[4];
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t remove_padding;
+#endif
+    RinDriverV3DisplaySetModeFn set_mode;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t set_mode_padding;
+#endif
+    RinDriverV3DisplayPollEventsFn poll_events;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t poll_events_padding;
+#endif
+    RinDriverV3DisplayGetEdidBlockFn get_edid_block;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t get_edid_block_padding;
+#endif
+    uint64_t reserved[1];
 } RinDriverV3DisplayOps;
+
+static inline int rin_driver_v3_display_mode_valid(
+    const RinDriverV3DisplayMode* mode) {
+    uint32_t bytes_per_pixel;
+    uint64_t minimum_stride;
+    if (!mode || mode->struct_size < sizeof(*mode) ||
+        mode->version != RIN_DRIVER_V3_OPS_VERSION || mode->width == 0u ||
+        mode->height == 0u || mode->width > 16384u ||
+        mode->height > 16384u || mode->refresh_millihz == 0u ||
+        mode->refresh_millihz > 1000000u || mode->flags != 0u)
+        return 0;
+    switch (mode->pixel_format) {
+    case RIN_DRIVER_V3_DISPLAY_PIXEL_RGBX8888:
+    case RIN_DRIVER_V3_DISPLAY_PIXEL_BGRX8888:
+    case RIN_DRIVER_V3_DISPLAY_PIXEL_XRGB2101010:
+        bytes_per_pixel = 4u;
+        break;
+    case RIN_DRIVER_V3_DISPLAY_PIXEL_RGB565:
+        bytes_per_pixel = 2u;
+        break;
+    default:
+        return 0;
+    }
+    minimum_stride = (uint64_t)mode->width * bytes_per_pixel;
+    return mode->stride_bytes >= minimum_stride &&
+           (uint64_t)mode->stride_bytes * mode->height <=
+               UINT64_C(1073741824);
+}
+
+static inline int rin_driver_v3_display_event_valid(
+    const RinDriverV3DisplayEvent* event) {
+    if (!event || event->struct_size < sizeof(*event) ||
+        event->version != RIN_DRIVER_V3_DISPLAY_EVENT_VERSION ||
+        event->type < RIN_DRIVER_V3_DISPLAY_EVENT_CONNECTED ||
+        event->type > RIN_DRIVER_V3_DISPLAY_EVENT_MODE_CHANGED ||
+        (event->flags & ~RIN_DRIVER_V3_DISPLAY_EVENT_FLAG_MASK) != 0u ||
+        event->device_generation == 0u || event->reserved[0] != 0u ||
+        event->reserved[1] != 0u)
+        return 0;
+    if (event->type == RIN_DRIVER_V3_DISPLAY_EVENT_DISCONNECTED)
+        return event->mode.struct_size == 0u && event->mode.version == 0u &&
+               event->mode.width == 0u && event->mode.height == 0u &&
+               event->mode.stride_bytes == 0u &&
+               event->mode.pixel_format == 0u &&
+               event->mode.refresh_millihz == 0u &&
+               event->mode.flags == 0u;
+    return rin_driver_v3_display_mode_valid(&event->mode);
+}
+
+static inline int rin_driver_v3_display_ops_valid(
+    const RinDriverV3DisplayOps* ops) {
+    if (!ops || ops->struct_size != sizeof(*ops) ||
+        ops->version != RIN_DRIVER_V3_OPS_VERSION || !ops->get_mode ||
+        !ops->damage || !ops->remove || ops->reserved[0] != 0u)
+        return 0;
+#if UINTPTR_MAX == UINT32_MAX
+    if (ops->get_mode_padding != 0u || ops->damage_padding != 0u ||
+        ops->cursor_padding != 0u || ops->remove_padding != 0u ||
+        ops->set_mode_padding != 0u || ops->poll_events_padding != 0u ||
+        ops->get_edid_block_padding != 0u)
+        return 0;
+#endif
+    return 1;
+}
 
 typedef struct RinDriverV3InputOps {
     uint32_t struct_size;
     uint32_t version;
     RinDriverV3InputReadFn read;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t read_padding;
+#endif
     RinDriverV3DeviceRemoveFn remove;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t remove_padding;
+#endif
     uint64_t reserved[4];
 } RinDriverV3InputOps;
 
@@ -726,11 +884,29 @@ typedef struct RinDriverV3AudioOps {
     uint32_t struct_size;
     uint32_t version;
     RinDriverV3AudioGetFormatFn get_format;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t get_format_padding;
+#endif
     RinDriverV3AudioConfigureFn configure;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t configure_padding;
+#endif
     RinDriverV3AudioSubmitFn submit;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t submit_padding;
+#endif
     RinDriverV3AudioPollFn poll;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t poll_padding;
+#endif
     RinDriverV3AudioStopFn stop;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t stop_padding;
+#endif
     RinDriverV3DeviceRemoveFn remove;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t remove_padding;
+#endif
     RinDriverV3AudioSetControlFn set_control;
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t set_control_padding;
@@ -742,16 +918,231 @@ typedef struct RinDriverV3UsbControllerOps {
     uint32_t struct_size;
     uint32_t version;
     RinDriverV3UsbGetPortCountFn get_port_count;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t get_port_count_padding;
+#endif
     RinDriverV3UsbGetPortStatusFn get_port_status;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t get_port_status_padding;
+#endif
     RinDriverV3UsbResetPortFn reset_port;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t reset_port_padding;
+#endif
     RinDriverV3UsbPollPortChangesFn poll_port_changes;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t poll_port_changes_padding;
+#endif
     RinDriverV3UsbResetControllerFn reset_controller;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t reset_controller_padding;
+#endif
     RinDriverV3DeviceRemoveFn remove;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t remove_padding;
+#endif
     RinDriverV3UsbSubmitTransferFn submit_transfer;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t submit_transfer_padding;
+#endif
     RinDriverV3UsbPollTransfersFn poll_transfers;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t poll_transfers_padding;
+#endif
     RinDriverV3UsbCancelTransferFn cancel_transfer;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t cancel_transfer_padding;
+#endif
     RinDriverV3UsbDeviceControlFn device_control;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t device_control_padding;
+#endif
 } RinDriverV3UsbControllerOps;
+
+static inline int rin_driver_v3_block_ops_valid(
+    const RinDriverV3BlockOps* ops) {
+    if (!ops || ops->struct_size != sizeof(*ops) ||
+        ops->version != RIN_DRIVER_V3_OPS_VERSION || !ops->get_geometry ||
+        !ops->submit || !ops->poll || !ops->cancel || !ops->reset ||
+        !ops->remove || ops->reserved[0] != 0u || ops->reserved[1] != 0u ||
+        ops->reserved[2] != 0u || ops->reserved[3] != 0u)
+        return 0;
+#if UINTPTR_MAX == UINT32_MAX
+    if (ops->get_geometry_padding != 0u || ops->submit_padding != 0u ||
+        ops->poll_padding != 0u || ops->cancel_padding != 0u ||
+        ops->reset_padding != 0u || ops->remove_padding != 0u)
+        return 0;
+#endif
+    return 1;
+}
+
+static inline int rin_driver_v3_input_ops_valid(
+    const RinDriverV3InputOps* ops) {
+    if (!ops || ops->struct_size != sizeof(*ops) ||
+        ops->version != RIN_DRIVER_V3_OPS_VERSION || !ops->read ||
+        !ops->remove || ops->reserved[0] != 0u || ops->reserved[1] != 0u ||
+        ops->reserved[2] != 0u || ops->reserved[3] != 0u)
+        return 0;
+#if UINTPTR_MAX == UINT32_MAX
+    if (ops->read_padding != 0u || ops->remove_padding != 0u) return 0;
+#endif
+    return 1;
+}
+
+static inline int rin_driver_v3_net_ops_valid(const RinDriverV3NetOps* ops) {
+    if (!ops || ops->struct_size != sizeof(*ops) ||
+        ops->version != RIN_DRIVER_V3_OPS_VERSION || !ops->transmit ||
+        !ops->poll_rx || !ops->remove || !ops->receive || !ops->get_info ||
+        ops->reserved[0] != 0u || ops->reserved[1] != 0u)
+        return 0;
+#if UINTPTR_MAX == UINT32_MAX
+    if (ops->transmit_padding != 0u || ops->poll_rx_padding != 0u ||
+        ops->remove_padding != 0u || ops->receive_padding != 0u ||
+        ops->get_info_padding != 0u)
+        return 0;
+#endif
+    return 1;
+}
+
+static inline int rin_driver_v3_audio_ops_valid(
+    const RinDriverV3AudioOps* ops) {
+    if (!ops || ops->struct_size != sizeof(*ops) ||
+        ops->version != RIN_DRIVER_V3_OPS_VERSION || !ops->get_format ||
+        !ops->configure || !ops->submit || !ops->poll || !ops->stop ||
+        !ops->remove || ops->reserved[0] != 0u || ops->reserved[1] != 0u ||
+        ops->reserved[2] != 0u)
+        return 0;
+#if UINTPTR_MAX == UINT32_MAX
+    if (ops->get_format_padding != 0u || ops->configure_padding != 0u ||
+        ops->submit_padding != 0u || ops->poll_padding != 0u ||
+        ops->stop_padding != 0u || ops->remove_padding != 0u ||
+        ops->set_control_padding != 0u)
+        return 0;
+#endif
+    return 1;
+}
+
+static inline int rin_driver_v3_usb_controller_ops_valid(
+    const RinDriverV3UsbControllerOps* ops) {
+    if (!ops || ops->struct_size != sizeof(*ops) ||
+        ops->version != RIN_DRIVER_V3_OPS_VERSION || !ops->get_port_count ||
+        !ops->get_port_status || !ops->reset_port ||
+        !ops->poll_port_changes || !ops->reset_controller || !ops->remove ||
+        !ops->submit_transfer || !ops->poll_transfers ||
+        !ops->cancel_transfer || !ops->device_control)
+        return 0;
+#if UINTPTR_MAX == UINT32_MAX
+    if (ops->get_port_count_padding != 0u ||
+        ops->get_port_status_padding != 0u ||
+        ops->reset_port_padding != 0u ||
+        ops->poll_port_changes_padding != 0u ||
+        ops->reset_controller_padding != 0u || ops->remove_padding != 0u ||
+        ops->submit_transfer_padding != 0u ||
+        ops->poll_transfers_padding != 0u ||
+        ops->cancel_transfer_padding != 0u ||
+        ops->device_control_padding != 0u)
+        return 0;
+#endif
+    return 1;
+}
+
+static inline int rin_driver_v3_input_event_valid(
+    const RinDriverV3InputEvent* event) {
+    return event && event->type != 0u;
+}
+
+static inline int rin_driver_v3_net_packet_valid(
+    const RinDriverV3NetPacket* packet) {
+    return packet && packet->memory_lease != 0u &&
+           packet->length >= RIN_DRIVER_V3_NET_MIN_FRAME_SIZE &&
+           packet->length <= RIN_DRIVER_V3_NET_MAX_FRAME_SIZE &&
+           packet->flags == 0u &&
+           packet->offset <= UINT64_MAX - packet->length;
+}
+
+static inline int rin_driver_v3_net_info_valid(
+    const RinDriverV3NetInfo* info) {
+    uint8_t mac_nonzero = 0u;
+    if (!info || info->struct_size < sizeof(*info) ||
+        info->version != RIN_DRIVER_V3_NET_INFO_VERSION ||
+        (info->flags & ~RIN_DRIVER_V3_NET_INFO_FLAG_MASK) != 0u ||
+        ((info->flags & RIN_DRIVER_V3_NET_LINK_UP) != 0u &&
+         (info->flags & RIN_DRIVER_V3_NET_LINK_KNOWN) == 0u) ||
+        info->mtu < 68u || info->mtu > 1500u || info->reserved0 != 0u ||
+        info->reserved[0] != 0u || info->reserved[1] != 0u)
+        return 0;
+    for (uint32_t index = 0u; index < sizeof(info->mac); ++index)
+        mac_nonzero |= info->mac[index];
+    return mac_nonzero != 0u && (info->mac[0] & 1u) == 0u;
+}
+
+static inline int rin_driver_v3_audio_format_valid(
+    const RinDriverV3AudioFormat* format) {
+    uint32_t channel_bits = 0u;
+    uint64_t mask;
+    if (!format || format->struct_size < sizeof(*format) ||
+        format->version != RIN_DRIVER_V3_OPS_VERSION ||
+        format->sample_rate_hz < 8000u ||
+        format->sample_rate_hz > 384000u ||
+        format->direction == 0u ||
+        (format->direction & ~RIN_DRIVER_V3_AUDIO_DIRECTION_MASK) != 0u ||
+        format->channel_count == 0u || format->channel_count > 32u ||
+        (format->bits_per_sample != 8u &&
+         format->bits_per_sample != 16u &&
+         format->bits_per_sample != 24u &&
+         format->bits_per_sample != 32u) ||
+        format->sample_format != RIN_DRIVER_V3_AUDIO_SIGNED_PCM ||
+        (format->flags & ~RIN_DRIVER_V3_AUDIO_FORMAT_FLAG_MASK) != 0u ||
+        (format->flags & RIN_DRIVER_V3_AUDIO_FORMAT_INTERLEAVED) == 0u ||
+        format->reserved0 != 0u || format->reserved[0] != 0u ||
+        format->reserved[1] != 0u)
+        return 0;
+    mask = format->channel_mask;
+    while (mask != 0u) {
+        channel_bits += (uint32_t)(mask & 1u);
+        mask >>= 1u;
+    }
+    return format->channel_mask == 0u ||
+           channel_bits == format->channel_count;
+}
+
+static inline int rin_driver_v3_audio_buffer_valid(
+    const RinDriverV3AudioBuffer* buffer,
+    const RinDriverV3AudioFormat* format) {
+    uint64_t bytes_per_frame;
+    uint64_t byte_length;
+    if (!buffer || !rin_driver_v3_audio_format_valid(format) ||
+        buffer->struct_size < sizeof(*buffer) ||
+        buffer->version != RIN_DRIVER_V3_OPS_VERSION ||
+        buffer->buffer_id == 0u || buffer->deadline_ns == 0u ||
+        (buffer->flags & ~RIN_DRIVER_V3_AUDIO_BUFFER_FLAG_MASK) != 0u ||
+        ((buffer->flags & RIN_DRIVER_V3_AUDIO_BUFFER_PLAYBACK) != 0u &&
+         (buffer->flags & RIN_DRIVER_V3_AUDIO_BUFFER_CAPTURE) != 0u) ||
+        buffer->reserved[0] != 0u || buffer->reserved[1] != 0u)
+        return 0;
+    if (buffer->frame_count == 0u)
+        return (buffer->flags & RIN_DRIVER_V3_AUDIO_BUFFER_END_OF_STREAM) != 0u &&
+               buffer->memory_lease == 0u && buffer->offset == 0u;
+    if (buffer->memory_lease == 0u) return 0;
+    bytes_per_frame = (uint64_t)format->channel_count *
+                      (format->bits_per_sample / 8u);
+    byte_length = bytes_per_frame * buffer->frame_count;
+    return buffer->offset <= UINT64_MAX - byte_length;
+}
+
+static inline int rin_driver_v3_audio_completion_valid(
+    const RinDriverV3AudioCompletion* completion,
+    const RinDriverV3AudioBuffer* buffer) {
+    return completion && buffer && completion->struct_size >= sizeof(*completion) &&
+           completion->version == RIN_DRIVER_V3_OPS_VERSION &&
+           completion->buffer_id == buffer->buffer_id &&
+           completion->result <= RIN_DRIVER_V3_OK &&
+           completion->result >= RIN_DRIVER_V3_UNSUPPORTED &&
+           completion->completed_frames <= buffer->frame_count &&
+           (completion->flags &
+            ~RIN_DRIVER_V3_AUDIO_COMPLETION_FLAG_MASK) == 0u &&
+           completion->reserved[0] == 0u && completion->reserved[1] == 0u;
+}
 
 typedef RinDriverV3Result (*RinDriverV3DmaAllocateFn)(
     uint64_t api_context, uint64_t session, uint64_t length,
@@ -812,12 +1203,33 @@ typedef struct RinDriverApiV3 {
     uint64_t api_context;
     uint64_t capabilities;
     RinDriverV3DmaAllocateFn dma_allocate;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t dma_allocate_padding;
+#endif
     RinDriverV3DmaMapSgFn dma_map_sg;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t dma_map_sg_padding;
+#endif
     RinDriverV3DmaSyncFn dma_sync;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t dma_sync_padding;
+#endif
     RinDriverV3BarMapFn bar_map;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t bar_map_padding;
+#endif
     RinDriverV3IrqAcquireFn irq_acquire;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t irq_acquire_padding;
+#endif
     RinDriverV3LeaseReleaseFn lease_release;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t lease_release_padding;
+#endif
     RinDriverV3TimerArmFn timer_arm;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t timer_arm_padding;
+#endif
     RinDriverV3TimerPollFn timer_poll;
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t timer_poll_padding;
@@ -827,14 +1239,35 @@ typedef struct RinDriverApiV3 {
     uint32_t timer_set_handler_padding;
 #endif
     RinDriverV3RegisterDeviceFn register_device;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t register_device_padding;
+#endif
     RinDriverV3PciConfigReadFn pci_config_read;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t pci_config_read_padding;
+#endif
     RinDriverV3PciConfigWriteFn pci_config_write;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t pci_config_write_padding;
+#endif
     RinDriverV3LogFn log;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t log_padding;
+#endif
     RinDriverV3ClockFn monotonic_time_ns;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t monotonic_time_ns_padding;
+#endif
     /* Consumes one formerly reserved pointer slot without changing the
      * RinDriverApiV3 size. Older v3 images may leave it unused. */
     RinDriverV3DeviceDmaStartFn device_dma_start;
-    uint64_t reserved[5];
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t device_dma_start_padding;
+#endif
+    /* Address of the optional, versioned capability broker table from
+     * <rin/driver/services_v3.h>. This consumes one reserved 64-bit slot. */
+    uint64_t services_api_address;
+    uint64_t reserved[4];
 } RinDriverApiV3;
 
 typedef RinDriverV3Result (*RinDriverEntryV3)(
@@ -843,6 +1276,13 @@ typedef RinDriverV3Result (*RinDriverPowerV3)(
     const RinDriverApiV3* api, RinDriverContextV3* context, uint32_t state);
 
 #if defined(__cplusplus)
+static_assert(sizeof(RinDriverApiV3) == 184u,
+              "NDRV v3 API table ABI drift");
+static_assert(offsetof(RinDriverApiV3, dma_allocate) == 24u &&
+                  offsetof(RinDriverApiV3, timer_poll) == 80u &&
+                  offsetof(RinDriverApiV3, services_api_address) == 144u &&
+                  offsetof(RinDriverApiV3, reserved) == 152u,
+              "NDRV v3 API callback slot ABI drift");
 static_assert(sizeof(RinDriverV3DmaLeaseInfo) == 48u,
               "NDRV v3 DMA lease ABI drift");
 static_assert(sizeof(RinDriverV3TimerEvent) == 32u,
@@ -880,19 +1320,16 @@ static_assert(sizeof(RinDriverV3BlockRequest) == 64u,
               "NDRV v3 block request ABI drift");
 static_assert(sizeof(RinDriverV3BlockCompletion) == 48u,
               "NDRV v3 block completion ABI drift");
+static_assert(sizeof(RinDriverV3BlockOps) == 88u,
+              "NDRV v3 block operation ABI drift");
 static_assert(sizeof(RinDriverV3AudioFormat) == 56u,
               "NDRV v3 audio format ABI drift");
 static_assert(sizeof(RinDriverV3AudioBuffer) == 64u,
               "NDRV v3 audio buffer ABI drift");
 static_assert(sizeof(RinDriverV3AudioCompletion) == 48u,
               "NDRV v3 audio completion ABI drift");
-#if UINTPTR_MAX == UINT32_MAX
-static_assert(sizeof(RinDriverV3AudioOps) == 64u,
-              "NDRV v3 32-bit audio operation ABI drift");
-#else
 static_assert(sizeof(RinDriverV3AudioOps) == 88u,
-              "NDRV v3 64-bit audio operation ABI drift");
-#endif
+              "NDRV v3 audio operation ABI drift");
 static_assert(sizeof(RinDriverV3UsbPortStatus) == 40u,
               "NDRV v3 USB port status ABI drift");
 static_assert(sizeof(RinDriverV3UsbDeviceRequest) == 64u,
@@ -905,7 +1342,22 @@ static_assert(sizeof(RinDriverV3UsbTransfer) == 96u,
               "NDRV v3 USB transfer ABI drift");
 static_assert(sizeof(RinDriverV3UsbTransferCompletion) == 56u,
               "NDRV v3 USB transfer completion ABI drift");
+static_assert(sizeof(RinDriverV3UsbControllerOps) == 88u,
+              "NDRV v3 USB controller operation ABI drift");
+static_assert(sizeof(RinDriverV3InputOps) == 56u,
+              "NDRV v3 input operation ABI drift");
+static_assert(sizeof(RinDriverV3DisplayEvent) == 72u,
+              "NDRV v3 display event ABI drift");
+static_assert(sizeof(RinDriverV3DisplayOps) == 72u,
+              "NDRV v3 display operation ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinDriverApiV3) == 184u,
+               "NDRV v3 API table ABI drift");
+_Static_assert(offsetof(RinDriverApiV3, dma_allocate) == 24u &&
+                   offsetof(RinDriverApiV3, timer_poll) == 80u &&
+                   offsetof(RinDriverApiV3, services_api_address) == 144u &&
+                   offsetof(RinDriverApiV3, reserved) == 152u,
+               "NDRV v3 API callback slot ABI drift");
 _Static_assert(sizeof(RinDriverV3DmaLeaseInfo) == 48u,
                "NDRV v3 DMA lease ABI drift");
 _Static_assert(sizeof(RinDriverV3TimerEvent) == 32u,
@@ -943,19 +1395,16 @@ _Static_assert(sizeof(RinDriverV3BlockRequest) == 64u,
                "NDRV v3 block request ABI drift");
 _Static_assert(sizeof(RinDriverV3BlockCompletion) == 48u,
                "NDRV v3 block completion ABI drift");
+_Static_assert(sizeof(RinDriverV3BlockOps) == 88u,
+               "NDRV v3 block operation ABI drift");
 _Static_assert(sizeof(RinDriverV3AudioFormat) == 56u,
                "NDRV v3 audio format ABI drift");
 _Static_assert(sizeof(RinDriverV3AudioBuffer) == 64u,
                "NDRV v3 audio buffer ABI drift");
 _Static_assert(sizeof(RinDriverV3AudioCompletion) == 48u,
                "NDRV v3 audio completion ABI drift");
-#if UINTPTR_MAX == UINT32_MAX
-_Static_assert(sizeof(RinDriverV3AudioOps) == 64u,
-               "NDRV v3 32-bit audio operation ABI drift");
-#else
 _Static_assert(sizeof(RinDriverV3AudioOps) == 88u,
-               "NDRV v3 64-bit audio operation ABI drift");
-#endif
+               "NDRV v3 audio operation ABI drift");
 _Static_assert(sizeof(RinDriverV3UsbPortStatus) == 40u,
                "NDRV v3 USB port status ABI drift");
 _Static_assert(sizeof(RinDriverV3UsbDeviceRequest) == 64u,
@@ -968,10 +1417,18 @@ _Static_assert(sizeof(RinDriverV3UsbTransfer) == 96u,
                "NDRV v3 USB transfer ABI drift");
 _Static_assert(sizeof(RinDriverV3UsbTransferCompletion) == 56u,
                "NDRV v3 USB transfer completion ABI drift");
+_Static_assert(sizeof(RinDriverV3UsbControllerOps) == 88u,
+               "NDRV v3 USB controller operation ABI drift");
+_Static_assert(sizeof(RinDriverV3InputOps) == 56u,
+               "NDRV v3 input operation ABI drift");
+_Static_assert(sizeof(RinDriverV3DisplayEvent) == 72u,
+               "NDRV v3 display event ABI drift");
+_Static_assert(sizeof(RinDriverV3DisplayOps) == 72u,
+               "NDRV v3 display operation ABI drift");
 _Static_assert(sizeof(RinDriverV3InputEvent) == 16u,
                "NDRV v3 input event ABI drift");
 _Static_assert(sizeof(RinDriverV3NetPacket) == 24u,
                "NDRV v3 net packet ABI drift");
 #endif
 
-#endif /* RIN_DRIVER_RUNTIME_API_V3_H */
+#endif /* RIN_DRIVER_MODULE_API_V3_H */

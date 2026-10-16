@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: MIT */
-#ifndef RIN_DRIVER_CONTRACT_V3_H
-#define RIN_DRIVER_CONTRACT_V3_H
+#ifndef RIN_DRIVER_RESOURCE_CONTRACT_V3_H
+#define RIN_DRIVER_RESOURCE_CONTRACT_V3_H
 
 #include <stdint.h>
 
-#include <rin/driver/abi_v3.h>
+#include <rin/driver/image_abi_v3.h>
 
 /*
  * NDRV v3 operation contracts. These are wire records and RVA/opaque-handle
@@ -306,4 +306,4 @@ _Static_assert(sizeof(RinDriverRevokeContractV3) == 48u,
                "NDRV v3 revoke ABI drift");
 #endif
 
-#endif /* RIN_DRIVER_CONTRACT_V3_H */
+#endif /* RIN_DRIVER_RESOURCE_CONTRACT_V3_H */
