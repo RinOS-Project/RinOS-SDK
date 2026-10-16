@@ -6,6 +6,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 #include "native_event.h"
 #include "../latency_abi.h"
 
@@ -82,6 +85,45 @@ rin_compositor_input_ring_slot(RinCompositorInputRingHeaderV1* header,
         (base + (sequence % header->capacity) * header->event_size);
 }
 
+static inline uint64_t rin_compositor_input_ring_load_acquire(
+    const uint64_t* value) {
+#if defined(_MSC_VER)
+    return (uint64_t)_InterlockedCompareExchange64(
+        (volatile __int64*)value, 0, 0);
+#else
+    return __atomic_load_n(value, __ATOMIC_ACQUIRE);
+#endif
+}
+
+static inline uint64_t rin_compositor_input_ring_load_relaxed(
+    const uint64_t* value) {
+#if defined(_MSC_VER)
+    return (uint64_t)_InterlockedCompareExchange64(
+        (volatile __int64*)value, 0, 0);
+#else
+    return __atomic_load_n(value, __ATOMIC_RELAXED);
+#endif
+}
+
+static inline void rin_compositor_input_ring_store_release(
+    uint64_t* value, uint64_t desired) {
+#if defined(_MSC_VER)
+    (void)_InterlockedExchange64((volatile __int64*)value, (__int64)desired);
+#else
+    __atomic_store_n(value, desired, __ATOMIC_RELEASE);
+#endif
+}
+
+static inline void rin_compositor_input_ring_add_relaxed(
+    uint64_t* value, uint64_t increment) {
+#if defined(_MSC_VER)
+    (void)_InterlockedExchangeAdd64((volatile __int64*)value,
+                                    (__int64)increment);
+#else
+    (void)__atomic_add_fetch(value, increment, __ATOMIC_RELAXED);
+#endif
+}
+
 static inline int rin_compositor_input_ring_header_valid(
     const RinCompositorInputRingHeaderV1* header, uint32_t mapped_bytes) {
     uint64_t required;
@@ -95,11 +137,13 @@ static inline int rin_compositor_input_ring_header_valid(
                (uint64_t)header->capacity * header->event_size;
     if (required > UINT32_MAX || mapped_bytes < (uint32_t)required)
         return 0;
-    if (__atomic_load_n(&header->consumer_sequence, __ATOMIC_ACQUIRE) >
-        __atomic_load_n(&header->producer_sequence, __ATOMIC_ACQUIRE))
+    if (rin_compositor_input_ring_load_acquire(&header->consumer_sequence) >
+        rin_compositor_input_ring_load_acquire(&header->producer_sequence))
         return 0;
-    return __atomic_load_n(&header->producer_sequence, __ATOMIC_ACQUIRE) -
-               __atomic_load_n(&header->consumer_sequence, __ATOMIC_ACQUIRE) <=
+    return rin_compositor_input_ring_load_acquire(
+               &header->producer_sequence) -
+               rin_compositor_input_ring_load_acquire(
+                   &header->consumer_sequence) <=
            header->capacity;
 }
 
@@ -138,8 +182,8 @@ static inline int rin_compositor_input_ring_event_current(
     if ((event->flags &
          RIN_COMPOSITOR_INPUT_RING_EVENT_FLAG_FOCUS_GENERATION) == 0u)
         return header->focus_generation == 0u;
-    return event->focus_generation == __atomic_load_n(
-        &header->focus_generation, __ATOMIC_ACQUIRE);
+    return event->focus_generation ==
+           rin_compositor_input_ring_load_acquire(&header->focus_generation);
 }
 
 /* Returns 0 for a new record, 1 for a coalesced record, and a negative value
@@ -154,12 +198,14 @@ static inline int rin_compositor_input_ring_publish(
         !rin_compositor_input_ring_header_valid(header, mapped_bytes))
         return -1;
     if (!rin_compositor_input_ring_event_current(header, event)) {
-        __atomic_add_fetch(&header->dropped_focus_events, 1u,
-                           __ATOMIC_RELAXED);
+        rin_compositor_input_ring_add_relaxed(&header->dropped_focus_events,
+                                              1u);
         return 1;
     }
-    producer = __atomic_load_n(&header->producer_sequence, __ATOMIC_RELAXED);
-    consumer = __atomic_load_n(&header->consumer_sequence, __ATOMIC_ACQUIRE);
+    producer =
+        rin_compositor_input_ring_load_relaxed(&header->producer_sequence);
+    consumer =
+        rin_compositor_input_ring_load_acquire(&header->consumer_sequence);
     if (producer - consumer >= header->capacity) {
         if (rin_compositor_input_ring_event_is_motion(event) && producer != consumer) {
             slot = rin_compositor_input_ring_slot(header, producer - 1u);
@@ -170,20 +216,20 @@ static inline int rin_compositor_input_ring_publish(
                 replacement.trace.coalesced_count =
                     slot->trace.coalesced_count + event->trace.coalesced_count;
                 *slot = replacement;
-                __atomic_add_fetch(&header->dropped_pointer_motion, 1u,
-                                   __ATOMIC_RELAXED);
+                rin_compositor_input_ring_add_relaxed(
+                    &header->dropped_pointer_motion, 1u);
                 return 1;
             }
         }
-        __atomic_add_fetch(&header->dropped_critical, 1u, __ATOMIC_RELAXED);
+        rin_compositor_input_ring_add_relaxed(&header->dropped_critical, 1u);
         return -2;
     }
     slot = rin_compositor_input_ring_slot(header, producer);
     *slot = *event;
-    __atomic_store_n(&header->producer_sequence, producer + 1u,
-                     __ATOMIC_RELEASE);
+    rin_compositor_input_ring_store_release(&header->producer_sequence,
+                                            producer + 1u);
     if (producer == consumer)
-        __atomic_add_fetch(&header->wake_sequence, 1u, __ATOMIC_RELAXED);
+        rin_compositor_input_ring_add_relaxed(&header->wake_sequence, 1u);
     return 0;
 }
 
@@ -195,19 +241,21 @@ static inline int rin_compositor_input_ring_pop(
     RinCompositorInputRingEventV1* slot;
     if (!event || !rin_compositor_input_ring_header_valid(header, mapped_bytes))
         return -1;
-    producer = __atomic_load_n(&header->producer_sequence, __ATOMIC_ACQUIRE);
-    consumer = __atomic_load_n(&header->consumer_sequence, __ATOMIC_RELAXED);
+    producer =
+        rin_compositor_input_ring_load_acquire(&header->producer_sequence);
+    consumer =
+        rin_compositor_input_ring_load_relaxed(&header->consumer_sequence);
     if (producer - consumer > header->capacity) return -1;
     while (consumer < producer) {
         slot = rin_compositor_input_ring_slot(header, consumer);
         *event = *slot;
         ++consumer;
-        __atomic_store_n(&header->consumer_sequence, consumer,
-                         __ATOMIC_RELEASE);
+        rin_compositor_input_ring_store_release(&header->consumer_sequence,
+                                                consumer);
         if (!rin_compositor_input_ring_event_valid(event)) return -1;
         if (rin_compositor_input_ring_event_current(header, event)) return 1;
-        __atomic_add_fetch(&header->dropped_focus_events, 1u,
-                           __ATOMIC_RELAXED);
+        rin_compositor_input_ring_add_relaxed(&header->dropped_focus_events,
+                                              1u);
     }
     return 0;
 }
@@ -228,8 +276,10 @@ static inline int rin_compositor_input_ring_pop_batch(
     if (!header || !events || capacity == 0u || count_out == NULL ||
         !rin_compositor_input_ring_header_valid(header, mapped_bytes))
         return -1;
-    producer = __atomic_load_n(&header->producer_sequence, __ATOMIC_ACQUIRE);
-    consumer = __atomic_load_n(&header->consumer_sequence, __ATOMIC_RELAXED);
+    producer =
+        rin_compositor_input_ring_load_acquire(&header->producer_sequence);
+    consumer =
+        rin_compositor_input_ring_load_relaxed(&header->consumer_sequence);
     if (producer - consumer > header->capacity) return -1;
     available = producer - consumer;
     while (consumed < available && count < capacity) {
@@ -237,20 +287,20 @@ static inline int rin_compositor_input_ring_pop_batch(
             *rin_compositor_input_ring_slot(header, consumer + consumed);
         ++consumed;
         if (!rin_compositor_input_ring_event_valid(&item)) {
-            __atomic_store_n(&header->consumer_sequence,
-                             consumer + consumed, __ATOMIC_RELEASE);
+            rin_compositor_input_ring_store_release(
+                &header->consumer_sequence, consumer + consumed);
             *count_out = count;
             return -1;
         }
         if (!rin_compositor_input_ring_event_current(header, &item)) {
-            __atomic_add_fetch(&header->dropped_focus_events, 1u,
-                               __ATOMIC_RELAXED);
+            rin_compositor_input_ring_add_relaxed(
+                &header->dropped_focus_events, 1u);
             continue;
         }
         events[count++] = item;
     }
-    __atomic_store_n(&header->consumer_sequence, consumer + consumed,
-                     __ATOMIC_RELEASE);
+    rin_compositor_input_ring_store_release(&header->consumer_sequence,
+                                            consumer + consumed);
     *count_out = count;
     return count == 0u ? 0 : 1;
 }
