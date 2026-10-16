@@ -91,7 +91,7 @@ typedef struct RinDriverV3WifiConnectRequest {
     uint64_t credential_memory_lease;
     uint64_t credential_offset;
     uint64_t deadline_ns;
-    uint64_t reserved[2];
+    uint64_t reserved[1];
 } RinDriverV3WifiConnectRequest;
 
 typedef struct RinDriverV3WifiEvent {
@@ -248,7 +248,7 @@ static inline int rin_driver_v3_wifi_connect_valid(
         request->ssid_length > RIN_DRIVER_V3_WIFI_SSID_MAX ||
         request->credential_length > RIN_DRIVER_V3_WIFI_CREDENTIAL_MAX ||
         request->deadline_ns == 0u || request->reserved0 != 0u ||
-        request->reserved[0] != 0u || request->reserved[1] != 0u)
+        request->reserved[0] != 0u)
         return 0;
     for (uint32_t index = request->ssid_length;
          index < RIN_DRIVER_V3_WIFI_SSID_MAX; ++index) {
