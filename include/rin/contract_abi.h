@@ -46,6 +46,7 @@ typedef int32_t RinResultCode;
 #define RIN_SYSTEM_INFO_FLAG_PAGEFILE_VALID 16u
 #define RIN_SYSTEM_INFO_FLAG_VIRTUAL_MEMORY_VALID 32u
 #define RIN_FILESYSTEM_USAGE_VERSION        1u
+#define RIN_VOLUME_MOUNT_IDENTITY_V1_VERSION 1u
 #define RIN_FILESYSTEM_TYPE_UNKNOWN         0u
 #define RIN_FILESYSTEM_TYPE_RINFS           1u
 #define RIN_FILESYSTEM_USAGE_FLAG_BLOCKS_VALID 1u
@@ -583,6 +584,18 @@ typedef struct RinFilesystemUsageV1 {
     uint8_t volume_name[24];
     uint64_t reserved;
 } RinFilesystemUsageV1;
+
+typedef struct RinVolumeMountIdentityV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    uint8_t volume_id[16];
+    uint64_t mount_id;
+    uint64_t namespace_id;
+    uint64_t root_object_id;
+    uint64_t root_generation;
+    uint64_t mount_generation;
+} RinVolumeMountIdentityV1;
 
 typedef struct RinCredentialSetV1 {
     uint32_t struct_size;
@@ -1471,6 +1484,16 @@ static_assert(offsetof(RinFilesystemUsageV1, total_inodes) == 48, "RinFilesystem
 static_assert(offsetof(RinFilesystemUsageV1, free_inodes) == 56, "RinFilesystemUsageV1.free_inodes ABI drift");
 static_assert(offsetof(RinFilesystemUsageV1, volume_name) == 64, "RinFilesystemUsageV1.volume_name ABI drift");
 static_assert(offsetof(RinFilesystemUsageV1, reserved) == 88, "RinFilesystemUsageV1.reserved ABI drift");
+static_assert(sizeof(RinVolumeMountIdentityV1) == 64, "RinVolumeMountIdentityV1 ABI drift");
+static_assert(offsetof(RinVolumeMountIdentityV1, struct_size) == 0, "RinVolumeMountIdentityV1.struct_size ABI drift");
+static_assert(offsetof(RinVolumeMountIdentityV1, version) == 4, "RinVolumeMountIdentityV1.version ABI drift");
+static_assert(offsetof(RinVolumeMountIdentityV1, reserved0) == 6, "RinVolumeMountIdentityV1.reserved0 ABI drift");
+static_assert(offsetof(RinVolumeMountIdentityV1, volume_id) == 8, "RinVolumeMountIdentityV1.volume_id ABI drift");
+static_assert(offsetof(RinVolumeMountIdentityV1, mount_id) == 24, "RinVolumeMountIdentityV1.mount_id ABI drift");
+static_assert(offsetof(RinVolumeMountIdentityV1, namespace_id) == 32, "RinVolumeMountIdentityV1.namespace_id ABI drift");
+static_assert(offsetof(RinVolumeMountIdentityV1, root_object_id) == 40, "RinVolumeMountIdentityV1.root_object_id ABI drift");
+static_assert(offsetof(RinVolumeMountIdentityV1, root_generation) == 48, "RinVolumeMountIdentityV1.root_generation ABI drift");
+static_assert(offsetof(RinVolumeMountIdentityV1, mount_generation) == 56, "RinVolumeMountIdentityV1.mount_generation ABI drift");
 static_assert(sizeof(RinCredentialSetV1) == 24, "RinCredentialSetV1 ABI drift");
 static_assert(offsetof(RinCredentialSetV1, struct_size) == 0, "RinCredentialSetV1.struct_size ABI drift");
 static_assert(offsetof(RinCredentialSetV1, version) == 4, "RinCredentialSetV1.version ABI drift");
@@ -2232,6 +2255,16 @@ _Static_assert(offsetof(RinFilesystemUsageV1, total_inodes) == 48, "RinFilesyste
 _Static_assert(offsetof(RinFilesystemUsageV1, free_inodes) == 56, "RinFilesystemUsageV1.free_inodes ABI drift");
 _Static_assert(offsetof(RinFilesystemUsageV1, volume_name) == 64, "RinFilesystemUsageV1.volume_name ABI drift");
 _Static_assert(offsetof(RinFilesystemUsageV1, reserved) == 88, "RinFilesystemUsageV1.reserved ABI drift");
+_Static_assert(sizeof(RinVolumeMountIdentityV1) == 64, "RinVolumeMountIdentityV1 ABI drift");
+_Static_assert(offsetof(RinVolumeMountIdentityV1, struct_size) == 0, "RinVolumeMountIdentityV1.struct_size ABI drift");
+_Static_assert(offsetof(RinVolumeMountIdentityV1, version) == 4, "RinVolumeMountIdentityV1.version ABI drift");
+_Static_assert(offsetof(RinVolumeMountIdentityV1, reserved0) == 6, "RinVolumeMountIdentityV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinVolumeMountIdentityV1, volume_id) == 8, "RinVolumeMountIdentityV1.volume_id ABI drift");
+_Static_assert(offsetof(RinVolumeMountIdentityV1, mount_id) == 24, "RinVolumeMountIdentityV1.mount_id ABI drift");
+_Static_assert(offsetof(RinVolumeMountIdentityV1, namespace_id) == 32, "RinVolumeMountIdentityV1.namespace_id ABI drift");
+_Static_assert(offsetof(RinVolumeMountIdentityV1, root_object_id) == 40, "RinVolumeMountIdentityV1.root_object_id ABI drift");
+_Static_assert(offsetof(RinVolumeMountIdentityV1, root_generation) == 48, "RinVolumeMountIdentityV1.root_generation ABI drift");
+_Static_assert(offsetof(RinVolumeMountIdentityV1, mount_generation) == 56, "RinVolumeMountIdentityV1.mount_generation ABI drift");
 _Static_assert(sizeof(RinCredentialSetV1) == 24, "RinCredentialSetV1 ABI drift");
 _Static_assert(offsetof(RinCredentialSetV1, struct_size) == 0, "RinCredentialSetV1.struct_size ABI drift");
 _Static_assert(offsetof(RinCredentialSetV1, version) == 4, "RinCredentialSetV1.version ABI drift");

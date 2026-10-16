@@ -107,6 +107,8 @@
 #define RIN_SYS_RECVMSG                     85u
 #define RIN_SYS_SOCK_SHUTDOWN               86u
 #define RIN_SYS_ACCEPT4                     87u
+/* file. */
+#define RIN_SYS_OPENAT_MOUNT_IDENTITY       88u
 /* system. */
 #define RIN_SYS_REBOOT                      90u
 #define RIN_SYS_SHUTDOWN                    91u
