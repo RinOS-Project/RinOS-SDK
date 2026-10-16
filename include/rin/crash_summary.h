@@ -10,6 +10,7 @@
 #define RIN_CRASH_SUMMARY_VERSION UINT16_C(1)
 #define RIN_CRASH_SUMMARY_POLICY_LOCAL_ONLY UINT32_C(1)
 #define RIN_CRASH_HISTORY_QUERY_VERSION UINT16_C(1)
+#define RIN_CRASH_HISTORY_ACK_VERSION UINT16_C(1)
 #define RIN_CRASH_HISTORY_MAX_RECORDS UINT16_C(2)
 
 /* Pointer-free, bounded model for a future local diagnostic viewer. This
@@ -52,6 +53,15 @@ typedef struct RinCrashHistoryQueryV1 {
     RinCrashSummaryV1 records[RIN_CRASH_HISTORY_MAX_RECORDS];
 } RinCrashHistoryQueryV1;
 
+/* Durable cursor update issued only after crashd has committed its recovery
+ * registry. This acknowledges retained history; it does not erase raw data. */
+typedef struct RinCrashHistoryAckV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved;
+    uint64_t sequence;
+} RinCrashHistoryAckV1;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -59,7 +69,7 @@ extern "C" {
 RinCrashRecordResult rin_crash_summary_decode(
     const void* record, uint32_t record_size, RinCrashSummaryV1* summary);
 
-/* RinNative64 runtime entry point. The kernel admits only a signed system
+/* RinRuntime entry point. The kernel admits only a signed system
  * service holding RIN_CAP_CRASH_DIAGNOSTIC and clears summary on failure. */
 int rin_crash_summary_get_local(RinCrashSummaryV1* summary);
 
@@ -67,6 +77,10 @@ int rin_crash_summary_get_local(RinCrashSummaryV1* summary);
  * single-summary query. Fails closed if any retained slot is unreadable or
  * corrupt; output records are cleared on failure. */
 int rin_crash_history_get_local(RinCrashHistoryQueryV1* query);
+
+/* Persist the highest sequence durably handled by the authorized diagnostic
+ * service. The kernel revalidates the caller and rejects future sequences. */
+int rin_crash_history_ack_local(uint64_t sequence);
 
 #ifdef __cplusplus
 }
@@ -77,11 +91,15 @@ static_assert(sizeof(RinCrashSummaryV1) == 2200u,
               "RinCrashSummaryV1 ABI drift");
 static_assert(sizeof(RinCrashHistoryQueryV1) == 4424u,
               "RinCrashHistoryQueryV1 ABI drift");
+static_assert(sizeof(RinCrashHistoryAckV1) == 16u,
+              "RinCrashHistoryAckV1 ABI drift");
 #elif UINTPTR_MAX == UINT64_MAX && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinCrashSummaryV1) == 2200u,
                "RinCrashSummaryV1 ABI drift");
 _Static_assert(sizeof(RinCrashHistoryQueryV1) == 4424u,
                "RinCrashHistoryQueryV1 ABI drift");
+_Static_assert(sizeof(RinCrashHistoryAckV1) == 16u,
+               "RinCrashHistoryAckV1 ABI drift");
 #endif
 
 #endif /* RIN_API_RIN_CRASH_SUMMARY_H */
