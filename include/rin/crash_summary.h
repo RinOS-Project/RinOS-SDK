@@ -12,6 +12,8 @@
 #define RIN_CRASH_HISTORY_QUERY_VERSION UINT16_C(1)
 #define RIN_CRASH_HISTORY_ACK_VERSION UINT16_C(1)
 #define RIN_CRASH_HISTORY_MAX_RECORDS UINT16_C(2)
+#define RIN_CRASH_PENDING_QUERY_VERSION UINT16_C(1)
+#define RIN_CRASH_PENDING_MAX_RECORDS UINT16_C(1)
 
 /* Pointer-free, bounded model for a future local diagnostic viewer. This
  * structure grants no authority to transmit or delete its source record. */
@@ -62,6 +64,26 @@ typedef struct RinCrashHistoryAckV1 {
     uint64_t sequence;
 } RinCrashHistoryAckV1;
 
+/* Read-only view of snapshots retained in the volatile pre-drain queue after
+ * a storage failure. queue_sequence belongs only to this queue; summary.sequence
+ * is zero and must never be sent to the durable history ACK interface. The
+ * boot ID plus queue_sequence identifies an entry while crashd moves it to
+ * durable local recovery storage. */
+typedef struct RinCrashPendingMinidumpV1 {
+    uint64_t queue_sequence;
+    RinCrashSummaryV1 summary;
+} RinCrashPendingMinidumpV1;
+
+typedef struct RinCrashPendingQueryV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t capacity;
+    uint32_t record_count;
+    uint32_t reserved;
+    uint64_t after_queue_sequence;
+    RinCrashPendingMinidumpV1 records[RIN_CRASH_PENDING_MAX_RECORDS];
+} RinCrashPendingQueryV1;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -78,6 +100,11 @@ int rin_crash_summary_get_local(RinCrashSummaryV1* summary);
  * corrupt; output records are cleared on failure. */
 int rin_crash_history_get_local(RinCrashHistoryQueryV1* query);
 
+/* Read pending volatile snapshots after an ambiguous/failed drain. Only the
+ * signed crash diagnostic system service can call this API. It does not ACK,
+ * mutate, or clear the queue. Output is cleared on failure. */
+int rin_crash_pending_minidumps_get_local(RinCrashPendingQueryV1* query);
+
 /* Persist the highest sequence durably handled by the authorized diagnostic
  * service. The kernel revalidates the caller and rejects future sequences. */
 int rin_crash_history_ack_local(uint64_t sequence);
@@ -93,6 +120,10 @@ static_assert(sizeof(RinCrashHistoryQueryV1) == 4424u,
               "RinCrashHistoryQueryV1 ABI drift");
 static_assert(sizeof(RinCrashHistoryAckV1) == 16u,
               "RinCrashHistoryAckV1 ABI drift");
+static_assert(sizeof(RinCrashPendingMinidumpV1) == 2208u,
+              "RinCrashPendingMinidumpV1 ABI drift");
+static_assert(sizeof(RinCrashPendingQueryV1) == 2232u,
+              "RinCrashPendingQueryV1 ABI drift");
 #elif UINTPTR_MAX == UINT64_MAX && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinCrashSummaryV1) == 2200u,
                "RinCrashSummaryV1 ABI drift");
@@ -100,6 +131,10 @@ _Static_assert(sizeof(RinCrashHistoryQueryV1) == 4424u,
                "RinCrashHistoryQueryV1 ABI drift");
 _Static_assert(sizeof(RinCrashHistoryAckV1) == 16u,
                "RinCrashHistoryAckV1 ABI drift");
+_Static_assert(sizeof(RinCrashPendingMinidumpV1) == 2208u,
+               "RinCrashPendingMinidumpV1 ABI drift");
+_Static_assert(sizeof(RinCrashPendingQueryV1) == 2232u,
+               "RinCrashPendingQueryV1 ABI drift");
 #endif
 
 #endif /* RIN_API_RIN_CRASH_SUMMARY_H */
