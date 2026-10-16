@@ -1105,8 +1105,7 @@ typedef struct RinManagementDeviceInfoV1 {
     uint8_t location[32];
 } RinManagementDeviceInfoV1;
 
-/* V2 preserves the fixed V1 response and adds the authenticated firmware
- * signer identity in a separately versioned record. */
+/* V2 preserves the fixed V1 response and adds the authenticated firmware signer identity in a separately versioned record. */
 typedef struct RinManagementDeviceFirmwareV2 {
     uint32_t struct_size;
     uint16_t version;
