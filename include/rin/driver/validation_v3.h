@@ -378,6 +378,7 @@ static inline int rin_ndrv_v3_usb_endpoint_configuration_valid(
     const RinDriverV3UsbEndpointConfiguration* endpoint) {
     uint32_t address;
     uint32_t transactions;
+    uint64_t interval_capacity;
     if (!endpoint || endpoint->struct_size < sizeof(*endpoint) ||
         endpoint->version != RIN_DRIVER_V3_OPS_VERSION ||
         (endpoint->transfer_type != RIN_DRIVER_V3_USB_TRANSFER_INTERRUPT &&
@@ -393,16 +394,28 @@ static inline int rin_ndrv_v3_usb_endpoint_configuration_valid(
          (endpoint->interval == 0u || endpoint->interval > 16u)) ||
         endpoint->max_burst > 15u ||
         endpoint->transactions_per_interval > 3u ||
-        endpoint->reserved[0] != 0u ||
         endpoint->reserved[1] != 0u)
         return 0;
     transactions = endpoint->transactions_per_interval == 0u
         ? 1u : endpoint->transactions_per_interval;
     if (endpoint->transfer_type != RIN_DRIVER_V3_USB_TRANSFER_ISOCHRONOUS &&
-        transactions != 1u)
+        (transactions != 1u || endpoint->reserved[0] != 0u))
         return 0;
-    if (transactions * endpoint->max_packet_size > 3072u)
-        return 0;
+    if (endpoint->transfer_type == RIN_DRIVER_V3_USB_TRANSFER_ISOCHRONOUS) {
+        interval_capacity = (uint64_t)endpoint->max_packet_size *
+                            (endpoint->max_burst + 1u) * transactions;
+        if (endpoint->reserved[0] == 0u) {
+            /* Legacy USB 2.0 endpoint geometry. */
+            if (endpoint->max_burst != 0u ||
+                transactions * endpoint->max_packet_size > 3072u)
+                return 0;
+        } else if (endpoint->reserved[0] < 2u ||
+                   endpoint->reserved[0] >
+                       RIN_DRIVER_V3_USB_MAX_ISOCH_ESIT_PAYLOAD ||
+                   endpoint->reserved[0] > interval_capacity) {
+            return 0;
+        }
+    }
     address = endpoint->endpoint_address;
     return (address & UINT32_C(0xffffff70)) == 0u &&
            (address & UINT32_C(0x0f)) != 0u;

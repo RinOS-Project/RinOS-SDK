@@ -414,6 +414,7 @@ typedef struct RinDriverV3AudioCompletion {
 #define RIN_DRIVER_V3_USB_SPEED_HIGH      UINT32_C(3)
 #define RIN_DRIVER_V3_USB_SPEED_SUPER     UINT32_C(4)
 #define RIN_DRIVER_V3_USB_SPEED_SUPER_PLUS UINT32_C(5)
+#define RIN_DRIVER_V3_USB_MAX_ISOCH_ESIT_PAYLOAD UINT32_C(49152)
 
 typedef struct RinDriverV3UsbPortStatus {
     uint32_t struct_size;
@@ -483,9 +484,12 @@ typedef struct RinDriverV3UsbEndpointConfiguration {
     uint32_t max_packet_size;
     uint32_t interval;
     uint32_t max_burst;
-    /* Isochronous high-speed endpoints may carry 1..3 transactions per
-     * service interval.  Zero is the legacy encoding for one transaction. */
+    /* Isochronous endpoints carry 1..3 USB 2.0 transactions or USB 3.x
+     * Mult bursts per service interval. Zero is the legacy encoding for one. */
     uint32_t transactions_per_interval;
+    /* For SuperSpeed isochronous endpoints, reserved[0] carries the exact
+     * wBytesPerInterval value from the companion descriptor (Max ESIT Payload).
+     * It is zero for USB 2.0 and non-isochronous endpoints. */
     uint64_t reserved[2];
 } RinDriverV3UsbEndpointConfiguration;
 
