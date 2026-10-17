@@ -1850,6 +1850,71 @@ RinResult rin_gpu_process_graphics_pipeline_create_v1(
         sizeof(request), (void*)0, 0u);
 }
 
+static int gpu_process_sampler_filter_valid(uint32_t filter) {
+    return filter == RIN_GPU_PROCESS_SAMPLER_FILTER_NEAREST_V1 ||
+           filter == RIN_GPU_PROCESS_SAMPLER_FILTER_LINEAR_V1;
+}
+
+static int gpu_process_sampler_address_valid(uint32_t address) {
+    return address == RIN_GPU_PROCESS_SAMPLER_ADDRESS_CLAMP_TO_EDGE_V1 ||
+           address == RIN_GPU_PROCESS_SAMPLER_ADDRESS_REPEAT_V1 ||
+           address == RIN_GPU_PROCESS_SAMPLER_ADDRESS_MIRRORED_REPEAT_V1;
+}
+
+static int gpu_process_sampler_desc_valid(
+    const RinGpuProcessSamplerDescV1* descriptor) {
+    return descriptor && descriptor->struct_size == sizeof(*descriptor) &&
+           descriptor->version == RIN_GPU_PROCESS_SAMPLER_DESC_VERSION_V1 &&
+           gpu_process_sampler_filter_valid(descriptor->min_filter) &&
+           gpu_process_sampler_filter_valid(descriptor->mag_filter) &&
+           (descriptor->mip_filter ==
+                RIN_GPU_PROCESS_SAMPLER_MIP_FILTER_NONE_V1 ||
+            gpu_process_sampler_filter_valid(descriptor->mip_filter)) &&
+           gpu_process_sampler_address_valid(descriptor->address_u) &&
+           gpu_process_sampler_address_valid(descriptor->address_v) &&
+           gpu_process_sampler_address_valid(descriptor->address_w) &&
+           descriptor->mip_lod_bias == descriptor->mip_lod_bias &&
+           descriptor->mip_lod_bias >= -16.0f &&
+           descriptor->mip_lod_bias <= 16.0f &&
+           descriptor->min_lod == descriptor->min_lod &&
+           descriptor->min_lod >= 0.0f && descriptor->min_lod <= 32.0f &&
+           descriptor->max_lod == descriptor->max_lod &&
+           descriptor->max_lod >= descriptor->min_lod &&
+           descriptor->max_lod <= 32.0f &&
+           descriptor->max_anisotropy != 0u &&
+           descriptor->max_anisotropy <=
+               RIN_GPU_PROCESS_SAMPLER_MAX_ANISOTROPY_V1 &&
+           descriptor->flags == 0u &&
+           (descriptor->compare_op ==
+                RIN_GPU_PROCESS_SAMPLER_COMPARE_NONE_V1 ||
+            (descriptor->compare_op >=
+                 RIN_GPU_PROCESS_SAMPLER_COMPARE_LESS_V1 &&
+             descriptor->compare_op <=
+                 RIN_GPU_PROCESS_SAMPLER_COMPARE_GREATER_EQUAL_V1));
+}
+
+RinResult rin_gpu_process_sampler_create_v1(
+    uint64_t device_id, uint64_t device_generation, uint64_t sampler_token,
+    const RinGpuProcessSamplerDescV1* descriptor) {
+    RinGpuProcessSamplerDescV1 descriptor_copy;
+    RinSdkArgsV1 request;
+
+    if (device_id == 0u || device_generation == 0u || sampler_token == 0u ||
+        !gpu_process_sampler_desc_valid(descriptor))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    descriptor_copy = *descriptor;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = sampler_token;
+    request.value[3] = (uint64_t)(uintptr_t)&descriptor_copy;
+    return rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_SAMPLER_CREATE, &request,
+        sizeof(request), (void*)0, 0u);
+}
+
 RinResult rin_gpu_process_compute_bind_group_create_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t bind_group_token, uint64_t pipeline_token,

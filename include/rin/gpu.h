@@ -49,6 +49,23 @@ extern "C" {
 #define RIN_GPU_PROCESS_MAX_COMPUTE_BINDINGS_V1 UINT32_C(64)
 #define RIN_GPU_PROCESS_COMPUTE_BINDING_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_GRAPHICS_PIPELINE_DESC_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_SAMPLER_DESC_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_SAMPLER_FILTER_NEAREST_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_SAMPLER_FILTER_LINEAR_V1 UINT32_C(2)
+#define RIN_GPU_PROCESS_SAMPLER_MIP_FILTER_NONE_V1 UINT32_C(0)
+#define RIN_GPU_PROCESS_SAMPLER_ADDRESS_CLAMP_TO_EDGE_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_SAMPLER_ADDRESS_REPEAT_V1 UINT32_C(2)
+#define RIN_GPU_PROCESS_SAMPLER_ADDRESS_MIRRORED_REPEAT_V1 UINT32_C(3)
+#define RIN_GPU_PROCESS_SAMPLER_MAX_ANISOTROPY_V1 UINT32_C(16)
+#define RIN_GPU_PROCESS_SAMPLER_COMPARE_NONE_V1 UINT32_C(0)
+#define RIN_GPU_PROCESS_SAMPLER_COMPARE_LESS_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_SAMPLER_COMPARE_LESS_EQUAL_V1 UINT32_C(2)
+#define RIN_GPU_PROCESS_SAMPLER_COMPARE_ALWAYS_V1 UINT32_C(3)
+#define RIN_GPU_PROCESS_SAMPLER_COMPARE_NEVER_V1 UINT32_C(4)
+#define RIN_GPU_PROCESS_SAMPLER_COMPARE_EQUAL_V1 UINT32_C(5)
+#define RIN_GPU_PROCESS_SAMPLER_COMPARE_GREATER_V1 UINT32_C(6)
+#define RIN_GPU_PROCESS_SAMPLER_COMPARE_NOT_EQUAL_V1 UINT32_C(7)
+#define RIN_GPU_PROCESS_SAMPLER_COMPARE_GREATER_EQUAL_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_SHADER_MAX_BYTES_V1 UINT64_C(1048640)
 #define RIN_GPU_PROCESS_QUERY_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_QUERY_RESULT_VERSION_V1 UINT32_C(1)
@@ -127,7 +144,8 @@ enum RinGpuSdkOperationV1 {
     /* V2 derives its exact allocation lease set from authenticated command
      * resource cookies; callers never need a foreign allocation handle. */
     RIN_GPU_SDK_PROCESS_SUBMIT_V2 = 25,
-    RIN_GPU_SDK_PROCESS_GRAPHICS_PIPELINE_CREATE = 26
+    RIN_GPU_SDK_PROCESS_GRAPHICS_PIPELINE_CREATE = 26,
+    RIN_GPU_SDK_PROCESS_SAMPLER_CREATE = 27
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -233,6 +251,25 @@ typedef struct RinGpuProcessGraphicsPipelineDescV1 {
     uint32_t color_format;
     uint32_t primitive_topology;
 } RinGpuProcessGraphicsPipelineDescV1;
+
+/* API-neutral sampler description. Enum values are stable RinGPU values;
+ * this record carries no Vulkan or backend object types. */
+typedef struct RinGpuProcessSamplerDescV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t min_filter;
+    uint32_t mag_filter;
+    uint32_t mip_filter;
+    uint32_t address_u;
+    uint32_t address_v;
+    uint32_t address_w;
+    float mip_lod_bias;
+    float min_lod;
+    float max_lod;
+    uint32_t max_anisotropy;
+    uint32_t flags;
+    uint32_t compare_op;
+} RinGpuProcessSamplerDescV1;
 
 /* Query descriptions and results use RingPU's bounded timestamp, occlusion,
  * and pipeline-statistics query types. The token remains process-owned. */
@@ -792,6 +829,11 @@ RIN_SDK_API RinResult rin_gpu_process_graphics_pipeline_create_v1(
     uint64_t pipeline_token, uint64_t vertex_shader_token,
     uint64_t fragment_shader_token,
     const RinGpuProcessGraphicsPipelineDescV1* descriptor);
+/* Create a live RinGPU sampler under an opaque process token. The backend
+ * object remains OS-Core-owned and is destroyed with the exact token. */
+RIN_SDK_API RinResult rin_gpu_process_sampler_create_v1(
+    uint64_t device_id, uint64_t device_generation, uint64_t sampler_token,
+    const RinGpuProcessSamplerDescV1* descriptor);
 /* Bind-group creation retains the authenticated process resource bindings
  * until the process object is destroyed. */
 RIN_SDK_API RinResult rin_gpu_process_compute_bind_group_create_v1(
@@ -879,6 +921,8 @@ static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
               "RinGpuProcessComputeBindingV1 ABI drift");
 static_assert(sizeof(RinGpuProcessGraphicsPipelineDescV1) == 16u,
               "RinGpuProcessGraphicsPipelineDescV1 ABI drift");
+static_assert(sizeof(RinGpuProcessSamplerDescV1) == 56u,
+              "RinGpuProcessSamplerDescV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
               "RinGpuProcessQueryDescV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueryResultV1) == 88u,
@@ -942,6 +986,8 @@ _Static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
                "RinGpuProcessComputeBindingV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessGraphicsPipelineDescV1) == 16u,
                "RinGpuProcessGraphicsPipelineDescV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessSamplerDescV1) == 56u,
+               "RinGpuProcessSamplerDescV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
                "RinGpuProcessQueryDescV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueryResultV1) == 88u,
