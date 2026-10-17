@@ -48,6 +48,7 @@ extern "C" {
 #define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_MAX_COMPUTE_BINDINGS_V1 UINT32_C(64)
 #define RIN_GPU_PROCESS_COMPUTE_BINDING_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_GRAPHICS_PIPELINE_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SHADER_MAX_BYTES_V1 UINT64_C(1048640)
 #define RIN_GPU_PROCESS_QUERY_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_QUERY_RESULT_VERSION_V1 UINT32_C(1)
@@ -125,7 +126,8 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_DIRECT_DISPLAY_DISPATCH = 24,
     /* V2 derives its exact allocation lease set from authenticated command
      * resource cookies; callers never need a foreign allocation handle. */
-    RIN_GPU_SDK_PROCESS_SUBMIT_V2 = 25
+    RIN_GPU_SDK_PROCESS_SUBMIT_V2 = 25,
+    RIN_GPU_SDK_PROCESS_GRAPHICS_PIPELINE_CREATE = 26
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -221,6 +223,16 @@ typedef struct RinGpuProcessComputeBindingV1 {
     uint32_t access;
     uint32_t reserved;
 } RinGpuProcessComputeBindingV1;
+
+/* Bounded, API-neutral process graphics-pipeline profile. Color format and
+ * primitive topology use RinGPU's stable enum values; Vulkan types are not
+ * part of the RinOS process ABI. */
+typedef struct RinGpuProcessGraphicsPipelineDescV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t color_format;
+    uint32_t primitive_topology;
+} RinGpuProcessGraphicsPipelineDescV1;
 
 /* Query descriptions and results use RingPU's bounded timestamp, occlusion,
  * and pipeline-statistics query types. The token remains process-owned. */
@@ -773,6 +785,13 @@ RIN_SDK_API RinResult rin_gpu_process_object_destroy_v1(
 RIN_SDK_API RinResult rin_gpu_process_compute_pipeline_create_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t pipeline_token, uint64_t shader_module_token);
+/* Create the bounded resource-free graphics pipeline profile from live,
+ * process-owned vertex and fragment shader modules. */
+RIN_SDK_API RinResult rin_gpu_process_graphics_pipeline_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t pipeline_token, uint64_t vertex_shader_token,
+    uint64_t fragment_shader_token,
+    const RinGpuProcessGraphicsPipelineDescV1* descriptor);
 /* Bind-group creation retains the authenticated process resource bindings
  * until the process object is destroyed. */
 RIN_SDK_API RinResult rin_gpu_process_compute_bind_group_create_v1(
@@ -858,6 +877,8 @@ static_assert(sizeof(RinGpuProcessAllocatedBufferV1) == 80u,
               "RinGpuProcessAllocatedBufferV1 ABI drift");
 static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
               "RinGpuProcessComputeBindingV1 ABI drift");
+static_assert(sizeof(RinGpuProcessGraphicsPipelineDescV1) == 16u,
+              "RinGpuProcessGraphicsPipelineDescV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
               "RinGpuProcessQueryDescV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueryResultV1) == 88u,
@@ -919,6 +940,8 @@ _Static_assert(sizeof(RinGpuProcessAllocatedBufferV1) == 80u,
                "RinGpuProcessAllocatedBufferV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
                "RinGpuProcessComputeBindingV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessGraphicsPipelineDescV1) == 16u,
+               "RinGpuProcessGraphicsPipelineDescV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
                "RinGpuProcessQueryDescV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueryResultV1) == 88u,
