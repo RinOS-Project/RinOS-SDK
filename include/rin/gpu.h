@@ -38,6 +38,11 @@ extern "C" {
 #define RIN_GPU_PROCESS_BUFFER_MAPPING_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_BUFFER_MAPPING_STATE_MAPPED_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_BUFFER_MAPPING_STATE_UNMAP_PENDING_V1 UINT32_C(2)
+#define RIN_GPU_PROCESS_ALLOCATED_BUFFER_DESC_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_ALLOCATED_BUFFER_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_ALLOCATED_BUFFER_STATE_BOUND_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_ALLOCATED_BUFFER_STATE_DESTROY_PENDING_V1 \
+    UINT32_C(2)
 #define RIN_GPU_PROCESS_MAX_COMMANDS_V1 UINT32_C(1024)
 #define RIN_GPU_PROCESS_MAX_RESOURCES_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
@@ -193,6 +198,17 @@ typedef struct RinGpuProcessBufferMappingV1 {
     uint64_t size_bytes;
     uint64_t reserved;
 } RinGpuProcessBufferMappingV1;
+
+/* Destroy first releases the process-resource lease, then the allocation. If
+ * allocation destruction fails, DESTROY_PENDING records that unbind already
+ * succeeded so retry cannot issue a second unbind. */
+typedef struct RinGpuProcessAllocatedBufferV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t state;
+    uint32_t reserved0;
+    RinGpuProcessBufferDescV1 desc;
+} RinGpuProcessAllocatedBufferV1;
 
 /* A process-owned compute bind-group entry. The range is relative to the
  * process resource cookie, not a GPUVA or physical address. */
@@ -579,6 +595,19 @@ typedef struct RinGpuAllocationDescV1 {
     uint64_t reserved[4];
 } RinGpuAllocationDescV1;
 
+/* Create a GPU allocation and bind a typed process-buffer view as one owner.
+ * required_gpu_access must be covered by allocation.flags. */
+typedef struct RinGpuProcessAllocatedBufferDescV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t device_id;
+    uint64_t device_generation;
+    uint64_t resource_cookie;
+    RinGpuAllocationDescV1 allocation;
+    uint32_t required_gpu_access;
+    uint32_t reserved;
+} RinGpuProcessAllocatedBufferDescV1;
+
 /* A successful query echoes the requested allocation handle, reports a
  * supported heap/access shape and active allocation, and returns aligned
  * address geometry with allocation_size_bytes >= requested_size_bytes,
@@ -709,6 +738,14 @@ RIN_SDK_API RinResult rin_gpu_process_buffer_map_v1(
     RinGpuProcessBufferMappingV1* mapping_out);
 RIN_SDK_API RinResult rin_gpu_process_buffer_unmap_v1(
     RinGpuProcessBufferMappingV1* mapping);
+/* The allocated-buffer owner creates and binds an allocation transactionally.
+ * On partial failure, buffer_out is published only when cleanup itself is
+ * pending; destroy_v1 resumes from the recorded cleanup phase. */
+RIN_SDK_API RinResult rin_gpu_process_allocated_buffer_create_v1(
+    const RinGpuProcessAllocatedBufferDescV1* descriptor,
+    RinGpuProcessAllocatedBufferV1* buffer_out);
+RIN_SDK_API RinResult rin_gpu_process_allocated_buffer_destroy_v1(
+    RinGpuProcessAllocatedBufferV1* buffer);
 /* Bounded staging operations use the buffer's allocation-relative range.
  * Each transfer remains subject to the SDK's 1 MiB limit and backend CPU
  * visibility/coherency rules. */
@@ -815,6 +852,10 @@ static_assert(sizeof(RinGpuProcessBufferV1) == 80u,
               "RinGpuProcessBufferV1 ABI drift");
 static_assert(sizeof(RinGpuProcessBufferMappingV1) == 80u,
               "RinGpuProcessBufferMappingV1 ABI drift");
+static_assert(sizeof(RinGpuProcessAllocatedBufferDescV1) == 104u,
+              "RinGpuProcessAllocatedBufferDescV1 ABI drift");
+static_assert(sizeof(RinGpuProcessAllocatedBufferV1) == 80u,
+              "RinGpuProcessAllocatedBufferV1 ABI drift");
 static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
               "RinGpuProcessComputeBindingV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
@@ -872,6 +913,10 @@ _Static_assert(sizeof(RinGpuProcessBufferV1) == 80u,
                "RinGpuProcessBufferV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessBufferMappingV1) == 80u,
                "RinGpuProcessBufferMappingV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessAllocatedBufferDescV1) == 104u,
+               "RinGpuProcessAllocatedBufferDescV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessAllocatedBufferV1) == 80u,
+               "RinGpuProcessAllocatedBufferV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
                "RinGpuProcessComputeBindingV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,

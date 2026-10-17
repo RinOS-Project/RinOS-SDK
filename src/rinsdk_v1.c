@@ -1579,6 +1579,164 @@ RinResult rin_gpu_process_buffer_unmap_v1(
     return result;
 }
 
+static int gpu_process_allocated_buffer_desc_valid(
+    const RinGpuProcessAllocatedBufferDescV1* descriptor) {
+    const uint32_t known_allocation_flags =
+        RIN_GPU_ALLOCATION_GPU_READ | RIN_GPU_ALLOCATION_GPU_WRITE |
+        RIN_GPU_ALLOCATION_CPU_VISIBLE | RIN_GPU_ALLOCATION_ZEROED;
+
+    if (!descriptor || descriptor->struct_size != sizeof(*descriptor) ||
+        descriptor->version !=
+            RIN_GPU_PROCESS_ALLOCATED_BUFFER_DESC_VERSION_V1 ||
+        descriptor->device_id == 0u || descriptor->device_generation == 0u ||
+        descriptor->resource_cookie == 0u ||
+        descriptor->allocation.struct_size !=
+            sizeof(descriptor->allocation) ||
+        descriptor->allocation.version !=
+            RIN_GPU_ALLOCATION_DESC_VERSION_V1 ||
+        (descriptor->allocation.heap != RIN_GPU_HEAP_LOCAL &&
+         descriptor->allocation.heap != RIN_GPU_HEAP_SYSTEM) ||
+        (descriptor->allocation.flags & ~known_allocation_flags) != 0u ||
+        (descriptor->allocation.flags &
+         (RIN_GPU_ALLOCATION_GPU_READ | RIN_GPU_ALLOCATION_GPU_WRITE)) == 0u ||
+        descriptor->allocation.size_bytes == 0u ||
+        (descriptor->allocation.alignment != 0u &&
+         (descriptor->allocation.alignment &
+          (descriptor->allocation.alignment - 1u)) != 0u) ||
+        descriptor->required_gpu_access == 0u ||
+        (descriptor->required_gpu_access &
+         ~(RIN_GPU_ALLOCATION_GPU_READ | RIN_GPU_ALLOCATION_GPU_WRITE)) !=
+            0u ||
+        (descriptor->required_gpu_access &
+         descriptor->allocation.flags) != descriptor->required_gpu_access ||
+        descriptor->reserved != 0u)
+        return 0;
+    for (uint32_t index = 0u; index < 4u; ++index)
+        if (descriptor->allocation.reserved[index] != 0u) return 0;
+    return 1;
+}
+
+static int gpu_process_allocated_buffer_valid(
+    const RinGpuProcessAllocatedBufferV1* buffer) {
+    return buffer && buffer->struct_size == sizeof(*buffer) &&
+           buffer->version == RIN_GPU_PROCESS_ALLOCATED_BUFFER_VERSION_V1 &&
+           (buffer->state ==
+                RIN_GPU_PROCESS_ALLOCATED_BUFFER_STATE_BOUND_V1 ||
+            buffer->state == RIN_GPU_PROCESS_ALLOCATED_BUFFER_STATE_DESTROY_PENDING_V1) &&
+           buffer->reserved0 == 0u &&
+           gpu_process_buffer_desc_valid(&buffer->desc) &&
+           buffer->desc.allocation_offset == 0u;
+}
+
+static int gpu_process_allocated_buffer_output_empty(
+    const RinGpuProcessAllocatedBufferV1* buffer) {
+    const unsigned char* bytes = (const unsigned char*)buffer;
+
+    for (size_t index = 0u; index < sizeof(*buffer); ++index)
+        if (bytes[index] != 0u) return 0;
+    return 1;
+}
+
+RinResult rin_gpu_process_allocated_buffer_create_v1(
+    const RinGpuProcessAllocatedBufferDescV1* descriptor,
+    RinGpuProcessAllocatedBufferV1* buffer_out) {
+    RinGpuProcessAllocatedBufferDescV1 descriptor_copy;
+    RinGpuProcessBufferDescV1 process_buffer_desc;
+    RinGpuProcessBufferV1 process_buffer;
+    RinGpuProcessAllocatedBufferV1 allocated_buffer;
+    RinGpuAllocationV1 allocation = 0u;
+    RinResult result;
+
+    if (!descriptor || !buffer_out) return RIN_ERROR_INVALID_ARGUMENT;
+    descriptor_copy = *descriptor;
+    if (!gpu_process_allocated_buffer_desc_valid(&descriptor_copy))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (!gpu_process_allocated_buffer_output_empty(buffer_out))
+        return gpu_process_allocated_buffer_valid(buffer_out)
+                   ? RIN_ERROR_BUSY
+                   : RIN_ERROR_INVALID_ARGUMENT;
+
+    result = rin_gpu_memory_allocate_v1(
+        descriptor_copy.device_id, descriptor_copy.device_generation,
+        &descriptor_copy.allocation, &allocation);
+    if (result != RIN_SUCCESS) return result;
+
+    rin_sdk_zero_bytes(&process_buffer_desc, sizeof(process_buffer_desc));
+    process_buffer_desc.struct_size = sizeof(process_buffer_desc);
+    process_buffer_desc.version = RIN_GPU_PROCESS_BUFFER_DESC_VERSION_V1;
+    process_buffer_desc.device_id = descriptor_copy.device_id;
+    process_buffer_desc.device_generation =
+        descriptor_copy.device_generation;
+    process_buffer_desc.resource_cookie = descriptor_copy.resource_cookie;
+    process_buffer_desc.allocation = allocation;
+    process_buffer_desc.size_bytes = descriptor_copy.allocation.size_bytes;
+    process_buffer_desc.required_gpu_access =
+        descriptor_copy.required_gpu_access;
+    result = rin_gpu_process_buffer_bind_v1(&process_buffer_desc,
+                                            &process_buffer);
+    if (result != RIN_SUCCESS) {
+        RinResult cleanup_result = rin_gpu_memory_destroy_v1(
+            descriptor_copy.device_id, descriptor_copy.device_generation,
+            allocation);
+        if (cleanup_result != RIN_SUCCESS) {
+            rin_sdk_zero_bytes(&allocated_buffer, sizeof(allocated_buffer));
+            allocated_buffer.struct_size = sizeof(allocated_buffer);
+            allocated_buffer.version =
+                RIN_GPU_PROCESS_ALLOCATED_BUFFER_VERSION_V1;
+            allocated_buffer.state =
+                RIN_GPU_PROCESS_ALLOCATED_BUFFER_STATE_DESTROY_PENDING_V1;
+            allocated_buffer.desc = process_buffer_desc;
+            *buffer_out = allocated_buffer;
+            return cleanup_result;
+        }
+        return result;
+    }
+
+    rin_sdk_zero_bytes(&allocated_buffer, sizeof(allocated_buffer));
+    allocated_buffer.struct_size = sizeof(allocated_buffer);
+    allocated_buffer.version = RIN_GPU_PROCESS_ALLOCATED_BUFFER_VERSION_V1;
+    allocated_buffer.state =
+        RIN_GPU_PROCESS_ALLOCATED_BUFFER_STATE_BOUND_V1;
+    allocated_buffer.desc = process_buffer.desc;
+    *buffer_out = allocated_buffer;
+    return RIN_SUCCESS;
+}
+
+RinResult rin_gpu_process_allocated_buffer_destroy_v1(
+    RinGpuProcessAllocatedBufferV1* buffer) {
+    RinGpuProcessAllocatedBufferV1 buffer_copy;
+    RinResult result;
+
+    if (!buffer) return RIN_ERROR_INVALID_ARGUMENT;
+    buffer_copy = *buffer;
+    if (!gpu_process_allocated_buffer_valid(&buffer_copy))
+        return RIN_ERROR_INVALID_ARGUMENT;
+
+    if (buffer_copy.state ==
+        RIN_GPU_PROCESS_ALLOCATED_BUFFER_STATE_BOUND_V1) {
+        RinGpuProcessBufferV1 process_buffer;
+        rin_sdk_zero_bytes(&process_buffer, sizeof(process_buffer));
+        process_buffer.struct_size = sizeof(process_buffer);
+        process_buffer.version = RIN_GPU_PROCESS_BUFFER_VERSION_V1;
+        process_buffer.state = RIN_GPU_PROCESS_BUFFER_STATE_BOUND_V1;
+        process_buffer.desc = buffer_copy.desc;
+        result = rin_gpu_process_buffer_unbind_v1(&process_buffer);
+        if (result != RIN_SUCCESS) return result;
+        buffer_copy.state =
+            RIN_GPU_PROCESS_ALLOCATED_BUFFER_STATE_DESTROY_PENDING_V1;
+    }
+
+    result = rin_gpu_memory_destroy_v1(
+        buffer_copy.desc.device_id, buffer_copy.desc.device_generation,
+        buffer_copy.desc.allocation);
+    if (result != RIN_SUCCESS) {
+        *buffer = buffer_copy;
+        return result;
+    }
+    rin_sdk_zero_bytes(buffer, sizeof(*buffer));
+    return RIN_SUCCESS;
+}
+
 RinResult rin_gpu_process_buffer_sync_v1(
     const RinGpuProcessBufferV1* buffer, uint32_t action,
     uint64_t offset, uint64_t length) {
