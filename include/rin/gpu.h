@@ -678,6 +678,18 @@ RIN_SDK_API RinResult rin_gpu_process_buffer_bind_v1(
     RinGpuProcessBufferV1* buffer_out);
 RIN_SDK_API RinResult rin_gpu_process_buffer_unbind_v1(
     RinGpuProcessBufferV1* buffer);
+/* Bounded staging operations use the buffer's allocation-relative range.
+ * Each transfer remains subject to the SDK's 1 MiB limit and backend CPU
+ * visibility/coherency rules. */
+RIN_SDK_API RinResult rin_gpu_process_buffer_sync_v1(
+    const RinGpuProcessBufferV1* buffer, uint32_t action,
+    uint64_t offset, uint64_t length);
+RIN_SDK_API RinResult rin_gpu_process_buffer_upload_v1(
+    const RinGpuProcessBufferV1* buffer, uint64_t offset,
+    const void* source, uint64_t length);
+RIN_SDK_API RinResult rin_gpu_process_buffer_readback_v1(
+    const RinGpuProcessBufferV1* buffer, uint64_t offset,
+    void* destination, uint64_t length);
 /* Create a process-owned RSH1 module. The kernel copies and validates the
  * bounded byte slice before any backend callback; the token is never a
  * backend cookie. Destroy is BUSY while a pipeline or submission depends on

@@ -1332,6 +1332,17 @@ static int gpu_process_buffer_desc_valid(
            descriptor->reserved == 0u;
 }
 
+static int gpu_process_buffer_range_valid(
+    const RinGpuProcessBufferV1* buffer, uint64_t offset, uint64_t length) {
+    return buffer && buffer->struct_size == sizeof(*buffer) &&
+           buffer->version == RIN_GPU_PROCESS_BUFFER_VERSION_V1 &&
+           buffer->state == RIN_GPU_PROCESS_BUFFER_STATE_BOUND_V1 &&
+           buffer->reserved0 == 0u &&
+           gpu_process_buffer_desc_valid(&buffer->desc) && length != 0u &&
+           offset <= buffer->desc.size_bytes &&
+           length <= buffer->desc.size_bytes - offset;
+}
+
 RinResult rin_gpu_process_buffer_bind_v1(
     const RinGpuProcessBufferDescV1* descriptor,
     RinGpuProcessBufferV1* buffer_out) {
@@ -1388,6 +1399,39 @@ RinResult rin_gpu_process_buffer_unbind_v1(RinGpuProcessBufferV1* buffer) {
     if (result == RIN_SUCCESS)
         rin_sdk_zero_bytes(buffer, sizeof(*buffer));
     return result;
+}
+
+RinResult rin_gpu_process_buffer_sync_v1(
+    const RinGpuProcessBufferV1* buffer, uint32_t action,
+    uint64_t offset, uint64_t length) {
+    if (!gpu_process_buffer_range_valid(buffer, offset, length))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_gpu_memory_sync_v1(
+        buffer->desc.device_id, buffer->desc.device_generation,
+        buffer->desc.allocation, action,
+        buffer->desc.allocation_offset + offset, length);
+}
+
+RinResult rin_gpu_process_buffer_upload_v1(
+    const RinGpuProcessBufferV1* buffer, uint64_t offset,
+    const void* source, uint64_t length) {
+    if (!source || !gpu_process_buffer_range_valid(buffer, offset, length))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_gpu_memory_upload_v1(
+        buffer->desc.device_id, buffer->desc.device_generation,
+        buffer->desc.allocation, buffer->desc.allocation_offset + offset,
+        source, length);
+}
+
+RinResult rin_gpu_process_buffer_readback_v1(
+    const RinGpuProcessBufferV1* buffer, uint64_t offset,
+    void* destination, uint64_t length) {
+    if (!destination || !gpu_process_buffer_range_valid(buffer, offset, length))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_gpu_memory_readback_v1(
+        buffer->desc.device_id, buffer->desc.device_generation,
+        buffer->desc.allocation, buffer->desc.allocation_offset + offset,
+        destination, length);
 }
 
 RinResult rin_gpu_process_shader_module_create_v1(
