@@ -125,6 +125,7 @@
 #define RIN_SYS_BLOCK_READ                  107u
 #define RIN_SYS_BLOCK_WRITE                 108u
 #define RIN_SYS_BLOCK_FLUSH                 109u
+#define RIN_SYS_BLOCK_GET_INFO              112u
 /* debug. */
 #define RIN_SYS_SERIAL_PRINT                110u
 #define RIN_SYS_SERIAL_HEX                  111u

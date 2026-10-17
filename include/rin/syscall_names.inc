@@ -98,6 +98,7 @@
 [RIN_SYS_BLOCK_READ] = "block_read",
 [RIN_SYS_BLOCK_WRITE] = "block_write",
 [RIN_SYS_BLOCK_FLUSH] = "block_flush",
+[RIN_SYS_BLOCK_GET_INFO] = "block_get_info",
 [RIN_SYS_SERIAL_PRINT] = "serial_print",
 [RIN_SYS_SERIAL_HEX] = "serial_hex",
 [RIN_SYS_ARCH_PRCTL] = "arch_prctl",

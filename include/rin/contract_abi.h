@@ -772,6 +772,35 @@ typedef struct RinBlockInfoV1 {
     uint8_t model[64];
 } RinBlockInfoV1;
 
+/* V2 adds a kernel-assigned physical-root identity. block_id is the live
+ * generation-bound block object; physical_device_id is shared by derived
+ * block layers whose ancestry is fully owned by the kernel. A zero identity
+ * or missing flags means physical separation cannot be proven. */
+#define RIN_BLOCK_INFO_VERSION_2 2u
+#define RIN_BLOCK_IDENTITY_FLAG_GENERATION_BOUND UINT32_C(0x00000001)
+#define RIN_BLOCK_IDENTITY_FLAG_ANCESTRY_COMPLETE UINT32_C(0x00000002)
+#define RIN_BLOCK_IDENTITY_FLAG_MASK \
+    (RIN_BLOCK_IDENTITY_FLAG_GENERATION_BOUND | \
+     RIN_BLOCK_IDENTITY_FLAG_ANCESTRY_COMPLETE)
+
+typedef struct RinBlockInfoV2 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t block_id;
+    uint16_t transport;
+    uint16_t reserved0;
+    uint32_t logical_block_size;
+    uint32_t physical_block_size;
+    uint32_t optimal_transfer_blocks;
+    uint32_t max_transfer_blocks;
+    uint64_t block_count;
+    uint8_t name[32];
+    uint8_t model[64];
+    uint32_t physical_device_id;
+    uint32_t identity_flags;
+} RinBlockInfoV2;
+
 typedef struct RinBlockIoV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -1655,6 +1684,12 @@ static_assert(offsetof(RinBlockInfoV1, max_transfer_blocks) == 28, "RinBlockInfo
 static_assert(offsetof(RinBlockInfoV1, block_count) == 32, "RinBlockInfoV1.block_count ABI drift");
 static_assert(offsetof(RinBlockInfoV1, name) == 40, "RinBlockInfoV1.name ABI drift");
 static_assert(offsetof(RinBlockInfoV1, model) == 72, "RinBlockInfoV1.model ABI drift");
+static_assert(sizeof(RinBlockInfoV2) == 144, "RinBlockInfoV2 ABI drift");
+static_assert(offsetof(RinBlockInfoV2, struct_size) == 0, "RinBlockInfoV2.struct_size ABI drift");
+static_assert(offsetof(RinBlockInfoV2, version) == 4, "RinBlockInfoV2.version ABI drift");
+static_assert(offsetof(RinBlockInfoV2, block_id) == 8, "RinBlockInfoV2.block_id ABI drift");
+static_assert(offsetof(RinBlockInfoV2, physical_device_id) == 136, "RinBlockInfoV2.physical_device_id ABI drift");
+static_assert(offsetof(RinBlockInfoV2, identity_flags) == 140, "RinBlockInfoV2.identity_flags ABI drift");
 static_assert(sizeof(RinBlockIoV1) == 32, "RinBlockIoV1 ABI drift");
 static_assert(offsetof(RinBlockIoV1, struct_size) == 0, "RinBlockIoV1.struct_size ABI drift");
 static_assert(offsetof(RinBlockIoV1, version) == 4, "RinBlockIoV1.version ABI drift");
@@ -2444,6 +2479,12 @@ _Static_assert(offsetof(RinBlockInfoV1, max_transfer_blocks) == 28, "RinBlockInf
 _Static_assert(offsetof(RinBlockInfoV1, block_count) == 32, "RinBlockInfoV1.block_count ABI drift");
 _Static_assert(offsetof(RinBlockInfoV1, name) == 40, "RinBlockInfoV1.name ABI drift");
 _Static_assert(offsetof(RinBlockInfoV1, model) == 72, "RinBlockInfoV1.model ABI drift");
+_Static_assert(sizeof(RinBlockInfoV2) == 144, "RinBlockInfoV2 ABI drift");
+_Static_assert(offsetof(RinBlockInfoV2, struct_size) == 0, "RinBlockInfoV2.struct_size ABI drift");
+_Static_assert(offsetof(RinBlockInfoV2, version) == 4, "RinBlockInfoV2.version ABI drift");
+_Static_assert(offsetof(RinBlockInfoV2, block_id) == 8, "RinBlockInfoV2.block_id ABI drift");
+_Static_assert(offsetof(RinBlockInfoV2, physical_device_id) == 136, "RinBlockInfoV2.physical_device_id ABI drift");
+_Static_assert(offsetof(RinBlockInfoV2, identity_flags) == 140, "RinBlockInfoV2.identity_flags ABI drift");
 _Static_assert(sizeof(RinBlockIoV1) == 32, "RinBlockIoV1 ABI drift");
 _Static_assert(offsetof(RinBlockIoV1, struct_size) == 0, "RinBlockIoV1.struct_size ABI drift");
 _Static_assert(offsetof(RinBlockIoV1, version) == 4, "RinBlockIoV1.version ABI drift");

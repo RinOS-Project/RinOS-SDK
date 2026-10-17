@@ -105,6 +105,7 @@
 #define SYS_BLOCK_READ                  RIN_SYS_BLOCK_READ
 #define SYS_BLOCK_WRITE                 RIN_SYS_BLOCK_WRITE
 #define SYS_BLOCK_FLUSH                 RIN_SYS_BLOCK_FLUSH
+#define SYS_BLOCK_GET_INFO              RIN_SYS_BLOCK_GET_INFO
 #define SYS_SERIAL_PRINT                RIN_SYS_SERIAL_PRINT
 #define SYS_SERIAL_HEX                  RIN_SYS_SERIAL_HEX
 #define SYS_ARCH_PRCTL                  RIN_SYS_ARCH_PRCTL
