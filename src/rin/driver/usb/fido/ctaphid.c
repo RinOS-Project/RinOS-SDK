@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
-#include "ctaphid.h"
+#include <rin/driver/usb/fido/ctaphid.h>
 
 #include <stddef.h>
 
