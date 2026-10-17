@@ -777,7 +777,7 @@ typedef struct RinBlockInfoV1 {
     uint8_t model[64];
 } RinBlockInfoV1;
 
-/* Adds a kernel-assigned root-registration identity. physical_device_id is shared by derived layers whose ancestry is fully owned by the kernel. Root registration IDs do not establish that independent roots name different physical media; callers need MEDIA_UNIQUE_ATTESTED before treating IDs as media identities. Missing identity or flags means separation is unproven. */
+/* Adds a kernel-assigned physical-device group identity. Derived layers inherit the ID. ATA/AHCI roots reporting the same validated IDENTIFY DEVICE WWN share an ID across registrations; other roots retain independent registration IDs. A matching ID correlates roots, but a WWN is not unique-media attestation. Callers need MEDIA_UNIQUE_ATTESTED on both roots before treating different IDs as proof of separation. Missing identity or flags means separation is unproven. */
 typedef struct RinBlockInfoV2 {
     uint32_t struct_size;
     uint16_t version;
