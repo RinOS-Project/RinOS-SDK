@@ -835,7 +835,9 @@ RIN_SDK_API RinResult rin_gpu_process_sampler_create_v1(
     uint64_t device_id, uint64_t device_generation, uint64_t sampler_token,
     const RinGpuProcessSamplerDescV1* descriptor);
 /* Bind-group creation retains the authenticated process resource bindings
- * until the process object is destroyed. */
+ * until the process object is destroyed. A resource-free pipeline accepts
+ * the canonical empty set (bindings == NULL, binding_count == 0); a pipeline
+ * declaring resources requires its exact non-empty binding set. */
 RIN_SDK_API RinResult rin_gpu_process_compute_bind_group_create_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t bind_group_token, uint64_t pipeline_token,

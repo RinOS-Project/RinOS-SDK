@@ -1925,7 +1925,8 @@ RinResult rin_gpu_process_compute_bind_group_create_v1(
 
     if (device_id == 0u || device_generation == 0u ||
         bind_group_token == 0u || pipeline_token == 0u ||
-        bind_group_token == pipeline_token || !bindings || binding_count == 0u ||
+        bind_group_token == pipeline_token ||
+        ((binding_count == 0u) != (bindings == NULL)) ||
         binding_count > RIN_GPU_PROCESS_MAX_COMPUTE_BINDINGS_V1)
         return RIN_ERROR_INVALID_ARGUMENT;
     for (uint32_t index = 0u; index < binding_count; ++index) {
@@ -1948,7 +1949,8 @@ RinResult rin_gpu_process_compute_bind_group_create_v1(
     request.value[1] = device_generation;
     request.value[2] = bind_group_token;
     request.value[3] = pipeline_token;
-    request.value[4] = (uint64_t)(uintptr_t)binding_copy;
+    request.value[4] = binding_count == 0u
+        ? 0u : (uint64_t)(uintptr_t)binding_copy;
     request.value[5] = binding_count;
     return rin_sdk_invoke_v1(
         RIN_SDK_LIBRARY_GPU,
