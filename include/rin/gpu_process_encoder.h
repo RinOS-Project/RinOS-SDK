@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <float.h>
 #include <string.h>
 
 #ifdef __cplusplus
@@ -32,6 +33,13 @@ typedef struct RinGpuProcessCommandEncoderV1 {
     uint32_t command_count;
     uint64_t reserved[2];
 } RinGpuProcessCommandEncoderV1;
+
+typedef struct RinGpuProcessEncoderGraphicsStateV1 {
+    uint64_t color_target_cookie;
+    uint32_t mip_level;
+    uint32_t array_layer;
+    uint32_t render_pass_active;
+} RinGpuProcessEncoderGraphicsStateV1;
 
 static inline int rin_gpu_process_encoder_v1_zero_words(
     const uint64_t* words, size_t count)
@@ -78,6 +86,140 @@ static inline RinGpuResult rin_gpu_process_encoder_v1_validate(
     return RIN_GPU_OK;
 }
 
+static inline int rin_gpu_process_encoder_v1_finite_float(float value)
+{
+    return value == value && value <= FLT_MAX && value >= -FLT_MAX;
+}
+
+static inline int rin_gpu_process_encoder_v1_render_pass_valid(
+    const RinGpuBackendRenderPassBeginV1* pass)
+{
+    const RinGpuClearRegionV1* region;
+    if (!pass || pass->color_target_cookie == 0u ||
+        (pass->load_op != RIN_GPU_RENDER_LOAD &&
+         pass->load_op != RIN_GPU_RENDER_CLEAR) ||
+        pass->store_op != RIN_GPU_RENDER_STORE || pass->flags != 0u ||
+        pass->reserved != 0u || pass->reserved1 != 0u ||
+        (pass->color_write_mask & ~RIN_GPU_COLOR_WRITE_ALL) != 0u)
+        return 0;
+    region = &pass->clear_region;
+    if (region->enabled > 1u || region->reserved != 0u)
+        return 0;
+    if (region->enabled == 0u &&
+        (region->x != 0 || region->y != 0 || region->width != 0u ||
+         region->height != 0u))
+        return 0;
+    if (region->enabled != 0u && (region->x < 0 || region->y < 0))
+        return 0;
+    if (pass->load_op == RIN_GPU_RENDER_LOAD)
+        return pass->clear_red == 0.0f && pass->clear_green == 0.0f &&
+               pass->clear_blue == 0.0f && pass->clear_alpha == 0.0f &&
+               pass->color_write_mask == 0u;
+    return rin_gpu_process_encoder_v1_finite_float(pass->clear_red) &&
+           rin_gpu_process_encoder_v1_finite_float(pass->clear_green) &&
+           rin_gpu_process_encoder_v1_finite_float(pass->clear_blue) &&
+           rin_gpu_process_encoder_v1_finite_float(pass->clear_alpha);
+}
+
+static inline int rin_gpu_process_encoder_v1_draw_valid(
+    const RinGpuBackendDrawV1* draw)
+{
+    return draw && draw->pipeline_cookie != 0u &&
+           draw->color_target_cookie != 0u && draw->vertex_count != 0u &&
+           draw->vertex_count <= RIN_GPU_MAX_DRAW_VERTICES &&
+           draw->instance_count != 0u &&
+           draw->instance_count <= RIN_GPU_MAX_DRAW_INSTANCES &&
+           draw->first_vertex <= UINT32_MAX - draw->vertex_count &&
+           draw->first_instance <= UINT32_MAX - draw->instance_count &&
+           draw->reserved0 == 0u && draw->reserved1 == 0u;
+}
+
+/* Re-validate caller-owned records before append/submit.  The compact encoder
+ * only accepts its explicit buffer/compute subset outside a render pass and
+ * one color target for a graphics pass. */
+static inline RinGpuResult rin_gpu_process_encoder_v1_graphics_state(
+    const RinGpuProcessCommandEncoderV1* encoder,
+    RinGpuProcessEncoderGraphicsStateV1* state_out)
+{
+    RinGpuProcessEncoderGraphicsStateV1 state = {0u, 0u, 0u, 0u};
+    for (uint32_t index = 0u; index < encoder->command_count; ++index) {
+        const RinGpuBackendCommandV1* command = &encoder->commands[index];
+        if (command->reserved != 0u) return RIN_GPU_ERROR_INVALID_ARGUMENT;
+        switch (command->type) {
+        case RIN_GPU_BACKEND_COMMAND_COPY_BUFFER:
+            if (state.render_pass_active != 0u)
+                return RIN_GPU_ERROR_STATE;
+            if (command->value.buffer_copy.destination_cookie == 0u ||
+                command->value.buffer_copy.source_cookie == 0u ||
+                command->value.buffer_copy.size_bytes == 0u ||
+                command->value.buffer_copy.destination_offset >
+                    UINT64_MAX - command->value.buffer_copy.size_bytes ||
+                command->value.buffer_copy.source_offset >
+                    UINT64_MAX - command->value.buffer_copy.size_bytes)
+                return RIN_GPU_ERROR_INVALID_ARGUMENT;
+            break;
+        case RIN_GPU_BACKEND_COMMAND_CLEAR_BUFFER:
+            if (state.render_pass_active != 0u)
+                return RIN_GPU_ERROR_STATE;
+            if (command->value.buffer_clear.destination_cookie == 0u ||
+                command->value.buffer_clear.size_bytes == 0u ||
+                command->value.buffer_clear.offset >
+                    UINT64_MAX - command->value.buffer_clear.size_bytes ||
+                command->value.buffer_clear.reserved != 0u)
+                return RIN_GPU_ERROR_INVALID_ARGUMENT;
+            break;
+        case RIN_GPU_BACKEND_COMMAND_DISPATCH:
+            if (state.render_pass_active != 0u)
+                return RIN_GPU_ERROR_STATE;
+            if (command->value.dispatch.pipeline_cookie == 0u ||
+                command->value.dispatch.bind_group_cookie == 0u ||
+                command->value.dispatch.group_count_x == 0u ||
+                command->value.dispatch.group_count_y == 0u ||
+                command->value.dispatch.group_count_z == 0u ||
+                command->value.dispatch.reserved != 0u)
+                return RIN_GPU_ERROR_INVALID_ARGUMENT;
+            break;
+        case RIN_GPU_BACKEND_COMMAND_BEGIN_RENDER_PASS:
+            if (state.render_pass_active != 0u)
+                return RIN_GPU_ERROR_STATE;
+            if (!rin_gpu_process_encoder_v1_render_pass_valid(
+                    &command->value.render_pass_begin))
+                return RIN_GPU_ERROR_INVALID_ARGUMENT;
+            state.color_target_cookie =
+                command->value.render_pass_begin.color_target_cookie;
+            state.mip_level = command->value.render_pass_begin.mip_level;
+            state.array_layer =
+                command->value.render_pass_begin.array_layer;
+            state.render_pass_active = 1u;
+            break;
+        case RIN_GPU_BACKEND_COMMAND_DRAW:
+            if (state.render_pass_active == 0u)
+                return RIN_GPU_ERROR_STATE;
+            if (!rin_gpu_process_encoder_v1_draw_valid(
+                    &command->value.draw))
+                return RIN_GPU_ERROR_INVALID_ARGUMENT;
+            if (command->value.draw.color_target_cookie !=
+                    state.color_target_cookie ||
+                command->value.draw.mip_level != state.mip_level ||
+                command->value.draw.array_layer != state.array_layer)
+                return RIN_GPU_ERROR_STATE;
+            break;
+        case RIN_GPU_BACKEND_COMMAND_END_RENDER_PASS:
+            if (state.render_pass_active == 0u)
+                return RIN_GPU_ERROR_STATE;
+            state.color_target_cookie = 0u;
+            state.mip_level = 0u;
+            state.array_layer = 0u;
+            state.render_pass_active = 0u;
+            break;
+        default:
+            return RIN_GPU_ERROR_UNSUPPORTED;
+        }
+    }
+    if (state_out) *state_out = state;
+    return RIN_GPU_OK;
+}
+
 static inline RinGpuResult rin_gpu_process_command_encoder_init_v1(
     RinGpuProcessCommandEncoderV1* encoder,
     RinGpuBackendCommandV1* command_storage, uint32_t command_capacity)
@@ -115,8 +257,12 @@ static inline RinGpuResult rin_gpu_process_command_encoder_copy_buffer_v1(
     uint64_t source_offset, uint64_t size_bytes)
 {
     RinGpuBackendCommandV1* command;
+    RinGpuProcessEncoderGraphicsStateV1 state;
     RinGpuResult result = rin_gpu_process_encoder_v1_validate(encoder);
     if (result != RIN_GPU_OK) return result;
+    result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
+    if (result != RIN_GPU_OK) return result;
+    if (state.render_pass_active != 0u) return RIN_GPU_ERROR_STATE;
     if (destination_cookie == 0u || source_cookie == 0u || size_bytes == 0u)
         return RIN_GPU_ERROR_INVALID_ARGUMENT;
     if (destination_offset > UINT64_MAX - size_bytes ||
@@ -141,8 +287,12 @@ static inline RinGpuResult rin_gpu_process_command_encoder_clear_buffer_v1(
     uint64_t offset, uint64_t size_bytes, uint32_t pattern)
 {
     RinGpuBackendCommandV1* command;
+    RinGpuProcessEncoderGraphicsStateV1 state;
     RinGpuResult result = rin_gpu_process_encoder_v1_validate(encoder);
     if (result != RIN_GPU_OK) return result;
+    result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
+    if (result != RIN_GPU_OK) return result;
+    if (state.render_pass_active != 0u) return RIN_GPU_ERROR_STATE;
     if (destination_cookie == 0u || size_bytes == 0u)
         return RIN_GPU_ERROR_INVALID_ARGUMENT;
     if (offset > UINT64_MAX - size_bytes) return RIN_GPU_ERROR_BOUNDS;
@@ -165,8 +315,12 @@ static inline RinGpuResult rin_gpu_process_command_encoder_dispatch_v1(
     uint32_t group_count_y, uint32_t group_count_z)
 {
     RinGpuBackendCommandV1* command;
+    RinGpuProcessEncoderGraphicsStateV1 state;
     RinGpuResult result = rin_gpu_process_encoder_v1_validate(encoder);
     if (result != RIN_GPU_OK) return result;
+    result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
+    if (result != RIN_GPU_OK) return result;
+    if (state.render_pass_active != 0u) return RIN_GPU_ERROR_STATE;
     if (pipeline_cookie == 0u || bind_group_cookie == 0u ||
         group_count_x == 0u || group_count_y == 0u || group_count_z == 0u)
         return RIN_GPU_ERROR_INVALID_ARGUMENT;
@@ -184,12 +338,88 @@ static inline RinGpuResult rin_gpu_process_command_encoder_dispatch_v1(
     return RIN_GPU_OK;
 }
 
+static inline RinGpuResult rin_gpu_process_command_encoder_begin_render_pass_v1(
+    RinGpuProcessCommandEncoderV1* encoder,
+    const RinGpuBackendRenderPassBeginV1* descriptor)
+{
+    RinGpuBackendCommandV1* command;
+    RinGpuProcessEncoderGraphicsStateV1 state;
+    RinGpuResult result = rin_gpu_process_encoder_v1_validate(encoder);
+    if (result != RIN_GPU_OK) return result;
+    result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
+    if (result != RIN_GPU_OK) return result;
+    if (state.render_pass_active != 0u)
+        return RIN_GPU_ERROR_STATE;
+    if (!rin_gpu_process_encoder_v1_render_pass_valid(descriptor))
+        return RIN_GPU_ERROR_INVALID_ARGUMENT;
+    if (encoder->command_count == encoder->command_capacity)
+        return RIN_GPU_ERROR_LIMIT;
+    command = &encoder->commands[encoder->command_count];
+    memset(command, 0, sizeof(*command));
+    command->type = RIN_GPU_BACKEND_COMMAND_BEGIN_RENDER_PASS;
+    command->value.render_pass_begin = *descriptor;
+    ++encoder->command_count;
+    return RIN_GPU_OK;
+}
+
+static inline RinGpuResult rin_gpu_process_command_encoder_draw_v1(
+    RinGpuProcessCommandEncoderV1* encoder,
+    const RinGpuBackendDrawV1* descriptor)
+{
+    RinGpuBackendCommandV1* command;
+    RinGpuProcessEncoderGraphicsStateV1 state;
+    RinGpuResult result = rin_gpu_process_encoder_v1_validate(encoder);
+    if (result != RIN_GPU_OK) return result;
+    result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
+    if (result != RIN_GPU_OK) return result;
+    if (state.render_pass_active == 0u)
+        return RIN_GPU_ERROR_STATE;
+    if (!rin_gpu_process_encoder_v1_draw_valid(descriptor))
+        return RIN_GPU_ERROR_INVALID_ARGUMENT;
+    if (descriptor->color_target_cookie != state.color_target_cookie ||
+        descriptor->mip_level != state.mip_level ||
+        descriptor->array_layer != state.array_layer)
+        return RIN_GPU_ERROR_STATE;
+    if (encoder->command_count == encoder->command_capacity)
+        return RIN_GPU_ERROR_LIMIT;
+    command = &encoder->commands[encoder->command_count];
+    memset(command, 0, sizeof(*command));
+    command->type = RIN_GPU_BACKEND_COMMAND_DRAW;
+    command->value.draw = *descriptor;
+    ++encoder->command_count;
+    return RIN_GPU_OK;
+}
+
+static inline RinGpuResult rin_gpu_process_command_encoder_end_render_pass_v1(
+    RinGpuProcessCommandEncoderV1* encoder)
+{
+    RinGpuBackendCommandV1* command;
+    RinGpuProcessEncoderGraphicsStateV1 state;
+    RinGpuResult result = rin_gpu_process_encoder_v1_validate(encoder);
+    if (result != RIN_GPU_OK) return result;
+    result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
+    if (result != RIN_GPU_OK) return result;
+    if (state.render_pass_active == 0u)
+        return RIN_GPU_ERROR_STATE;
+    if (encoder->command_count == encoder->command_capacity)
+        return RIN_GPU_ERROR_LIMIT;
+    command = &encoder->commands[encoder->command_count];
+    memset(command, 0, sizeof(*command));
+    command->type = RIN_GPU_BACKEND_COMMAND_END_RENDER_PASS;
+    ++encoder->command_count;
+    return RIN_GPU_OK;
+}
+
 static inline RinGpuResult rin_gpu_process_command_encoder_make_submit_v2(
     const RinGpuProcessCommandEncoderV1* encoder,
     RinGpuProcessSubmitDescV2* descriptor_out)
 {
+    RinGpuProcessEncoderGraphicsStateV1 state;
     RinGpuResult result = rin_gpu_process_encoder_v1_validate(encoder);
     if (result != RIN_GPU_OK) return result;
+    result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
+    if (result != RIN_GPU_OK) return result;
+    if (state.render_pass_active != 0u) return RIN_GPU_ERROR_STATE;
     if (!descriptor_out || encoder->command_count == 0u ||
         rin_gpu_process_encoder_v1_ranges_overlap(
             encoder, sizeof(*encoder), descriptor_out, sizeof(*descriptor_out)) ||
