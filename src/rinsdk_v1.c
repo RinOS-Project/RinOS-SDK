@@ -195,7 +195,7 @@ static RinResult rin_sdk_invoke_scalar_output_v1(
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE) || \
     defined(RINSDK_BUILD_IPC) || defined(RINSDK_BUILD_NET) || \
     defined(RINSDK_BUILD_FS) || defined(RINSDK_BUILD_GUI) || \
-    defined(RINSDK_BUILD_MEDIA) || \
+    defined(RINSDK_BUILD_MEDIA) || defined(RINSDK_BUILD_CONFIG) || \
     defined(RINSDK_BUILD_PKG) || defined(RINSDK_BUILD_DEVICE)
 static RinResult rin_sdk_invoke_handle_output_v1(
     uint32_t library_id, uint32_t operation, const void* request,
