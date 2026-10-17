@@ -379,6 +379,8 @@ static inline int rin_ndrv_v3_usb_endpoint_configuration_valid(
     uint32_t address;
     uint32_t transactions;
     uint64_t interval_capacity;
+    uint64_t isoch_tbc_capacity;
+    uint32_t ssp_isochronous;
     if (!endpoint || endpoint->struct_size < sizeof(*endpoint) ||
         endpoint->version != RIN_DRIVER_V3_OPS_VERSION ||
         (endpoint->transfer_type != RIN_DRIVER_V3_USB_TRANSFER_INTERRUPT &&
@@ -394,24 +396,40 @@ static inline int rin_ndrv_v3_usb_endpoint_configuration_valid(
          (endpoint->interval == 0u || endpoint->interval > 16u)) ||
         endpoint->max_burst > 15u ||
         endpoint->transactions_per_interval > 3u ||
-        endpoint->reserved[1] != 0u)
+        (endpoint->reserved[1] != 0u &&
+         endpoint->reserved[1] !=
+             RIN_DRIVER_V3_USB_ENDPOINT_FLAG_SSP_ISOCHRONOUS))
         return 0;
+    ssp_isochronous = endpoint->reserved[1] ==
+                      RIN_DRIVER_V3_USB_ENDPOINT_FLAG_SSP_ISOCHRONOUS;
     transactions = endpoint->transactions_per_interval == 0u
         ? 1u : endpoint->transactions_per_interval;
     if (endpoint->transfer_type != RIN_DRIVER_V3_USB_TRANSFER_ISOCHRONOUS &&
-        (transactions != 1u || endpoint->reserved[0] != 0u))
+        (transactions != 1u || endpoint->reserved[0] != 0u ||
+         ssp_isochronous))
         return 0;
     if (endpoint->transfer_type == RIN_DRIVER_V3_USB_TRANSFER_ISOCHRONOUS) {
         interval_capacity = (uint64_t)endpoint->max_packet_size *
                             (endpoint->max_burst + 1u) * transactions;
+        isoch_tbc_capacity = (uint64_t)endpoint->max_packet_size *
+                             (endpoint->max_burst + 1u) *
+                             RIN_DRIVER_V3_USB_ISOCH_TRB_MAX_BURSTS;
         if (endpoint->reserved[0] == 0u) {
             /* Legacy USB 2.0 endpoint geometry. */
-            if (endpoint->max_burst != 0u ||
+            if (ssp_isochronous || endpoint->max_burst != 0u ||
                 transactions * endpoint->max_packet_size > 3072u)
+                return 0;
+        } else if (ssp_isochronous) {
+            if (endpoint->reserved[0] <=
+                    RIN_DRIVER_V3_USB_MAX_SS_ISOCH_ESIT_PAYLOAD ||
+                endpoint->reserved[0] >
+                    RIN_DRIVER_V3_USB_MAX_ISOCH_ESIT_PAYLOAD ||
+                transactions != 1u ||
+                endpoint->reserved[0] > isoch_tbc_capacity)
                 return 0;
         } else if (endpoint->reserved[0] < 2u ||
                    endpoint->reserved[0] >
-                       RIN_DRIVER_V3_USB_MAX_ISOCH_ESIT_PAYLOAD ||
+                       RIN_DRIVER_V3_USB_MAX_SS_ISOCH_ESIT_PAYLOAD ||
                    endpoint->reserved[0] > interval_capacity) {
             return 0;
         }
