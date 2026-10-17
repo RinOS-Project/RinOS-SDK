@@ -64,11 +64,11 @@ typedef struct RinCrashHistoryAckV1 {
     uint64_t sequence;
 } RinCrashHistoryAckV1;
 
-/* Read-only view of snapshots retained in the volatile pre-drain queue after
- * a storage failure. queue_sequence belongs only to this queue; summary.sequence
- * is zero and must never be sent to the durable history ACK interface. The
- * boot ID plus queue_sequence identifies an entry while crashd moves it to
- * durable local recovery storage. */
+/* Read-only view of a pending pre-drain entry. FAILED RAM entries are volatile;
+ * RQP1 entries are durable across reboot. queue_sequence belongs only to this
+ * queue and summary.sequence is zero, so it must never be sent to the RCD1
+ * history ACK interface. The boot ID plus queue_sequence identifies an entry
+ * while crashd moves it to durable local recovery storage. */
 typedef struct RinCrashPendingMinidumpV1 {
     uint64_t queue_sequence;
     RinCrashSummaryV1 summary;
@@ -100,9 +100,10 @@ int rin_crash_summary_get_local(RinCrashSummaryV1* summary);
  * corrupt; output records are cleared on failure. */
 int rin_crash_history_get_local(RinCrashHistoryQueryV1* query);
 
-/* Read pending volatile snapshots after an ambiguous/failed drain. Only the
- * signed crash diagnostic system service can call this API. It does not ACK,
- * mutate, or clear the queue. Output is cleared on failure. */
+/* Read pending durable RQP1 entries and volatile snapshots retained after an
+ * ambiguous/failed drain. Only the signed crash diagnostic system service can
+ * call this API. The read does not mutate either source. Output is cleared on
+ * failure. */
 int rin_crash_pending_minidumps_get_local(RinCrashPendingQueryV1* query);
 
 /* Persist the highest sequence durably handled by the authorized diagnostic
