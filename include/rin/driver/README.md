@@ -15,6 +15,9 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `serial.h` | Serial/TTY line configuration, memory-lease transfers, completion, and modem-line contracts. |
 | `bluetooth/hci.h` | Bluetooth HCI command/data packet, controller, event, and completion contracts. |
 | `wifi.h` | Wi-Fi scanning, regulatory channels, secure association, events, and the shared Network data path. |
+| `usb/audio/*.h` | USB Audio Class 1/2 descriptors, runtime stream negotiation, isochronous packet planning, and transport contracts. |
+| `usb/hid/*.h` | HID boot reports, pen and gamepad parsing, mapping/calibration support, and force-feedback records. |
+| `usb/fido/ctaphid.h` | CTAP-HID packet framing and transaction state for FIDO authenticators. |
 
 `module_api_v3.h` is the canonical OS-Core callback table. `resource_runtime_v3.h` supplies checked wrappers for the BAR, DMA, IRQ, timer, and registration records; call `rin_driver_runtime_init` before `rin_driver_runtime_start`, then release every acquired lease before stopping. Other callbacks, including DMA scatter/gather synchronization, PCI configuration, and extended service brokers, are provided by the canonical table and `services_v3.h`. The record layouts and numeric ABI values remain defined by their original types and macros.
 
@@ -27,3 +30,7 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `display/edid.h` and `src/rin/driver/display/edid.c` | EDID validation and display-mode parsing. |
 
 The shared VirtIO and EDID sources are executable SDK implementations intended for direct use by external Driver packages. Header-only broker and device-class APIs validate requests, results, and operation tables, then call the granted OS-Core operation table. A capability is usable only when OS-Core grants it with a complete provider. OS-Core policy, kernel object layouts, and NDRV v1/v2 compatibility interfaces remain outside this public include tree.
+
+The USB Audio, HID, and CTAP-HID parsers and packet helpers are also executable SDK sources under `src/rin/driver/usb/`; build them directly into the relevant Driver package or SDK library. USB descriptors, reports, and packet sizes are checked against fixed bounds before any data is exposed to a Driver.
+
+`services_v3.h` defines the public firmware and child-device records and checked calls. NDRV v3 packages may embed authenticated firmware with repeated `make_drv.py --firmware=NAME=PATH` options. The kernel verifies the signed resource catalog and payload digests, then returns bounded reads through a generation-bound lease. Child publication uses the kernel's bounded child catalog and returns a kernel-generated device identity. Neither capability is granted when its backing runtime service is unavailable.

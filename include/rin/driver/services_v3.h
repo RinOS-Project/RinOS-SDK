@@ -25,6 +25,53 @@
 #define RIN_DRIVER_V3_FIRMWARE_NAME_MAX 128u
 #define RIN_DRIVER_V3_FIRMWARE_MAX_READ UINT32_C(65536)
 #define RIN_DRIVER_V3_IRQ_EVENT_MAX_BATCH 64u
+#define RIN_DRIVER_V3_FIRMWARE_CATALOG_MAGIC UINT32_C(0x57464452) /* RDFW */
+#define RIN_DRIVER_V3_FIRMWARE_CATALOG_VERSION UINT16_C(1)
+#define RIN_DRIVER_V3_FIRMWARE_CATALOG_HEADER_SIZE 32u
+#define RIN_DRIVER_V3_FIRMWARE_CATALOG_ENTRY_SIZE 184u
+#define RIN_DRIVER_V3_FIRMWARE_CATALOG_MAX_ENTRIES 128u
+#define RIN_DRIVER_V3_FIRMWARE_CATALOG_MAX_SIZE UINT32_C(0x01000000)
+#define RIN_DRIVER_V3_FIRMWARE_ENTRY_AUTHENTICATED UINT32_C(0x00000001)
+
+/* Optional bytes in an NDRV v3 RESOURCES section. The NDRV signature covers
+ * this catalog and all payload bytes, so entries can be served directly from
+ * the read-only loaded image after the kernel checks their digest. */
+typedef struct RinDriverFirmwareCatalogV1 {
+    uint32_t magic;
+    uint16_t version;
+    uint16_t header_size;
+    uint32_t entry_count;
+    uint32_t entry_size;
+    uint32_t table_offset;
+    uint32_t data_offset;
+    uint32_t section_size;
+    uint32_t reserved;
+} RinDriverFirmwareCatalogV1;
+
+typedef struct RinDriverFirmwareEntryV1 {
+    uint32_t flags;
+    uint32_t name_length;
+    uint64_t data_offset;
+    uint64_t data_size;
+    uint8_t sha256[32];
+    char name[RIN_DRIVER_V3_FIRMWARE_NAME_MAX];
+} RinDriverFirmwareEntryV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinDriverFirmwareCatalogV1) == 32u,
+              "NDRV firmware catalog ABI drift");
+static_assert(sizeof(RinDriverFirmwareEntryV1) == 184u,
+              "NDRV firmware entry ABI drift");
+static_assert(offsetof(RinDriverFirmwareEntryV1, name) == 56u,
+              "NDRV firmware name offset drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinDriverFirmwareCatalogV1) == 32u,
+               "NDRV firmware catalog ABI drift");
+_Static_assert(sizeof(RinDriverFirmwareEntryV1) == 184u,
+               "NDRV firmware entry ABI drift");
+_Static_assert(offsetof(RinDriverFirmwareEntryV1, name) == 56u,
+               "NDRV firmware name offset drift");
+#endif
 
 typedef struct RinDriverV3IoPortLease {
     uint32_t struct_size;
