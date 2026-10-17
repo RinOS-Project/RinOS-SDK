@@ -11,7 +11,9 @@
 #include "pkg.h"
 #include "device.h"
 #include "gpu.h"
+#if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GPU)
 #include "gpu_graphics_pipeline_owner_v1.h"
+#endif
 #include "service.h"
 #include "keyring.h"
 #include "syscall_abi.h"
