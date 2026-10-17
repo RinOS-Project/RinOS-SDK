@@ -701,6 +701,19 @@ void* memchr(const void* memory, int character, size_t length)
     return (void*)0;
 }
 
+int memcmp(const void* left, const void* right, size_t length)
+{
+    const unsigned char* left_bytes = (const unsigned char*)left;
+    const unsigned char* right_bytes = (const unsigned char*)right;
+    while (length-- != 0u) {
+        if (*left_bytes != *right_bytes)
+            return (int)*left_bytes - (int)*right_bytes;
+        ++left_bytes;
+        ++right_bytes;
+    }
+    return 0;
+}
+
 size_t strlen(const char* text)
 {
     size_t length = 0u;

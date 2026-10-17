@@ -4,7 +4,7 @@
   "targets": ["i686-unknown-rinos", "x86_64-unknown-rinos"],
   "include_directory": "include",
   "libraries": {
-    "rincrt": {"archive": "librincrt.ra", "shared": "rincrt.rll", "define": "RINSDK_BUILD_CORE", "dependencies": [], "extra_sources": ["rincrt_bootstrap_v1.c"]},
+    "rincrt": {"archive": "librincrt.ra", "shared": "rincrt.rll", "define": "RINSDK_BUILD_CORE", "dependencies": [], "extra_sources": ["rincrt_bootstrap_v1.c", "../../libs/libc/rin_user_allocator.c"]},
     "rinbase": {"archive": "librinbase.ra", "shared": "rinbase.rll", "define": "RINSDK_BUILD_BASE", "dependencies": ["rincrt"]},
     "rinipc": {"archive": "librinipc.ra", "shared": "rinipc.rll", "define": "RINSDK_BUILD_IPC", "dependencies": ["rincrt", "rinbase"]},
     "rinfs": {"archive": "librinfs.ra", "shared": "rinfs.rll", "define": "RINSDK_BUILD_FS", "dependencies": ["rincrt", "rinbase", "rinipc"]},
