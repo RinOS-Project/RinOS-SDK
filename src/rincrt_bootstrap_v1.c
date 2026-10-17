@@ -189,19 +189,19 @@ __attribute__((naked, returns_twice))
 int setjmp(RinCrtJmpBuf env __attribute__((unused)))
 {
     __asm__ __volatile__(
-        "mov %rdi, %rax\n"
-        "mov %rbx, 0(%rax)\n"
-        "mov %rbp, 8(%rax)\n"
-        "mov %r12, 16(%rax)\n"
-        "mov %r13, 24(%rax)\n"
-        "mov %r14, 32(%rax)\n"
-        "mov %r15, 40(%rax)\n"
-        "lea 8(%rsp), %rdx\n"
-        "mov %rdx, 48(%rax)\n"
-        "mov (%rsp), %rdx\n"
-        "mov %rdx, 56(%rax)\n"
-        "xor %eax, %eax\n"
-        "ret\n");
+        "mov %%rdi, %%rax\n"
+        "mov %%rbx, 0(%%rax)\n"
+        "mov %%rbp, 8(%%rax)\n"
+        "mov %%r12, 16(%%rax)\n"
+        "mov %%r13, 24(%%rax)\n"
+        "mov %%r14, 32(%%rax)\n"
+        "mov %%r15, 40(%%rax)\n"
+        "lea 8(%%rsp), %%rdx\n"
+        "mov %%rdx, 48(%%rax)\n"
+        "mov (%%rsp), %%rdx\n"
+        "mov %%rdx, 56(%%rax)\n"
+        "xor %%eax, %%eax\n"
+        "ret\n" : : :);
 }
 
 __attribute__((naked, noreturn))
@@ -209,38 +209,38 @@ void longjmp(RinCrtJmpBuf env __attribute__((unused)),
              int value __attribute__((unused)))
 {
     __asm__ __volatile__(
-        "mov %rdi, %rdx\n"
-        "mov %esi, %eax\n"
-        "test %eax, %eax\n"
+        "mov %%rdi, %%rdx\n"
+        "mov %%esi, %%eax\n"
+        "test %%eax, %%eax\n"
         "jnz 1f\n"
-        "mov $1, %eax\n"
+        "mov $1, %%eax\n"
         "1:\n"
-        "mov 0(%rdx), %rbx\n"
-        "mov 8(%rdx), %rbp\n"
-        "mov 16(%rdx), %r12\n"
-        "mov 24(%rdx), %r13\n"
-        "mov 32(%rdx), %r14\n"
-        "mov 40(%rdx), %r15\n"
-        "mov 48(%rdx), %rsp\n"
-        "mov 56(%rdx), %rcx\n"
-        "jmp *%rcx\n");
+        "mov 0(%%rdx), %%rbx\n"
+        "mov 8(%%rdx), %%rbp\n"
+        "mov 16(%%rdx), %%r12\n"
+        "mov 24(%%rdx), %%r13\n"
+        "mov 32(%%rdx), %%r14\n"
+        "mov 40(%%rdx), %%r15\n"
+        "mov 48(%%rdx), %%rsp\n"
+        "mov 56(%%rdx), %%rcx\n"
+        "jmp *%%rcx\n" : : :);
 }
 #elif defined(__i386__) || defined(_M_IX86)
 __attribute__((naked, returns_twice))
 int setjmp(RinCrtJmpBuf env __attribute__((unused)))
 {
     __asm__ __volatile__(
-        "mov 4(%esp), %eax\n"
-        "mov %ebx, 0(%eax)\n"
-        "mov %esi, 4(%eax)\n"
-        "mov %edi, 8(%eax)\n"
-        "mov %ebp, 12(%eax)\n"
-        "lea 4(%esp), %edx\n"
-        "mov %edx, 16(%eax)\n"
-        "mov (%esp), %edx\n"
-        "mov %edx, 20(%eax)\n"
-        "xor %eax, %eax\n"
-        "ret\n");
+        "mov 4(%%esp), %%eax\n"
+        "mov %%ebx, 0(%%eax)\n"
+        "mov %%esi, 4(%%eax)\n"
+        "mov %%edi, 8(%%eax)\n"
+        "mov %%ebp, 12(%%eax)\n"
+        "lea 4(%%esp), %%edx\n"
+        "mov %%edx, 16(%%eax)\n"
+        "mov (%%esp), %%edx\n"
+        "mov %%edx, 20(%%eax)\n"
+        "xor %%eax, %%eax\n"
+        "ret\n" : : :);
 }
 
 __attribute__((naked, noreturn))
@@ -248,19 +248,19 @@ void longjmp(RinCrtJmpBuf env __attribute__((unused)),
              int value __attribute__((unused)))
 {
     __asm__ __volatile__(
-        "mov 4(%esp), %edx\n"
-        "mov 8(%esp), %eax\n"
-        "test %eax, %eax\n"
+        "mov 4(%%esp), %%edx\n"
+        "mov 8(%%esp), %%eax\n"
+        "test %%eax, %%eax\n"
         "jnz 1f\n"
-        "mov $1, %eax\n"
+        "mov $1, %%eax\n"
         "1:\n"
-        "mov 0(%edx), %ebx\n"
-        "mov 4(%edx), %esi\n"
-        "mov 8(%edx), %edi\n"
-        "mov 12(%edx), %ebp\n"
-        "mov 16(%edx), %esp\n"
-        "mov 20(%edx), %ecx\n"
-        "jmp *%ecx\n");
+        "mov 0(%%edx), %%ebx\n"
+        "mov 4(%%edx), %%esi\n"
+        "mov 8(%%edx), %%edi\n"
+        "mov 12(%%edx), %%ebp\n"
+        "mov 16(%%edx), %%esp\n"
+        "mov 20(%%edx), %%ecx\n"
+        "jmp *%%ecx\n" : : :);
 }
 #endif
 
@@ -382,7 +382,8 @@ static void rincrt_cpp_exception_throw_owned(
 __attribute__((noreturn, no_stack_protector))
 void rin_cpp_exception_throw(uintptr_t value, uintptr_t type)
 {
-    rincrt_cpp_exception_throw_owned(value, type, (void*)0);
+    rincrt_cpp_exception_throw_owned(
+        value, type, (RinCrtCppExceptionCleanup)0);
 }
 
 __attribute__((noreturn, no_stack_protector))
@@ -399,7 +400,8 @@ void rin_cpp_exception_throw_object(const void* object, uintptr_t size,
     copy = (unsigned char*)rin_user_allocator_malloc((size_t)size);
     if (!copy) _exit(1);
     for (index = 0u; index < size; ++index) copy[index] = source[index];
-    rincrt_cpp_exception_throw_owned((uintptr_t)copy, type, (void*)0);
+    rincrt_cpp_exception_throw_owned(
+        (uintptr_t)copy, type, (RinCrtCppExceptionCleanup)0);
 }
 
 __attribute__((noreturn, no_stack_protector))
@@ -431,7 +433,8 @@ void rin_cpp_exception_release_frame(RinCrtCppExceptionFrame* frame)
         rincrt_cpp_exception_current_cleanup) {
         RinCrtCppExceptionCleanup cleanup =
             rincrt_cpp_exception_current_cleanup;
-        rincrt_cpp_exception_current_cleanup = (void*)0;
+        rincrt_cpp_exception_current_cleanup =
+            (RinCrtCppExceptionCleanup)0;
         cleanup((void*)frame->value);
     }
     rin_user_allocator_free((void*)frame->value);
@@ -447,7 +450,8 @@ void rin_cpp_exception_rethrow_frame(RinCrtCppExceptionFrame* frame)
         frame->value, frame->type,
         frame->value == rincrt_cpp_exception_current_value &&
                 frame->type == rincrt_cpp_exception_current_type
-            ? rincrt_cpp_exception_current_cleanup : (void*)0);
+            ? rincrt_cpp_exception_current_cleanup
+            : (RinCrtCppExceptionCleanup)0);
 }
 
 __attribute__((noreturn, no_stack_protector))
@@ -549,13 +553,10 @@ static intptr_t rincrt_raw_syscall6(uintptr_t number, uintptr_t first,
 {
     intptr_t result;
 #if defined(__x86_64__)
-    register uintptr_t r10 __asm__("r10") = fourth;
-    register uintptr_t r8 __asm__("r8") = fifth;
-    register uintptr_t r9 __asm__("r9") = sixth;
     __asm__ __volatile__("syscall"
                          : "=a"(result)
                          : "a"(number), "D"(first), "S"(second), "d"(third),
-                           "r"(r10), "r"(r8), "r"(r9)
+                           "{r10}"(fourth), "{r8}"(fifth), "{r9}"(sixth)
                          : "rcx", "r11", "memory");
 #else
     __asm__ __volatile__(
