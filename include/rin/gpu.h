@@ -32,6 +32,9 @@ extern "C" {
 #define RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_QUEUE_TIMELINE_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_RESOURCE_BINDING_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_BUFFER_DESC_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_BUFFER_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_BUFFER_STATE_BOUND_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_MAX_COMMANDS_V1 UINT32_C(1024)
 #define RIN_GPU_PROCESS_MAX_RESOURCES_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
@@ -142,6 +145,33 @@ typedef struct RinGpuProcessResourceBindingV1 {
     uint32_t required_gpu_access;
     uint32_t reserved;
 } RinGpuProcessResourceBindingV1;
+
+/* Typed process-owned buffer view over an existing allocation. Binding
+ * acquires the kernel's authenticated process-resource lease for this exact
+ * allocation range. This record owns the binding, not the allocation. */
+typedef struct RinGpuProcessBufferDescV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t device_id;
+    uint64_t device_generation;
+    uint64_t resource_cookie;
+    RinGpuAllocationV1 allocation;
+    uint64_t allocation_offset;
+    uint64_t size_bytes;
+    uint32_t required_gpu_access;
+    uint32_t reserved;
+} RinGpuProcessBufferDescV1;
+
+/* A successful bind publishes this live owner. Unbind clears it only after
+ * the kernel confirms that the exact process binding and lease are gone; on
+ * any failure the record remains intact for a caller retry. */
+typedef struct RinGpuProcessBufferV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t state;
+    uint32_t reserved0;
+    RinGpuProcessBufferDescV1 desc;
+} RinGpuProcessBufferV1;
 
 /* A process-owned compute bind-group entry. The range is relative to the
  * process resource cookie, not a GPUVA or physical address. */
@@ -640,6 +670,14 @@ RIN_SDK_API RinResult rin_gpu_process_resource_bind_v1(
 RIN_SDK_API RinResult rin_gpu_process_resource_unbind_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t resource_cookie);
+/* Bind/unbind a typed buffer owner using the existing authenticated
+ * process-resource ABI. A failed bind leaves `buffer_out` unchanged. A failed
+ * unbind leaves the live owner unchanged so cleanup can be retried. */
+RIN_SDK_API RinResult rin_gpu_process_buffer_bind_v1(
+    const RinGpuProcessBufferDescV1* descriptor,
+    RinGpuProcessBufferV1* buffer_out);
+RIN_SDK_API RinResult rin_gpu_process_buffer_unbind_v1(
+    RinGpuProcessBufferV1* buffer);
 /* Create a process-owned RSH1 module. The kernel copies and validates the
  * bounded byte slice before any backend callback; the token is never a
  * backend cookie. Destroy is BUSY while a pipeline or submission depends on
@@ -728,6 +766,10 @@ static_assert(sizeof(RinGpuProcessDirectDisplayResponseV1) == 4136u,
               "RinGpuProcessDirectDisplayResponseV1 ABI drift");
 static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
               "RinGpuProcessResourceBindingV1 ABI drift");
+static_assert(sizeof(RinGpuProcessBufferDescV1) == 64u,
+              "RinGpuProcessBufferDescV1 ABI drift");
+static_assert(sizeof(RinGpuProcessBufferV1) == 80u,
+              "RinGpuProcessBufferV1 ABI drift");
 static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
               "RinGpuProcessComputeBindingV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
@@ -779,6 +821,10 @@ _Static_assert(sizeof(RinGpuProcessDirectDisplayResponseV1) == 4136u,
                "RinGpuProcessDirectDisplayResponseV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessResourceBindingV1) == 48u,
                "RinGpuProcessResourceBindingV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessBufferDescV1) == 64u,
+               "RinGpuProcessBufferDescV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessBufferV1) == 80u,
+               "RinGpuProcessBufferV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
                "RinGpuProcessComputeBindingV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,

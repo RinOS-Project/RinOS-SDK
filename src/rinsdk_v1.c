@@ -1315,6 +1315,81 @@ RinResult rin_gpu_process_resource_unbind_v1(
                 resource_cookie, 0, 0, 0);
 }
 
+static int gpu_process_buffer_desc_valid(
+    const RinGpuProcessBufferDescV1* descriptor) {
+    return descriptor && descriptor->struct_size == sizeof(*descriptor) &&
+           descriptor->version == RIN_GPU_PROCESS_BUFFER_DESC_VERSION_V1 &&
+           descriptor->device_id != 0u &&
+           descriptor->device_generation != 0u &&
+           descriptor->resource_cookie != 0u &&
+           descriptor->allocation != 0u && descriptor->size_bytes != 0u &&
+           descriptor->allocation_offset <=
+               UINT64_MAX - descriptor->size_bytes &&
+           descriptor->required_gpu_access != 0u &&
+           (descriptor->required_gpu_access &
+            ~(RIN_GPU_ALLOCATION_GPU_READ | RIN_GPU_ALLOCATION_GPU_WRITE)) ==
+               0u &&
+           descriptor->reserved == 0u;
+}
+
+RinResult rin_gpu_process_buffer_bind_v1(
+    const RinGpuProcessBufferDescV1* descriptor,
+    RinGpuProcessBufferV1* buffer_out) {
+    RinGpuProcessBufferDescV1 descriptor_copy;
+    RinGpuProcessResourceBindingV1 binding;
+    RinGpuProcessBufferV1 buffer;
+    RinResult result;
+
+    if (!descriptor || !buffer_out)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    descriptor_copy = *descriptor;
+    if (!gpu_process_buffer_desc_valid(&descriptor_copy))
+        return RIN_ERROR_INVALID_ARGUMENT;
+
+    rin_sdk_zero_bytes(&binding, sizeof(binding));
+    binding.struct_size = sizeof(binding);
+    binding.version = RIN_GPU_PROCESS_RESOURCE_BINDING_VERSION_V1;
+    binding.resource_cookie = descriptor_copy.resource_cookie;
+    binding.allocation = descriptor_copy.allocation;
+    binding.allocation_offset = descriptor_copy.allocation_offset;
+    binding.size_bytes = descriptor_copy.size_bytes;
+    binding.required_gpu_access = descriptor_copy.required_gpu_access;
+    result = rin_gpu_process_resource_bind_v1(
+        descriptor_copy.device_id, descriptor_copy.device_generation,
+        &binding);
+    if (result != RIN_SUCCESS)
+        return result;
+
+    rin_sdk_zero_bytes(&buffer, sizeof(buffer));
+    buffer.struct_size = sizeof(buffer);
+    buffer.version = RIN_GPU_PROCESS_BUFFER_VERSION_V1;
+    buffer.state = RIN_GPU_PROCESS_BUFFER_STATE_BOUND_V1;
+    buffer.desc = descriptor_copy;
+    *buffer_out = buffer;
+    return RIN_SUCCESS;
+}
+
+RinResult rin_gpu_process_buffer_unbind_v1(RinGpuProcessBufferV1* buffer) {
+    RinGpuProcessBufferV1 buffer_copy;
+    RinResult result;
+
+    if (!buffer) return RIN_ERROR_INVALID_ARGUMENT;
+    buffer_copy = *buffer;
+    if (buffer_copy.struct_size != sizeof(buffer_copy) ||
+        buffer_copy.version != RIN_GPU_PROCESS_BUFFER_VERSION_V1 ||
+        buffer_copy.state != RIN_GPU_PROCESS_BUFFER_STATE_BOUND_V1 ||
+        buffer_copy.reserved0 != 0u ||
+        !gpu_process_buffer_desc_valid(&buffer_copy.desc))
+        return RIN_ERROR_INVALID_ARGUMENT;
+
+    result = rin_gpu_process_resource_unbind_v1(
+        buffer_copy.desc.device_id, buffer_copy.desc.device_generation,
+        buffer_copy.desc.resource_cookie);
+    if (result == RIN_SUCCESS)
+        rin_sdk_zero_bytes(buffer, sizeof(*buffer));
+    return result;
+}
+
 RinResult rin_gpu_process_shader_module_create_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t shader_module_token, const void* rin_shader_ir,
