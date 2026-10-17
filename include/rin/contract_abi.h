@@ -772,16 +772,20 @@ typedef struct RinBlockInfoV1 {
     uint8_t model[64];
 } RinBlockInfoV1;
 
-/* V2 adds a kernel-assigned physical-root identity. block_id is the live
+/* V2 adds a kernel-assigned root-registration identity. block_id is the live
  * generation-bound block object; physical_device_id is shared by derived
- * block layers whose ancestry is fully owned by the kernel. A zero identity
- * or missing flags means physical separation cannot be proven. */
+ * layers whose ancestry is fully owned by the kernel. Root registration IDs
+ * do not establish that independent roots name different physical media;
+ * callers need MEDIA_UNIQUE_ATTESTED as well before treating IDs as media
+ * identities. Missing identity or flags means separation is unproven. */
 #define RIN_BLOCK_INFO_VERSION_2 2u
 #define RIN_BLOCK_IDENTITY_FLAG_GENERATION_BOUND UINT32_C(0x00000001)
 #define RIN_BLOCK_IDENTITY_FLAG_ANCESTRY_COMPLETE UINT32_C(0x00000002)
+#define RIN_BLOCK_IDENTITY_FLAG_MEDIA_UNIQUE_ATTESTED UINT32_C(0x00000004)
 #define RIN_BLOCK_IDENTITY_FLAG_MASK \
     (RIN_BLOCK_IDENTITY_FLAG_GENERATION_BOUND | \
-     RIN_BLOCK_IDENTITY_FLAG_ANCESTRY_COMPLETE)
+     RIN_BLOCK_IDENTITY_FLAG_ANCESTRY_COMPLETE | \
+     RIN_BLOCK_IDENTITY_FLAG_MEDIA_UNIQUE_ATTESTED)
 
 typedef struct RinBlockInfoV2 {
     uint32_t struct_size;
