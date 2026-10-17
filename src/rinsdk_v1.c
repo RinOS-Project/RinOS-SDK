@@ -1401,6 +1401,184 @@ RinResult rin_gpu_process_buffer_unbind_v1(RinGpuProcessBufferV1* buffer) {
     return result;
 }
 
+static int gpu_process_buffer_mapping_valid(
+    const RinGpuProcessBufferMappingV1* mapping) {
+    if (!mapping || mapping->struct_size != sizeof(*mapping) ||
+        mapping->version != RIN_GPU_PROCESS_BUFFER_MAPPING_VERSION_V1 ||
+        mapping->device_id == 0u || mapping->device_generation == 0u ||
+        mapping->allocation == 0u || mapping->mapping == 0u ||
+        (mapping->access & ~(RIN_GPU_MAP_CPU_READ |
+                             RIN_GPU_MAP_CPU_WRITE)) != 0u ||
+        mapping->access == 0u || mapping->reserved != 0u)
+        return 0;
+
+    if (mapping->state ==
+        RIN_GPU_PROCESS_BUFFER_MAPPING_STATE_UNMAP_PENDING_V1)
+        return mapping->address == 0u && mapping->allocation_offset == 0u &&
+               mapping->size_bytes == 0u;
+
+    return mapping->state ==
+               RIN_GPU_PROCESS_BUFFER_MAPPING_STATE_MAPPED_V1 &&
+           mapping->address != 0u && mapping->size_bytes != 0u &&
+           mapping->allocation_offset <=
+               UINT64_MAX - mapping->size_bytes &&
+           mapping->address <= (uint64_t)UINTPTR_MAX &&
+           mapping->size_bytes - 1u <=
+               (uint64_t)UINTPTR_MAX - mapping->address;
+}
+
+static void gpu_process_buffer_mapping_set_pending(
+    RinGpuProcessBufferMappingV1* destination,
+    const RinGpuProcessBufferDescV1* buffer, uint32_t access,
+    uint64_t mapping_token) {
+    RinGpuProcessBufferMappingV1 pending;
+
+    rin_sdk_zero_bytes(&pending, sizeof(pending));
+    pending.struct_size = sizeof(pending);
+    pending.version = RIN_GPU_PROCESS_BUFFER_MAPPING_VERSION_V1;
+    pending.state = RIN_GPU_PROCESS_BUFFER_MAPPING_STATE_UNMAP_PENDING_V1;
+    pending.access = access;
+    pending.device_id = buffer->device_id;
+    pending.device_generation = buffer->device_generation;
+    pending.allocation = buffer->allocation;
+    pending.mapping = mapping_token;
+    *destination = pending;
+}
+
+static int gpu_process_buffer_mapping_output_empty(
+    const RinGpuProcessBufferMappingV1* mapping) {
+    const unsigned char* bytes = (const unsigned char*)mapping;
+
+    for (size_t index = 0u; index < sizeof(*mapping); ++index)
+        if (bytes[index] != 0u) return 0;
+    return 1;
+}
+
+RinResult rin_gpu_process_buffer_map_v1(
+    const RinGpuProcessBufferV1* buffer,
+    uint32_t access,
+    RinGpuProcessBufferMappingV1* mapping_out) {
+    RinGpuProcessBufferV1 buffer_copy;
+    RinGpuMemoryMappingV1 allocation_mapping;
+    RinGpuProcessBufferMappingV1 mapping;
+    uint64_t view_end;
+    uint64_t view_address;
+    RinResult result;
+
+    if (!buffer || !mapping_out ||
+        (access & ~(RIN_GPU_MAP_CPU_READ | RIN_GPU_MAP_CPU_WRITE)) != 0u ||
+        access == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (!gpu_process_buffer_mapping_output_empty(mapping_out))
+        return gpu_process_buffer_mapping_valid(mapping_out)
+                   ? RIN_ERROR_BUSY
+                   : RIN_ERROR_INVALID_ARGUMENT;
+    buffer_copy = *buffer;
+    if (!gpu_process_buffer_range_valid(&buffer_copy, 0u,
+                                       buffer_copy.desc.size_bytes) ||
+        buffer_copy.desc.allocation_offset >
+            UINT64_MAX - buffer_copy.desc.size_bytes)
+        return RIN_ERROR_INVALID_ARGUMENT;
+
+    rin_sdk_zero_bytes(&allocation_mapping, sizeof(allocation_mapping));
+    allocation_mapping.struct_size = sizeof(allocation_mapping);
+    allocation_mapping.version = RIN_SDK_STRUCT_VERSION_1;
+    result = rin_gpu_memory_map_v1(
+        buffer_copy.desc.device_id, buffer_copy.desc.device_generation,
+        buffer_copy.desc.allocation, access, &allocation_mapping);
+    if (result != RIN_SUCCESS) {
+        if (allocation_mapping.mapping != 0u &&
+            allocation_mapping.struct_size == sizeof(allocation_mapping) &&
+            allocation_mapping.version == RIN_SDK_STRUCT_VERSION_1 &&
+            allocation_mapping.access == access &&
+            allocation_mapping.reserved0 == 0u &&
+            allocation_mapping.allocation == buffer_copy.desc.allocation &&
+            allocation_mapping.address == 0u &&
+            allocation_mapping.size_bytes == 0u &&
+            allocation_mapping.device_generation ==
+                buffer_copy.desc.device_generation &&
+            allocation_mapping.reserved == 0u) {
+            gpu_process_buffer_mapping_set_pending(
+                mapping_out, &buffer_copy.desc, access,
+                allocation_mapping.mapping);
+        }
+        return result;
+    }
+
+    view_end = buffer_copy.desc.allocation_offset +
+               buffer_copy.desc.size_bytes;
+    if (allocation_mapping.allocation != buffer_copy.desc.allocation ||
+        allocation_mapping.device_generation !=
+            buffer_copy.desc.device_generation ||
+        allocation_mapping.access != access ||
+        allocation_mapping.address == 0u ||
+        allocation_mapping.address > (uint64_t)UINTPTR_MAX ||
+        view_end > allocation_mapping.size_bytes ||
+        buffer_copy.desc.allocation_offset > UINT64_MAX -
+            allocation_mapping.address) {
+        RinResult cleanup_result = rin_gpu_memory_unmap_v1(
+            buffer_copy.desc.device_id, buffer_copy.desc.device_generation,
+            buffer_copy.desc.allocation, allocation_mapping.mapping);
+        if (cleanup_result != RIN_SUCCESS) {
+            gpu_process_buffer_mapping_set_pending(
+                mapping_out, &buffer_copy.desc, access,
+                allocation_mapping.mapping);
+            return cleanup_result;
+        }
+        return RIN_ERROR_ABI_MISMATCH;
+    }
+
+    view_address = allocation_mapping.address +
+                   buffer_copy.desc.allocation_offset;
+    if (view_address > (uint64_t)UINTPTR_MAX ||
+        buffer_copy.desc.size_bytes - 1u >
+            (uint64_t)UINTPTR_MAX - view_address) {
+        RinResult cleanup_result = rin_gpu_memory_unmap_v1(
+            buffer_copy.desc.device_id, buffer_copy.desc.device_generation,
+            buffer_copy.desc.allocation, allocation_mapping.mapping);
+        if (cleanup_result != RIN_SUCCESS) {
+            gpu_process_buffer_mapping_set_pending(
+                mapping_out, &buffer_copy.desc, access,
+                allocation_mapping.mapping);
+            return cleanup_result;
+        }
+        return RIN_ERROR_ABI_MISMATCH;
+    }
+
+    rin_sdk_zero_bytes(&mapping, sizeof(mapping));
+    mapping.struct_size = sizeof(mapping);
+    mapping.version = RIN_GPU_PROCESS_BUFFER_MAPPING_VERSION_V1;
+    mapping.state = RIN_GPU_PROCESS_BUFFER_MAPPING_STATE_MAPPED_V1;
+    mapping.access = access;
+    mapping.device_id = buffer_copy.desc.device_id;
+    mapping.device_generation = buffer_copy.desc.device_generation;
+    mapping.allocation = buffer_copy.desc.allocation;
+    mapping.mapping = allocation_mapping.mapping;
+    mapping.address = view_address;
+    mapping.allocation_offset = buffer_copy.desc.allocation_offset;
+    mapping.size_bytes = buffer_copy.desc.size_bytes;
+    *mapping_out = mapping;
+    return RIN_SUCCESS;
+}
+
+RinResult rin_gpu_process_buffer_unmap_v1(
+    RinGpuProcessBufferMappingV1* mapping) {
+    RinGpuProcessBufferMappingV1 mapping_copy;
+    RinResult result;
+
+    if (!mapping) return RIN_ERROR_INVALID_ARGUMENT;
+    mapping_copy = *mapping;
+    if (!gpu_process_buffer_mapping_valid(&mapping_copy))
+        return RIN_ERROR_INVALID_ARGUMENT;
+
+    result = rin_gpu_memory_unmap_v1(
+        mapping_copy.device_id, mapping_copy.device_generation,
+        mapping_copy.allocation, mapping_copy.mapping);
+    if (result == RIN_SUCCESS)
+        rin_sdk_zero_bytes(mapping, sizeof(*mapping));
+    return result;
+}
+
 RinResult rin_gpu_process_buffer_sync_v1(
     const RinGpuProcessBufferV1* buffer, uint32_t action,
     uint64_t offset, uint64_t length) {

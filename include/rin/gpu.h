@@ -35,6 +35,9 @@ extern "C" {
 #define RIN_GPU_PROCESS_BUFFER_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_BUFFER_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_BUFFER_STATE_BOUND_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_BUFFER_MAPPING_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_BUFFER_MAPPING_STATE_MAPPED_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_BUFFER_MAPPING_STATE_UNMAP_PENDING_V1 UINT32_C(2)
 #define RIN_GPU_PROCESS_MAX_COMMANDS_V1 UINT32_C(1024)
 #define RIN_GPU_PROCESS_MAX_RESOURCES_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
@@ -172,6 +175,24 @@ typedef struct RinGpuProcessBufferV1 {
     uint32_t reserved0;
     RinGpuProcessBufferDescV1 desc;
 } RinGpuProcessBufferV1;
+
+/* A CPU mapping owner exposes only the bound buffer view, even though the
+ * kernel mapping lease covers its backing allocation. A failed cleanup keeps
+ * an address-free UNMAP_PENDING record so the lease can be retried safely. */
+typedef struct RinGpuProcessBufferMappingV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t state;
+    uint32_t access;
+    uint64_t device_id;
+    uint64_t device_generation;
+    RinGpuAllocationV1 allocation;
+    uint64_t mapping;
+    uint64_t address;
+    uint64_t allocation_offset;
+    uint64_t size_bytes;
+    uint64_t reserved;
+} RinGpuProcessBufferMappingV1;
 
 /* A process-owned compute bind-group entry. The range is relative to the
  * process resource cookie, not a GPUVA or physical address. */
@@ -678,6 +699,16 @@ RIN_SDK_API RinResult rin_gpu_process_buffer_bind_v1(
     RinGpuProcessBufferV1* buffer_out);
 RIN_SDK_API RinResult rin_gpu_process_buffer_unbind_v1(
     RinGpuProcessBufferV1* buffer);
+/* The mapping owner exposes only this buffer's allocation-relative view.
+ * mapping_out must be zero-initialized and unused. A live output is rejected
+ * to prevent losing its lease. If backend validation fails and cleanup also
+ * fails, map_out receives an address-free UNMAP_PENDING token that must be
+ * retried with unmap_v1. */
+RIN_SDK_API RinResult rin_gpu_process_buffer_map_v1(
+    const RinGpuProcessBufferV1* buffer, uint32_t access,
+    RinGpuProcessBufferMappingV1* mapping_out);
+RIN_SDK_API RinResult rin_gpu_process_buffer_unmap_v1(
+    RinGpuProcessBufferMappingV1* mapping);
 /* Bounded staging operations use the buffer's allocation-relative range.
  * Each transfer remains subject to the SDK's 1 MiB limit and backend CPU
  * visibility/coherency rules. */
@@ -782,6 +813,8 @@ static_assert(sizeof(RinGpuProcessBufferDescV1) == 64u,
               "RinGpuProcessBufferDescV1 ABI drift");
 static_assert(sizeof(RinGpuProcessBufferV1) == 80u,
               "RinGpuProcessBufferV1 ABI drift");
+static_assert(sizeof(RinGpuProcessBufferMappingV1) == 80u,
+              "RinGpuProcessBufferMappingV1 ABI drift");
 static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
               "RinGpuProcessComputeBindingV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
@@ -837,6 +870,8 @@ _Static_assert(sizeof(RinGpuProcessBufferDescV1) == 64u,
                "RinGpuProcessBufferDescV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessBufferV1) == 80u,
                "RinGpuProcessBufferV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessBufferMappingV1) == 80u,
+               "RinGpuProcessBufferMappingV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
                "RinGpuProcessComputeBindingV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
