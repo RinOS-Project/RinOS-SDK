@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-#include "uac1_descriptor_v1.h"
+#include <rin/driver/usb/audio/uac1_descriptor_v1.h>
 
 #define USB_DESCRIPTOR_CONFIGURATION 2u
 #define USB_DESCRIPTOR_INTERFACE 4u

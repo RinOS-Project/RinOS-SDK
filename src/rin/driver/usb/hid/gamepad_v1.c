@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-#include "gamepad_v1.h"
+#include <rin/driver/usb/hid/gamepad_v1.h>
 
 #define HID_ITEM_TYPE_MAIN 0u
 #define HID_ITEM_TYPE_GLOBAL 1u

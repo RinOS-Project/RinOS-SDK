@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
-#include "gamepad_mapping_v1.h"
+#include <rin/driver/usb/hid/gamepad_mapping_v1.h>
 
 static void mapping_zero(void* value, uint32_t size)
 {

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
-#include "gamepad_pid_effects_v1.h"
+#include <rin/driver/usb/hid/gamepad_pid_effects_v1.h>
 
 static void pid_zero(void* value, uint32_t size)
 {

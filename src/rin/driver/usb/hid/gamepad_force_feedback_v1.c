@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
-#include "gamepad_force_feedback_v1.h"
+#include <rin/driver/usb/hid/gamepad_force_feedback_v1.h>
 
 #include <stddef.h>
 
