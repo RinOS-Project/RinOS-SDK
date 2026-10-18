@@ -14,6 +14,7 @@
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GPU)
 #include "gpu_graphics_bind_group_owner_v1.h"
 #include "gpu_graphics_pipeline_owner_v1.h"
+#include "gpu_process_graphics_binding_v2.h"
 #endif
 #include "service.h"
 #include "keyring.h"
