@@ -260,9 +260,14 @@ typedef struct RinGpuProcessGraphicsBindingV1 {
     uint32_t access;
 } RinGpuProcessGraphicsBindingV1;
 
-/* Bounded, API-neutral process graphics-pipeline profile. Color format and
+/* Bounded, API-neutral process graphics-pipeline V1 profile. Color format and
  * primitive topology use RinGPU's stable enum values; Vulkan types are not
- * part of the RinOS process ABI. */
+ * part of the RinOS process ABI. The shader interface is intentionally
+ * position-only: vertex input_count must be zero, RSH1 vertex output slots
+ * [0, 4) are the Float32 position, fragment input_count must be zero, and
+ * the fragment shader declares exactly four scalar color slots. Inter-stage
+ * varyings require a later descriptor version with an explicit location/type
+ * map; they are not inferred from aggregate RSH1 slot counts. */
 typedef struct RinGpuProcessGraphicsPipelineDescV1 {
     uint32_t struct_size;
     uint32_t version;
