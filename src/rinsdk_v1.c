@@ -1958,6 +1958,58 @@ RinResult rin_gpu_process_compute_bind_group_create_v1(
         sizeof(request), (void*)0, 0u);
 }
 
+RinResult rin_gpu_process_graphics_bind_group_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t bind_group_token, uint64_t pipeline_token,
+    const RinGpuProcessGraphicsBindingV1* bindings, uint32_t binding_count) {
+    RinGpuProcessGraphicsBindingV1 binding_copy[
+        RIN_GPU_PROCESS_MAX_GRAPHICS_BINDINGS_V1];
+    uint64_t seen_bindings = 0u;
+    RinSdkArgsV1 request;
+
+    if (device_id == 0u || device_generation == 0u ||
+        bind_group_token == 0u || pipeline_token == 0u ||
+        bind_group_token == pipeline_token || !bindings ||
+        binding_count == 0u ||
+        binding_count > RIN_GPU_PROCESS_MAX_GRAPHICS_BINDINGS_V1)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    for (uint32_t index = 0u; index < binding_count; ++index) {
+        const RinGpuProcessGraphicsBindingV1* binding = &bindings[index];
+        if (binding->struct_size != sizeof(*binding) ||
+            binding->version != RIN_GPU_PROCESS_GRAPHICS_BINDING_VERSION_V1 ||
+            binding->resource_cookie == 0u || binding->size_bytes == 0u ||
+            binding->offset > UINT64_MAX - binding->size_bytes ||
+            binding->binding >= binding_count ||
+            (seen_bindings & (UINT64_C(1) << binding->binding)) != 0u ||
+            (binding->offset & 3u) != 0u ||
+            (binding->size_bytes & 3u) != 0u || binding->access == 0u ||
+            (binding->access & ~(RIN_GPU_ALLOCATION_GPU_READ |
+                                 RIN_GPU_ALLOCATION_GPU_WRITE)) != 0u)
+            return RIN_ERROR_INVALID_ARGUMENT;
+        seen_bindings |= UINT64_C(1) << binding->binding;
+        binding_copy[index] = *binding;
+    }
+    if (seen_bindings !=
+        (binding_count == 64u
+             ? UINT64_MAX
+             : ((UINT64_C(1) << binding_count) - UINT64_C(1))))
+        return RIN_ERROR_INVALID_ARGUMENT;
+
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = bind_group_token;
+    request.value[3] = pipeline_token;
+    request.value[4] = (uint64_t)(uintptr_t)binding_copy;
+    request.value[5] = binding_count;
+    return rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU,
+        RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE, &request,
+        sizeof(request), (void*)0, 0u);
+}
+
 static int gpu_process_query_type_valid(uint32_t query_type) {
     return query_type == RIN_GPU_PROCESS_QUERY_TIMESTAMP_V1 ||
            query_type == RIN_GPU_PROCESS_QUERY_OCCLUSION_V1 ||

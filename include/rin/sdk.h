@@ -11,6 +11,7 @@
 #include "pkg.h"
 #include "device.h"
 #include "gpu.h"
+#include "gpu_graphics_bind_group_owner_v1.h"
 #include "gpu_graphics_pipeline_owner_v1.h"
 #include "service.h"
 #include "keyring.h"

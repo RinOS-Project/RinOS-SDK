@@ -48,6 +48,8 @@ extern "C" {
 #define RIN_GPU_PROCESS_MAX_QUEUES_V1 UINT32_C(8)
 #define RIN_GPU_PROCESS_MAX_COMPUTE_BINDINGS_V1 UINT32_C(64)
 #define RIN_GPU_PROCESS_COMPUTE_BINDING_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_MAX_GRAPHICS_BINDINGS_V1 UINT32_C(64)
+#define RIN_GPU_PROCESS_GRAPHICS_BINDING_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_GRAPHICS_PIPELINE_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SAMPLER_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SAMPLER_FILTER_NEAREST_V1 UINT32_C(1)
@@ -145,7 +147,8 @@ enum RinGpuSdkOperationV1 {
      * resource cookies; callers never need a foreign allocation handle. */
     RIN_GPU_SDK_PROCESS_SUBMIT_V2 = 25,
     RIN_GPU_SDK_PROCESS_GRAPHICS_PIPELINE_CREATE = 26,
-    RIN_GPU_SDK_PROCESS_SAMPLER_CREATE = 27
+    RIN_GPU_SDK_PROCESS_SAMPLER_CREATE = 27,
+    RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE = 28
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -241,6 +244,19 @@ typedef struct RinGpuProcessComputeBindingV1 {
     uint32_t access;
     uint32_t reserved;
 } RinGpuProcessComputeBindingV1;
+
+/* A process-owned graphics storage-buffer binding. `binding` is the shader
+ * binding index; access uses RIN_GPU_ALLOCATION_GPU_{READ,WRITE}. This
+ * API-independent record contains no backend handle or address. */
+typedef struct RinGpuProcessGraphicsBindingV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t resource_cookie;
+    uint64_t offset;
+    uint64_t size_bytes;
+    uint32_t binding;
+    uint32_t access;
+} RinGpuProcessGraphicsBindingV1;
 
 /* Bounded, API-neutral process graphics-pipeline profile. Color format and
  * primitive topology use RinGPU's stable enum values; Vulkan types are not
@@ -842,6 +858,12 @@ RIN_SDK_API RinResult rin_gpu_process_compute_bind_group_create_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t bind_group_token, uint64_t pipeline_token,
     const RinGpuProcessComputeBindingV1* bindings, uint32_t binding_count);
+/* Create a graphics bind group from authenticated process resource cookies.
+ * The current process ABI supports storage-buffer bindings only. */
+RIN_SDK_API RinResult rin_gpu_process_graphics_bind_group_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t bind_group_token, uint64_t pipeline_token,
+    const RinGpuProcessGraphicsBindingV1* bindings, uint32_t binding_count);
 /* Query creation and result retrieval use an opaque process token. Results
  * return successfully with `available == 0` while submitted work is pending. */
 RIN_SDK_API RinResult rin_gpu_process_query_create_v1(
