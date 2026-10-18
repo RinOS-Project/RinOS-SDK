@@ -198,6 +198,9 @@ static inline int rin_gpu_process_image_view_v1_valid(
     if (view->dimension == RIN_GPU_PROCESS_IMAGE_DIMENSION_2D_V1 &&
         view->depth != 1u)
         return 0;
+    if (view->dimension == RIN_GPU_PROCESS_IMAGE_DIMENSION_3D_V1 &&
+        view->array_layers != 1u)
+        return 0;
     max_dimension = view->width;
     if (view->height > max_dimension) max_dimension = view->height;
     if (view->depth > max_dimension) max_dimension = view->depth;
