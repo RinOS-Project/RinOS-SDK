@@ -309,6 +309,78 @@ static inline RinGpuResult rin_gpu_process_command_encoder_clear_buffer_v1(
     return RIN_GPU_OK;
 }
 
+/* Validate a borrowed, live process-buffer owner and the requested access
+ * range before translating it to the cookie-based canonical command. This
+ * does not retain the owner: callers must keep every referenced buffer bound
+ * through submit and completion. The authenticated kernel still resolves the
+ * cookie and acquires its own allocation lease at submit time. */
+static inline RinGpuResult rin_gpu_process_encoder_v1_buffer_range_status(
+    const RinGpuProcessBufferV1* buffer, uint32_t access,
+    uint64_t offset, uint64_t size_bytes)
+{
+    const uint32_t known_access = RIN_GPU_ALLOCATION_GPU_READ |
+                                  RIN_GPU_ALLOCATION_GPU_WRITE;
+
+    if (!buffer || buffer->struct_size != sizeof(*buffer) ||
+        buffer->version != RIN_GPU_PROCESS_BUFFER_VERSION_V1 ||
+        buffer->state != RIN_GPU_PROCESS_BUFFER_STATE_BOUND_V1 ||
+        buffer->reserved0 != 0u ||
+        buffer->desc.struct_size != sizeof(buffer->desc) ||
+        buffer->desc.version != RIN_GPU_PROCESS_BUFFER_DESC_VERSION_V1 ||
+        buffer->desc.device_id == 0u ||
+        buffer->desc.device_generation == 0u ||
+        buffer->desc.resource_cookie == 0u || buffer->desc.allocation == 0u ||
+        buffer->desc.size_bytes == 0u || buffer->desc.reserved != 0u ||
+        buffer->desc.required_gpu_access == 0u ||
+        (buffer->desc.required_gpu_access & ~known_access) != 0u ||
+        access == 0u || (access & ~known_access) != 0u ||
+        (access & buffer->desc.required_gpu_access) != access ||
+        buffer->desc.allocation_offset >
+            UINT64_MAX - buffer->desc.size_bytes)
+        return RIN_GPU_ERROR_INVALID_ARGUMENT;
+    if (size_bytes == 0u || offset > buffer->desc.size_bytes ||
+        size_bytes > buffer->desc.size_bytes - offset)
+        return RIN_GPU_ERROR_BOUNDS;
+    return RIN_GPU_OK;
+}
+
+static inline RinGpuResult
+rin_gpu_process_command_encoder_copy_process_buffers_v1(
+    RinGpuProcessCommandEncoderV1* encoder,
+    const RinGpuProcessBufferV1* destination, uint64_t destination_offset,
+    const RinGpuProcessBufferV1* source, uint64_t source_offset,
+    uint64_t size_bytes)
+{
+    RinGpuResult result = rin_gpu_process_encoder_v1_buffer_range_status(
+        destination, RIN_GPU_ALLOCATION_GPU_WRITE, destination_offset,
+        size_bytes);
+    if (result != RIN_GPU_OK) return result;
+    result = rin_gpu_process_encoder_v1_buffer_range_status(
+        source, RIN_GPU_ALLOCATION_GPU_READ, source_offset, size_bytes);
+    if (result != RIN_GPU_OK) return result;
+    if (destination->desc.device_id != source->desc.device_id ||
+        destination->desc.device_generation !=
+            source->desc.device_generation)
+        return RIN_GPU_ERROR_STATE;
+    return rin_gpu_process_command_encoder_copy_buffer_v1(
+        encoder, destination->desc.resource_cookie, destination_offset,
+        source->desc.resource_cookie, source_offset, size_bytes);
+}
+
+static inline RinGpuResult
+rin_gpu_process_command_encoder_clear_process_buffer_v1(
+    RinGpuProcessCommandEncoderV1* encoder,
+    const RinGpuProcessBufferV1* destination, uint64_t offset,
+    uint64_t size_bytes, uint32_t pattern)
+{
+    RinGpuResult result = rin_gpu_process_encoder_v1_buffer_range_status(
+        destination, RIN_GPU_ALLOCATION_GPU_WRITE, offset, size_bytes);
+    if (result != RIN_GPU_OK) return result;
+    return rin_gpu_process_command_encoder_clear_buffer_v1(
+        encoder, destination->desc.resource_cookie, offset, size_bytes,
+        pattern);
+}
+
 static inline RinGpuResult rin_gpu_process_command_encoder_dispatch_v1(
     RinGpuProcessCommandEncoderV1* encoder, uint64_t pipeline_cookie,
     uint64_t bind_group_cookie, uint32_t group_count_x,
