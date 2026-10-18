@@ -14,6 +14,7 @@
 #define RIN_CRASH_HISTORY_MAX_RECORDS UINT16_C(2)
 #define RIN_CRASH_PENDING_QUERY_VERSION UINT16_C(2)
 #define RIN_CRASH_PENDING_MAX_RECORDS UINT16_C(1)
+#define RIN_CRASH_PENDING_ACK_VERSION UINT16_C(1)
 
 /* Pointer-free, bounded model for a future local diagnostic viewer. This
  * structure grants no authority to transmit or delete its source record. */
@@ -63,6 +64,17 @@ typedef struct RinCrashHistoryAckV1 {
     uint16_t reserved;
     uint64_t sequence;
 } RinCrashHistoryAckV1;
+
+/* Distinct-size request routed through SYS_CRASH_SUMMARY_GET. It acknowledges
+ * the oldest pending pre-drain entry only after crashd durably exports it.
+ * queue_sequence belongs to the pending queue, not the RCD1 history. */
+typedef struct RinCrashPendingAckV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved;
+    uint64_t queue_sequence;
+    uint64_t reserved2;
+} RinCrashPendingAckV1;
 
 /* Read-only view of a pending pre-drain entry. FAILED RAM entries are volatile;
  * RQP1 entries are durable across reboot. queue_sequence belongs only to this
@@ -121,6 +133,8 @@ static_assert(sizeof(RinCrashHistoryQueryV1) == 4456u,
               "RinCrashHistoryQueryV1 ABI drift");
 static_assert(sizeof(RinCrashHistoryAckV1) == 16u,
               "RinCrashHistoryAckV1 ABI drift");
+static_assert(sizeof(RinCrashPendingAckV1) == 24u,
+              "RinCrashPendingAckV1 ABI drift");
 static_assert(sizeof(RinCrashPendingMinidumpV1) == 2224u,
               "RinCrashPendingMinidumpV1 ABI drift");
 static_assert(sizeof(RinCrashPendingQueryV1) == 2248u,
@@ -132,6 +146,8 @@ _Static_assert(sizeof(RinCrashHistoryQueryV1) == 4456u,
                "RinCrashHistoryQueryV1 ABI drift");
 _Static_assert(sizeof(RinCrashHistoryAckV1) == 16u,
                "RinCrashHistoryAckV1 ABI drift");
+_Static_assert(sizeof(RinCrashPendingAckV1) == 24u,
+               "RinCrashPendingAckV1 ABI drift");
 _Static_assert(sizeof(RinCrashPendingMinidumpV1) == 2224u,
                "RinCrashPendingMinidumpV1 ABI drift");
 _Static_assert(sizeof(RinCrashPendingQueryV1) == 2248u,
