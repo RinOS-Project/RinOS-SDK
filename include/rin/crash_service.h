@@ -16,6 +16,11 @@
 #define RIN_CRASH_SERVICE_OP_APPEND_DIAGNOSTIC UINT16_C(4)
 #define RIN_CRASH_SERVICE_OP_HANDOFF_REPORT UINT16_C(5)
 #define RIN_CRASH_SERVICE_OP_QUERY_RECOVERY_CRASH UINT16_C(6)
+#define RIN_CRASH_SERVICE_OP_EXPORT_MINIDUMP UINT16_C(7)
+#define RIN_CRASH_SERVICE_OP_READ_HISTORY UINT16_C(8)
+#define RIN_CRASH_SERVICE_OP_PURGE_HISTORY UINT16_C(9)
+#define RIN_CRASH_SERVICE_OP_LEGACY_HISTORY_STATUS UINT16_C(10)
+#define RIN_CRASH_SERVICE_OP_PURGE_LEGACY_HISTORY UINT16_C(11)
 
 #define RIN_CRASH_SERVICE_STATUS_CONSENT_REQUIRED INT32_C(-1000)
 
@@ -73,6 +78,38 @@ typedef struct RinCrashConsentProofV1 {
     uint8_t authenticator[32];
     uint64_t reserved[2];
 } RinCrashConsentProofV1;
+
+/* The status contains a count and sequence high-water only; it never exposes
+ * crash contents. A system administrator displays this exact count before
+ * invoking the separate, physically consented purge operation. */
+#define RIN_CRASH_SERVICE_LEGACY_HISTORY_STATUS_VERSION UINT16_C(1)
+#define RIN_CRASH_SERVICE_LEGACY_HISTORY_PURGE_VERSION UINT16_C(1)
+#define RIN_CRASH_SERVICE_LEGACY_HISTORY_MAX_RECORDS UINT32_C(64)
+typedef struct RinCrashServiceLegacyHistoryStatusQueryV1 {
+    uint16_t version;
+    uint16_t reserved0;
+    uint32_t reserved1;
+} RinCrashServiceLegacyHistoryStatusQueryV1;
+
+typedef struct RinCrashServiceLegacyHistoryStatusV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    uint32_t inaccessible_record_count;
+    uint32_t reserved1;
+    uint64_t through_sequence;
+} RinCrashServiceLegacyHistoryStatusV1;
+
+/* The expected count and sequence bind the user's confirmation to the status
+ * shown immediately before purge. The kernel consent proof is fresh and bound
+ * to this exact request and authenticated connection. */
+typedef struct RinCrashServiceLegacyHistoryPurgeV1 {
+    RinCrashConsentProofV1 proof;
+    uint64_t through_sequence;
+    uint32_t expected_inaccessible_record_count;
+    uint16_t version;
+    uint16_t reserved;
+} RinCrashServiceLegacyHistoryPurgeV1;
 
 /* Registration stores only authenticated identity and opaque document
  * metadata. Recovery plaintext and filesystem paths remain in the owning
@@ -146,6 +183,12 @@ static_assert(sizeof(RinCrashServiceStatusV1) == 32u,
               "RinCrashServiceStatusV1 ABI drift");
 static_assert(sizeof(RinCrashConsentProofV1) == 128u,
               "RinCrashConsentProofV1 ABI drift");
+static_assert(sizeof(RinCrashServiceLegacyHistoryStatusQueryV1) == 8u,
+              "RinCrashServiceLegacyHistoryStatusQueryV1 ABI drift");
+static_assert(sizeof(RinCrashServiceLegacyHistoryStatusV1) == 24u,
+              "RinCrashServiceLegacyHistoryStatusV1 ABI drift");
+static_assert(sizeof(RinCrashServiceLegacyHistoryPurgeV1) == 144u,
+              "RinCrashServiceLegacyHistoryPurgeV1 ABI drift");
 static_assert(sizeof(RinCrashRecoveryRegistrationV1) == 152u,
               "RinCrashRecoveryRegistrationV1 ABI drift");
 static_assert(sizeof(RinCrashDiagnosticLogV1) == 288u,
@@ -159,6 +202,12 @@ _Static_assert(sizeof(RinCrashServiceStatusV1) == 32u,
                "RinCrashServiceStatusV1 ABI drift");
 _Static_assert(sizeof(RinCrashConsentProofV1) == 128u,
                "RinCrashConsentProofV1 ABI drift");
+_Static_assert(sizeof(RinCrashServiceLegacyHistoryStatusQueryV1) == 8u,
+               "RinCrashServiceLegacyHistoryStatusQueryV1 ABI drift");
+_Static_assert(sizeof(RinCrashServiceLegacyHistoryStatusV1) == 24u,
+               "RinCrashServiceLegacyHistoryStatusV1 ABI drift");
+_Static_assert(sizeof(RinCrashServiceLegacyHistoryPurgeV1) == 144u,
+               "RinCrashServiceLegacyHistoryPurgeV1 ABI drift");
 _Static_assert(sizeof(RinCrashRecoveryRegistrationV1) == 152u,
                "RinCrashRecoveryRegistrationV1 ABI drift");
 _Static_assert(sizeof(RinCrashDiagnosticLogV1) == 288u,
