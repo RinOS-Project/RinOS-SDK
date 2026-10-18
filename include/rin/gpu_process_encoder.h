@@ -425,6 +425,38 @@ rin_gpu_process_command_encoder_copy_process_allocated_buffers_v1(
 }
 
 static inline RinGpuResult
+rin_gpu_process_command_encoder_copy_process_buffer_to_allocated_buffer_v1(
+    RinGpuProcessCommandEncoderV1* encoder,
+    const RinGpuProcessAllocatedBufferV1* destination,
+    uint64_t destination_offset, const RinGpuProcessBufferV1* source,
+    uint64_t source_offset, uint64_t size_bytes)
+{
+    RinGpuProcessBufferV1 destination_view;
+    RinGpuResult result = rin_gpu_process_encoder_v1_allocated_buffer_view(
+        destination, &destination_view);
+    if (result != RIN_GPU_OK) return result;
+    return rin_gpu_process_command_encoder_copy_process_buffers_v1(
+        encoder, &destination_view, destination_offset, source, source_offset,
+        size_bytes);
+}
+
+static inline RinGpuResult
+rin_gpu_process_command_encoder_copy_process_allocated_buffer_to_buffer_v1(
+    RinGpuProcessCommandEncoderV1* encoder,
+    const RinGpuProcessBufferV1* destination, uint64_t destination_offset,
+    const RinGpuProcessAllocatedBufferV1* source, uint64_t source_offset,
+    uint64_t size_bytes)
+{
+    RinGpuProcessBufferV1 source_view;
+    RinGpuResult result = rin_gpu_process_encoder_v1_allocated_buffer_view(
+        source, &source_view);
+    if (result != RIN_GPU_OK) return result;
+    return rin_gpu_process_command_encoder_copy_process_buffers_v1(
+        encoder, destination, destination_offset, &source_view, source_offset,
+        size_bytes);
+}
+
+static inline RinGpuResult
 rin_gpu_process_command_encoder_clear_process_allocated_buffer_v1(
     RinGpuProcessCommandEncoderV1* encoder,
     const RinGpuProcessAllocatedBufferV1* destination, uint64_t offset,
