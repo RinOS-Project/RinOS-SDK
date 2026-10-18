@@ -150,7 +150,8 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_GRAPHICS_PIPELINE_CREATE = 26,
     RIN_GPU_SDK_PROCESS_SAMPLER_CREATE = 27,
     RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE = 28,
-    RIN_GPU_SDK_PROCESS_IMAGE_CREATE = 29
+    RIN_GPU_SDK_PROCESS_IMAGE_CREATE = 29,
+    RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE_V2 = 30
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -877,6 +878,12 @@ RIN_SDK_API RinResult rin_gpu_process_graphics_bind_group_create_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t bind_group_token, uint64_t pipeline_token,
     const RinGpuProcessGraphicsBindingV1* bindings, uint32_t binding_count);
+/* V2 carries API-neutral image-view and sampler tokens. The input array is
+ * validated and copied synchronously before entering the kernel. */
+RIN_SDK_API RinResult rin_gpu_process_graphics_bind_group_create_v2(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t bind_group_token, uint64_t pipeline_token,
+    const RinGpuProcessGraphicsBindingV2* bindings, uint32_t binding_count);
 /* Query creation and result retrieval use an opaque process token. Results
  * return successfully with `available == 0` while submitted work is pending. */
 RIN_SDK_API RinResult rin_gpu_process_query_create_v1(
