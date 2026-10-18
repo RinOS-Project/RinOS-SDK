@@ -5,6 +5,8 @@
 
 #include <stdint.h>
 
+#include <rin/crash_summary.h>
+
 
 #define RIN_CRASH_SERVICE_ABI_VERSION UINT16_C(1)
 #define RIN_CRASH_SERVICE_ID "crashd"
@@ -102,6 +104,49 @@ typedef struct RinCrashServiceNoticeReadV1 {
     RinCrashConsentProofV1 proof;
     RinCrashServiceNoticeV1 notice;
 } RinCrashServiceNoticeReadV1;
+
+/* Each history page consumes a separate one-shot local physical-consent
+ * proof. The sequence cursor is stable across pages if the archive changes. */
+#define RIN_CRASH_SERVICE_HISTORY_PAGE_MAX_RECORDS UINT16_C(8)
+#define RIN_CRASH_SERVICE_HISTORY_READ_VERSION UINT16_C(1)
+#define RIN_CRASH_SERVICE_HISTORY_PAGE_VERSION UINT16_C(1)
+#define RIN_CRASH_SERVICE_HISTORY_PURGE_VERSION UINT16_C(1)
+#define RIN_CRASH_SERVICE_HISTORY_PAGE_FLAG_GAP UINT32_C(0x00000001)
+#define RIN_CRASH_SERVICE_HISTORY_PAGE_FLAG_ARCHIVE_FULL UINT32_C(0x00000002)
+#define RIN_CRASH_SERVICE_HISTORY_PAGE_FLAG_MASK \
+    (RIN_CRASH_SERVICE_HISTORY_PAGE_FLAG_GAP | \
+     RIN_CRASH_SERVICE_HISTORY_PAGE_FLAG_ARCHIVE_FULL)
+
+typedef struct RinCrashServiceHistoryReadV1 {
+    RinCrashConsentProofV1 proof;
+    uint64_t after_sequence;
+    uint16_t capacity;
+    uint16_t version;
+    uint32_t reserved;
+} RinCrashServiceHistoryReadV1;
+
+typedef struct RinCrashServiceHistoryPageV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t record_count;
+    uint32_t flags;
+    uint32_t reserved;
+    uint64_t after_sequence;
+    uint64_t gap_before_sequence;
+    uint64_t next_sequence;
+    RinCrashSummaryV1 records[
+        RIN_CRASH_SERVICE_HISTORY_PAGE_MAX_RECORDS];
+} RinCrashServiceHistoryPageV1;
+
+/* Purge removes only records authorized for the authenticated owner and
+ * requires a fresh physical-consent proof for this exact request. */
+typedef struct RinCrashServiceHistoryPurgeV1 {
+    RinCrashConsentProofV1 proof;
+    uint64_t through_sequence;
+    uint16_t version;
+    uint16_t reserved0;
+    uint32_t reserved1;
+} RinCrashServiceHistoryPurgeV1;
 
 /* The status contains a count and sequence high-water only; it never exposes
  * crash contents. A system administrator displays this exact count before
@@ -211,6 +256,14 @@ static_assert(sizeof(RinCrashServiceNoticeV1) == 48u,
               "RinCrashServiceNoticeV1 ABI drift");
 static_assert(sizeof(RinCrashServiceNoticeReadV1) == 176u,
               "RinCrashServiceNoticeReadV1 ABI drift");
+static_assert(sizeof(RinCrashServiceHistoryReadV1) == 144u,
+              "RinCrashServiceHistoryReadV1 ABI drift");
+static_assert(sizeof(RinCrashServiceHistoryPageV1) ==
+                  40u + sizeof(RinCrashSummaryV1) *
+                            RIN_CRASH_SERVICE_HISTORY_PAGE_MAX_RECORDS,
+              "RinCrashServiceHistoryPageV1 ABI drift");
+static_assert(sizeof(RinCrashServiceHistoryPurgeV1) == 144u,
+              "RinCrashServiceHistoryPurgeV1 ABI drift");
 static_assert(sizeof(RinCrashServiceLegacyHistoryStatusQueryV1) == 8u,
               "RinCrashServiceLegacyHistoryStatusQueryV1 ABI drift");
 static_assert(sizeof(RinCrashServiceLegacyHistoryStatusV1) == 24u,
@@ -234,6 +287,14 @@ _Static_assert(sizeof(RinCrashServiceNoticeV1) == 48u,
                "RinCrashServiceNoticeV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceNoticeReadV1) == 176u,
                "RinCrashServiceNoticeReadV1 ABI drift");
+_Static_assert(sizeof(RinCrashServiceHistoryReadV1) == 144u,
+               "RinCrashServiceHistoryReadV1 ABI drift");
+_Static_assert(sizeof(RinCrashServiceHistoryPageV1) ==
+                   40u + sizeof(RinCrashSummaryV1) *
+                             RIN_CRASH_SERVICE_HISTORY_PAGE_MAX_RECORDS,
+               "RinCrashServiceHistoryPageV1 ABI drift");
+_Static_assert(sizeof(RinCrashServiceHistoryPurgeV1) == 144u,
+               "RinCrashServiceHistoryPurgeV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceLegacyHistoryStatusQueryV1) == 8u,
                "RinCrashServiceLegacyHistoryStatusQueryV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceLegacyHistoryStatusV1) == 24u,
