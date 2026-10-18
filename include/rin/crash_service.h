@@ -26,6 +26,7 @@
 #define RIN_CRASH_SERVICE_OP_DESKTOP_NOTICE UINT16_C(12)
 #define RIN_CRASH_SERVICE_OP_READ_NOTICE UINT16_C(13)
 #define RIN_CRASH_SERVICE_OP_EXPORT_NOTICE UINT16_C(14)
+#define RIN_CRASH_SERVICE_OP_READ_NOTICE_RECOVERY UINT16_C(15)
 #define RIN_CRASH_SERVICE_MINIDUMP_MAX_BYTES UINT32_C(638)
 
 #define RIN_CRASH_SERVICE_STATUS_CONSENT_REQUIRED INT32_C(-1000)
@@ -104,6 +105,38 @@ typedef struct RinCrashServiceNoticeReadV1 {
     RinCrashConsentProofV1 proof;
     RinCrashServiceNoticeV1 notice;
 } RinCrashServiceNoticeReadV1;
+
+/* Desktop receives this record only with the matching consented summary.
+ * It identifies the exact signed package registration that observed the
+ * same crash sequence; it deliberately contains no document ID or path. */
+#define RIN_CRASH_SERVICE_RECOVERY_AUTHORITY_VERSION UINT16_C(1)
+#define RIN_CRASH_RECOVERY_APPLICATION_ID_SIZE 32u
+#define RIN_CRASH_RECOVERY_PACKAGE_DIGEST_SIZE 32u
+#define RIN_CRASH_SERVICE_RECOVERY_AUTHORITY_FLAG_AVAILABLE UINT16_C(0x0001)
+#define RIN_CRASH_SERVICE_RECOVERY_AUTHORITY_FLAG_MASK \
+    RIN_CRASH_SERVICE_RECOVERY_AUTHORITY_FLAG_AVAILABLE
+typedef struct RinCrashServiceRecoveryAuthorityV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t boot_id_high;
+    uint64_t boot_id_low;
+    uint64_t sequence;
+    uint64_t package_generation;
+    uint32_t owner_uid;
+    uint32_t session_id;
+    uint64_t session_instance_cookie;
+    uint64_t process_id;
+    uint64_t process_instance_cookie;
+    uint8_t application_id[RIN_CRASH_RECOVERY_APPLICATION_ID_SIZE];
+    uint8_t package_digest[RIN_CRASH_RECOVERY_PACKAGE_DIGEST_SIZE];
+    uint64_t reserved[2];
+} RinCrashServiceRecoveryAuthorityV1;
+
+typedef struct RinCrashServiceNoticeRecoveryV1 {
+    RinCrashSummaryV1 summary;
+    RinCrashServiceRecoveryAuthorityV1 recovery;
+} RinCrashServiceNoticeRecoveryV1;
 
 /* Each history page consumes a separate one-shot local physical-consent
  * proof. The sequence cursor is stable across pages if the archive changes. */
@@ -184,8 +217,6 @@ typedef struct RinCrashServiceLegacyHistoryPurgeV1 {
  * metadata. Recovery plaintext and filesystem paths remain in the owning
  * application's private state directory. */
 #define RIN_CRASH_RECOVERY_REGISTRATION_VERSION UINT16_C(1)
-#define RIN_CRASH_RECOVERY_APPLICATION_ID_SIZE 32u
-#define RIN_CRASH_RECOVERY_PACKAGE_DIGEST_SIZE 32u
 #define RIN_CRASH_RECOVERY_DOCUMENT_ID_SIZE 32u
 #define RIN_CRASH_RECOVERY_REASON_CRASH UINT16_C(1)
 #define RIN_CRASH_RECOVERY_REASON_LOGOUT_OR_REBOOT UINT16_C(2)
@@ -256,6 +287,8 @@ static_assert(sizeof(RinCrashServiceNoticeV1) == 48u,
               "RinCrashServiceNoticeV1 ABI drift");
 static_assert(sizeof(RinCrashServiceNoticeReadV1) == 176u,
               "RinCrashServiceNoticeReadV1 ABI drift");
+static_assert(sizeof(RinCrashServiceRecoveryAuthorityV1) == 152u,
+              "RinCrashServiceRecoveryAuthorityV1 ABI drift");
 static_assert(sizeof(RinCrashServiceHistoryReadV1) == 144u,
               "RinCrashServiceHistoryReadV1 ABI drift");
 static_assert(sizeof(RinCrashServiceHistoryPageV1) ==
@@ -287,6 +320,8 @@ _Static_assert(sizeof(RinCrashServiceNoticeV1) == 48u,
                "RinCrashServiceNoticeV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceNoticeReadV1) == 176u,
                "RinCrashServiceNoticeReadV1 ABI drift");
+_Static_assert(sizeof(RinCrashServiceRecoveryAuthorityV1) == 152u,
+               "RinCrashServiceRecoveryAuthorityV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceHistoryReadV1) == 144u,
                "RinCrashServiceHistoryReadV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceHistoryPageV1) ==
