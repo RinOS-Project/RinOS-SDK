@@ -212,6 +212,88 @@ rollback:
     return result;
 }
 
+/* V2 differs only in the explicit inter-stage map sent to the kernel. The
+ * owner record remains V1 because token ownership and destroy semantics are
+ * unchanged. */
+static inline RinResult rin_gpu_process_graphics_pipeline_owner_v1_create_v2(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t pipeline_token, uint64_t vertex_shader_token,
+    uint64_t fragment_shader_token,
+    const void* vertex_shader_ir, uint64_t vertex_shader_ir_size,
+    const void* fragment_shader_ir, uint64_t fragment_shader_ir_size,
+    const RinGpuProcessGraphicsPipelineDescV2* descriptor,
+    RinGpuProcessGraphicsPipelineOwnerV1* owner_out)
+{
+    RinGpuProcessGraphicsPipelineOwnerV1 candidate;
+    RinGpuProcessGraphicsPipelineDescV2 descriptor_copy;
+    RinResult result;
+
+    if (!owner_out ||
+        !rin_gpu_process_graphics_pipeline_owner_v1_valid(owner_out) ||
+        owner_out->phase !=
+            RIN_GPU_PROCESS_GRAPHICS_PIPELINE_OWNER_PHASE_EMPTY ||
+        device_id == 0u || device_generation == 0u || pipeline_token == 0u ||
+        vertex_shader_token == 0u || fragment_shader_token == 0u ||
+        pipeline_token == vertex_shader_token ||
+        pipeline_token == fragment_shader_token ||
+        vertex_shader_token == fragment_shader_token ||
+        !vertex_shader_ir || vertex_shader_ir_size == 0u ||
+        vertex_shader_ir_size > RIN_GPU_PROCESS_SHADER_MAX_BYTES_V1 ||
+        !fragment_shader_ir || fragment_shader_ir_size == 0u ||
+        fragment_shader_ir_size > RIN_GPU_PROCESS_SHADER_MAX_BYTES_V1 ||
+        !descriptor ||
+        !rin_gpu_process_graphics_pipeline_desc_v2_valid(descriptor) ||
+        rin_gpu_process_graphics_pipeline_owner_v1_overlap(
+            owner_out, sizeof(*owner_out), descriptor, sizeof(*descriptor)) ||
+        rin_gpu_process_graphics_pipeline_owner_v1_overlap(
+            owner_out, sizeof(*owner_out), vertex_shader_ir,
+            vertex_shader_ir_size) ||
+        rin_gpu_process_graphics_pipeline_owner_v1_overlap(
+            owner_out, sizeof(*owner_out), fragment_shader_ir,
+            fragment_shader_ir_size))
+        return RIN_ERROR_INVALID_ARGUMENT;
+
+    descriptor_copy = *descriptor;
+    rin_gpu_process_graphics_pipeline_owner_v1_init(&candidate);
+    candidate.device_id = device_id;
+    candidate.device_generation = device_generation;
+    candidate.pipeline_token = pipeline_token;
+    candidate.vertex_shader_token = vertex_shader_token;
+    candidate.fragment_shader_token = fragment_shader_token;
+
+    result = rin_gpu_process_shader_module_create_v1(
+        device_id, device_generation, vertex_shader_token, vertex_shader_ir,
+        vertex_shader_ir_size);
+    if (result != RIN_SUCCESS) return result;
+    candidate.owned_objects |=
+        RIN_GPU_PROCESS_GRAPHICS_PIPELINE_OWNER_HAS_VERTEX_MODULE;
+
+    result = rin_gpu_process_shader_module_create_v1(
+        device_id, device_generation, fragment_shader_token, fragment_shader_ir,
+        fragment_shader_ir_size);
+    if (result != RIN_SUCCESS) goto rollback_v2;
+    candidate.owned_objects |=
+        RIN_GPU_PROCESS_GRAPHICS_PIPELINE_OWNER_HAS_FRAGMENT_MODULE;
+
+    result = rin_gpu_process_graphics_pipeline_create_v2(
+        device_id, device_generation, pipeline_token, vertex_shader_token,
+        fragment_shader_token, &descriptor_copy);
+    if (result != RIN_SUCCESS) goto rollback_v2;
+    candidate.owned_objects |=
+        RIN_GPU_PROCESS_GRAPHICS_PIPELINE_OWNER_HAS_PIPELINE;
+    candidate.phase = RIN_GPU_PROCESS_GRAPHICS_PIPELINE_OWNER_PHASE_ACTIVE;
+    *owner_out = candidate;
+    return RIN_SUCCESS;
+
+rollback_v2:
+    candidate.phase =
+        RIN_GPU_PROCESS_GRAPHICS_PIPELINE_OWNER_PHASE_CLEANUP_PENDING;
+    if (rin_gpu_process_graphics_pipeline_owner_v1_destroy(&candidate) !=
+        RIN_SUCCESS)
+        *owner_out = candidate;
+    return result;
+}
+
 /* Destroys pipeline before its shader modules. A failed destroy retains that
  * token and all dependencies it may still need, allowing a safe retry. */
 static inline RinResult rin_gpu_process_graphics_pipeline_owner_v1_destroy(

@@ -52,6 +52,10 @@ extern "C" {
 #define RIN_GPU_PROCESS_MAX_GRAPHICS_BINDINGS_V1 UINT32_C(64)
 #define RIN_GPU_PROCESS_GRAPHICS_BINDING_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_GRAPHICS_PIPELINE_DESC_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_GRAPHICS_PIPELINE_DESC_VERSION_V2 UINT32_C(2)
+#define RIN_GPU_PROCESS_GRAPHICS_PIPELINE_MAX_SHADER_IO_V2 UINT32_C(32)
+#define RIN_GPU_PROCESS_GRAPHICS_PIPELINE_MAX_VARYINGS_V2 \
+    (RIN_GPU_PROCESS_GRAPHICS_PIPELINE_MAX_SHADER_IO_V2 - UINT32_C(4))
 #define RIN_GPU_PROCESS_SAMPLER_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SAMPLER_FILTER_NEAREST_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_SAMPLER_FILTER_LINEAR_V1 UINT32_C(2)
@@ -151,7 +155,8 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_SAMPLER_CREATE = 27,
     RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE = 28,
     RIN_GPU_SDK_PROCESS_IMAGE_CREATE = 29,
-    RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE_V2 = 30
+    RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE_V2 = 30,
+    RIN_GPU_SDK_PROCESS_GRAPHICS_PIPELINE_CREATE_V2 = 31
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -275,6 +280,91 @@ typedef struct RinGpuProcessGraphicsPipelineDescV1 {
     uint32_t color_format;
     uint32_t primitive_topology;
 } RinGpuProcessGraphicsPipelineDescV1;
+
+enum {
+    RIN_GPU_PROCESS_GRAPHICS_VARYING_FLOAT32_V2 = 1u,
+    RIN_GPU_PROCESS_GRAPHICS_VARYING_SINT32_V2 = 2u,
+    RIN_GPU_PROCESS_GRAPHICS_INTERPOLATION_PERSPECTIVE_V2 = 1u,
+    RIN_GPU_PROCESS_GRAPHICS_INTERPOLATION_NO_PERSPECTIVE_V2 = 2u,
+    RIN_GPU_PROCESS_GRAPHICS_INTERPOLATION_FLAT_V2 = 3u
+};
+
+/* V2 carries explicit scalar-slot links from translated RSH1 vertex outputs
+ * to fragment inputs. Slots [0, 4) are reserved for BuiltIn Position; each
+ * varying uses the API-neutral scalar-slot coordinate system, not Vulkan
+ * types or source SPIR-V Location values. The adapter that translates a
+ * shader owns the mapping from its source locations. */
+typedef struct RinGpuProcessGraphicsVaryingV2 {
+    uint32_t vertex_output_location;
+    uint32_t fragment_input_location;
+    uint32_t type;
+    uint32_t interpolation;
+} RinGpuProcessGraphicsVaryingV2;
+
+typedef struct RinGpuProcessGraphicsPipelineDescV2 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t color_format;
+    uint32_t primitive_topology;
+    uint32_t varying_count;
+    uint32_t flags;
+    uint64_t reserved[2];
+    RinGpuProcessGraphicsVaryingV2
+        varyings[RIN_GPU_PROCESS_GRAPHICS_PIPELINE_MAX_VARYINGS_V2];
+} RinGpuProcessGraphicsPipelineDescV2;
+
+static inline int rin_gpu_process_graphics_pipeline_desc_v2_valid(
+    const RinGpuProcessGraphicsPipelineDescV2* descriptor)
+{
+    uint32_t index;
+    if (!descriptor || descriptor->struct_size != sizeof(*descriptor) ||
+        descriptor->version !=
+            RIN_GPU_PROCESS_GRAPHICS_PIPELINE_DESC_VERSION_V2 ||
+        descriptor->color_format == 0u ||
+        descriptor->primitive_topology == 0u ||
+        descriptor->varying_count >
+            RIN_GPU_PROCESS_GRAPHICS_PIPELINE_MAX_VARYINGS_V2 ||
+        descriptor->flags != 0u || descriptor->reserved[0] != 0u ||
+        descriptor->reserved[1] != 0u)
+        return 0;
+    for (index = 0u; index < descriptor->varying_count; ++index) {
+        const RinGpuProcessGraphicsVaryingV2* varying =
+            &descriptor->varyings[index];
+        uint32_t prior;
+        if (varying->vertex_output_location < 4u ||
+            varying->vertex_output_location >=
+                RIN_GPU_PROCESS_GRAPHICS_PIPELINE_MAX_SHADER_IO_V2 ||
+            varying->fragment_input_location >=
+                RIN_GPU_PROCESS_GRAPHICS_PIPELINE_MAX_SHADER_IO_V2 ||
+            (varying->type != RIN_GPU_PROCESS_GRAPHICS_VARYING_FLOAT32_V2 &&
+             varying->type != RIN_GPU_PROCESS_GRAPHICS_VARYING_SINT32_V2) ||
+            (varying->interpolation !=
+                 RIN_GPU_PROCESS_GRAPHICS_INTERPOLATION_PERSPECTIVE_V2 &&
+             varying->interpolation !=
+                 RIN_GPU_PROCESS_GRAPHICS_INTERPOLATION_NO_PERSPECTIVE_V2 &&
+             varying->interpolation !=
+                 RIN_GPU_PROCESS_GRAPHICS_INTERPOLATION_FLAT_V2) ||
+            (varying->type == RIN_GPU_PROCESS_GRAPHICS_VARYING_SINT32_V2 &&
+             varying->interpolation !=
+                 RIN_GPU_PROCESS_GRAPHICS_INTERPOLATION_FLAT_V2))
+            return 0;
+        for (prior = 0u; prior < index; ++prior)
+            if (descriptor->varyings[prior].vertex_output_location ==
+                    varying->vertex_output_location ||
+                descriptor->varyings[prior].fragment_input_location ==
+                    varying->fragment_input_location)
+                return 0;
+    }
+    for (index = descriptor->varying_count;
+         index < RIN_GPU_PROCESS_GRAPHICS_PIPELINE_MAX_VARYINGS_V2;
+         ++index)
+        if (descriptor->varyings[index].vertex_output_location != 0u ||
+            descriptor->varyings[index].fragment_input_location != 0u ||
+            descriptor->varyings[index].type != 0u ||
+            descriptor->varyings[index].interpolation != 0u)
+            return 0;
+    return 1;
+}
 
 /* API-neutral sampler description. Enum values are stable RinGPU values;
  * this record carries no Vulkan or backend object types. */
@@ -853,6 +943,11 @@ RIN_SDK_API RinResult rin_gpu_process_graphics_pipeline_create_v1(
     uint64_t pipeline_token, uint64_t vertex_shader_token,
     uint64_t fragment_shader_token,
     const RinGpuProcessGraphicsPipelineDescV1* descriptor);
+RIN_SDK_API RinResult rin_gpu_process_graphics_pipeline_create_v2(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t pipeline_token, uint64_t vertex_shader_token,
+    uint64_t fragment_shader_token,
+    const RinGpuProcessGraphicsPipelineDescV2* descriptor);
 /* Create a live RinGPU sampler under an opaque process token. The backend
  * object remains OS-Core-owned and is destroyed with the exact token. */
 RIN_SDK_API RinResult rin_gpu_process_sampler_create_v1(
@@ -965,6 +1060,10 @@ static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
               "RinGpuProcessComputeBindingV1 ABI drift");
 static_assert(sizeof(RinGpuProcessGraphicsPipelineDescV1) == 16u,
               "RinGpuProcessGraphicsPipelineDescV1 ABI drift");
+static_assert(sizeof(RinGpuProcessGraphicsVaryingV2) == 16u,
+              "RinGpuProcessGraphicsVaryingV2 ABI drift");
+static_assert(sizeof(RinGpuProcessGraphicsPipelineDescV2) == 488u,
+              "RinGpuProcessGraphicsPipelineDescV2 ABI drift");
 static_assert(sizeof(RinGpuProcessSamplerDescV1) == 56u,
               "RinGpuProcessSamplerDescV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
@@ -1030,6 +1129,10 @@ _Static_assert(sizeof(RinGpuProcessComputeBindingV1) == 40u,
                "RinGpuProcessComputeBindingV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessGraphicsPipelineDescV1) == 16u,
                "RinGpuProcessGraphicsPipelineDescV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessGraphicsVaryingV2) == 16u,
+               "RinGpuProcessGraphicsVaryingV2 ABI drift");
+_Static_assert(sizeof(RinGpuProcessGraphicsPipelineDescV2) == 488u,
+               "RinGpuProcessGraphicsPipelineDescV2 ABI drift");
 _Static_assert(sizeof(RinGpuProcessSamplerDescV1) == 56u,
                "RinGpuProcessSamplerDescV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,

@@ -1850,6 +1850,37 @@ RinResult rin_gpu_process_graphics_pipeline_create_v1(
         sizeof(request), (void*)0, 0u);
 }
 
+RinResult rin_gpu_process_graphics_pipeline_create_v2(
+    uint64_t device_id, uint64_t device_generation,
+    uint64_t pipeline_token, uint64_t vertex_shader_token,
+    uint64_t fragment_shader_token,
+    const RinGpuProcessGraphicsPipelineDescV2* descriptor) {
+    RinGpuProcessGraphicsPipelineDescV2 descriptor_copy;
+    RinSdkArgsV1 request;
+
+    if (device_id == 0u || device_generation == 0u || pipeline_token == 0u ||
+        vertex_shader_token == 0u || fragment_shader_token == 0u ||
+        pipeline_token == vertex_shader_token ||
+        pipeline_token == fragment_shader_token ||
+        vertex_shader_token == fragment_shader_token || !descriptor ||
+        !rin_gpu_process_graphics_pipeline_desc_v2_valid(descriptor))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    descriptor_copy = *descriptor;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = pipeline_token;
+    request.value[3] = vertex_shader_token;
+    request.value[4] = fragment_shader_token;
+    request.value[5] = (uint64_t)(uintptr_t)&descriptor_copy;
+    return rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU,
+        RIN_GPU_SDK_PROCESS_GRAPHICS_PIPELINE_CREATE_V2, &request,
+        sizeof(request), (void*)0, 0u);
+}
+
 static int gpu_process_sampler_filter_valid(uint32_t filter) {
     return filter == RIN_GPU_PROCESS_SAMPLER_FILTER_NEAREST_V1 ||
            filter == RIN_GPU_PROCESS_SAMPLER_FILTER_LINEAR_V1;
