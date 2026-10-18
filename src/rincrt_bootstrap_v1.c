@@ -183,6 +183,8 @@ typedef struct RinCrtCppExceptionFrame {
 } RinCrtCppExceptionFrame;
 
 void _exit(int status);
+void rin_cpp_exception_install(RinCrtCppExceptionFrame* frame);
+void rin_cpp_exception_leave(RinCrtCppExceptionFrame* frame);
 
 #if defined(__x86_64__) || defined(_M_X64)
 __attribute__((naked, returns_twice))
@@ -274,22 +276,41 @@ static __attribute__((noreturn, no_stack_protector))
 void rincrt_cpp_exception_cleanup_fatal(void)
 {
     _exit(134);
+    __builtin_unreachable();
+}
+
+static void rincrt_cpp_exception_invoke_cleanup(
+    RinCrtCppExceptionCleanup callback, void* object)
+{
+    RinCrtCppExceptionFrame guard;
+    if (setjmp(guard.env) != 0) rincrt_cpp_exception_cleanup_fatal();
+    rin_cpp_exception_install(&guard);
+    callback(object);
+    rin_cpp_exception_leave(&guard);
+}
+
+static void rincrt_cpp_exception_unwind_cleanups_impl(
+    RinCrtCppExceptionFrame* frame, int terminate_on_callback_exception)
+{
+    RinCrtCppExceptionCleanupRecord* record;
+    if (!frame) rincrt_cpp_exception_cleanup_fatal();
+    while ((record = frame->cleanup_top) != (void*)0) {
+        RinCrtCppExceptionCleanupRecord* previous = record->previous;
+        RinCrtCppExceptionCleanup callback = record->callback;
+        void* object = record->object;
+        frame->cleanup_top = previous;
+        rin_user_allocator_free(record);
+        if (terminate_on_callback_exception) {
+            rincrt_cpp_exception_invoke_cleanup(callback, object);
+        } else {
+            callback(object);
+        }
+    }
 }
 
 void rin_cpp_exception_unwind_cleanups(RinCrtCppExceptionFrame* frame)
 {
-    RinCrtCppExceptionCleanupRecord* record;
-    if (!frame) rincrt_cpp_exception_cleanup_fatal();
-    record = frame->cleanup_top;
-    frame->cleanup_top = (void*)0;
-    while (record) {
-        RinCrtCppExceptionCleanupRecord* previous = record->previous;
-        RinCrtCppExceptionCleanup callback = record->callback;
-        void* object = record->object;
-        rin_user_allocator_free(record);
-        callback(object);
-        record = previous;
-    }
+    rincrt_cpp_exception_unwind_cleanups_impl(frame, 0);
 }
 
 void rin_cpp_exception_register_cleanup(
@@ -355,8 +376,10 @@ void rin_cpp_exception_install(RinCrtCppExceptionFrame* frame)
 void rin_cpp_exception_leave(RinCrtCppExceptionFrame* frame)
 {
     if (frame && rincrt_cpp_exception_top == frame) {
-        rincrt_cpp_exception_top = frame->previous;
-        rin_cpp_exception_unwind_cleanups(frame);
+        rincrt_cpp_exception_unwind_cleanups_impl(frame, 0);
+        if (rincrt_cpp_exception_top == frame) {
+            rincrt_cpp_exception_top = frame->previous;
+        }
     }
 }
 
@@ -369,7 +392,7 @@ static void rincrt_cpp_exception_throw_owned(
         _exit(1);
     }
     rincrt_cpp_exception_top = frame->previous;
-    rin_cpp_exception_unwind_cleanups(frame);
+    rincrt_cpp_exception_unwind_cleanups_impl(frame, 1);
     frame->value = value;
     frame->type = type;
     rincrt_cpp_exception_current_value = value;
