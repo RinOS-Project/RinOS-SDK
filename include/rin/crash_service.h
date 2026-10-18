@@ -21,6 +21,8 @@
 #define RIN_CRASH_SERVICE_OP_PURGE_HISTORY UINT16_C(9)
 #define RIN_CRASH_SERVICE_OP_LEGACY_HISTORY_STATUS UINT16_C(10)
 #define RIN_CRASH_SERVICE_OP_PURGE_LEGACY_HISTORY UINT16_C(11)
+#define RIN_CRASH_SERVICE_OP_DESKTOP_NOTICE UINT16_C(12)
+#define RIN_CRASH_SERVICE_OP_READ_NOTICE UINT16_C(13)
 
 #define RIN_CRASH_SERVICE_STATUS_CONSENT_REQUIRED INT32_C(-1000)
 
@@ -78,6 +80,26 @@ typedef struct RinCrashConsentProofV1 {
     uint8_t authenticator[32];
     uint64_t reserved[2];
 } RinCrashConsentProofV1;
+
+/* Session-scoped, content-free hint for the signed Desktop service. The boot
+ * identity and sequence let Desktop deduplicate without receiving any crash
+ * contents. A READ_NOTICE request must return this exact record after fresh
+ * physical consent. */
+#define RIN_CRASH_SERVICE_NOTICE_VERSION UINT16_C(1)
+typedef struct RinCrashServiceNoticeV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    uint64_t boot_id_high;
+    uint64_t boot_id_low;
+    uint64_t sequence;
+    uint64_t reserved[2];
+} RinCrashServiceNoticeV1;
+
+typedef struct RinCrashServiceNoticeReadV1 {
+    RinCrashConsentProofV1 proof;
+    RinCrashServiceNoticeV1 notice;
+} RinCrashServiceNoticeReadV1;
 
 /* The status contains a count and sequence high-water only; it never exposes
  * crash contents. A system administrator displays this exact count before
@@ -183,6 +205,10 @@ static_assert(sizeof(RinCrashServiceStatusV1) == 32u,
               "RinCrashServiceStatusV1 ABI drift");
 static_assert(sizeof(RinCrashConsentProofV1) == 128u,
               "RinCrashConsentProofV1 ABI drift");
+static_assert(sizeof(RinCrashServiceNoticeV1) == 48u,
+              "RinCrashServiceNoticeV1 ABI drift");
+static_assert(sizeof(RinCrashServiceNoticeReadV1) == 176u,
+              "RinCrashServiceNoticeReadV1 ABI drift");
 static_assert(sizeof(RinCrashServiceLegacyHistoryStatusQueryV1) == 8u,
               "RinCrashServiceLegacyHistoryStatusQueryV1 ABI drift");
 static_assert(sizeof(RinCrashServiceLegacyHistoryStatusV1) == 24u,
@@ -202,6 +228,10 @@ _Static_assert(sizeof(RinCrashServiceStatusV1) == 32u,
                "RinCrashServiceStatusV1 ABI drift");
 _Static_assert(sizeof(RinCrashConsentProofV1) == 128u,
                "RinCrashConsentProofV1 ABI drift");
+_Static_assert(sizeof(RinCrashServiceNoticeV1) == 48u,
+               "RinCrashServiceNoticeV1 ABI drift");
+_Static_assert(sizeof(RinCrashServiceNoticeReadV1) == 176u,
+               "RinCrashServiceNoticeReadV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceLegacyHistoryStatusQueryV1) == 8u,
                "RinCrashServiceLegacyHistoryStatusQueryV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceLegacyHistoryStatusV1) == 24u,
