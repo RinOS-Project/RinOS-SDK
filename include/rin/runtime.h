@@ -32,7 +32,11 @@ RIN_SDK_API int rin_dns_resolve_cancel(uint32_t handle);
 
 RIN_SDK_API int rin_shm_get(const char* name, uint32_t size, uint32_t flags);
 RIN_SDK_API void* rin_shm_at(int handle, void* address_hint, uint32_t prot);
+RIN_SDK_API void* rin_shm_at_range(int handle, void* address_hint,
+                                   uint64_t offset, uint64_t size,
+                                   uint32_t prot);
 RIN_SDK_API int rin_shm_dt(int handle, void* address);
+RIN_SDK_API int rin_shm_protect(void* address, uint64_t size, uint32_t prot);
 
 /* Transitional libc-backed filesystem entry points used by freestanding
  * services while their callers migrate to the structured file ABI. */

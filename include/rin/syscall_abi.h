@@ -476,6 +476,9 @@
 #define RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES 0x807Eu
 #define RIN_SYS_WIFI_AWDL_TRANSPORT         0x807Fu
 #define RIN_SYS_BLUETOOTH_HCI_CONTROL       0x8080u
+/* memory. */
+#define RIN_SYS_SHM_ATTACH_RANGE            0x8081u
+#define RIN_SYS_SHM_PROTECT                 0x8082u
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u

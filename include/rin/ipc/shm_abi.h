@@ -10,5 +10,14 @@
 
 #define RIN_SHM_PROT_READ   0x00000001u
 #define RIN_SHM_PROT_WRITE  0x00000002u
+/* Executable aliases are x86_64-only and must never be combined with WRITE.
+ * The kernel enforces W^X for every SHM mapping; this bit is not a request
+ * for a writable+executable page. */
+#define RIN_SHM_PROT_EXEC   0x00000004u
+
+/* The current page-backed SHM implementation is eagerly allocated.  Keep
+ * the bound explicit so NativeAOT/CoreCLR cannot silently request a sparse
+ * file-sized mapping that RinOS cannot supply. */
+#define RIN_SHM_MAX_SIZE    0x10000000ULL
 
 #endif
