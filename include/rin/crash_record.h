@@ -7,13 +7,24 @@
 #include <stddef.h>
 
 #define RIN_CRASH_RECORD_MAGIC UINT32_C(0x31524352) /* "RCR1" */
-#define RIN_CRASH_RECORD_VERSION UINT16_C(1)
+#define RIN_CRASH_RECORD_VERSION_LEGACY UINT16_C(1)
+#define RIN_CRASH_RECORD_VERSION UINT16_C(2)
 #define RIN_CRASH_RECORD_MAX_SIZE UINT32_C(65536)
 #define RIN_CRASH_RECORD_MAX_SECTIONS UINT32_C(16)
 #define RIN_CRASH_RECORD_MAX_MESSAGE UINT32_C(256)
 #define RIN_CRASH_RECORD_MAX_FRAMES UINT32_C(64)
 #define RIN_CRASH_SCHEDULER_INFO_VERSION UINT16_C(2)
 #define RIN_CRASH_SCHEDULER_MAX_CPUS UINT32_C(16)
+#define RIN_CRASH_OWNER_ACCOUNT_IDENTITY_SIZE UINT32_C(15)
+#define RIN_CRASH_OWNER_ACCOUNT_IDENTITY_VERSION_V1 UINT8_C(1)
+#define RIN_CRASH_PROCESS_OWNER_IDENTITY_SESSION UINT32_C(0)
+#define RIN_CRASH_PROCESS_OWNER_IDENTITY_ACCOUNT_V1 UINT32_C(1)
+
+static inline int rin_crash_record_version_valid(uint16_t version)
+{
+    return version == RIN_CRASH_RECORD_VERSION_LEGACY ||
+           version == RIN_CRASH_RECORD_VERSION;
+}
 
 #define RIN_CRASH_RECORD_FLAG_LOCAL_ONLY UINT32_C(0x00000001)
 #define RIN_CRASH_RECORD_FLAG_USER_MODE  UINT32_C(0x00000002)
@@ -94,6 +105,7 @@ typedef struct RinCrashRecordHeader {
     uint32_t section_count;
     uint32_t payload_crc32;
     uint32_t header_crc32;
+    /* Reserved for future record-header flags. */
     uint32_t reserved;
 } RinCrashRecordHeader;
 
@@ -164,12 +176,61 @@ typedef struct RinCrashProcessInfo {
      * fields cleared. */
     uint64_t process_instance_cookie;
     uint32_t owner_uid;
+    /* Zero means the owner_session member is an exact session generation.
+     * ACCOUNT_V1 means the same 16 bytes hold the stable 15-byte account key
+     * followed by one zero byte. This is versioned by the enclosing RCR1
+     * version-2 record header and never exposed in crash-service replies. */
     uint32_t reserved;
     /* Exact authenticated login session captured with this process, when
      * the process was session-bound. A zero record is allowed for legacy
      * launches and kernel-generated summaries. */
     RinCrashOwnerSessionV1 owner_session;
 } RinCrashProcessInfo;
+
+static inline int rin_crash_owner_account_identity_valid(
+    const uint8_t identity[RIN_CRASH_OWNER_ACCOUNT_IDENTITY_SIZE])
+{
+    uint8_t aggregate = 0u;
+    uint32_t index;
+    if (identity == NULL ||
+        identity[0] != RIN_CRASH_OWNER_ACCOUNT_IDENTITY_VERSION_V1)
+        return 0;
+    for (index = 1u; index < RIN_CRASH_OWNER_ACCOUNT_IDENTITY_SIZE; ++index)
+        aggregate |= identity[index];
+    return aggregate != 0u;
+}
+
+static inline int rin_crash_process_owner_identity_valid(
+    const RinCrashProcessInfo* process)
+{
+    const uint8_t* account_identity;
+    if (process == NULL) return 0;
+    if (process->reserved == RIN_CRASH_PROCESS_OWNER_IDENTITY_SESSION)
+        return rin_crash_owner_session_valid(&process->owner_session,
+                                             process->owner_uid);
+    if (process->reserved != RIN_CRASH_PROCESS_OWNER_IDENTITY_ACCOUNT_V1 ||
+        process->owner_uid == 0u)
+        return 0;
+    account_identity = (const uint8_t*)&process->owner_session;
+    return account_identity[RIN_CRASH_OWNER_ACCOUNT_IDENTITY_SIZE] == 0u &&
+           rin_crash_owner_account_identity_valid(account_identity);
+}
+
+static inline int rin_crash_process_set_owner_account_identity(
+    RinCrashProcessInfo* process,
+    const uint8_t identity[RIN_CRASH_OWNER_ACCOUNT_IDENTITY_SIZE])
+{
+    uint8_t* destination;
+    uint32_t index;
+    if (process == NULL || !rin_crash_owner_account_identity_valid(identity))
+        return 0;
+    destination = (uint8_t*)&process->owner_session;
+    for (index = 0u; index < RIN_CRASH_OWNER_ACCOUNT_IDENTITY_SIZE; ++index)
+        destination[index] = identity[index];
+    destination[RIN_CRASH_OWNER_ACCOUNT_IDENTITY_SIZE] = 0u;
+    process->reserved = RIN_CRASH_PROCESS_OWNER_IDENTITY_ACCOUNT_V1;
+    return 1;
+}
 
 #define RIN_CRASH_PROCESS_INFO_LEGACY_SIZE \
     ((uint32_t)offsetof(RinCrashProcessInfo, process_instance_cookie))

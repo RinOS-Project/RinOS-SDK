@@ -56,6 +56,7 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define SO_RIN_UNIX_PEER_PACKAGE_IDENTITY 0x5008
 #define SO_RIN_UNIX_PEER_APPLICATION_METADATA 0x5009
 #define SO_RIN_UNIX_PEER_APPLICATION_IMAGE_PATH 0x500A
+#define SO_RIN_UNIX_PEER_ACCOUNT_IDENTITY 0x500B
 
 #define RIN_UNIX_SCOPE_SYSTEM UINT16_C(1)
 #define RIN_UNIX_SCOPE_USER UINT16_C(2)
@@ -71,6 +72,8 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define RIN_UNIX_PEER_PACKAGE_IDENTITY_VERSION 1u
 #define RIN_UNIX_PEER_APPLICATION_METADATA_VERSION 1u
 #define RIN_UNIX_PEER_APPLICATION_IMAGE_PATH_VERSION 1u
+#define RIN_UNIX_PEER_ACCOUNT_IDENTITY_VERSION 1u
+#define RIN_UNIX_ACCOUNT_IDENTITY_SIZE 15u
 #define RIN_UNIX_SESSION_STATE_NONE UINT32_C(0)
 #define RIN_UNIX_SESSION_STATE_CREATING UINT32_C(1)
 #define RIN_UNIX_SESSION_STATE_AUTHENTICATING UINT32_C(2)
@@ -141,6 +144,18 @@ typedef struct rin_unix_peer_session_state_v1 {
     RinSessionIdentityV1 identity;
     uint64_t reserved[2];
 } rin_unix_peer_session_state_v1;
+
+/* Restricted to the signed crash diagnostic service. The opaque account key
+ * is returned with the exact live peer session so consumers cannot substitute
+ * a UID or a caller-supplied session token for persistent ownership. */
+typedef struct rin_unix_peer_account_identity_v1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved;
+    RinSessionIdentityV1 identity;
+    uint8_t account_identity[RIN_UNIX_ACCOUNT_IDENTITY_SIZE];
+    uint8_t reserved1;
+} rin_unix_peer_account_identity_v1;
 
 /* Returned by SO_RIN_UNIX_PEER_PACKAGE_IDENTITY.  Every field is captured
  * from the kernel-owned launch record; the application cannot select or
@@ -231,6 +246,18 @@ static inline int rin_unix_peer_session_identity_valid(
            identity->reserved[0] == 0u && identity->reserved[1] == 0u &&
            identity->session_id != 0u && identity->uid != 0u &&
            rin_sdk_live_identity(identity->instance_cookie);
+}
+
+static inline int rin_unix_peer_account_identity_valid(
+    const rin_unix_peer_account_identity_v1* value)
+{
+    return value != NULL && value->struct_size == sizeof(*value) &&
+           value->version == RIN_UNIX_PEER_ACCOUNT_IDENTITY_VERSION &&
+           value->reserved == 0u && value->reserved1 == 0u &&
+           rin_unix_peer_session_identity_valid(&value->identity) &&
+           value->account_identity[0] == 1u &&
+           rin_sdk_nonzero_bytes_valid(value->account_identity + 1u,
+                                       RIN_UNIX_ACCOUNT_IDENTITY_SIZE - 1u);
 }
 
 static inline int rin_unix_peer_session_state_valid(
@@ -334,6 +361,8 @@ static_assert(sizeof(rin_unix_peer_session_identity_v1) == 40u,
               "Rin Unix peer session identity ABI drift");
 static_assert(sizeof(rin_unix_peer_session_state_v1) == 72u,
               "Rin Unix peer session state ABI drift");
+static_assert(sizeof(rin_unix_peer_account_identity_v1) == 64u,
+              "Rin Unix peer account identity ABI drift");
 static_assert(sizeof(rin_unix_peer_package_identity_v1) == 112u,
               "Rin Unix peer package identity ABI drift");
 static_assert(sizeof(rin_unix_peer_application_metadata_v1) == 144u,
@@ -351,6 +380,8 @@ _Static_assert(sizeof(rin_unix_peer_session_identity_v1) == 40u,
                "Rin Unix peer session identity ABI drift");
 _Static_assert(sizeof(rin_unix_peer_session_state_v1) == 72u,
                "Rin Unix peer session state ABI drift");
+_Static_assert(sizeof(rin_unix_peer_account_identity_v1) == 64u,
+               "Rin Unix peer account identity ABI drift");
 _Static_assert(sizeof(rin_unix_peer_package_identity_v1) == 112u,
                "Rin Unix peer package identity ABI drift");
 _Static_assert(sizeof(rin_unix_peer_application_metadata_v1) == 144u,
