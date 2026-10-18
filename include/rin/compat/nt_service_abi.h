@@ -8,6 +8,10 @@
 #define RINNT_SERVICE_ABI_MAGIC UINT32_C(0x31534e52) /* "RNS1" */
 #define RINNT_SERVICE_ABI_VERSION 1u
 
+/* Canonical RinNT service endpoint. Its path is routing information only;
+ * connection identity is supplied by the authenticated local transport. */
+#define RINNT_SERVICE_SOCKET_PATH "/run/rin/rinnt.sock"
+
 #define RINNT_SERVICE_MAX_MESSAGE_SIZE (64u * 1024u)
 #define RINNT_SERVICE_MAX_PATH_SIZE 1024u
 #define RINNT_SERVICE_MAX_COMMAND_LINE_SIZE 32768u
