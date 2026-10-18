@@ -41,6 +41,25 @@
 #define RIN_PATH_AT_FSETXATTR       19u
 #define RIN_PATH_AT_FREMOVEXATTR    20u
 #define RIN_PATH_AT_XATTR_VALUE_MAX 1024u
+/* Return the generation-bound identity of an open RinFS descriptor. */
+#define RIN_PATH_AT_FGETIDENTITY    21u
+#define RIN_PATH_AT_FILE_IDENTITY_V1_VERSION 1u
+
+typedef struct RinPathAtFileIdentityV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t mount_id;
+    uint64_t object_id;
+    uint64_t generation;
+} RinPathAtFileIdentityV1;
+
+#if defined(__cplusplus) && !defined(MIDL_PASS)
+static_assert(sizeof(RinPathAtFileIdentityV1) == 32u,
+              "RinPathAtFileIdentityV1 ABI size");
+#elif !defined(MIDL_PASS)
+_Static_assert(sizeof(RinPathAtFileIdentityV1) == 32u,
+               "RinPathAtFileIdentityV1 ABI size");
+#endif
 
 #define RIN_PATH_AT_O_CLOEXEC       0x0200u
 
@@ -89,7 +108,7 @@ typedef struct RinPathAtCallV1 {
     uint64_t path1;
     uint64_t path2;
     /* For RENAME_EXPECT_SOURCE_IDENTITY, this references the expected source
-     * identity record and buffer_size must equal its structure size. */
+     * identity record. FGETIDENTITY writes RinPathAtFileIdentityV1 here. */
     uint64_t buffer;
     uint64_t buffer_size;
 } RinPathAtCallV1;
