@@ -4,6 +4,7 @@
 #define RIN_SDK_GPU_H
 
 #include "abi.h"
+#include "gpu_process_graphics_binding_v2.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -148,7 +149,8 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_SUBMIT_V2 = 25,
     RIN_GPU_SDK_PROCESS_GRAPHICS_PIPELINE_CREATE = 26,
     RIN_GPU_SDK_PROCESS_SAMPLER_CREATE = 27,
-    RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE = 28
+    RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE = 28,
+    RIN_GPU_SDK_PROCESS_IMAGE_CREATE = 29
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -850,6 +852,12 @@ RIN_SDK_API RinResult rin_gpu_process_graphics_pipeline_create_v1(
 RIN_SDK_API RinResult rin_gpu_process_sampler_create_v1(
     uint64_t device_id, uint64_t device_generation, uint64_t sampler_token,
     const RinGpuProcessSamplerDescV1* descriptor);
+/* Create an authenticated process-owned image from the API-neutral V2
+ * descriptor schema. The descriptor must describe the whole image and start
+ * in UNDEFINED logical state; physical storage layout is provider-owned. */
+RIN_SDK_API RinResult rin_gpu_process_image_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    const RinGpuProcessImageViewV1* image);
 /* Bind-group creation retains the authenticated process resource bindings
  * until the process object is destroyed. A resource-free pipeline accepts
  * the canonical empty set (bindings == NULL, binding_count == 0); a pipeline

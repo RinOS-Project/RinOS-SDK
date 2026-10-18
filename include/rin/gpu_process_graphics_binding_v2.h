@@ -208,6 +208,28 @@ static inline int rin_gpu_process_image_view_v1_valid(
     return view->mip_levels <= max_mips;
 }
 
+/* Creation describes a whole image, not a narrowed view. The initial logical
+ * state is UNDEFINED; storage tiling/modifier/address remains provider-owned. */
+static inline int rin_gpu_process_image_create_desc_v1_valid(
+    const RinGpuProcessImageViewV1* image)
+{
+    if (!rin_gpu_process_image_view_v1_valid(image) ||
+        image->logical_layout != RIN_GPU_PROCESS_IMAGE_LAYOUT_UNDEFINED_V1 ||
+        image->base_mip_level != 0u ||
+        image->level_count != image->mip_levels ||
+        image->base_array_layer != 0u ||
+        image->layer_count != image->array_layers)
+        return 0;
+    if ((image->dimension == RIN_GPU_PROCESS_IMAGE_DIMENSION_1D_V1 &&
+         (image->height != 1u || image->depth != 1u)) ||
+        (image->dimension == RIN_GPU_PROCESS_IMAGE_DIMENSION_2D_V1 &&
+         image->depth != 1u) ||
+        (image->dimension == RIN_GPU_PROCESS_IMAGE_DIMENSION_3D_V1 &&
+         image->array_layers != 1u))
+        return 0;
+    return 1;
+}
+
 static inline int rin_gpu_process_image_view_v1_zero(
     const RinGpuProcessImageViewV1* view) {
     return view && view->struct_size == 0u && view->version == 0u &&

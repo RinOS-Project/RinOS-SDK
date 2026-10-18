@@ -1915,6 +1915,28 @@ RinResult rin_gpu_process_sampler_create_v1(
         sizeof(request), (void*)0, 0u);
 }
 
+RinResult rin_gpu_process_image_create_v1(
+    uint64_t device_id, uint64_t device_generation,
+    const RinGpuProcessImageViewV1* image)
+{
+    RinGpuProcessImageViewV1 image_copy;
+    RinSdkArgsV1 request;
+
+    if (device_id == 0u || device_generation == 0u || !image ||
+        !rin_gpu_process_image_create_desc_v1_valid(image))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    image_copy = *image;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    request.value[2] = (uint64_t)(uintptr_t)&image_copy;
+    return rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_IMAGE_CREATE, &request,
+        sizeof(request), (void*)0, 0u);
+}
+
 RinResult rin_gpu_process_compute_bind_group_create_v1(
     uint64_t device_id, uint64_t device_generation,
     uint64_t bind_group_token, uint64_t pipeline_token,
