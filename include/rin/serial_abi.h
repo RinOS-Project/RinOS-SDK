@@ -18,6 +18,14 @@ typedef enum RinSerialTransportV1 {
     RIN_SERIAL_TRANSPORT_USB_VENDOR = 3
 } RinSerialTransportV1;
 
+/* Optional serial endpoint protocol/class metadata. 0 remains the generic
+ * serial class for existing producers and consumers. Specialized kernel
+ * transports must require their exact class rather than claiming any UART. */
+typedef enum RinSerialDeviceClassV1 {
+    RIN_SERIAL_DEVICE_CLASS_GENERIC = 0,
+    RIN_SERIAL_DEVICE_CLASS_BLUETOOTH_HCI_H4 = 1
+} RinSerialDeviceClassV1;
+
 typedef enum RinSerialParityV1 {
     RIN_SERIAL_PARITY_NONE = 0,
     RIN_SERIAL_PARITY_ODD = 1,
