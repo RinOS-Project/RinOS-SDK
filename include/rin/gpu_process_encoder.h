@@ -36,9 +36,11 @@ typedef struct RinGpuProcessCommandEncoderV1 {
 
 typedef struct RinGpuProcessEncoderGraphicsStateV1 {
     uint64_t color_target_cookie;
+    uint64_t query_cookie;
     uint32_t mip_level;
     uint32_t array_layer;
     uint32_t render_pass_active;
+    uint32_t query_type;
 } RinGpuProcessEncoderGraphicsStateV1;
 
 static inline int rin_gpu_process_encoder_v1_zero_words(
@@ -134,6 +136,37 @@ static inline int rin_gpu_process_encoder_v1_draw_valid(
            draw->reserved0 == 0u && draw->reserved1 == 0u;
 }
 
+/* Process-query types and RinGPU backend-query types currently share numeric
+ * values, but translate explicitly at this ABI boundary so a future public
+ * token schema cannot silently change the backend command meaning. */
+static inline RinGpuResult rin_gpu_process_encoder_v1_query_type(
+    uint32_t process_query_type, uint32_t* backend_query_type_out)
+{
+    if (!backend_query_type_out) return RIN_GPU_ERROR_INVALID_ARGUMENT;
+    *backend_query_type_out = 0u;
+    switch (process_query_type) {
+    case RIN_GPU_PROCESS_QUERY_TIMESTAMP_V1:
+        *backend_query_type_out = RIN_GPU_QUERY_TIMESTAMP;
+        return RIN_GPU_OK;
+    case RIN_GPU_PROCESS_QUERY_OCCLUSION_V1:
+        *backend_query_type_out = RIN_GPU_QUERY_OCCLUSION;
+        return RIN_GPU_OK;
+    case RIN_GPU_PROCESS_QUERY_PIPELINE_STATISTICS_V1:
+        *backend_query_type_out = RIN_GPU_QUERY_PIPELINE_STATISTICS;
+        return RIN_GPU_OK;
+    default:
+        return RIN_GPU_ERROR_UNSUPPORTED;
+    }
+}
+
+static inline int rin_gpu_process_encoder_v1_backend_query_type_valid(
+    uint32_t backend_query_type)
+{
+    return backend_query_type == RIN_GPU_QUERY_TIMESTAMP ||
+           backend_query_type == RIN_GPU_QUERY_OCCLUSION ||
+           backend_query_type == RIN_GPU_QUERY_PIPELINE_STATISTICS;
+}
+
 /* Re-validate caller-owned records before append/submit.  The compact encoder
  * only accepts its explicit buffer/compute subset outside a render pass and
  * one color target for a graphics pass. */
@@ -141,7 +174,7 @@ static inline RinGpuResult rin_gpu_process_encoder_v1_graphics_state(
     const RinGpuProcessCommandEncoderV1* encoder,
     RinGpuProcessEncoderGraphicsStateV1* state_out)
 {
-    RinGpuProcessEncoderGraphicsStateV1 state = {0u, 0u, 0u, 0u};
+    RinGpuProcessEncoderGraphicsStateV1 state = {0};
     for (uint32_t index = 0u; index < encoder->command_count; ++index) {
         const RinGpuBackendCommandV1* command = &encoder->commands[index];
         if (command->reserved != 0u) return RIN_GPU_ERROR_INVALID_ARGUMENT;
@@ -212,6 +245,44 @@ static inline RinGpuResult rin_gpu_process_encoder_v1_graphics_state(
             state.array_layer = 0u;
             state.render_pass_active = 0u;
             break;
+        case RIN_GPU_BACKEND_COMMAND_BEGIN_QUERY: {
+            if (command->value.query.query_cookie == 0u ||
+                command->value.query.reserved != 0u)
+                return RIN_GPU_ERROR_INVALID_ARGUMENT;
+            if (!rin_gpu_process_encoder_v1_backend_query_type_valid(
+                    command->value.query.query_type))
+                return RIN_GPU_ERROR_UNSUPPORTED;
+            if (state.query_cookie != 0u) return RIN_GPU_ERROR_STATE;
+            state.query_cookie = command->value.query.query_cookie;
+            state.query_type = command->value.query.query_type;
+            break;
+        }
+        case RIN_GPU_BACKEND_COMMAND_END_QUERY: {
+            if (command->value.query.query_cookie == 0u ||
+                command->value.query.reserved != 0u)
+                return RIN_GPU_ERROR_INVALID_ARGUMENT;
+            if (!rin_gpu_process_encoder_v1_backend_query_type_valid(
+                    command->value.query.query_type))
+                return RIN_GPU_ERROR_UNSUPPORTED;
+            if (state.query_cookie != command->value.query.query_cookie ||
+                state.query_type != command->value.query.query_type)
+                return RIN_GPU_ERROR_STATE;
+            state.query_cookie = 0u;
+            state.query_type = 0u;
+            break;
+        }
+        case RIN_GPU_BACKEND_COMMAND_RESET_QUERY: {
+            if (command->value.query.query_cookie == 0u ||
+                command->value.query.reserved != 0u)
+                return RIN_GPU_ERROR_INVALID_ARGUMENT;
+            if (!rin_gpu_process_encoder_v1_backend_query_type_valid(
+                    command->value.query.query_type))
+                return RIN_GPU_ERROR_UNSUPPORTED;
+            if (state.query_cookie != 0u ||
+                state.render_pass_active != 0u)
+                return RIN_GPU_ERROR_STATE;
+            break;
+        }
         default:
             return RIN_GPU_ERROR_UNSUPPORTED;
         }
@@ -571,6 +642,78 @@ static inline RinGpuResult rin_gpu_process_command_encoder_end_render_pass_v1(
     return RIN_GPU_OK;
 }
 
+/* Query cookies are authenticated process-query tokens, never backend
+ * cookies. The kernel resolves them to this process' query object before the
+ * canonical command reaches the physical driver. */
+static inline RinGpuResult rin_gpu_process_command_encoder_query_v1(
+    RinGpuProcessCommandEncoderV1* encoder, uint32_t command_type,
+    uint64_t process_query_token, uint32_t process_query_type)
+{
+    RinGpuBackendCommandV1* command;
+    RinGpuProcessEncoderGraphicsStateV1 state;
+    uint32_t backend_query_type;
+    RinGpuResult result = rin_gpu_process_encoder_v1_validate(encoder);
+    if (result != RIN_GPU_OK) return result;
+    if (process_query_token == 0u) return RIN_GPU_ERROR_INVALID_ARGUMENT;
+    result = rin_gpu_process_encoder_v1_query_type(process_query_type,
+                                                   &backend_query_type);
+    if (result != RIN_GPU_OK) return result;
+    result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
+    if (result != RIN_GPU_OK) return result;
+    switch (command_type) {
+    case RIN_GPU_BACKEND_COMMAND_BEGIN_QUERY:
+        if (state.query_cookie != 0u) return RIN_GPU_ERROR_STATE;
+        break;
+    case RIN_GPU_BACKEND_COMMAND_END_QUERY:
+        if (state.query_cookie != process_query_token ||
+            state.query_type != backend_query_type)
+            return RIN_GPU_ERROR_STATE;
+        break;
+    case RIN_GPU_BACKEND_COMMAND_RESET_QUERY:
+        if (state.query_cookie != 0u || state.render_pass_active != 0u)
+            return RIN_GPU_ERROR_STATE;
+        break;
+    default:
+        return RIN_GPU_ERROR_INVALID_ARGUMENT;
+    }
+    if (encoder->command_count == encoder->command_capacity)
+        return RIN_GPU_ERROR_LIMIT;
+    command = &encoder->commands[encoder->command_count];
+    memset(command, 0, sizeof(*command));
+    command->type = command_type;
+    command->value.query.query_cookie = process_query_token;
+    command->value.query.query_type = backend_query_type;
+    ++encoder->command_count;
+    return RIN_GPU_OK;
+}
+
+static inline RinGpuResult rin_gpu_process_command_encoder_begin_query_v1(
+    RinGpuProcessCommandEncoderV1* encoder, uint64_t process_query_token,
+    uint32_t process_query_type)
+{
+    return rin_gpu_process_command_encoder_query_v1(
+        encoder, RIN_GPU_BACKEND_COMMAND_BEGIN_QUERY, process_query_token,
+        process_query_type);
+}
+
+static inline RinGpuResult rin_gpu_process_command_encoder_end_query_v1(
+    RinGpuProcessCommandEncoderV1* encoder, uint64_t process_query_token,
+    uint32_t process_query_type)
+{
+    return rin_gpu_process_command_encoder_query_v1(
+        encoder, RIN_GPU_BACKEND_COMMAND_END_QUERY, process_query_token,
+        process_query_type);
+}
+
+static inline RinGpuResult rin_gpu_process_command_encoder_reset_query_v1(
+    RinGpuProcessCommandEncoderV1* encoder, uint64_t process_query_token,
+    uint32_t process_query_type)
+{
+    return rin_gpu_process_command_encoder_query_v1(
+        encoder, RIN_GPU_BACKEND_COMMAND_RESET_QUERY, process_query_token,
+        process_query_type);
+}
+
 static inline RinGpuResult rin_gpu_process_command_encoder_make_submit_v2(
     const RinGpuProcessCommandEncoderV1* encoder,
     RinGpuProcessSubmitDescV2* descriptor_out)
@@ -580,7 +723,8 @@ static inline RinGpuResult rin_gpu_process_command_encoder_make_submit_v2(
     if (result != RIN_GPU_OK) return result;
     result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
     if (result != RIN_GPU_OK) return result;
-    if (state.render_pass_active != 0u) return RIN_GPU_ERROR_STATE;
+    if (state.render_pass_active != 0u || state.query_cookie != 0u)
+        return RIN_GPU_ERROR_STATE;
     if (!descriptor_out || encoder->command_count == 0u ||
         rin_gpu_process_encoder_v1_ranges_overlap(
             encoder, sizeof(*encoder), descriptor_out, sizeof(*descriptor_out)) ||
