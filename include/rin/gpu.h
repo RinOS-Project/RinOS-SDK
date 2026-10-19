@@ -76,6 +76,7 @@ extern "C" {
 #define RIN_GPU_PROCESS_SHADER_MAX_BYTES_V1 UINT64_C(1048640)
 #define RIN_GPU_PROCESS_QUERY_DESC_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_QUERY_RESULT_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_TIMESTAMP_PERIOD_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_PRODUCT_STATUS_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_PRODUCT_REPORT_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_QUERY_VALUE_COUNT_V1 UINT32_C(8)
@@ -156,7 +157,8 @@ enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE = 28,
     RIN_GPU_SDK_PROCESS_IMAGE_CREATE = 29,
     RIN_GPU_SDK_PROCESS_GRAPHICS_BIND_GROUP_CREATE_V2 = 30,
-    RIN_GPU_SDK_PROCESS_GRAPHICS_PIPELINE_CREATE_V2 = 31
+    RIN_GPU_SDK_PROCESS_GRAPHICS_PIPELINE_CREATE_V2 = 31,
+    RIN_GPU_SDK_PROCESS_TIMESTAMP_PERIOD = 32
 };
 
 typedef uint64_t RinGpuAllocationV1;
@@ -405,6 +407,21 @@ typedef struct RinGpuProcessQueryResultV1 {
     uint32_t reserved1;
     uint64_t values[RIN_GPU_PROCESS_QUERY_VALUE_COUNT_V1];
 } RinGpuProcessQueryResultV1;
+
+/* Exact hardware timestamp period for this device generation. A zero
+ * fractional denominator is valid only when the numerator is zero. The
+ * clock-domain cookie is returned by the admitted hardware owner and is not
+ * selected by the calling process. */
+typedef struct RinGpuProcessTimestampPeriodV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t device_generation;
+    uint64_t clock_domain_cookie;
+    uint64_t whole_nanoseconds;
+    uint64_t fractional_numerator;
+    uint64_t fractional_denominator;
+    uint64_t reserved[2];
+} RinGpuProcessTimestampPeriodV1;
 
 /* `commands` is a byte slice of canonical public RinGpuBackendCommandV1
  * records; command_record_size must equal
@@ -987,6 +1004,9 @@ RIN_SDK_API RinResult rin_gpu_process_query_create_v1(
 RIN_SDK_API RinResult rin_gpu_process_query_result_v1(
     uint64_t device_id, uint64_t device_generation, uint64_t query_token,
     RinGpuProcessQueryResultV1* result_out);
+RIN_SDK_API RinResult rin_gpu_process_timestamp_period_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuProcessTimestampPeriodV1* period_out);
 RIN_SDK_API RinResult rin_gpu_process_product_get_status_v1(
     uint64_t device_id, uint64_t device_generation,
     RinGpuProcessProductStatusV1* status_out);
@@ -1070,6 +1090,8 @@ static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
               "RinGpuProcessQueryDescV1 ABI drift");
 static_assert(sizeof(RinGpuProcessQueryResultV1) == 88u,
               "RinGpuProcessQueryResultV1 ABI drift");
+static_assert(sizeof(RinGpuProcessTimestampPeriodV1) == 64u,
+              "RinGpuProcessTimestampPeriodV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinGpuAllocationDescV1) == 64u,
                "RinGpuAllocationDescV1 ABI drift");
@@ -1139,6 +1161,8 @@ _Static_assert(sizeof(RinGpuProcessQueryDescV1) == 24u,
                "RinGpuProcessQueryDescV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessQueryResultV1) == 88u,
                "RinGpuProcessQueryResultV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessTimestampPeriodV1) == 64u,
+               "RinGpuProcessTimestampPeriodV1 ABI drift");
 #endif
 
 #ifdef __cplusplus

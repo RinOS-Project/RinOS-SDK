@@ -2178,6 +2178,49 @@ RinResult rin_gpu_process_query_result_v1(
     return result;
 }
 
+RinResult rin_gpu_process_timestamp_period_v1(
+    uint64_t device_id, uint64_t device_generation,
+    RinGpuProcessTimestampPeriodV1* period_out) {
+    RinSdkArgsV1 request;
+    RinResult result;
+
+    if (!period_out || device_id == 0u || device_generation == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (!versioned(period_out, sizeof(*period_out)))
+        return RIN_ERROR_ABI_MISMATCH;
+    rin_sdk_zero_bytes(period_out, sizeof(*period_out));
+    period_out->struct_size = sizeof(*period_out);
+    period_out->version = RIN_GPU_PROCESS_TIMESTAMP_PERIOD_VERSION_V1;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = device_id;
+    request.value[1] = device_generation;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GPU, RIN_GPU_SDK_PROCESS_TIMESTAMP_PERIOD, &request,
+        sizeof(request), period_out, sizeof(*period_out));
+    if (result == RIN_SUCCESS &&
+        (period_out->struct_size != sizeof(*period_out) ||
+         period_out->version !=
+             RIN_GPU_PROCESS_TIMESTAMP_PERIOD_VERSION_V1 ||
+         period_out->device_generation != device_generation ||
+         period_out->clock_domain_cookie == 0u ||
+         (period_out->fractional_numerator == 0u
+              ? period_out->fractional_denominator != 0u ||
+                    period_out->whole_nanoseconds == 0u
+              : period_out->fractional_denominator == 0u ||
+                    period_out->fractional_numerator >=
+                        period_out->fractional_denominator) ||
+         period_out->reserved[0] != 0u || period_out->reserved[1] != 0u))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(period_out, sizeof(*period_out));
+        period_out->struct_size = sizeof(*period_out);
+        period_out->version = RIN_GPU_PROCESS_TIMESTAMP_PERIOD_VERSION_V1;
+    }
+    return result;
+}
+
 RinResult rin_gpu_process_product_get_status_v1(
     uint64_t device_id, uint64_t device_generation,
     RinGpuProcessProductStatusV1* status_out)
