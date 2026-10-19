@@ -582,13 +582,14 @@ static intptr_t rincrt_raw_syscall6(uintptr_t number, uintptr_t first,
                            "{r10}"(fourth), "{r8}"(fifth), "{r9}"(sixth)
                          : "rcx", "r11", "memory");
 #else
+    result = (intptr_t)number;
     __asm__ __volatile__(
         "pushl %%ebp\n\t"
-        "movl %7, %%ebp\n\t"
+        "movl %6, %%ebp\n\t"
         "int $0x80\n\t"
         "popl %%ebp"
-        : "=&a"(result)
-        : "0"(number), "b"(first), "c"(second), "d"(third),
+        : "+a"(result)
+        : "b"(first), "c"(second), "d"(third),
           "S"(fourth), "D"(fifth), "m"(sixth)
         : "memory");
 #endif

@@ -16,6 +16,11 @@ enum RinRenderTargetFormat {
 #define RIN_RENDER_TARGET_FLAG_WRITABLE UINT32_C(0x00000001)
 #define RIN_RENDER_TARGET_FLAG_EXTERNAL UINT32_C(0x00000002)
 
+/* RIN render-target v1 uses a 4-byte layout on i686 even when the compiler's
+ * native uint64_t alignment is 8 bytes. Keep the ABI stable across compilers. */
+#if UINTPTR_MAX <= UINT32_MAX
+#pragma pack(push, 4)
+#endif
 typedef struct RinRenderTarget {
     uint32_t struct_size;
     uint16_t version;
@@ -29,5 +34,8 @@ typedef struct RinRenderTarget {
     uint32_t buffer_slot;
     uint32_t flags;
 } RinRenderTarget;
+#if UINTPTR_MAX <= UINT32_MAX
+#pragma pack(pop)
+#endif
 
 #endif /* RIN_SDK_RENDER_TARGET_H */
