@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #include <rin/driver/usb/hid/gamepad_v1.h>
-#include "subsystems/rinnt/service_input.h"
+#include <rin/input/gamepad_state_v1.h>
 #include "rin/contract_abi.h"
 #define RIN_USB_HID_GAMEPAD_MAPPING_V1 1u
 #define RIN_USB_HID_GAMEPAD_MAPPING_AXIS_ABSENT UINT8_C(0xff)
@@ -55,7 +55,7 @@ RinResultCode rin_usb_hid_gamepad_mapping_apply(
     const RinUsbHidGamepadMappingV1* mapping,
     const RinUsbHidGamepadSampleV1* sample,
     uint32_t user_index, uint64_t device_id, uint64_t device_generation,
-    uint64_t sample_sequence, RinNTServiceInputNativeGamepadV1* state_out);
+    uint64_t sample_sequence, RinGamepadStateV1* state_out);
 
 #if defined(__cplusplus)
 static_assert(sizeof(RinUsbHidGamepadMappingV1) == 96u,

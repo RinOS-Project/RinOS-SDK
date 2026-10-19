@@ -125,7 +125,7 @@ RinResultCode rin_usb_hid_gamepad_mapping_apply(
     const RinUsbHidGamepadMappingV1* mapping,
     const RinUsbHidGamepadSampleV1* sample,
     uint32_t user_index, uint64_t device_id, uint64_t device_generation,
-    uint64_t sample_sequence, RinNTServiceInputNativeGamepadV1* state_out)
+    uint64_t sample_sequence, RinGamepadStateV1* state_out)
 {
     if (state_out) mapping_zero(state_out, sizeof(*state_out));
     if (!mapping_valid(mapping) || !sample || !state_out ||
@@ -148,9 +148,9 @@ RinResultCode rin_usb_hid_gamepad_mapping_apply(
             return RIN_RESULT_CORRUPT_DATA;
     }
     state_out->struct_size = sizeof(*state_out);
-    state_out->version = RINNT_SERVICE_INPUT_GAMEPAD_VERSION;
+    state_out->version = RIN_GAMEPAD_STATE_VERSION;
     state_out->user_index = user_index;
-    state_out->flags = RINNT_SERVICE_INPUT_GAMEPAD_CONNECTED;
+    state_out->flags = RIN_GAMEPAD_STATE_FLAG_CONNECTED;
     state_out->device_id = device_id;
     state_out->device_generation = device_generation;
     state_out->sample_sequence = sample_sequence;
