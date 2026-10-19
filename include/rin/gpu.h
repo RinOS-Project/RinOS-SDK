@@ -121,6 +121,8 @@ extern "C" {
 /* RinGpuBackendCommandV1's canonical packed record size. The kernel pins this
  * SDK value to sizeof(RinGpuBackendCommandV1) at its dispatch boundary. */
 #define RIN_GPU_PROCESS_COMMAND_RECORD_SIZE_V1 UINT32_C(872)
+/* Canonical indirect-dispatch arguments are three uint32 workgroup counts. */
+#define RIN_GPU_PROCESS_DISPATCH_INDIRECT_ARGUMENT_SIZE_V1 UINT64_C(12)
 
 enum RinGpuSdkOperationV1 {
     RIN_GPU_SDK_MEMORY_ALLOCATE = 1,

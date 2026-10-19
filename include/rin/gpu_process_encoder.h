@@ -205,11 +205,22 @@ static inline RinGpuResult rin_gpu_process_encoder_v1_graphics_state(
             if (state.render_pass_active != 0u)
                 return RIN_GPU_ERROR_STATE;
             if (command->value.dispatch.pipeline_cookie == 0u ||
-                command->value.dispatch.bind_group_cookie == 0u ||
                 command->value.dispatch.group_count_x == 0u ||
                 command->value.dispatch.group_count_y == 0u ||
                 command->value.dispatch.group_count_z == 0u ||
                 command->value.dispatch.reserved != 0u)
+                return RIN_GPU_ERROR_INVALID_ARGUMENT;
+            break;
+        case RIN_GPU_BACKEND_COMMAND_DISPATCH_INDIRECT:
+            if (state.render_pass_active != 0u)
+                return RIN_GPU_ERROR_STATE;
+            if (command->value.dispatch_indirect.pipeline_cookie == 0u ||
+                command->value.dispatch_indirect.indirect_buffer_cookie == 0u ||
+                (command->value.dispatch_indirect.indirect_offset &
+                 UINT64_C(3)) != 0u ||
+                command->value.dispatch_indirect.indirect_offset >
+                    UINT64_MAX -
+                        RIN_GPU_PROCESS_DISPATCH_INDIRECT_ARGUMENT_SIZE_V1)
                 return RIN_GPU_ERROR_INVALID_ARGUMENT;
             break;
         case RIN_GPU_BACKEND_COMMAND_BEGIN_RENDER_PASS:
@@ -553,8 +564,8 @@ static inline RinGpuResult rin_gpu_process_command_encoder_dispatch_v1(
     result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
     if (result != RIN_GPU_OK) return result;
     if (state.render_pass_active != 0u) return RIN_GPU_ERROR_STATE;
-    if (pipeline_cookie == 0u || bind_group_cookie == 0u ||
-        group_count_x == 0u || group_count_y == 0u || group_count_z == 0u)
+    if (pipeline_cookie == 0u || group_count_x == 0u ||
+        group_count_y == 0u || group_count_z == 0u)
         return RIN_GPU_ERROR_INVALID_ARGUMENT;
     if (encoder->command_count == encoder->command_capacity)
         return RIN_GPU_ERROR_LIMIT;
@@ -568,6 +579,55 @@ static inline RinGpuResult rin_gpu_process_command_encoder_dispatch_v1(
     command->value.dispatch.group_count_z = group_count_z;
     ++encoder->command_count;
     return RIN_GPU_OK;
+}
+
+static inline RinGpuResult
+rin_gpu_process_command_encoder_dispatch_indirect_v1(
+    RinGpuProcessCommandEncoderV1* encoder, uint64_t pipeline_cookie,
+    uint64_t bind_group_cookie, const RinGpuProcessBufferV1* indirect_buffer,
+    uint64_t indirect_offset)
+{
+    RinGpuBackendCommandV1* command;
+    RinGpuProcessEncoderGraphicsStateV1 state;
+    RinGpuResult result = rin_gpu_process_encoder_v1_validate(encoder);
+    if (result != RIN_GPU_OK) return result;
+    result = rin_gpu_process_encoder_v1_graphics_state(encoder, &state);
+    if (result != RIN_GPU_OK) return result;
+    if (state.render_pass_active != 0u) return RIN_GPU_ERROR_STATE;
+    if (pipeline_cookie == 0u || (indirect_offset & UINT64_C(3)) != 0u)
+        return RIN_GPU_ERROR_INVALID_ARGUMENT;
+    result = rin_gpu_process_encoder_v1_buffer_range_status(
+        indirect_buffer, RIN_GPU_ALLOCATION_GPU_READ, indirect_offset,
+        RIN_GPU_PROCESS_DISPATCH_INDIRECT_ARGUMENT_SIZE_V1);
+    if (result != RIN_GPU_OK) return result;
+    if (encoder->command_count == encoder->command_capacity)
+        return RIN_GPU_ERROR_LIMIT;
+    command = &encoder->commands[encoder->command_count];
+    memset(command, 0, sizeof(*command));
+    command->type = RIN_GPU_BACKEND_COMMAND_DISPATCH_INDIRECT;
+    command->value.dispatch_indirect.pipeline_cookie = pipeline_cookie;
+    command->value.dispatch_indirect.bind_group_cookie = bind_group_cookie;
+    command->value.dispatch_indirect.indirect_buffer_cookie =
+        indirect_buffer->desc.resource_cookie;
+    command->value.dispatch_indirect.indirect_offset = indirect_offset;
+    ++encoder->command_count;
+    return RIN_GPU_OK;
+}
+
+static inline RinGpuResult
+rin_gpu_process_command_encoder_dispatch_indirect_allocated_buffer_v1(
+    RinGpuProcessCommandEncoderV1* encoder, uint64_t pipeline_cookie,
+    uint64_t bind_group_cookie,
+    const RinGpuProcessAllocatedBufferV1* indirect_buffer,
+    uint64_t indirect_offset)
+{
+    RinGpuProcessBufferV1 buffer_view;
+    RinGpuResult result = rin_gpu_process_encoder_v1_allocated_buffer_view(
+        indirect_buffer, &buffer_view);
+    if (result != RIN_GPU_OK) return result;
+    return rin_gpu_process_command_encoder_dispatch_indirect_v1(
+        encoder, pipeline_cookie, bind_group_cookie, &buffer_view,
+        indirect_offset);
 }
 
 static inline RinGpuResult rin_gpu_process_command_encoder_begin_render_pass_v1(
