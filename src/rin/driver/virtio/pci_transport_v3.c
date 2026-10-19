@@ -104,8 +104,9 @@ RinDriverV3Result rin_virtio_pci_discover_v3(
     layout.vendor_id = (uint16_t)identity;
     layout.device_id = (uint16_t)(identity >> 16u);
     if (layout.vendor_id != RIN_VIRTIO_PCI_VENDOR_ID ||
-        layout.device_id < UINT16_C(0x1040) ||
-        layout.device_id > UINT16_C(0x107f)) {
+        (layout.device_id != UINT16_C(0x1000) &&
+         (layout.device_id < UINT16_C(0x1040) ||
+          layout.device_id > UINT16_C(0x107f)))) {
         return RIN_DRIVER_V3_DENIED;
     }
     result = config_read(api, context, 0x06u, 2u, &status);
