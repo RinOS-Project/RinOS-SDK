@@ -479,6 +479,7 @@
 /* memory. */
 #define RIN_SYS_SHM_ATTACH_RANGE            0x8081u
 #define RIN_SYS_SHM_PROTECT                 0x8082u
+/* storage. */
 #define RIN_SYS_INSTALL_BACKUP_SOURCE_OPEN  0x8083u
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
