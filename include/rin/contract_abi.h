@@ -798,10 +798,7 @@ typedef struct RinBlockInfoV2 {
     uint32_t identity_flags;
 } RinBlockInfoV2;
 
-/* V3 separates the registration-root coordinate from the kernel's reported-
- * identity alias group. Equal alias-group IDs are a conservative collision
- * signal; different values are not proof of distinct media without the
- * generation-bound MEDIA_UNIQUE_ATTESTED flag. */
+/* V3 separates the registration-root coordinate from the kernel's reported-identity alias group. Equal alias-group IDs are a conservative collision signal; different values are not proof of distinct media without the generation-bound MEDIA_UNIQUE_ATTESTED flag. */
 typedef struct RinBlockInfoV3 {
     uint32_t struct_size;
     uint16_t version;
@@ -1722,6 +1719,19 @@ static_assert(offsetof(RinBlockInfoV2, model) == 72, "RinBlockInfoV2.model ABI d
 static_assert(offsetof(RinBlockInfoV2, physical_device_id) == 136, "RinBlockInfoV2.physical_device_id ABI drift");
 static_assert(offsetof(RinBlockInfoV2, identity_flags) == 140, "RinBlockInfoV2.identity_flags ABI drift");
 static_assert(sizeof(RinBlockInfoV3) == 152, "RinBlockInfoV3 ABI drift");
+static_assert(offsetof(RinBlockInfoV3, struct_size) == 0, "RinBlockInfoV3.struct_size ABI drift");
+static_assert(offsetof(RinBlockInfoV3, version) == 4, "RinBlockInfoV3.version ABI drift");
+static_assert(offsetof(RinBlockInfoV3, flags) == 6, "RinBlockInfoV3.flags ABI drift");
+static_assert(offsetof(RinBlockInfoV3, block_id) == 8, "RinBlockInfoV3.block_id ABI drift");
+static_assert(offsetof(RinBlockInfoV3, transport) == 12, "RinBlockInfoV3.transport ABI drift");
+static_assert(offsetof(RinBlockInfoV3, reserved0) == 14, "RinBlockInfoV3.reserved0 ABI drift");
+static_assert(offsetof(RinBlockInfoV3, logical_block_size) == 16, "RinBlockInfoV3.logical_block_size ABI drift");
+static_assert(offsetof(RinBlockInfoV3, physical_block_size) == 20, "RinBlockInfoV3.physical_block_size ABI drift");
+static_assert(offsetof(RinBlockInfoV3, optimal_transfer_blocks) == 24, "RinBlockInfoV3.optimal_transfer_blocks ABI drift");
+static_assert(offsetof(RinBlockInfoV3, max_transfer_blocks) == 28, "RinBlockInfoV3.max_transfer_blocks ABI drift");
+static_assert(offsetof(RinBlockInfoV3, block_count) == 32, "RinBlockInfoV3.block_count ABI drift");
+static_assert(offsetof(RinBlockInfoV3, name) == 40, "RinBlockInfoV3.name ABI drift");
+static_assert(offsetof(RinBlockInfoV3, model) == 72, "RinBlockInfoV3.model ABI drift");
 static_assert(offsetof(RinBlockInfoV3, root_registration_id) == 136, "RinBlockInfoV3.root_registration_id ABI drift");
 static_assert(offsetof(RinBlockInfoV3, identity_flags) == 140, "RinBlockInfoV3.identity_flags ABI drift");
 static_assert(offsetof(RinBlockInfoV3, physical_device_id) == 144, "RinBlockInfoV3.physical_device_id ABI drift");
@@ -2532,6 +2542,19 @@ _Static_assert(offsetof(RinBlockInfoV2, model) == 72, "RinBlockInfoV2.model ABI 
 _Static_assert(offsetof(RinBlockInfoV2, physical_device_id) == 136, "RinBlockInfoV2.physical_device_id ABI drift");
 _Static_assert(offsetof(RinBlockInfoV2, identity_flags) == 140, "RinBlockInfoV2.identity_flags ABI drift");
 _Static_assert(sizeof(RinBlockInfoV3) == 152, "RinBlockInfoV3 ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, struct_size) == 0, "RinBlockInfoV3.struct_size ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, version) == 4, "RinBlockInfoV3.version ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, flags) == 6, "RinBlockInfoV3.flags ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, block_id) == 8, "RinBlockInfoV3.block_id ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, transport) == 12, "RinBlockInfoV3.transport ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, reserved0) == 14, "RinBlockInfoV3.reserved0 ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, logical_block_size) == 16, "RinBlockInfoV3.logical_block_size ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, physical_block_size) == 20, "RinBlockInfoV3.physical_block_size ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, optimal_transfer_blocks) == 24, "RinBlockInfoV3.optimal_transfer_blocks ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, max_transfer_blocks) == 28, "RinBlockInfoV3.max_transfer_blocks ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, block_count) == 32, "RinBlockInfoV3.block_count ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, name) == 40, "RinBlockInfoV3.name ABI drift");
+_Static_assert(offsetof(RinBlockInfoV3, model) == 72, "RinBlockInfoV3.model ABI drift");
 _Static_assert(offsetof(RinBlockInfoV3, root_registration_id) == 136, "RinBlockInfoV3.root_registration_id ABI drift");
 _Static_assert(offsetof(RinBlockInfoV3, identity_flags) == 140, "RinBlockInfoV3.identity_flags ABI drift");
 _Static_assert(offsetof(RinBlockInfoV3, physical_device_id) == 144, "RinBlockInfoV3.physical_device_id ABI drift");
