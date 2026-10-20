@@ -27,6 +27,8 @@
 #define RIN_CRASH_SERVICE_OP_READ_NOTICE UINT16_C(13)
 #define RIN_CRASH_SERVICE_OP_EXPORT_NOTICE UINT16_C(14)
 #define RIN_CRASH_SERVICE_OP_READ_NOTICE_RECOVERY UINT16_C(15)
+#define RIN_CRASH_SERVICE_OP_READ_PENDING_DUMPS UINT16_C(16)
+#define RIN_CRASH_SERVICE_OP_EXPORT_PENDING_DUMP UINT16_C(17)
 #define RIN_CRASH_SERVICE_MINIDUMP_MAX_BYTES UINT32_C(638)
 
 #define RIN_CRASH_SERVICE_STATUS_CONSENT_REQUIRED INT32_C(-1000)
@@ -181,6 +183,42 @@ typedef struct RinCrashServiceHistoryPurgeV1 {
     uint32_t reserved1;
 } RinCrashServiceHistoryPurgeV1;
 
+/* Pending pre-drain dumps are retained by crashd separately from the RCD1
+ * summary archive. Listing and exporting them each require fresh local
+ * physical consent. The owner identity is checked by crashd and is never
+ * returned in this public record. */
+#define RIN_CRASH_SERVICE_PENDING_DUMP_LIST_VERSION UINT16_C(1)
+#define RIN_CRASH_SERVICE_PENDING_DUMP_EXPORT_VERSION UINT16_C(1)
+#define RIN_CRASH_SERVICE_PENDING_DUMP_MAX_RECORDS UINT16_C(32)
+typedef struct RinCrashServicePendingDumpInfoV1 {
+    uint64_t boot_id_high;
+    uint64_t boot_id_low;
+    uint64_t queue_sequence;
+    uint64_t timestamp_ns;
+    uint32_t exception_code;
+    uint32_t architecture;
+} RinCrashServicePendingDumpInfoV1;
+
+typedef struct RinCrashServicePendingDumpListV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t record_count;
+    uint32_t unattributed_count;
+    uint32_t reserved;
+    RinCrashServicePendingDumpInfoV1 records[
+        RIN_CRASH_SERVICE_PENDING_DUMP_MAX_RECORDS];
+} RinCrashServicePendingDumpListV1;
+
+typedef struct RinCrashServicePendingDumpExportV1 {
+    RinCrashConsentProofV1 proof;
+    uint64_t boot_id_high;
+    uint64_t boot_id_low;
+    uint64_t queue_sequence;
+    uint16_t version;
+    uint16_t reserved0;
+    uint32_t reserved1;
+} RinCrashServicePendingDumpExportV1;
+
 /* The status contains a count and sequence high-water only; it never exposes
  * crash contents. A system administrator displays this exact count before
  * invoking the separate, physically consented purge operation. */
@@ -297,6 +335,14 @@ static_assert(sizeof(RinCrashServiceHistoryPageV1) ==
               "RinCrashServiceHistoryPageV1 ABI drift");
 static_assert(sizeof(RinCrashServiceHistoryPurgeV1) == 144u,
               "RinCrashServiceHistoryPurgeV1 ABI drift");
+static_assert(sizeof(RinCrashServicePendingDumpInfoV1) == 40u,
+              "RinCrashServicePendingDumpInfoV1 ABI drift");
+static_assert(sizeof(RinCrashServicePendingDumpListV1) ==
+                  16u + sizeof(RinCrashServicePendingDumpInfoV1) *
+                            RIN_CRASH_SERVICE_PENDING_DUMP_MAX_RECORDS,
+              "RinCrashServicePendingDumpListV1 ABI drift");
+static_assert(sizeof(RinCrashServicePendingDumpExportV1) == 160u,
+              "RinCrashServicePendingDumpExportV1 ABI drift");
 static_assert(sizeof(RinCrashServiceLegacyHistoryStatusQueryV1) == 8u,
               "RinCrashServiceLegacyHistoryStatusQueryV1 ABI drift");
 static_assert(sizeof(RinCrashServiceLegacyHistoryStatusV1) == 24u,
@@ -330,6 +376,14 @@ _Static_assert(sizeof(RinCrashServiceHistoryPageV1) ==
                "RinCrashServiceHistoryPageV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceHistoryPurgeV1) == 144u,
                "RinCrashServiceHistoryPurgeV1 ABI drift");
+_Static_assert(sizeof(RinCrashServicePendingDumpInfoV1) == 40u,
+               "RinCrashServicePendingDumpInfoV1 ABI drift");
+_Static_assert(sizeof(RinCrashServicePendingDumpListV1) ==
+                   16u + sizeof(RinCrashServicePendingDumpInfoV1) *
+                             RIN_CRASH_SERVICE_PENDING_DUMP_MAX_RECORDS,
+               "RinCrashServicePendingDumpListV1 ABI drift");
+_Static_assert(sizeof(RinCrashServicePendingDumpExportV1) == 160u,
+               "RinCrashServicePendingDumpExportV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceLegacyHistoryStatusQueryV1) == 8u,
                "RinCrashServiceLegacyHistoryStatusQueryV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceLegacyHistoryStatusV1) == 24u,
