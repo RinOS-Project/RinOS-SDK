@@ -29,6 +29,7 @@
 #define RIN_CRASH_SERVICE_OP_READ_NOTICE_RECOVERY UINT16_C(15)
 #define RIN_CRASH_SERVICE_OP_READ_PENDING_DUMPS UINT16_C(16)
 #define RIN_CRASH_SERVICE_OP_EXPORT_PENDING_DUMP UINT16_C(17)
+#define RIN_CRASH_SERVICE_OP_DELETE_PENDING_DUMP UINT16_C(18)
 #define RIN_CRASH_SERVICE_MINIDUMP_MAX_BYTES UINT32_C(638)
 
 #define RIN_CRASH_SERVICE_STATUS_CONSENT_REQUIRED INT32_C(-1000)
@@ -219,6 +220,27 @@ typedef struct RinCrashServicePendingDumpExportV1 {
     uint32_t reserved1;
 } RinCrashServicePendingDumpExportV1;
 
+/* Deletion is bound to one listed tuple and requires its own fresh physical
+ * confirmation. The service confirms only after the private file removal is
+ * directory-synced. */
+#define RIN_CRASH_SERVICE_PENDING_DUMP_DELETE_VERSION UINT16_C(1)
+#define RIN_CRASH_SERVICE_PENDING_DUMP_DELETE_RESULT_VERSION UINT16_C(1)
+typedef struct RinCrashServicePendingDumpDeleteV1 {
+    RinCrashConsentProofV1 proof;
+    uint64_t boot_id_high;
+    uint64_t boot_id_low;
+    uint64_t queue_sequence;
+    uint16_t version;
+    uint16_t reserved0;
+    uint32_t reserved1;
+} RinCrashServicePendingDumpDeleteV1;
+
+typedef struct RinCrashServicePendingDumpDeleteResultV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved;
+} RinCrashServicePendingDumpDeleteResultV1;
+
 /* The status contains a count and sequence high-water only; it never exposes
  * crash contents. A system administrator displays this exact count before
  * invoking the separate, physically consented purge operation. */
@@ -343,6 +365,10 @@ static_assert(sizeof(RinCrashServicePendingDumpListV1) ==
               "RinCrashServicePendingDumpListV1 ABI drift");
 static_assert(sizeof(RinCrashServicePendingDumpExportV1) == 160u,
               "RinCrashServicePendingDumpExportV1 ABI drift");
+static_assert(sizeof(RinCrashServicePendingDumpDeleteV1) == 160u,
+              "RinCrashServicePendingDumpDeleteV1 ABI drift");
+static_assert(sizeof(RinCrashServicePendingDumpDeleteResultV1) == 8u,
+              "RinCrashServicePendingDumpDeleteResultV1 ABI drift");
 static_assert(sizeof(RinCrashServiceLegacyHistoryStatusQueryV1) == 8u,
               "RinCrashServiceLegacyHistoryStatusQueryV1 ABI drift");
 static_assert(sizeof(RinCrashServiceLegacyHistoryStatusV1) == 24u,
@@ -384,6 +410,10 @@ _Static_assert(sizeof(RinCrashServicePendingDumpListV1) ==
                "RinCrashServicePendingDumpListV1 ABI drift");
 _Static_assert(sizeof(RinCrashServicePendingDumpExportV1) == 160u,
                "RinCrashServicePendingDumpExportV1 ABI drift");
+_Static_assert(sizeof(RinCrashServicePendingDumpDeleteV1) == 160u,
+               "RinCrashServicePendingDumpDeleteV1 ABI drift");
+_Static_assert(sizeof(RinCrashServicePendingDumpDeleteResultV1) == 8u,
+               "RinCrashServicePendingDumpDeleteResultV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceLegacyHistoryStatusQueryV1) == 8u,
                "RinCrashServiceLegacyHistoryStatusQueryV1 ABI drift");
 _Static_assert(sizeof(RinCrashServiceLegacyHistoryStatusV1) == 24u,
