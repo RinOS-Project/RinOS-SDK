@@ -90,6 +90,61 @@ static inline RinResult rin_gpu_process_queue_owner_v1_create(
     return RIN_SUCCESS;
 }
 
+/* Queue operations require the owner to remain ACTIVE. Callers must serialize
+ * submit/query against destroy; a cleanup-pending token must not accept new
+ * work while release is being retried. */
+static inline RinResult rin_gpu_process_queue_owner_v1_submit_v1(
+    const RinGpuProcessQueueOwnerV1* owner,
+    const RinGpuProcessSubmitDescV1* descriptor,
+    RinGpuProcessSubmitReceiptV1* receipt_out)
+{
+    RinResult result;
+    if (!rin_gpu_process_queue_owner_v1_valid(owner) ||
+        owner->phase != RIN_GPU_PROCESS_QUEUE_OWNER_PHASE_ACTIVE)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    result = rin_gpu_process_submit_v1(
+        owner->queue_token, descriptor, receipt_out);
+    if (result == RIN_SUCCESS && receipt_out &&
+        receipt_out->queue_id != owner->queue_id)
+        return RIN_ERROR_ABI_MISMATCH;
+    return result;
+}
+
+static inline RinResult rin_gpu_process_queue_owner_v1_submit_v2(
+    const RinGpuProcessQueueOwnerV1* owner,
+    const RinGpuProcessSubmitDescV2* descriptor,
+    RinGpuProcessSubmitReceiptV1* receipt_out)
+{
+    RinResult result;
+    if (!rin_gpu_process_queue_owner_v1_valid(owner) ||
+        owner->phase != RIN_GPU_PROCESS_QUEUE_OWNER_PHASE_ACTIVE)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    result = rin_gpu_process_submit_v2(
+        owner->queue_token, descriptor, receipt_out);
+    if (result == RIN_SUCCESS && receipt_out &&
+        receipt_out->queue_id != owner->queue_id)
+        return RIN_ERROR_ABI_MISMATCH;
+    return result;
+}
+
+static inline RinResult rin_gpu_process_queue_owner_v1_query_timeline(
+    const RinGpuProcessQueueOwnerV1* owner, uint64_t expected_device_epoch,
+    uint64_t expected_iommu_map_generation,
+    RinGpuProcessQueueTimelineV1* timeline_out)
+{
+    RinResult result;
+    if (!rin_gpu_process_queue_owner_v1_valid(owner) ||
+        owner->phase != RIN_GPU_PROCESS_QUEUE_OWNER_PHASE_ACTIVE)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    result = rin_gpu_process_queue_query_timeline_v1(
+        owner->queue_token, expected_device_epoch,
+        expected_iommu_map_generation, timeline_out);
+    if (result == RIN_SUCCESS && timeline_out &&
+        timeline_out->queue_id != owner->queue_id)
+        return RIN_ERROR_ABI_MISMATCH;
+    return result;
+}
+
 /* Destruction marks intent before releasing. Any release error leaves the
  * exact token and identity cleanup-pending for a safe retry. */
 static inline RinResult rin_gpu_process_queue_owner_v1_destroy(
