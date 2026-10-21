@@ -18,6 +18,8 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
         (api->capabilities & capabilities) != capabilities ||
         !api->dma_allocate || !api->bar_map ||
         !api->lease_release || !api->register_device ||
+        (((api->capabilities & RIN_DRIVER_V3_CAP_ENTROPY_MIX) != 0u) !=
+         (api->entropy_mix != NULL)) ||
         (((api->capabilities &
            (RIN_DRIVER_V3_CAP_MSI | RIN_DRIVER_V3_CAP_MSIX)) != 0u) &&
          !api->irq_acquire) ||
@@ -27,7 +29,7 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
          !api->device_dma_start)) {
         return 0;
     }
-    for (uint32_t index = 0u; index < 4u; ++index) {
+    for (uint32_t index = 0u; index < 3u; ++index) {
         if (api->reserved[index] != 0u) return 0;
     }
     for (uint32_t index = 0u; index < 8u; ++index) {
@@ -44,7 +46,8 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
         api->pci_config_read_padding != 0u ||
         api->pci_config_write_padding != 0u || api->log_padding != 0u ||
         api->monotonic_time_ns_padding != 0u ||
-        api->device_dma_start_padding != 0u)
+        api->device_dma_start_padding != 0u ||
+        api->entropy_mix_padding != 0u)
         return 0;
 #endif
     return 1;

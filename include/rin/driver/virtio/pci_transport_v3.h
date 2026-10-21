@@ -23,6 +23,7 @@ typedef struct RinVirtioPciLayoutV3 {
     RinVirtioPciCapabilityV3 common;
     RinVirtioPciCapabilityV3 notify;
     RinVirtioPciCapabilityV3 isr;
+    /* Device-specific configuration is optional in the Virtio PCI spec. */
     RinVirtioPciCapabilityV3 device;
 } RinVirtioPciLayoutV3;
 

@@ -169,7 +169,11 @@ RinDriverV3Result rin_virtio_pci_discover_v3(
         }
         capability = next;
     }
-    if (found != UINT32_C(0x0f)) return RIN_DRIVER_V3_INVALID;
+    /* Common, notification, and ISR regions are required.  Device-specific
+     * configuration is optional for devices such as Virtio RNG. */
+    if ((found & UINT32_C(0x07)) != UINT32_C(0x07) ||
+        (found & ~UINT32_C(0x0f)) != 0u)
+        return RIN_DRIVER_V3_INVALID;
     *output = layout;
     return RIN_DRIVER_V3_OK;
 }

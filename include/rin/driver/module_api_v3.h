@@ -37,6 +37,7 @@
 #define RIN_DRIVER_V3_CAP_FIRMWARE         UINT64_C(0x0000000000000800)
 #define RIN_DRIVER_V3_CAP_CHILD_DEVICE     UINT64_C(0x0000000000001000)
 #define RIN_DRIVER_V3_CAP_DEVICE_PROPERTIES UINT64_C(0x0000000000002000)
+#define RIN_DRIVER_V3_CAP_ENTROPY_MIX      UINT64_C(0x0000000000004000)
 #define RIN_DRIVER_V3_CAPABILITY_MASK                                   \
     (RIN_DRIVER_V3_CAP_DMA_ISOLATED | RIN_DRIVER_V3_CAP_BAR |            \
      RIN_DRIVER_V3_CAP_MSI | RIN_DRIVER_V3_CAP_MSIX |                    \
@@ -44,7 +45,8 @@
      RIN_DRIVER_V3_CAP_PCI_CONFIG | RIN_DRIVER_V3_CAP_DMA_START |          \
      RIN_DRIVER_V3_CAP_DMA_CONTIGUOUS | RIN_DRIVER_V3_CAP_IOPORT |       \
      RIN_DRIVER_V3_CAP_IRQ_EVENTS | RIN_DRIVER_V3_CAP_FIRMWARE |          \
-     RIN_DRIVER_V3_CAP_CHILD_DEVICE | RIN_DRIVER_V3_CAP_DEVICE_PROPERTIES)
+     RIN_DRIVER_V3_CAP_CHILD_DEVICE | RIN_DRIVER_V3_CAP_DEVICE_PROPERTIES | \
+     RIN_DRIVER_V3_CAP_ENTROPY_MIX)
 
 #define RIN_DRIVER_V3_DEVICE_BLOCK   UINT32_C(1)
 #define RIN_DRIVER_V3_DEVICE_NET     UINT32_C(2)
@@ -1204,6 +1206,12 @@ typedef void (*RinDriverV3LogFn)(
 typedef uint64_t (*RinDriverV3ClockFn)(uint64_t api_context);
 typedef RinDriverV3Result (*RinDriverV3DeviceDmaStartFn)(
     uint64_t api_context, uint64_t session);
+/* Mixes a bounded sample from an active DMA lease into the kernel DRBG.
+ * The sample is never credited as trusted entropy and is never returned as
+ * random output. The runtime copies the bytes before mixing them. */
+typedef RinDriverV3Result (*RinDriverV3EntropyMixFn)(
+    uint64_t api_context, uint64_t session,
+    const void* dma_sample, uint32_t sample_length);
 
 typedef struct RinDriverApiV3 {
     uint32_t struct_size;
@@ -1275,7 +1283,13 @@ typedef struct RinDriverApiV3 {
     /* Address of the optional, versioned capability broker table from
      * <rin/driver/services_v3.h>. This consumes one reserved 64-bit slot. */
     uint64_t services_api_address;
-    uint64_t reserved[4];
+    /* Entropy mix input is capability-gated and consumes one former reserved
+     * pointer slot without changing the 184-byte API table. */
+    RinDriverV3EntropyMixFn entropy_mix;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t entropy_mix_padding;
+#endif
+    uint64_t reserved[3];
 } RinDriverApiV3;
 
 typedef RinDriverV3Result (*RinDriverEntryV3)(
@@ -1289,7 +1303,8 @@ static_assert(sizeof(RinDriverApiV3) == 184u,
 static_assert(offsetof(RinDriverApiV3, dma_allocate) == 24u &&
                   offsetof(RinDriverApiV3, timer_poll) == 80u &&
                   offsetof(RinDriverApiV3, services_api_address) == 144u &&
-                  offsetof(RinDriverApiV3, reserved) == 152u,
+                  offsetof(RinDriverApiV3, entropy_mix) == 152u &&
+                  offsetof(RinDriverApiV3, reserved) == 160u,
               "NDRV v3 API callback slot ABI drift");
 static_assert(sizeof(RinDriverV3DmaLeaseInfo) == 48u,
               "NDRV v3 DMA lease ABI drift");
@@ -1364,7 +1379,8 @@ _Static_assert(sizeof(RinDriverApiV3) == 184u,
 _Static_assert(offsetof(RinDriverApiV3, dma_allocate) == 24u &&
                    offsetof(RinDriverApiV3, timer_poll) == 80u &&
                    offsetof(RinDriverApiV3, services_api_address) == 144u &&
-                   offsetof(RinDriverApiV3, reserved) == 152u,
+                   offsetof(RinDriverApiV3, entropy_mix) == 152u &&
+                   offsetof(RinDriverApiV3, reserved) == 160u,
                "NDRV v3 API callback slot ABI drift");
 _Static_assert(sizeof(RinDriverV3DmaLeaseInfo) == 48u,
                "NDRV v3 DMA lease ABI drift");
