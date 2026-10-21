@@ -156,9 +156,10 @@ typedef struct RinBluetoothHciControlRequestV1 {
     uint8_t scan_response_data[RIN_BLUETOOTH_HCI_CONTROL_MAX_LEGACY_ADV_DATA];
     union {
         /* Retained for source compatibility with earlier V1 clients. */
-        uint8_t reserved1[6];
+        uint8_t reserved1[8];
         /* Used only by DISCONNECT; zero for every other operation. */
         struct __attribute__((packed)) {
+            uint16_t reserved0;
             uint16_t connection_handle;
             uint32_t connection_generation;
         } disconnect;
@@ -234,6 +235,8 @@ static inline int rin_bluetooth_hci_control_request_v1_valid(
         (request->operation != RIN_BLUETOOTH_HCI_CONTROL_DISCONNECT &&
          !rin_bluetooth_hci_control_request_v1_zero(
              request->reserved1, sizeof(request->reserved1))) ||
+        (request->operation == RIN_BLUETOOTH_HCI_CONTROL_DISCONNECT &&
+         request->disconnect.reserved0 != 0u) ||
         request->disconnect.connection_handle > UINT16_C(0x0eff))
         return 0;
     if (request->operation != RIN_BLUETOOTH_HCI_CONTROL_DISCONNECT &&
@@ -517,9 +520,9 @@ static_assert(sizeof(RinBluetoothHciControlConnectionInfoV1) == 32u,
 static_assert(sizeof(RinBluetoothHciControlRequestV1) == 1936u,
               "Bluetooth HCI request ABI drift");
 static_assert(offsetof(RinBluetoothHciControlRequestV1,
-                       disconnect.connection_handle) == 134u &&
+                       disconnect.connection_handle) == 136u &&
                   offsetof(RinBluetoothHciControlRequestV1,
-                           disconnect.connection_generation) == 136u &&
+                           disconnect.connection_generation) == 138u &&
                   offsetof(RinBluetoothHciControlRequestV1, payload) == 144u,
               "Bluetooth HCI connection-control offsets ABI drift");
 static_assert(sizeof(RinBluetoothHciControlRequestV1) <=
@@ -541,9 +544,9 @@ _Static_assert(sizeof(RinBluetoothHciControlConnectionInfoV1) == 32u,
 _Static_assert(sizeof(RinBluetoothHciControlRequestV1) == 1936u,
                "Bluetooth HCI request ABI drift");
 _Static_assert(offsetof(RinBluetoothHciControlRequestV1,
-                        disconnect.connection_handle) == 134u &&
+                        disconnect.connection_handle) == 136u &&
                    offsetof(RinBluetoothHciControlRequestV1,
-                            disconnect.connection_generation) == 136u &&
+                            disconnect.connection_generation) == 138u &&
                    offsetof(RinBluetoothHciControlRequestV1, payload) == 144u,
                "Bluetooth HCI connection-control offsets ABI drift");
 _Static_assert(sizeof(RinBluetoothHciControlRequestV1) <=
