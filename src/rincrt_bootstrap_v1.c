@@ -358,9 +358,22 @@ void rin_cpp_exception_register_current_cleanup(
 void rin_cpp_exception_unregister_current_cleanup(
     RinCrtCppExceptionCleanup callback, void* object)
 {
-    RinCrtCppExceptionFrame* frame = rincrt_cpp_exception_top;
+    RinCrtCppExceptionFrame* frame;
     if (!callback || !object) rincrt_cpp_exception_cleanup_fatal();
-    if (frame) rin_cpp_exception_unregister_cleanup(frame, callback, object);
+    /* A callee-owned parameter may be registered on its caller's frame. */
+    for (frame = rincrt_cpp_exception_top; frame; frame = frame->previous) {
+        RinCrtCppExceptionCleanupRecord* record;
+        RinCrtCppExceptionCleanupRecord* previous = (void*)0;
+        for (record = frame->cleanup_top; record; record = record->previous) {
+            if (record->callback == callback && record->object == object) {
+                if (previous) previous->previous = record->previous;
+                else frame->cleanup_top = record->previous;
+                rin_user_allocator_free(record);
+                return;
+            }
+            previous = record;
+        }
+    }
 }
 
 void rin_cpp_exception_install(RinCrtCppExceptionFrame* frame)
