@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include <rin/base.h>
 #include <rin/gui.h>
+#include <rin/gui/surface_abi.h>
 
 int main(void)
 {

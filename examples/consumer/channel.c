@@ -5,7 +5,7 @@
 int main(void)
 {
     static const char payload[] = "ping";
-    char received[sizeof(payload)] = {0};
+    char received[5] = {0};
     RinChannel sender = RIN_HANDLE_INVALID;
     RinChannel receiver = RIN_HANDLE_INVALID;
     RinIpcMessageV1 message = {0};
