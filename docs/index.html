@@ -29,6 +29,7 @@
   <nav aria-label="SDK guide">
     <a href="#quick-start">Quick start</a>
     <a href="#abi">ABI and ownership</a>
+    <a href="#cpp20">C++20 conveniences</a>
     <a href="#process">Processes and IPC</a>
     <a href="#portal">File Portal</a>
     <a href="#gui-media">Window and media</a>
@@ -64,12 +65,36 @@ int main(void) {
   <section id="capabilities">
     <h2>Capabilities and handle ownership</h2>
     <p>Capabilities authorize classes of operations; object handles refer to individual kernel-managed objects. An application requests only the capability bits it needs, and policy may grant fewer or none. A capability bit is not proof that a backing service or device is present.</p>
-    <p>Handles are opaque, process-scoped values. Treat a handle as a capability, never as an address or object identifier. Duplicating a handle can only narrow its rights. Close each owned handle once with its typed close function or <code>rin_object_close_v1</code>; do not close borrowed handles. If cleanup errors must be reported, call <code>close()</code> explicitly before an RAII wrapper is destroyed.</p>
+    <p>Handles are opaque, process-scoped values. Treat a handle as a capability, never as an address or object identifier. Duplicating a handle can only narrow its rights. Close each owned handle once with its typed close function or <code>rin_object_close_v1</code>; do not close borrowed handles. If cleanup errors must be reported, call <code>close()</code> explicitly before an RAII wrapper is destroyed. Use <code>try_replace(std::move(next))</code> when replacing an owned handle and checking close errors matters; on failure both wrappers keep their original handles. Move assignment preserves that same ownership rule but cannot return the close error.</p>
     <pre><code>auto created = rin::channel_create();
 if (!created) return static_cast&lt;int&gt;(created.code());
 rin::unique_handle&lt;RinChannel&gt; endpoint(created.value().first);
 /* endpoint closes its owned channel when its scope ends. */</code></pre>
-    <p>The C++ <code>outcome&lt;T&gt;</code> preserves the ABI result code. Read <code>value()</code> only after checking <code>ok()</code>; output values on failure are not usable results.</p>
+    <p>The C++ <code>outcome&lt;T&gt;</code> preserves the ABI result code. Read <code>value()</code> only after checking <code>ok()</code>; output values on failure are not usable results. New code can use <code>try_value()</code>, which returns null on failure.</p>
+  </section>
+
+  <section id="cpp20">
+    <h2>C++20 strings, buffers, and timeouts</h2>
+    <p><code>&lt;rin/cpp/sdk.hpp&gt;</code> provides overloads for <code>std::string_view</code>, <code>std::span&lt;T&gt;</code>, and integral <code>std::chrono::duration</code> values. These overloads only build the existing pointer/length and nanosecond C records; the public ABI layout does not change.</p>
+#include &lt;array&gt;
+#include &lt;chrono&gt;
+#include &lt;cstddef&gt;
+#include &lt;span&gt;
+#include &lt;string_view&gt;
+#include &lt;rin/cpp/sdk.hpp&gt;
+
+int main() {
+std::string_view service = "com.example.echo";
+auto channel = rin::service_connect(service);
+if (auto* value = channel.try_value()) {
+    rin::unique_handle&lt;RinChannel&gt; owned(*value);
+}
+
+std::array&lt;std::byte, 128&gt; input{};
+auto sent = rin::socket_send(socket, std::span{input});
+auto waited = rin::process_wait(process, std::chrono::milliseconds{250});
+}</code></pre>
+    <p>A string view preserves its byte length, including embedded NULs, and its storage must remain valid for the synchronous call. Span overloads measure bytes, accept empty spans as zero-length slices, and require trivially copyable elements; output buffers require mutable spans. Duration overloads accept integral reps, reject negative values, truncate positive sub-nanosecond values toward zero, and return <code>RIN_ERROR_LIMIT_EXCEEDED</code> when conversion overflows or reaches the ABI's reserved infinite-timeout value. Floating-point durations are intentionally not accepted because their conversion would be lossy.</p>
   </section>
 
   <section id="process">
