@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="RinOS public application and driver SDK guide">
+  <title>RinOS SDK</title>
+  <style>
+    :root { color-scheme: light dark; font: 16px/1.55 system-ui, sans-serif; }
+    body { margin: 0 auto; max-width: 72rem; padding: 2rem clamp(1rem, 4vw, 3rem); }
+    header, main, footer { max-width: 68rem; margin: 0 auto; }
+    nav { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin: 1.5rem 0 2rem; }
+    a { text-underline-offset: .18em; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    code { overflow-wrap: anywhere; }
+    pre { overflow-x: auto; padding: 1rem; border: 1px solid #8886; border-radius: .5rem; }
+    section { margin: 2.5rem 0; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #8886; padding: .55rem .7rem; text-align: left; vertical-align: top; }
+    th { font-weight: 650; }
+    .note { border-left: .25rem solid #5489cc; padding: .75rem 1rem; background: #5489cc12; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>RinOS SDK</h1>
+  <p>The public SDK contains fixed-width C ABIs, header-only C++20 conveniences, shared driver helpers, and the runtime import contracts used by RinOS applications.</p>
+  <p>Supported SDK package targets are <code>i686-unknown-rinos</code> and <code>x86_64-unknown-rinos</code>. Application code uses public SDK headers and granted capabilities; it does not include OS-Core headers.</p>
+  <nav aria-label="SDK guide">
+    <a href="#quick-start">Quick start</a>
+    <a href="#abi">ABI and ownership</a>
+    <a href="#process">Processes and IPC</a>
+    <a href="#portal">File Portal</a>
+    <a href="#gui-media">Window and media</a>
+    <a href="#drivers">Drivers</a>
+    <a href="#build">Build and package</a>
+  </nav>
+</header>
+
+<main>
+  <section id="quick-start">
+    <h2>Quick start</h2>
+    <p>Start with <a href="../include/rin/sdk.h"><code>&lt;rin/sdk.h&gt;</code></a> for the common application surface. Include a narrower <code>&lt;rin/...&gt;</code> header when an application only needs one domain. The <a href="../include/rin/cpp/sdk.hpp"><code>&lt;rin/cpp/sdk.hpp&gt;</code></a> wrapper requires C++20 and keeps its C++ types on the caller side of the stable C ABI.</p>
+    <pre><code>#include &lt;rin/sdk.h&gt;
+
+int main(void) {
+    rin_log("Hello from a RinOS application.");
+    return 0;
+}</code></pre>
+    <p>The consumer project under <a href="../examples/consumer/"><code>examples/consumer</code></a> is an SDK-only C/C++ compile entry. It compiles one translation unit per public header, then builds the sample translation units without including OS-Core sources.</p>
+  </section>
+
+  <section id="abi">
+    <h2>ABI versioning and errors</h2>
+    <ul>
+      <li>The published package identity is <code>rinos-sdk-v1</code>; the supported target names are recorded in <a href="../pkg/rinsdk-v1.json"><code>pkg/rinsdk-v1.json</code></a>.</li>
+      <li>Each versioned request and response sets <code>struct_size = sizeof(record)</code> and its documented <code>version</code>. Reserved fields are zero. A caller checks <code>RinResult</code> before consuming output fields.</li>
+      <li>Keep fixed-width integers and opaque handles at the ABI boundary. Do not pass C++ objects, exceptions, STL containers, compiler bitfields, or pointers to temporary storage across an SDK call.</li>
+      <li>New fields require a versioned ABI change or a reserved-field contract that explicitly permits them. Do not infer compatibility from the compiler, architecture, or the size of an unrelated record.</li>
+    </ul>
+    <p>The top-level SDK ABI declarations are in <a href="../include/rin/abi.h"><code>abi.h</code></a>. Domain records live beside their APIs; for example, process requests are in <a href="../include/rin/base.h"><code>base.h</code></a> and window records are in <a href="../include/rin/gui.h"><code>gui.h</code></a>.</p>
+  </section>
+
+  <section id="capabilities">
+    <h2>Capabilities and handle ownership</h2>
+    <p>Capabilities authorize classes of operations; object handles refer to individual kernel-managed objects. An application requests only the capability bits it needs, and policy may grant fewer or none. A capability bit is not proof that a backing service or device is present.</p>
+    <p>Handles are opaque, process-scoped values. Treat a handle as a capability, never as an address or object identifier. Duplicating a handle can only narrow its rights. Close each owned handle once with its typed close function or <code>rin_object_close_v1</code>; do not close borrowed handles. If cleanup errors must be reported, call <code>close()</code> explicitly before an RAII wrapper is destroyed.</p>
+    <pre><code>auto created = rin::channel_create();
+if (!created) return static_cast&lt;int&gt;(created.code());
+rin::unique_handle&lt;RinChannel&gt; endpoint(created.value().first);
+/* endpoint closes its owned channel when its scope ends. */</code></pre>
+    <p>The C++ <code>outcome&lt;T&gt;</code> preserves the ABI result code. Read <code>value()</code> only after checking <code>ok()</code>; output values on failure are not usable results.</p>
+  </section>
+
+  <section id="process">
+    <h2>Processes and IPC</h2>
+    <p><a href="../include/rin/base.h"><code>rin_process_spawn_v1</code></a> starts an image with an explicit capability mask. A zero mask requests no optional capabilities. Wait on the returned process handle, inspect the exit code only on success, and close the handle on every path.</p>
+    <p>Channels are bounded and non-blocking. Empty receive and queue-full send return <code>RIN_ERROR_WOULD_BLOCK</code>; wait for readiness before retrying. Inline messages are limited to 64 KiB and handle transfer to 16 handles. Use shared memory for larger payloads. Transferred handles retain their rights and require the source handle's duplicate right.</p>
+    <p>See <a href="../include/rin/ipc.h"><code>ipc.h</code></a> for the readiness and queue contract, and the C and C++ examples in <code>examples/consumer</code> for spawn, wait, and channel ownership patterns.</p>
+  </section>
+
+  <section id="portal">
+    <h2>File Portal</h2>
+    <p>A File Portal grant represents a user-authorized file object, not a pathname. The privileged chooser resolves the selected object and issues a rights-limited grant. Applications must not manufacture a path from the grant ID or use a grant to bypass their namespace policy.</p>
+    <p>For a durable grant, pass the grant ID supplied by the trusted portal flow to <code>rin_fs_portal_open_v1</code>. The kernel rechecks the current sandbox identity, object type, rights, expiry, and policy generation, and returns a process-owned file or directory handle. Open with the minimum rights and close the returned handle when finished. The sample <code>file_portal.c</code> reads a regular-file grant using read-only access.</p>
+    <p>Ephemeral token issue/open and durable-grant syscall records are documented in <a href="../include/rin/file_portal.h"><code>file_portal.h</code></a>, <a href="../include/rin/file_portal_call.h"><code>file_portal_call.h</code></a>, and <a href="../include/rin/fs.h"><code>fs.h</code></a>. Token authentication keys belong to the trusted portal service; ordinary applications must never embed them.</p>
+  </section>
+
+  <section id="gui-media">
+    <h2>Window and media APIs</h2>
+    <p>The GUI surface in <a href="../include/rin/gui.h"><code>gui.h</code></a> creates a window, returns versioned events, and presents caller-owned surfaces. Check every result and close both window and surface handles. Window creation does not grant control over other applications' windows.</p>
+    <p>Media operations are in <a href="../include/rin/media.h"><code>media.h</code></a>. They accept an explicit MIME type, source slice, media type, and flags. Decoded image/audio data is written to a caller-provided bounded output slice; video decode targets a surface. Applications request the corresponding media capabilities (such as microphone or camera capture) through package policy and handle denial or unsupported formats as normal results.</p>
+    <p>The sample <code>window.c</code> creates a window and waits for one event. The media records and functions have standalone C/C++ consumer coverage in the CMake project.</p>
+  </section>
+
+  <section id="drivers">
+    <h2>Driver contract</h2>
+    <p>External drivers use the NDRV v3 public ABI under <a href="../include/rin/driver/README.md"><code>include/rin/driver/README.md</code></a>. A driver receives only the capabilities and generation-bound resource leases that the kernel grants. BAR mappings, DMA buffers, IRQs, timers, firmware, and registrations have checked lifetimes; release them before stopping or unloading the module.</p>
+    <p>Use <code>probe</code> to validate the device and required services, <code>start</code> to publish the active owner, then honor <code>quiesce</code>, <code>stop</code>, and <code>remove</code> ordering. A failed cleanup keeps its lease and driver image for retry. Do not include kernel headers or assume that a PCI match alone grants access to hardware.</p>
+  </section>
+
+  <section id="build">
+    <h2>Build and package</h2>
+    <p>Configure the standalone header consumer with C and C++ compilers, then build its targets:</p>
+    <pre><code>cmake -S examples/consumer -B build/consumer
+cmake --build build/consumer</code></pre>
+    <p>From an OS-Core checkout, the same project can be configured with an explicit SDK path:</p>
+    <pre><code>cmake -S public-base/RinOS-SDK/examples/consumer -B out/sdk-consumer \
+  -DRINOS_SDK_ROOT=public-base/RinOS-SDK
+cmake --build out/sdk-consumer</code></pre>
+    <p>The <code>rinosdk_headers_c</code> and <code>rinosdk_headers_cpp</code> object targets compile each public header by itself in C11 and C++20 modes. The <code>rinosdk_example_*</code> targets compile the samples. They intentionally do not link to a host runtime; a RinOS application links the SDK libraries listed in <code>pkg/rinsdk-v1.json</code> with the RinOS target toolchain.</p>
+    <p>SDK runtime libraries are built and signed by the RinOS release toolchain using the versioned package manifest. Application packages are separately linked and signed by their publisher. A successful host header build does not prove target linkage, package signatures, granted capabilities, or runtime service availability.</p>
+  </section>
+</main>
+
+<footer>
+  <p>All API behavior is bounded by the public versioned headers shipped with the selected SDK package. When prose and a versioned declaration disagree, report the mismatch and follow the ABI contract in the header.</p>
+</footer>
+</body>
+</html>
