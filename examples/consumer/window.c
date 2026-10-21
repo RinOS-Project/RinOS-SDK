@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
-#include <rin/sdk.h>
+#include <rin/base.h>
+#include <rin/gui.h>
 
 int main(void)
 {

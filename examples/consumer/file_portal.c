@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include <rin/file_portal.h>
-#include <rin/sdk.h>
+#include <rin/fs.h>
 
 int main(int argc, char** argv)
 {
