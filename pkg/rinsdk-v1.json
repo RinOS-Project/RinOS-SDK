@@ -3,6 +3,10 @@
   "abi": "rinos-sdk-v1",
   "targets": ["i686-unknown-rinos", "x86_64-unknown-rinos"],
   "include_directory": "include",
+  "public_header_dependencies": [
+    {"project": "RinGPU", "include_subdirectory": "ringpu"},
+    {"project": "RinResource", "include_subdirectory": "rinresource"}
+  ],
   "libraries": {
     "rincrt": {"archive": "librincrt.ra", "shared": "rincrt.rll", "define": "RINSDK_BUILD_CORE", "dependencies": [], "extra_sources": ["rincrt_bootstrap_v1.c", "../../libs/libc/rin_user_allocator.c"]},
     "rinbase": {"archive": "librinbase.ra", "shared": "rinbase.rll", "define": "RINSDK_BUILD_BASE", "dependencies": ["rincrt"]},

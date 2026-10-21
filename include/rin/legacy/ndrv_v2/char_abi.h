@@ -25,9 +25,15 @@ typedef struct __attribute__((packed)) RinLegacyDriverV2CharPendingEntry {
     uint8_t reserved[7];
 } RinLegacyDriverV2CharPendingEntry;
 
+#if defined(__cplusplus)
+static_assert(sizeof(RinLegacyDriverV2CharPendingEntry) ==
+                  RIN_LEGACY_DRIVER_V2_CHAR_ENTRY_SIZE,
+              "legacy v2 CHAR2 entry ABI drift");
+#else
 _Static_assert(sizeof(RinLegacyDriverV2CharPendingEntry) ==
                    RIN_LEGACY_DRIVER_V2_CHAR_ENTRY_SIZE,
                "legacy v2 CHAR2 entry ABI drift");
+#endif
 
 /* Callbacks execute in ordinary process context after the VFS owner has
  * acquired its generation-bound callback lease.  `device` is the optional

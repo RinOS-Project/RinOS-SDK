@@ -156,7 +156,7 @@ RinUsbHidGamepadPidEffectsResult rin_usb_hid_gamepad_pid_effects_detach(
     uint32_t port_generation);
 
 #if defined(__cplusplus)
-static_assert(sizeof(RinUsbHidGamepadPidEffectsSpecV1) == 56u,
+static_assert(sizeof(RinUsbHidGamepadPidEffectSpecV1) == 56u,
               "PID effect spec ABI drift");
 static_assert(sizeof(RinUsbHidGamepadPidEffectOutputV1) == 32u,
               "PID effect output ABI drift");

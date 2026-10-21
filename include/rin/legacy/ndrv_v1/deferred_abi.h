@@ -127,7 +127,7 @@ static inline int rin_legacy_driver_deferred_request(
         return RIN_LEGACY_DRIVER_DEFERRED_EXHAUSTED;
     }
     queue->callback = callback_value;
-    ++queue->request_generation;
+    queue->request_generation = queue->request_generation + 1u;
     queue->flags = flags | RIN_LEGACY_DRIVER_DEFERRED_PENDING;
     rin_legacy_driver_deferred_queue_unlock(queue);
     return RIN_LEGACY_DRIVER_DEFERRED_OK;

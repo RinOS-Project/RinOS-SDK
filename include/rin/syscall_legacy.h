@@ -8,6 +8,7 @@
 #include "syscall_abi.h"
 
 /* Transitional aliases for existing kernel and RinPort sources. */
+#if !defined(__cplusplus) || defined(RIN_SDK_ENABLE_LEGACY_SYSCALL_ALIASES)
 #define SYS_RIN_PRIVATE_BASE RIN_SYS_PRIVATE_BASE
 #define SYS_EXIT                        RIN_SYS_EXIT
 #define SYS_FORK                        RIN_SYS_FORK
@@ -387,5 +388,6 @@
 #define SYS_SYSCALL_BATCH_ABI_VERSION   RIN_SYSCALL_BATCH_ABI_VERSION
 #define SYS_SYSCALL_BATCH_MAX_ITEMS     RIN_SYSCALL_BATCH_MAX_ITEMS
 #define SYS_SYSCALL_BATCH_ITEM_STRIDE   RIN_SYSCALL_BATCH_ITEM_STRIDE
+#endif /* C++ legacy aliases opt-in */
 
 #endif /* RIN_SDK_SYSCALL_LEGACY_H */

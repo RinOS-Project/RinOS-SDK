@@ -174,7 +174,7 @@ static inline RinGpuResult rin_gpu_process_encoder_v1_graphics_state(
     const RinGpuProcessCommandEncoderV1* encoder,
     RinGpuProcessEncoderGraphicsStateV1* state_out)
 {
-    RinGpuProcessEncoderGraphicsStateV1 state = {0};
+    RinGpuProcessEncoderGraphicsStateV1 state = {0u, 0u, 0u, 0u, 0u, 0u};
     for (uint32_t index = 0u; index < encoder->command_count; ++index) {
         const RinGpuBackendCommandV1* command = &encoder->commands[index];
         if (command->reserved != 0u) return RIN_GPU_ERROR_INVALID_ARGUMENT;
