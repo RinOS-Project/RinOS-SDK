@@ -99,3 +99,14 @@ endforeach()
 add_library(rinosdk_example_cpp OBJECT example_cpp.cpp)
 target_include_directories(rinosdk_example_cpp PRIVATE
                            ${_rinos_sdk_public_include_dirs})
+
+enable_testing()
+add_executable(rinosdk_cpp_contract_test cpp_api_contract_test.cpp)
+target_include_directories(rinosdk_cpp_contract_test PRIVATE
+                           ${_rinos_sdk_public_include_dirs})
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(rinosdk_cpp_contract_test PRIVATE
+                         -Wall -Wextra -Werror)
+endif()
+add_test(NAME rinosdk-cpp-api-contract
+         COMMAND rinosdk_cpp_contract_test)
