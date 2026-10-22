@@ -55,7 +55,6 @@ typedef struct RinCrashServicePendingDumpCleanupStatusV1 {
 
 /* Purge is bound to the complete snapshot shown to the administrator and
  * consumes a fresh kernel-issued physical-consent proof. */
-#define RIN_CRASH_SERVICE_PENDING_DUMP_CLEANUP_REQUEST_VERSION UINT16_C(1)
 typedef struct RinCrashServicePendingDumpCleanupRequestV1 {
     RinCrashConsentProofV1 proof;
     uint16_t version;
