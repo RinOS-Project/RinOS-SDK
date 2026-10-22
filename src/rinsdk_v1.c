@@ -648,7 +648,7 @@ RinResult rin_file_seek_v1(const RinFileSeekV1* request, uint64_t* position) {
         sizeof(*position));
 }
 RinResult rin_file_stat_v1(RinFile file, RinFileStatV1* stat) {
-    RinSdkArgsV1 request = {};
+    RinSdkArgsV1 request = {0};
     RinResult stat_result;
     if (file == RIN_HANDLE_INVALID || !stat)
         return RIN_ERROR_INVALID_ARGUMENT;
