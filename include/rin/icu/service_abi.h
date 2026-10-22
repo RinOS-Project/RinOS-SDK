@@ -70,6 +70,9 @@ enum {
     RIN_ICU_CMD_DISPLAY_NAME_V1 = 112,
     RIN_ICU_CMD_LIST_FORMAT_V1 = 113,
     RIN_ICU_CMD_RELATIVE_TIME_FORMAT_V1 = 114,
+    /* V2 preserves the upstream ICU timestamp used for temporal metazone
+     * selection. V1 remains the current-projection compatibility command. */
+    RIN_ICU_CMD_DISPLAY_NAME_V2 = 115,
 
     RIN_ICU_CMD_TIME_ZONE_CURRENT_V1 = 128,
     RIN_ICU_CMD_TIME_ZONE_CANONICALIZE_V1 = 129,
@@ -386,6 +389,16 @@ typedef struct RIN_ICU_ABI_PACKED RinIcuDisplayNameRequest {
     uint32_t reserved0;
 } RinIcuDisplayNameRequest;
 
+typedef struct RIN_ICU_ABI_PACKED RinIcuDisplayNameRequestV2 {
+    uint32_t locale_len;
+    uint32_t code_len;
+    uint32_t type;
+    uint32_t style;
+    uint32_t language_display;
+    uint32_t reserved0;
+    int64_t epoch_ms;
+} RinIcuDisplayNameRequestV2;
+
 typedef struct RIN_ICU_ABI_PACKED RinIcuListFormatRequest {
     uint32_t locale_len;
     uint32_t item_count;
@@ -485,6 +498,7 @@ static inline int rin_icu_command_known_v2(uint32_t command)
     case RIN_ICU_CMD_PLURAL_RULES_CREATE_V1:
     case RIN_ICU_CMD_PLURAL_RULES_SELECT_V1:
     case RIN_ICU_CMD_DISPLAY_NAME_V1:
+    case RIN_ICU_CMD_DISPLAY_NAME_V2:
     case RIN_ICU_CMD_LIST_FORMAT_V1:
     case RIN_ICU_CMD_RELATIVE_TIME_FORMAT_V1:
     case RIN_ICU_CMD_TIME_ZONE_CURRENT_V1:
@@ -576,6 +590,8 @@ RIN_ICU_STATIC_ASSERT(rin_icu_plural_select_size_is_stable,
                       sizeof(RinIcuPluralSelectRequest) == 8u);
 RIN_ICU_STATIC_ASSERT(rin_icu_display_name_size_is_stable,
                       sizeof(RinIcuDisplayNameRequest) == 24u);
+RIN_ICU_STATIC_ASSERT(rin_icu_display_name_v2_size_is_stable,
+                      sizeof(RinIcuDisplayNameRequestV2) == 32u);
 RIN_ICU_STATIC_ASSERT(rin_icu_list_format_size_is_stable,
                       sizeof(RinIcuListFormatRequest) == 16u);
 RIN_ICU_STATIC_ASSERT(rin_icu_relative_time_size_is_stable,
