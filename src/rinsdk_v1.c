@@ -1074,6 +1074,48 @@ static int gpu_process_slice_valid(RinSliceV1 slice) {
            slice.size - 1u <= (uint64_t)UINTPTR_MAX - slice.address;
 }
 
+/* The submit receipt is written before the syscall and again on failure. Do
+ * not clear it until every caller-owned input range is proven disjoint; an
+ * aliased output would otherwise corrupt the descriptor or command/resource
+ * bytes before the kernel has copied them. Treat malformed/overflowing ranges
+ * as unsafe to write through, leaving the caller's memory untouched. */
+static int gpu_process_submit_output_disjoint(
+    const RinGpuProcessSubmitReceiptV1* receipt,
+    const void* descriptor, size_t descriptor_size,
+    RinSliceV1 commands, RinSliceV1 resources, int has_resources) {
+    const uintptr_t output_begin = (uintptr_t)receipt;
+    const uintptr_t descriptor_begin = (uintptr_t)descriptor;
+    uintptr_t output_end;
+    uintptr_t descriptor_end;
+
+    if (!receipt || !descriptor || descriptor_size == 0u ||
+        sizeof(*receipt) - 1u > UINTPTR_MAX - output_begin ||
+        descriptor_size - 1u > UINTPTR_MAX - descriptor_begin)
+        return 0;
+    output_end = output_begin + sizeof(*receipt) - 1u;
+    descriptor_end = descriptor_begin + descriptor_size - 1u;
+    if (output_begin <= descriptor_end && descriptor_begin <= output_end)
+        return 0;
+
+    if (!gpu_process_slice_valid(commands)) return 0;
+    {
+        const uintptr_t input_begin = (uintptr_t)commands.address;
+        const uintptr_t input_end = input_begin + (uintptr_t)commands.size - 1u;
+        if (output_begin <= input_end && input_begin <= output_end) return 0;
+    }
+    if (has_resources) {
+        if (!gpu_process_slice_valid(resources)) return 0;
+        {
+            const uintptr_t input_begin = (uintptr_t)resources.address;
+            const uintptr_t input_end =
+                input_begin + (uintptr_t)resources.size - 1u;
+            if (output_begin <= input_end && input_begin <= output_end)
+                return 0;
+        }
+    }
+    return 1;
+}
+
 RinResult rin_gpu_process_queue_bind_v1(
     uint64_t device_id, uint64_t device_generation, uint32_t queue_id,
     RinGpuProcessQueueV1* queue_out) {
@@ -1114,14 +1156,18 @@ RinResult rin_gpu_process_submit_v1(
     uint64_t expected_commands_size;
     uint64_t expected_resources_size;
 
-    if (receipt_out) {
-        rin_sdk_zero_bytes(receipt_out, sizeof(*receipt_out));
-        receipt_out->struct_size = sizeof(*receipt_out);
-        receipt_out->version = RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1;
-    }
-    if (!receipt_out || queue == 0u || !descriptor ||
+    if (!receipt_out || !descriptor ||
         descriptor->struct_size != sizeof(*descriptor) ||
         descriptor->version != RIN_GPU_PROCESS_SUBMIT_DESC_VERSION_V1 ||
+        !gpu_process_submit_output_disjoint(
+            receipt_out, descriptor, sizeof(*descriptor),
+            descriptor->commands, descriptor->resources,
+            descriptor->resource_count != 0u))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    rin_sdk_zero_bytes(receipt_out, sizeof(*receipt_out));
+    receipt_out->struct_size = sizeof(*receipt_out);
+    receipt_out->version = RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1;
+    if (queue == 0u ||
         descriptor->reserved != 0u || descriptor->command_count == 0u ||
         descriptor->command_count > RIN_GPU_PROCESS_MAX_COMMANDS_V1 ||
         descriptor->command_record_size !=
@@ -1182,17 +1228,21 @@ RinResult rin_gpu_process_submit_v2(
     RinGpuProcessSubmitReceiptV1* receipt_out) {
     RinGpuProcessSubmitDescV2 request_desc;
     RinSdkArgsV1 request;
+    const RinSliceV1 no_resources = {0u, 0u};
     RinResult result;
     uint64_t expected_commands_size;
 
-    if (receipt_out) {
-        rin_sdk_zero_bytes(receipt_out, sizeof(*receipt_out));
-        receipt_out->struct_size = sizeof(*receipt_out);
-        receipt_out->version = RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1;
-    }
-    if (!receipt_out || queue == 0u || !descriptor ||
+    if (!receipt_out || !descriptor ||
         descriptor->struct_size != sizeof(*descriptor) ||
         descriptor->version != RIN_GPU_PROCESS_SUBMIT_DESC_VERSION_V2 ||
+        !gpu_process_submit_output_disjoint(
+            receipt_out, descriptor, sizeof(*descriptor),
+            descriptor->commands, no_resources, 0))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    rin_sdk_zero_bytes(receipt_out, sizeof(*receipt_out));
+    receipt_out->struct_size = sizeof(*receipt_out);
+    receipt_out->version = RIN_GPU_PROCESS_SUBMIT_RECEIPT_VERSION_V1;
+    if (queue == 0u ||
         descriptor->reserved[0] != 0u || descriptor->reserved[1] != 0u ||
         descriptor->command_count == 0u ||
         descriptor->command_count > RIN_GPU_PROCESS_MAX_COMMANDS_V1 ||
