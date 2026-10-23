@@ -4,9 +4,10 @@
 header in its C11 and C++20 modes and compiles the consumer source files as
 separate objects. It does not link for RinOS.
 
-`build.py` cross-compiles, links, validates, and packages the five C examples
-(`hello`, `process`, `channel`, `file_portal`, and `window`) for either SDK
-target. Pass one installed target prefix produced by `package_rinsdk_v1.py`;
+`build.py` cross-compiles, links, validates, and packages the C examples
+(`hello`, `process`, `channel`, `file_portal`, `window`, and `explorer`) for
+either SDK target. Pass one installed target prefix produced by
+`package_rinsdk_v1.py`;
 the helper verifies its manifest, public headers, runtime-library hashes, and
 signatures before producing application packages. The prefix contains the
 declared RinGPU and RinResource public-header dependencies.
@@ -35,3 +36,10 @@ target. The generated packages declare the runtime-library package version
 selected with `--runtime-version` (default `1.0.0`). `file_portal` accepts a
 durable grant ID from the trusted portal handoff; it requests read-only access
 and never turns the grant into a pathname.
+
+`explorer` is a developer-only text catalog. It lists the sample package IDs,
+public entry points, and each sample's declared capability. Use `--run` with
+an installed sample's executable path to start it and wait for its exit. The
+Explorer requests `process-control`, and it starts children with an empty
+capability mask; each sample package still declares and requests its own
+capabilities. It is not included in the standard application set.

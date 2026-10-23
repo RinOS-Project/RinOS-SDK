@@ -90,7 +90,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(rinosdk_headers_cpp PRIVATE -Wall -Wextra -Werror)
 endif()
 
-foreach(_example IN ITEMS hello process channel file_portal window)
+foreach(_example IN ITEMS hello process channel file_portal window explorer)
   add_library("rinosdk_example_${_example}" OBJECT "${_example}.c")
   target_include_directories("rinosdk_example_${_example}" PRIVATE
                              ${_rinos_sdk_public_include_dirs})

@@ -70,6 +70,21 @@ EXAMPLES = {
         "gui": True,
         "description": "Window creation and event consumer.",
     },
+    "explorer": {
+        "dependencies": ["rincrt", "rinbase"],
+        "imports": [
+            ("rinbase", "rin_process_spawn_v1"),
+            ("rinbase", "rin_process_wait_v1"),
+            ("rinbase", "rin_object_close_v1"),
+            ("rincrt", "puts"),
+            ("rincrt", "printf"),
+            ("rincrt", "strcmp"),
+            ("rincrt", "strlen"),
+        ],
+        "capabilities": ["process-control"],
+        "gui": False,
+        "description": "Developer-only SDK example catalog and launcher.",
+    },
 }
 RUNTIME_PACKAGE_PREFIX = "org.rinos.sdklib."
 
