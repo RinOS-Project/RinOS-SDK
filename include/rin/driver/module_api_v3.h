@@ -714,6 +714,12 @@ typedef RinDriverV3Result (*RinDriverV3BlockCancelFn)(
  * leases belonging to the cancelled request(s). */
 typedef RinDriverV3Result (*RinDriverV3BlockResetFn)(
     uint64_t driver_context, uint64_t deadline_ns);
+/* Returns a bounded RinStorageHealthSnapshotV1 byte payload for this block
+ * device generation. Implementations must leave unsupported values absent;
+ * this read-only diagnostic callback does not grant block I/O permissions. */
+typedef RinDriverV3Result (*RinDriverV3BlockGetStorageHealthSnapshotFn)(
+    uint64_t driver_context, uint64_t device_generation, uint8_t* data,
+    uint32_t capacity, uint32_t* data_size);
 typedef RinDriverV3Result (*RinDriverV3DeviceRemoveFn)(uint64_t driver_context);
 
 typedef struct RinDriverV3BlockOps {
@@ -743,7 +749,19 @@ typedef struct RinDriverV3BlockOps {
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t remove_padding;
 #endif
-    uint64_t reserved[4];
+    /* Reuse one reserved pointer-sized slot without changing the ABI size.
+     * Older drivers leave the callback null and remain valid. */
+    union {
+        uint64_t reserved[4];
+        struct {
+            RinDriverV3BlockGetStorageHealthSnapshotFn
+                get_storage_health_snapshot;
+#if UINTPTR_MAX == UINT32_MAX
+            uint32_t get_storage_health_snapshot_padding;
+#endif
+            uint64_t reserved_tail[3];
+        } extensions;
+    };
 } RinDriverV3BlockOps;
 
 typedef struct RinDriverV3DisplayOps {
@@ -974,13 +992,15 @@ static inline int rin_driver_v3_block_ops_valid(
     if (!ops || ops->struct_size != sizeof(*ops) ||
         ops->version != RIN_DRIVER_V3_OPS_VERSION || !ops->get_geometry ||
         !ops->submit || !ops->poll || !ops->cancel || !ops->reset ||
-        !ops->remove || ops->reserved[0] != 0u || ops->reserved[1] != 0u ||
-        ops->reserved[2] != 0u || ops->reserved[3] != 0u)
+        !ops->remove || ops->extensions.reserved_tail[0] != 0u ||
+        ops->extensions.reserved_tail[1] != 0u ||
+        ops->extensions.reserved_tail[2] != 0u)
         return 0;
 #if UINTPTR_MAX == UINT32_MAX
     if (ops->get_geometry_padding != 0u || ops->submit_padding != 0u ||
         ops->poll_padding != 0u || ops->cancel_padding != 0u ||
-        ops->reset_padding != 0u || ops->remove_padding != 0u)
+        ops->reset_padding != 0u || ops->remove_padding != 0u ||
+        ops->extensions.get_storage_health_snapshot_padding != 0u)
         return 0;
 #endif
     return 1;
@@ -1345,6 +1365,8 @@ static_assert(sizeof(RinDriverV3BlockCompletion) == 48u,
               "NDRV v3 block completion ABI drift");
 static_assert(sizeof(RinDriverV3BlockOps) == 88u,
               "NDRV v3 block operation ABI drift");
+static_assert(offsetof(RinDriverV3BlockOps, extensions) == 56u,
+              "NDRV v3 block extension slot ABI drift");
 static_assert(sizeof(RinDriverV3AudioFormat) == 56u,
               "NDRV v3 audio format ABI drift");
 static_assert(sizeof(RinDriverV3AudioBuffer) == 64u,
@@ -1421,6 +1443,8 @@ _Static_assert(sizeof(RinDriverV3BlockCompletion) == 48u,
                "NDRV v3 block completion ABI drift");
 _Static_assert(sizeof(RinDriverV3BlockOps) == 88u,
                "NDRV v3 block operation ABI drift");
+_Static_assert(offsetof(RinDriverV3BlockOps, extensions) == 56u,
+               "NDRV v3 block extension slot ABI drift");
 _Static_assert(sizeof(RinDriverV3AudioFormat) == 56u,
                "NDRV v3 audio format ABI drift");
 _Static_assert(sizeof(RinDriverV3AudioBuffer) == 64u,
