@@ -5,9 +5,9 @@
 extern "C" {
 #endif
 
-/* Values accepted by RinMediaOpenV1.media_type. MIME type still identifies
- * the concrete container/codec; this field selects the media pipeline. Zero
- * and values outside this v1 set are invalid/unsupported. */
+/* Stable v1 values accepted by RinMediaOpenV1.media_type. Do not renumber
+ * them. MIME type still identifies the concrete container/codec; this field
+ * selects the media pipeline. Zero and values outside this set are invalid. */
 typedef enum RinMediaTypeV1 {
     RIN_MEDIA_TYPE_IMAGE = 1,
     RIN_MEDIA_TYPE_AUDIO = 2,

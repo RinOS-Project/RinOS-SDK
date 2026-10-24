@@ -809,7 +809,18 @@ RinResult rin_notification_show_v1(RinStringV1 title,RinStringV1 message,uint32_
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_MEDIA)
-RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object) { if (!versioned(request,sizeof(*request))) return RIN_ERROR_ABI_MISMATCH; return rin_sdk_invoke_handle_output_v1(RIN_SDK_LIBRARY_MEDIA,MEDIA_OPEN,request,sizeof(*request),object); }
+RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object) {
+    if (!versioned(request, sizeof(*request)))
+        return RIN_ERROR_ABI_MISMATCH;
+    if (request->media_type != RIN_MEDIA_TYPE_IMAGE &&
+        request->media_type != RIN_MEDIA_TYPE_AUDIO &&
+        request->media_type != RIN_MEDIA_TYPE_VIDEO) {
+        if (object != NULL) *object = RIN_HANDLE_INVALID;
+        return RIN_ERROR_INVALID_ARGUMENT;
+    }
+    return rin_sdk_invoke_handle_output_v1(
+        RIN_SDK_LIBRARY_MEDIA, MEDIA_OPEN, request, sizeof(*request), object);
+}
 RinResult rin_image_decode_v1(RinMediaObject object,uint32_t format,RinSliceV1 output,uint64_t* required) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_IMAGE_DECODE,required,object,format,output.address,output.size,0,0); }
 RinResult rin_audio_decode_v1(RinMediaObject object,RinSliceV1 output,uint64_t* frames) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_AUDIO_DECODE,frames,object,output.address,output.size,0,0,0); }
 RinResult rin_video_decode_v1(RinMediaObject object,RinSurface target,uint64_t* timestamp_ns) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_VIDEO_DECODE,timestamp_ns,object,target,0,0,0,0); }
