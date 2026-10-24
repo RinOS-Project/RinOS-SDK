@@ -1,24 +1,11 @@
 #ifndef RIN_SDK_MEDIA_H
 #define RIN_SDK_MEDIA_H
 #include "abi.h"
+#include "media_types.h"
 #include "syscall_abi.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* Stable v1 values accepted by RinMediaOpenV1.media_type. Do not renumber
- * them. MIME type still identifies the concrete container/codec; this field
- * selects the media pipeline. Zero and values outside this set are invalid. */
-typedef enum RinMediaTypeV1 {
-    RIN_MEDIA_TYPE_IMAGE = 1,
-    RIN_MEDIA_TYPE_AUDIO = 2,
-    RIN_MEDIA_TYPE_VIDEO = 3
-} RinMediaTypeV1;
-
-typedef enum RinImageDecodeFormatV1 {
-    /* Each output pixel is a little-endian uint32_t value 0xAARRGGBB. */
-    RIN_IMAGE_DECODE_FORMAT_ARGB8888 = 1
-} RinImageDecodeFormatV1;
 
 typedef enum RinAudioSampleFormatV1 {
     /* Signed 16-bit little-endian samples, interleaved by channel. */
@@ -64,16 +51,8 @@ typedef struct RinAudioInfoV1 {
 
 /* Keep the public values fixed even when enum declarations are reorganized. */
 #if defined(__cplusplus)
-static_assert(RIN_MEDIA_TYPE_IMAGE == 1, "RinMedia image type ABI drift");
-static_assert(RIN_MEDIA_TYPE_AUDIO == 2, "RinMedia audio type ABI drift");
-static_assert(RIN_MEDIA_TYPE_VIDEO == 3, "RinMedia video type ABI drift");
-static_assert(RIN_IMAGE_DECODE_FORMAT_ARGB8888 == 1, "RinMedia image format ABI drift");
 static_assert(RIN_AUDIO_SAMPLE_FORMAT_S16LE == 1, "RinMedia audio format ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(RIN_MEDIA_TYPE_IMAGE == 1, "RinMedia image type ABI drift");
-_Static_assert(RIN_MEDIA_TYPE_AUDIO == 2, "RinMedia audio type ABI drift");
-_Static_assert(RIN_MEDIA_TYPE_VIDEO == 3, "RinMedia video type ABI drift");
-_Static_assert(RIN_IMAGE_DECODE_FORMAT_ARGB8888 == 1, "RinMedia image format ABI drift");
 _Static_assert(RIN_AUDIO_SAMPLE_FORMAT_S16LE == 1, "RinMedia audio format ABI drift");
 #endif
 
@@ -86,6 +65,22 @@ typedef struct RinMediaOpenV1 {
     uint32_t flags;
     uint64_t reserved[4];
 } RinMediaOpenV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinMediaOpenV1) == 80u,
+              "RinMediaOpenV1 ABI drift");
+static_assert(offsetof(RinMediaOpenV1, media_type) == 40u,
+              "RinMediaOpenV1 media type offset drift");
+static_assert(offsetof(RinMediaOpenV1, reserved) == 48u,
+              "RinMediaOpenV1 reserved offset drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinMediaOpenV1) == 80u,
+               "RinMediaOpenV1 ABI drift");
+_Static_assert(offsetof(RinMediaOpenV1, media_type) == 40u,
+               "RinMediaOpenV1 media type offset drift");
+_Static_assert(offsetof(RinMediaOpenV1, reserved) == 48u,
+               "RinMediaOpenV1 reserved offset drift");
+#endif
 /* A failed open writes RIN_HANDLE_INVALID to a non-null output handle. */
 RIN_SDK_API RinResult rin_media_open_v1(const RinMediaOpenV1* request, RinMediaObject* object);
 RIN_SDK_API RinResult rin_image_get_info_v1(RinMediaObject object, RinImageInfoV1* info);
