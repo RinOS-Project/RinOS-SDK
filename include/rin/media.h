@@ -14,6 +14,17 @@ typedef enum RinMediaTypeV1 {
     RIN_MEDIA_TYPE_VIDEO = 3
 } RinMediaTypeV1;
 
+/* Keep the public values fixed even when enum declarations are reorganized. */
+#if defined(__cplusplus)
+static_assert(RIN_MEDIA_TYPE_IMAGE == 1, "RinMedia image type ABI drift");
+static_assert(RIN_MEDIA_TYPE_AUDIO == 2, "RinMedia audio type ABI drift");
+static_assert(RIN_MEDIA_TYPE_VIDEO == 3, "RinMedia video type ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(RIN_MEDIA_TYPE_IMAGE == 1, "RinMedia image type ABI drift");
+_Static_assert(RIN_MEDIA_TYPE_AUDIO == 2, "RinMedia audio type ABI drift");
+_Static_assert(RIN_MEDIA_TYPE_VIDEO == 3, "RinMedia video type ABI drift");
+#endif
+
 typedef struct RinMediaOpenV1 {
     uint32_t struct_size;
     uint32_t version;
