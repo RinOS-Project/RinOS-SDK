@@ -16,9 +16,11 @@
 #define RIN_COMPOSITOR_INPUT_VERSION_V1 1u
 #define RIN_COMPOSITOR_INPUT_VERSION_V2 2u
 #define RIN_COMPOSITOR_INPUT_VERSION_V3 3u
+#define RIN_COMPOSITOR_INPUT_VERSION_V4 4u
 #define RIN_COMPOSITOR_INPUT_POLL 1u
-/* WAIT is a non-consuming, spurious-wakeable wait. The kernel requests a
- * 250 ms scheduler timeout; callers must POLL after every successful return. */
+/* WAIT is a non-consuming, spurious-wakeable wait. V1-V3 use a 250 ms
+ * scheduler timeout; V4 returns a shorter repeat deadline when one is due.
+ * Callers must POLL after every successful return. */
 #define RIN_COMPOSITOR_INPUT_WAIT 2u
 #define RIN_COMPOSITOR_INPUT_FLAG_TEXT_INPUT 0x00000001u
 #define RIN_COMPOSITOR_INPUT_FLAG_RESET_COMPOSITION 0x00000002u
@@ -139,6 +141,23 @@ static_assert(sizeof(RinCompositorInputPollV3) == 528u,
 #else
 _Static_assert(sizeof(RinCompositorInputPollV3) == 528u,
                "RinCompositorInputPollV3 ABI drift");
+#endif
+
+/* V4 adds the compositor's current keyboard target and a bounded WAIT timeout
+ * returned by the kernel. The target binds held-key repeat to focus; the
+ * timeout lets WAIT wake for the next repeat without polling while idle. */
+typedef struct RinCompositorInputPollV4 {
+    RinCompositorInputPollV3 base;
+    uint32_t focused_surface_id;
+    uint32_t wait_timeout_ms;
+} RinCompositorInputPollV4;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinCompositorInputPollV4) == 536u,
+              "RinCompositorInputPollV4 ABI drift");
+#else
+_Static_assert(sizeof(RinCompositorInputPollV4) == 536u,
+               "RinCompositorInputPollV4 ABI drift");
 #endif
 
 /* Surface effects are copied into compositor-owned state.  The request has
