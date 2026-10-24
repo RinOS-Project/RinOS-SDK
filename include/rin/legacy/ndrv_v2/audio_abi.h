@@ -2,6 +2,7 @@
 #ifndef RIN_API_LEGACY_DRIVER_V2_AUDIO_ABI_H
 #define RIN_API_LEGACY_DRIVER_V2_AUDIO_ABI_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 /* Canonical legacy SDK contract; retained only for the legacy namespace. */
@@ -29,7 +30,9 @@ typedef struct RinDriverDeviceV2 {
     uint16_t vendor_id;
     uint16_t device_id;
     uint8_t irq;
-    uint8_t reserved8[7];
+    /* PCI segment group; zero for devices without segment information. */
+    uint16_t segment;
+    uint8_t reserved8[5];
     uint64_t mmio_phys;
     uint64_t mmio_size;
     uint32_t io_base;
@@ -58,6 +61,10 @@ typedef struct __attribute__((packed)) {
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinDriverDeviceV2) == 72u,
                "NDRV v2 device ABI drift");
+_Static_assert(offsetof(RinDriverDeviceV2, segment) == 30u,
+               "NDRV v2 PCI segment offset drift");
+_Static_assert(offsetof(RinDriverDeviceV2, mmio_phys) == 40u,
+               "NDRV v2 device MMIO offset drift");
 _Static_assert(sizeof(RinAudioOpsV2) == 32u,
                "NDRV v2 audio ops ABI drift");
 _Static_assert(sizeof(RinLegacyDriverV2AudioPendingEntry) ==
