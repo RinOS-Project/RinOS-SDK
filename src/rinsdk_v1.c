@@ -274,6 +274,7 @@ static RinResult rin_sdk_invoke_handle_output_v1(
 } while (0)
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE)
+#if !defined(RINSDK_NO_RUNTIME_SERVICE_ADAPTERS)
 enum {
     RINSDK_SERVICE_ID_CAPACITY = 64u,
     RINSDK_SERVICE_MAX_VISIBLE = 1024u
@@ -420,6 +421,7 @@ int rin_service_find_system_slot(const char* service_id, uint32_t* slot_id) {
     *slot_id = found_slot;
     return 0;
 }
+#endif /* !RINSDK_NO_RUNTIME_SERVICE_ADAPTERS */
 
 RinResult rin_object_close_v1(RinObject object) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_BASE, BASE_OBJECT_CLOSE, (RinResult*)0, object,0,0,0,0,0);
