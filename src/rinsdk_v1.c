@@ -1,4 +1,5 @@
 #include <rin/sdk.h>
+#include <rin/contract_abi.h>
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE)
 #include <limits.h>
