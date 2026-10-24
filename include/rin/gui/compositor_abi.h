@@ -17,6 +17,8 @@
 #define RIN_COMPOSITOR_INPUT_VERSION_V2 2u
 #define RIN_COMPOSITOR_INPUT_VERSION_V3 3u
 #define RIN_COMPOSITOR_INPUT_POLL 1u
+/* WAIT is a non-consuming, spurious-wakeable wait. The kernel requests a
+ * 250 ms scheduler timeout; callers must POLL after every successful return. */
 #define RIN_COMPOSITOR_INPUT_WAIT 2u
 #define RIN_COMPOSITOR_INPUT_FLAG_TEXT_INPUT 0x00000001u
 #define RIN_COMPOSITOR_INPUT_FLAG_RESET_COMPOSITION 0x00000002u
