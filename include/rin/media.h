@@ -61,7 +61,7 @@ typedef struct RinMediaOpenV1 {
     uint32_t version;
     RinStringV1 mime_type;
     RinSliceV1 source;
-    uint32_t media_type;
+    RinMediaTypeV1 media_type;
     uint32_t flags;
     uint64_t reserved[4];
 } RinMediaOpenV1;
