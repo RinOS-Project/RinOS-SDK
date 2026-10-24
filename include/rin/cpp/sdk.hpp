@@ -913,6 +913,14 @@ media_open(const RinMediaOpenV1& request) noexcept {
     return {rin_media_open_v1(&request, &object), object};
 }
 
+[[nodiscard]] inline outcome<RinImageInfoV1>
+image_get_info(RinMediaObject object) noexcept {
+    RinImageInfoV1 info{};
+    info.struct_size = sizeof(info);
+    info.version = RIN_SDK_STRUCT_VERSION_1;
+    return {rin_image_get_info_v1(object, &info), info};
+}
+
 [[nodiscard]] inline outcome<uint64_t>
 image_decode(RinMediaObject object, uint32_t format,
              RinSliceV1 output) noexcept {
@@ -935,6 +943,14 @@ image_decode(RinMediaObject object, uint32_t format,
 audio_decode(RinMediaObject object, RinSliceV1 output) noexcept {
     uint64_t frames = 0u;
     return {rin_audio_decode_v1(object, output, &frames), frames};
+}
+
+[[nodiscard]] inline outcome<RinAudioInfoV1>
+audio_get_info(RinMediaObject object) noexcept {
+    RinAudioInfoV1 info{};
+    info.struct_size = sizeof(info);
+    info.version = RIN_SDK_STRUCT_VERSION_1;
+    return {rin_audio_get_info_v1(object, &info), info};
 }
 
 template<typename T, std::size_t Extent>

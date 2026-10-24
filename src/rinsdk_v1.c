@@ -70,6 +70,7 @@ enum {
     GUI_WINDOW_PRESENT, GUI_CLIPBOARD_SET, GUI_CLIPBOARD_GET,
     GUI_DIALOG_SHOW, GUI_NOTIFICATION_SHOW,
     MEDIA_OPEN = 1, MEDIA_IMAGE_DECODE, MEDIA_AUDIO_DECODE, MEDIA_VIDEO_DECODE,
+    MEDIA_IMAGE_INFO, MEDIA_AUDIO_INFO,
     CONFIG_OPEN = 1, CONFIG_GET, CONFIG_SET, CONFIG_COMMIT, CONFIG_REMOVE,
     PKG_OPEN = 1, PKG_QUERY, PKG_INSTALL, PKG_REMOVE, PKG_ENUMERATE,
     DEVICE_ENUMERATE = 1, DEVICE_OPEN, DEVICE_CONTROL, DEVICE_QUERY
@@ -977,7 +978,9 @@ RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object
     return rin_sdk_invoke_handle_output_v1(
         RIN_SDK_LIBRARY_MEDIA, MEDIA_OPEN, request, sizeof(*request), object);
 }
+RinResult rin_image_get_info_v1(RinMediaObject object,RinImageInfoV1* info) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_IMAGE_INFO,info,object,0,0,0,0,0); }
 RinResult rin_image_decode_v1(RinMediaObject object,uint32_t format,RinSliceV1 output,uint64_t* required) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_IMAGE_DECODE,required,object,format,output.address,output.size,0,0); }
+RinResult rin_audio_get_info_v1(RinMediaObject object,RinAudioInfoV1* info) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_AUDIO_INFO,info,object,0,0,0,0,0); }
 RinResult rin_audio_decode_v1(RinMediaObject object,RinSliceV1 output,uint64_t* frames) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_AUDIO_DECODE,frames,object,output.address,output.size,0,0,0); }
 RinResult rin_video_decode_v1(RinMediaObject object,RinSurface target,uint64_t* timestamp_ns) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_VIDEO_DECODE,timestamp_ns,object,target,0,0,0,0); }
 #endif
