@@ -5,7 +5,8 @@ header in its C11 and C++20 modes and compiles the consumer source files as
 separate objects. It does not link for RinOS.
 
 `build.py` cross-compiles, links, validates, and packages the C examples
-(`hello`, `process`, `channel`, `file_portal`, `window`, `media`, and `explorer`) for
+(`hello`, `process`, `channel`, `file_portal`, `window`, `media`, `keyring`,
+and `explorer`) for
 either SDK target. Pass one installed target prefix produced by
 `package_rinsdk_v1.py`;
 the helper verifies its manifest, public headers, runtime-library hashes, and
@@ -49,3 +50,13 @@ capabilities. It is not included in the standard application set.
 requests no filesystem, camera, or microphone capability. The example only
 demonstrates typed media-object open/close; it does not claim that a target
 provides an image decoder or that media decoding has been accepted.
+
+`keyring` demonstrates the public Keyring v1 wire ABI with a read-only service
+status request. It resolves the system Keyring slot, connects to the documented
+Unix socket, and checks the kernel-reported service identity against that slot
+before sending the request. It declares no capabilities and never sends a
+secret name or secret payload; this sample therefore exercises service
+identity and availability without granting application access to credentials.
+The bounded socket I/O and response validation are local to this small sample;
+applications performing secret operations should use the authenticated
+RinRuntime Keyring client rather than extending this status-only example.

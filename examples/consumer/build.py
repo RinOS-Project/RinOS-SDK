@@ -81,6 +81,17 @@ EXAMPLES = {
         "gui": False,
         "description": "Typed image-open consumer with explicit unsupported handling.",
     },
+    "keyring": {
+        "dependencies": ["rincrt", "rinbase"],
+        "imports": [
+            ("rinbase", "rin_service_find_system_slot"),
+            ("rincrt", "printf"),
+            ("rincrt", "puts"),
+        ],
+        "capabilities": [],
+        "gui": False,
+        "description": "Read-only authenticated Keyring service-status consumer.",
+    },
     "explorer": {
         "dependencies": ["rincrt", "rinbase"],
         "imports": [

@@ -96,6 +96,15 @@ foreach(_example IN ITEMS hello process channel file_portal window media explore
                              ${_rinos_sdk_public_include_dirs})
 endforeach()
 
+# The keyring wire sample uses the target POSIX local-socket headers. Keep the
+# host header-contract project portable to Windows hosts; build.py compiles it
+# with the RinOS target toolchain on both supported target architectures.
+if(UNIX)
+  add_library(rinosdk_example_keyring OBJECT keyring.c)
+  target_include_directories(rinosdk_example_keyring PRIVATE
+                             ${_rinos_sdk_public_include_dirs})
+endif()
+
 add_library(rinosdk_example_cpp OBJECT example_cpp.cpp)
 target_include_directories(rinosdk_example_cpp PRIVATE
                            ${_rinos_sdk_public_include_dirs})
