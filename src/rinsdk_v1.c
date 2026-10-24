@@ -967,16 +967,21 @@ RinResult rin_notification_show_v1(RinStringV1 title,RinStringV1 message,uint32_
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_MEDIA)
 RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object) {
+    RinMediaOpenV1 request_snapshot;
     if (object != NULL) *object = RIN_HANDLE_INVALID;
     if (!versioned(request, sizeof(*request)))
         return RIN_ERROR_ABI_MISMATCH;
-    if (request->media_type != RIN_MEDIA_TYPE_IMAGE &&
-        request->media_type != RIN_MEDIA_TYPE_AUDIO &&
-        request->media_type != RIN_MEDIA_TYPE_VIDEO) {
+    request_snapshot = *request;
+    if (!versioned(&request_snapshot, sizeof(request_snapshot)))
+        return RIN_ERROR_ABI_MISMATCH;
+    if (request_snapshot.media_type != RIN_MEDIA_TYPE_IMAGE &&
+        request_snapshot.media_type != RIN_MEDIA_TYPE_AUDIO &&
+        request_snapshot.media_type != RIN_MEDIA_TYPE_VIDEO) {
         return RIN_ERROR_INVALID_ARGUMENT;
     }
     return rin_sdk_invoke_handle_output_v1(
-        RIN_SDK_LIBRARY_MEDIA, MEDIA_OPEN, request, sizeof(*request), object);
+        RIN_SDK_LIBRARY_MEDIA, MEDIA_OPEN, &request_snapshot,
+        sizeof(request_snapshot), object);
 }
 RinResult rin_image_get_info_v1(RinMediaObject object,RinImageInfoV1* info) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_IMAGE_INFO,info,object,0,0,0,0,0); }
 RinResult rin_image_decode_v1(RinMediaObject object,uint32_t format,RinSliceV1 output,uint64_t* required) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_IMAGE_DECODE,required,object,format,output.address,output.size,0,0); }
