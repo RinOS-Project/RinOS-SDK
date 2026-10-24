@@ -23,6 +23,7 @@ typedef struct RinMediaOpenV1 {
     uint32_t flags;
     uint64_t reserved[4];
 } RinMediaOpenV1;
+/* A failed open writes RIN_HANDLE_INVALID to a non-null output handle. */
 RIN_SDK_API RinResult rin_media_open_v1(const RinMediaOpenV1* request, RinMediaObject* object);
 RIN_SDK_API RinResult rin_image_decode_v1(RinMediaObject object, uint32_t format, RinSliceV1 output, uint64_t* required);
 RIN_SDK_API RinResult rin_audio_decode_v1(RinMediaObject object, RinSliceV1 output, uint64_t* frames);

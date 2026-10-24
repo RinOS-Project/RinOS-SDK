@@ -810,12 +810,12 @@ RinResult rin_notification_show_v1(RinStringV1 title,RinStringV1 message,uint32_
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_MEDIA)
 RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object) {
+    if (object != NULL) *object = RIN_HANDLE_INVALID;
     if (!versioned(request, sizeof(*request)))
         return RIN_ERROR_ABI_MISMATCH;
     if (request->media_type != RIN_MEDIA_TYPE_IMAGE &&
         request->media_type != RIN_MEDIA_TYPE_AUDIO &&
         request->media_type != RIN_MEDIA_TYPE_VIDEO) {
-        if (object != NULL) *object = RIN_HANDLE_INVALID;
         return RIN_ERROR_INVALID_ARGUMENT;
     }
     return rin_sdk_invoke_handle_output_v1(
