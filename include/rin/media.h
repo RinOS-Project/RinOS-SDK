@@ -1,6 +1,7 @@
 #ifndef RIN_SDK_MEDIA_H
 #define RIN_SDK_MEDIA_H
 #include "abi.h"
+#include "syscall_abi.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -21,7 +22,7 @@ typedef enum RinImageDecodeFormatV1 {
 
 typedef enum RinAudioSampleFormatV1 {
     /* Signed 16-bit little-endian samples, interleaved by channel. */
-    RIN_AUDIO_SAMPLE_FORMAT_S16LE = 1
+    RIN_MEDIA_AUDIO_SAMPLE_FORMAT_S16LE = RIN_AUDIO_SAMPLE_FORMAT_S16LE
 } RinAudioSampleFormatV1;
 
 typedef struct RinImageInfoV1 {
