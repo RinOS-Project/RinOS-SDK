@@ -1,5 +1,11 @@
 #include <rin/sdk.h>
 
+#if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE)
+#include <limits.h>
+#include <stddef.h>
+#include <sys/syscall.h>
+#endif
+
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_CORE) || \
     defined(RINSDK_BUILD_IPC) || defined(RINSDK_BUILD_NET)
 static void rin_sdk_copy_bytes(void* destination, const void* source,
@@ -267,6 +273,153 @@ static RinResult rin_sdk_invoke_handle_output_v1(
 } while (0)
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE)
+enum {
+    RINSDK_SERVICE_ID_CAPACITY = 64u,
+    RINSDK_SERVICE_MAX_VISIBLE = 1024u
+};
+
+typedef struct RinSdkServiceInfoV1 {
+    uint32_t slot_id;
+    char id[RINSDK_SERVICE_ID_CAPACITY];
+    char name[64];
+    char exec_path[256];
+    char control_app[256];
+    uint32_t pid;
+    uint32_t owner_uid;
+    uint32_t restart_count;
+    int32_t last_exit_code;
+    uint32_t last_start_tick;
+    uint32_t last_exit_tick;
+    uint32_t last_health_tick;
+    uint32_t health_interval_ms;
+    uint32_t health_timeout_ms;
+    uint16_t scope;
+    uint16_t state;
+    uint16_t last_exit_reason;
+    uint16_t flags;
+} RinSdkServiceInfoV1;
+
+_Static_assert(sizeof(RinSdkServiceInfoV1) == 688u,
+               "public service syscall record layout changed");
+
+static size_t rin_sdk_service_id_size(const char* id) {
+    size_t index;
+    if (!id) return 0u;
+    for (index = 0u; index < RINSDK_SERVICE_ID_CAPACITY; ++index) {
+        if (id[index] == '\0') return index == 0u ? 0u : index;
+    }
+    return 0u;
+}
+
+static int rin_sdk_service_id_record_valid(
+    const char id[RINSDK_SERVICE_ID_CAPACITY]) {
+    size_t index;
+    if (!id) return 0;
+    for (index = 0u; index < RINSDK_SERVICE_ID_CAPACITY; ++index)
+        if (id[index] == '\0') break;
+    if (index == RINSDK_SERVICE_ID_CAPACITY) return 0;
+    for (++index; index < RINSDK_SERVICE_ID_CAPACITY; ++index)
+        if (id[index] != '\0') return 0;
+    return 1;
+}
+
+static int rin_sdk_service_id_matches(
+    const char id[RINSDK_SERVICE_ID_CAPACITY], const char* expected) {
+    size_t index;
+    size_t expected_size = rin_sdk_service_id_size(expected);
+    if (!rin_sdk_service_id_record_valid(id) || expected_size == 0u)
+        return 0;
+    for (index = 0u; index < expected_size; ++index)
+        if (id[index] != expected[index]) return 0;
+    return id[expected_size] == '\0';
+}
+
+static int rin_sdk_service_result_valid(intptr_t result) {
+    switch (result) {
+    case RIN_SUCCESS:
+    case RIN_ERROR_INVALID_ARGUMENT:
+    case RIN_ERROR_NOT_SUPPORTED:
+    case RIN_ERROR_NOT_FOUND:
+    case RIN_ERROR_ACCESS_DENIED:
+    case RIN_ERROR_NO_MEMORY:
+    case RIN_ERROR_BUSY:
+    case RIN_ERROR_TIMEOUT:
+    case RIN_ERROR_CANCELLED:
+    case RIN_ERROR_IO:
+    case RIN_ERROR_WOULD_BLOCK:
+    case RIN_ERROR_ABI_MISMATCH:
+    case RIN_ERROR_STALE_HANDLE:
+    case RIN_ERROR_INTEGRITY:
+    case RIN_ERROR_BUFFER_TOO_SMALL:
+    case RIN_ERROR_TABLE_FULL:
+    case RIN_ERROR_LIMIT_EXCEEDED:
+    case RIN_ERROR_WRONG_TYPE:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+static RinResult rin_sdk_service_status_result(intptr_t result) {
+    if (result == 0) return RIN_SUCCESS;
+    return rin_sdk_service_result_valid(result)
+        ? (RinResult)result : RIN_ERROR_IO;
+}
+
+static int rin_sdk_service_info_get(int index, RinSdkServiceInfoV1* info) {
+    if (!info || index < 0) return -1;
+    return _syscall3((uintptr_t)RIN_SYS_SERVICE_GET_INFO,
+                     (uintptr_t)RIN_SERVICE_SCOPE_SYSTEM,
+                     (uintptr_t)(unsigned int)index,
+                     (uintptr_t)info) == 0 ? 0 : -1;
+}
+
+RinResult rin_service_start(int scope, const char* id) {
+    if ((scope != RIN_SERVICE_SCOPE_SYSTEM &&
+         scope != RIN_SERVICE_SCOPE_USER) ||
+        rin_sdk_service_id_size(id) == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_sdk_service_status_result(_syscall2(
+        (uintptr_t)RIN_SYS_SERVICE_START,
+        (uintptr_t)(unsigned int)scope, (uintptr_t)id));
+}
+
+int rin_service_find_system_slot(const char* service_id, uint32_t* slot_id) {
+    RinSdkServiceInfoV1 info;
+    intptr_t raw_count;
+    int count;
+    uint32_t found_slot = 0u;
+    int index;
+
+    if (!slot_id) return -1;
+    *slot_id = 0u;
+    if (rin_sdk_service_id_size(service_id) == 0u) return -1;
+
+    raw_count = _syscall1((uintptr_t)RIN_SYS_SERVICE_COUNT,
+                          (uintptr_t)RIN_SERVICE_SCOPE_SYSTEM);
+    if (raw_count < 0 || raw_count > INT_MAX) return -1;
+    count = (int)raw_count;
+    if (count <= 0 || (unsigned int)count > RINSDK_SERVICE_MAX_VISIBLE)
+        return -1;
+
+    for (index = 0; index < count; ++index) {
+        rin_sdk_zero_bytes(&info, sizeof(info));
+        if (rin_sdk_service_info_get(index, &info) != 0) return -1;
+        if (!rin_sdk_service_id_matches(info.id, service_id)) continue;
+
+        if (found_slot != 0u || info.slot_id == 0u || info.pid == 0u ||
+            info.owner_uid != 0u ||
+            info.scope != RIN_SERVICE_SCOPE_SYSTEM ||
+            info.state != RIN_MANAGEMENT_SERVICE_STATE_RUNNING)
+            return -1;
+        found_slot = info.slot_id;
+    }
+
+    if (found_slot == 0u) return -1;
+    *slot_id = found_slot;
+    return 0;
+}
+
 RinResult rin_object_close_v1(RinObject object) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_BASE, BASE_OBJECT_CLOSE, (RinResult*)0, object,0,0,0,0,0);
 }
