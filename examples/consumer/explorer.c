@@ -21,6 +21,8 @@ static const ExampleEntry examples[] = {
      "rin_fs_portal_open_v1 / rin_file_read_v1", "file-portal"},
     {"window", "org.rinos.sdk.window",
      "rin_window_create_v1 / rin_window_next_event_v1", "gui-control"},
+    {"media", "org.rinos.sdk.media",
+     "rin_media_open_v1 / rin_object_close_v1", "none"},
 };
 
 static const ExampleEntry* find_example(const char* id)

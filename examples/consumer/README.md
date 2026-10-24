@@ -5,7 +5,7 @@ header in its C11 and C++20 modes and compiles the consumer source files as
 separate objects. It does not link for RinOS.
 
 `build.py` cross-compiles, links, validates, and packages the C examples
-(`hello`, `process`, `channel`, `file_portal`, `window`, and `explorer`) for
+(`hello`, `process`, `channel`, `file_portal`, `window`, `media`, and `explorer`) for
 either SDK target. Pass one installed target prefix produced by
 `package_rinsdk_v1.py`;
 the helper verifies its manifest, public headers, runtime-library hashes, and
@@ -43,3 +43,9 @@ an installed sample's executable path to start it and wait for its exit. The
 Explorer requests `process-control`, and it starts children with an empty
 capability mask; each sample package still declares and requests its own
 capabilities. It is not included in the standard application set.
+
+`media` opens a self-contained 1x1 PNG through the public media API using
+`RIN_MEDIA_TYPE_IMAGE`. It handles `RIN_ERROR_NOT_SUPPORTED` explicitly and
+requests no filesystem, camera, or microphone capability. The example only
+demonstrates typed media-object open/close; it does not claim that a target
+provides an image decoder or that media decoding has been accepted.

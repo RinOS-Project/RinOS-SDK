@@ -4,6 +4,16 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Values accepted by RinMediaOpenV1.media_type. MIME type still identifies
+ * the concrete container/codec; this field selects the media pipeline. Zero
+ * and values outside this v1 set are invalid/unsupported. */
+typedef enum RinMediaTypeV1 {
+    RIN_MEDIA_TYPE_IMAGE = 1,
+    RIN_MEDIA_TYPE_AUDIO = 2,
+    RIN_MEDIA_TYPE_VIDEO = 3
+} RinMediaTypeV1;
+
 typedef struct RinMediaOpenV1 {
     uint32_t struct_size;
     uint32_t version;

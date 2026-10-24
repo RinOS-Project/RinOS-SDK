@@ -70,6 +70,17 @@ EXAMPLES = {
         "gui": True,
         "description": "Window creation and event consumer.",
     },
+    "media": {
+        "dependencies": ["rincrt", "rinbase", "rinmedia"],
+        "imports": [
+            ("rinmedia", "rin_media_open_v1"),
+            ("rinbase", "rin_object_close_v1"),
+            ("rincrt", "printf"),
+        ],
+        "capabilities": [],
+        "gui": False,
+        "description": "Typed image-open consumer with explicit unsupported handling.",
+    },
     "explorer": {
         "dependencies": ["rincrt", "rinbase"],
         "imports": [
