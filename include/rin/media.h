@@ -111,8 +111,9 @@ typedef struct RinVideoDecodeOptionsV1 {
  * The configured FFmpeg fallback includes H.264, HEVC, AV1, VP8, VP9, Theora,
  * and MJPEG; the bounded AVI path also supports uncompressed frames. The
  * target mapping is never sent over IPC; after success release it and present
- * its window
- * with wnd_release_render_target() and wnd_present(). A canceled in-flight
+ * its window with wnd_release_render_target() and wnd_present(), or use
+ * RinRuntime's rinruntime_video_decode_frame_v1() helper for the complete
+ * acquire/decode/release/present sequence. A canceled in-flight
  * request retires its media session, which must be reopened before decoding. */
 
 /* Keep the public values fixed even when enum declarations are reorganized. */
