@@ -613,13 +613,18 @@ static int rin_media_transfer_snapshot_timeout(int source_fd, int socket_fd,
         const uint32_t chunk = remaining < sizeof(buffer)
             ? (uint32_t)remaining : (uint32_t)sizeof(buffer);
         uint32_t received = 0u;
+        uint32_t interrupted = 0u;
         while (received < chunk) {
             const ssize_t count = read(source_fd, buffer + received,
                                       (size_t)(chunk - received));
-            if (count < 0 && errno == EINTR) continue;
+            if (count < 0 && errno == EINTR) {
+                if (++interrupted < RIN_MEDIA_MDC1_IO_RETRY_LIMIT) continue;
+                goto done;
+            }
             if (count <= 0 || (uint64_t)count > (uint64_t)(chunk - received))
                 goto done;
             received += (uint32_t)count;
+            interrupted = 0u;
         }
         if (!rin_media_transfer_exact_timeout(
                 socket_fd, buffer, chunk, 0, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
