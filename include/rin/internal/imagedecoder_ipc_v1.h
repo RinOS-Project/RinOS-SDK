@@ -13,7 +13,7 @@
 #define RIN_IMAGE_DECODER_ALIGNAS_8 _Alignas(8)
 #endif
 
-#define RIN_IMAGE_DECODER_TRANSPORT_VERSION UINT16_C(1)
+#define RIN_IMAGE_DECODER_TRANSPORT_VERSION UINT16_C(2)
 #define RIN_IMAGE_DECODER_TRANSPORT_MAX_SOURCE_BYTES UINT64_C(67108864)
 #define RIN_IMAGE_DECODER_TRANSPORT_MAX_DIMENSION UINT32_C(4096)
 #define RIN_IMAGE_DECODER_TRANSPORT_MAX_PIXELS UINT32_C(16777216)
@@ -21,10 +21,12 @@
 #define RIN_IMAGE_DECODER_TRANSPORT_MAX_OUTPUT_BYTES UINT32_C(67108864)
 #define RIN_IMAGE_DECODER_TRANSPORT_MAX_PIXEL_CHUNK UINT32_C(65536)
 #define RIN_IMAGE_DECODER_TRANSPORT_PIXEL_FORMAT_ARGB8888 UINT32_C(1)
+#define RIN_IMAGE_DECODER_TRANSPORT_FRAME_KIND_STATIC UINT32_C(0)
+#define RIN_IMAGE_DECODER_TRANSPORT_FRAME_KIND_ANIMATED UINT32_C(1)
 
 #define RIN_IMAGE_DECODER_SERVICE_ID "imagedecoder"
 #define RIN_IMAGE_DECODER_SERVICE_SOCKET_PATH "/run/rin/imagedecoder.sock"
-#define RIN_IMAGE_DECODER_SERVICE_PROTOCOL_VERSION UINT16_C(1)
+#define RIN_IMAGE_DECODER_SERVICE_PROTOCOL_VERSION UINT16_C(2)
 #define RIN_IMAGE_DECODER_SERVICE_PROTOCOL_MAGIC UINT32_C(0x31434449)
 
 typedef enum RinImageDecoderTransportOperation {
@@ -136,9 +138,11 @@ typedef struct RinImageDecoderDecodeResponseV1 {
     uint32_t height;
     uint32_t stride_bytes;
     uint32_t pixel_bytes;
+    /* Total source frame count; only the first frame is returned by V1. */
     uint32_t frame_count;
     uint32_t pixel_format;
-    uint32_t reserved0;
+    /* RinImageFrameKind from rinimage/image.h, kept fixed-width on the wire. */
+    uint32_t frame_kind;
     RIN_IMAGE_DECODER_ALIGNAS_8 uint64_t reserved1[2];
 } RinImageDecoderDecodeResponseV1;
 

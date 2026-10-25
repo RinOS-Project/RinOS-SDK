@@ -923,10 +923,19 @@ static RinResult rin_media_image_decode_locked(
         response.width > RIN_IMAGE_DECODER_TRANSPORT_MAX_DIMENSION ||
         response.height > RIN_IMAGE_DECODER_TRANSPORT_MAX_DIMENSION ||
         response.stride_bytes != response.width * 4u ||
-        response.frame_count != 1u ||
+        response.frame_count == 0u ||
+        response.frame_count > RIN_MEDIA_IMAGE_MAX_FRAMES ||
+        response.frame_kind >
+            RIN_IMAGE_DECODER_TRANSPORT_FRAME_KIND_ANIMATED ||
+        (response.frame_kind ==
+             RIN_IMAGE_DECODER_TRANSPORT_FRAME_KIND_STATIC &&
+         response.frame_count != 1u) ||
+        (response.frame_kind ==
+             RIN_IMAGE_DECODER_TRANSPORT_FRAME_KIND_ANIMATED &&
+         response.frame_count <= 1u) ||
         response.pixel_format !=
             RIN_IMAGE_DECODER_TRANSPORT_PIXEL_FORMAT_ARGB8888 ||
-        response.reserved0 != 0u || response.reserved1[0] != 0u ||
+        response.reserved1[0] != 0u ||
         response.reserved1[1] != 0u)
         return RIN_ERROR_INTEGRITY;
     pixel_count = (uint64_t)response.width * response.height;
@@ -1243,9 +1252,9 @@ RinResult rin_media_sdk_client_image_info_v1(RinObject object,
     info->height = session->image_info.height;
     info->format = RIN_IMAGE_DECODE_FORMAT_ARGB8888;
     info->row_stride_bytes = session->image_info.stride_bytes;
-    /* The internal first-frame wire response does not carry total animation
-     * frame count, so report unknown instead of claiming every source is still. */
-    info->frame_count = 0u;
+    /* The wire carries the source's total frame count and kind, while the
+     * decode payload remains first-frame-only.  A count above one is animated. */
+    info->frame_count = session->image_info.frame_count;
     info->decoded_size_bytes = session->image_info.pixel_bytes;
     rin_media_session_unlock(session);
     return RIN_SUCCESS;
