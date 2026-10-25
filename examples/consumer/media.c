@@ -84,6 +84,10 @@ static int decode_png(void)
     info.struct_size = sizeof(info);
     info.version = RIN_SDK_STRUCT_VERSION_1;
     result = rin_image_get_info_v1(object, &info);
+    if (result == RIN_ERROR_NOT_SUPPORTED) {
+        puts("image decoder is not available on this target");
+        return close_media(object, 3);
+    }
     if (result != RIN_SUCCESS) {
         printf("image metadata query failed: %d\n", (int)result);
         return close_media(object, 1);
@@ -101,6 +105,10 @@ static int decode_png(void)
     output.size = sizeof(decoded_pixel);
     result = rin_image_decode_v1(
         object, RIN_IMAGE_DECODE_FORMAT_ARGB8888, output, &required_bytes);
+    if (result == RIN_ERROR_NOT_SUPPORTED) {
+        puts("image decoder is not available on this target");
+        return close_media(object, 3);
+    }
     if (result != RIN_SUCCESS || required_bytes != sizeof(decoded_pixel)) {
         printf("image decode failed: %d (bytes=%llu)\n", (int)result,
                (unsigned long long)required_bytes);
@@ -129,6 +137,10 @@ static int decode_wav(void)
     info.struct_size = sizeof(info);
     info.version = RIN_SDK_STRUCT_VERSION_1;
     result = rin_audio_get_info_v1(object, &info);
+    if (result == RIN_ERROR_NOT_SUPPORTED) {
+        puts("audio decoder is not available on this target");
+        return close_media(object, 3);
+    }
     if (result != RIN_SUCCESS) {
         printf("audio metadata query failed: %d\n", (int)result);
         return close_media(object, 1);
@@ -136,8 +148,11 @@ static int decode_wav(void)
     if (info.sample_rate_hz != 8000u || info.channels != 1u ||
         info.sample_format != RIN_MEDIA_AUDIO_SAMPLE_FORMAT_S16LE ||
         info.bytes_per_frame != 2u ||
-        (info.flags & RIN_AUDIO_INFO_FRAME_COUNT_KNOWN) == 0u ||
-        info.frame_count != 2u) {
+        (info.flags & ~RIN_AUDIO_INFO_FRAME_COUNT_KNOWN) != 0u ||
+        (((info.flags & RIN_AUDIO_INFO_FRAME_COUNT_KNOWN) != 0u) &&
+         info.frame_count != 2u) ||
+        (((info.flags & RIN_AUDIO_INFO_FRAME_COUNT_KNOWN) == 0u) &&
+         info.frame_count != 0u)) {
         puts("audio metadata did not match the self-contained PCM fixture");
         return close_media(object, 1);
     }
@@ -145,6 +160,10 @@ static int decode_wav(void)
     output.address = (uint64_t)(uintptr_t)decoded_samples;
     output.size = sizeof(decoded_samples);
     result = rin_audio_decode_v1(object, output, &decoded_frames);
+    if (result == RIN_ERROR_NOT_SUPPORTED) {
+        puts("audio decoder is not available on this target");
+        return close_media(object, 3);
+    }
     if (result != RIN_SUCCESS || decoded_frames != 2u) {
         printf("audio decode failed: %d (frames=%llu)\n",
                (int)result, (unsigned long long)decoded_frames);
