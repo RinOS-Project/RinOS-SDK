@@ -60,6 +60,7 @@ int main(void) {
       <li>New fields require a versioned ABI change or a reserved-field contract that explicitly permits them. Do not infer compatibility from the compiler, architecture, or the size of an unrelated record.</li>
     </ul>
     <p>The top-level SDK ABI declarations are in <a href="../include/rin/abi.h"><code>abi.h</code></a>. Domain records live beside their APIs; for example, process requests are in <a href="../include/rin/base.h"><code>base.h</code></a> and window records are in <a href="../include/rin/gui.h"><code>gui.h</code></a>.</p>
+    <p>WinCompat consumers can include <a href="../include/rin/compat/uxtheme_abi.h"><code>&lt;rin/compat/uxtheme_abi.h&gt;</code></a> for the fixed-width <code>WTA_OPTIONS</code> layout, <code>WTA_NONCLIENT</code>/<code>WTNCA_*</code> values, and the function-pointer type for the <code>SetWindowThemeAttribute</code> export. Its namespaced types avoid collisions with host Windows headers.</p>
   </section>
 
   <section id="capabilities">

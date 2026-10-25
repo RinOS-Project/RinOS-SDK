@@ -91,6 +91,7 @@
 #include "web/webcontent_protocol.h"
 #include "web/workerd_protocol.h"
 #include "compat/nt_service_abi.h"
+#include "compat/uxtheme_abi.h"
 #include "audio/device_abi.h"
 #include "audio/formats.h"
 #include "audio/policy_abi.h"
