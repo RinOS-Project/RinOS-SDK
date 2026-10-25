@@ -15,6 +15,9 @@ enum {
     RIN_MEDIA_TYPE_VIDEO = 3u
 };
 
+/* Bound every v1 caller-owned source span before it is copied or decoded. */
+#define RIN_MEDIA_MAX_SOURCE_BYTES_V1 UINT64_C(1073741824)
+
 typedef enum RinImageDecodeFormatV1 {
     /* Each output pixel is a little-endian uint32_t value 0xAARRGGBB. */
     RIN_IMAGE_DECODE_FORMAT_ARGB8888 = 1
