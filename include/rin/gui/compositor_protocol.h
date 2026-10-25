@@ -573,6 +573,7 @@ typedef struct RinCompositorSetCursorV1 {
 /* A cursor-role surface publishes a process-owned image through the normal
  * shared-buffer commit path, then selects it with this generation-ordered
  * request. Cursor pixels never cross the control socket. */
+#pragma pack(push, 4)
 typedef struct RinCompositorUpdateCursorSurfaceV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -585,6 +586,7 @@ typedef struct RinCompositorUpdateCursorSurfaceV1 {
     uint64_t cursor_generation;
     uint32_t reserved[2];
 } RinCompositorUpdateCursorSurfaceV1;
+#pragma pack(pop)
 
 /* Window metadata is exposed only to the authenticated desktop shell.  The
  * bounded cursor lets a shell consume more than one page without leaking the
