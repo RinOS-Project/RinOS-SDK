@@ -353,6 +353,13 @@ static RinResult rin_media_image_status_result(int32_t status)
         return RIN_ERROR_STALE_HANDLE;
     case RIN_IMAGE_DECODER_TRANSPORT_PROTOCOL:
         return RIN_ERROR_INTEGRITY;
+    case RIN_IMAGE_DECODER_TRANSPORT_UNSUPPORTED:
+        return RIN_ERROR_NOT_SUPPORTED;
+    case RIN_IMAGE_DECODER_TRANSPORT_LIMIT_EXCEEDED:
+    case RIN_IMAGE_DECODER_TRANSPORT_OVERFLOW:
+        return RIN_ERROR_LIMIT_EXCEEDED;
+    case RIN_IMAGE_DECODER_TRANSPORT_MALFORMED:
+        return RIN_ERROR_INTEGRITY;
     default:
         return RIN_ERROR_INTEGRITY;
     }
@@ -474,7 +481,7 @@ static int rin_media_image_response_header(
            response->connection_id == session->image_connection_id &&
            response->reserved == 0u &&
            response->status <= RIN_IMAGE_DECODER_TRANSPORT_OK &&
-           response->status >= RIN_IMAGE_DECODER_TRANSPORT_PROTOCOL &&
+           response->status >= RIN_IMAGE_DECODER_TRANSPORT_MALFORMED &&
            (response->status == RIN_IMAGE_DECODER_TRANSPORT_OK ||
             response->payload_size == 0u);
 }

@@ -42,7 +42,13 @@ typedef enum RinImageDecoderTransportStatus {
     RIN_IMAGE_DECODER_TRANSPORT_TIMED_OUT = -4,
     RIN_IMAGE_DECODER_TRANSPORT_CANCELLED = -5,
     RIN_IMAGE_DECODER_TRANSPORT_NOT_FOUND = -6,
-    RIN_IMAGE_DECODER_TRANSPORT_PROTOCOL = -7
+    RIN_IMAGE_DECODER_TRANSPORT_PROTOCOL = -7,
+    /* Codec outcomes stay distinct on the service wire.  Callers may map
+     * these onto a smaller public result set without losing IPC diagnostics. */
+    RIN_IMAGE_DECODER_TRANSPORT_UNSUPPORTED = -8,
+    RIN_IMAGE_DECODER_TRANSPORT_LIMIT_EXCEEDED = -9,
+    RIN_IMAGE_DECODER_TRANSPORT_OVERFLOW = -10,
+    RIN_IMAGE_DECODER_TRANSPORT_MALFORMED = -11
 } RinImageDecoderTransportStatus;
 
 typedef enum RinImageDecoderServiceListenerOperation {
