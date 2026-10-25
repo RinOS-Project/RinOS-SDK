@@ -17,6 +17,9 @@ enum {
 
 /* Bound every v1 caller-owned source span before it is copied or decoded. */
 #define RIN_MEDIA_MAX_SOURCE_BYTES_V1 UINT64_C(1073741824)
+/* The first authenticated VIDEO backend keeps an indexed AVI snapshot in
+ * bounded userspace memory. Other media types retain the generic 1 GiB cap. */
+#define RIN_MEDIA_MAX_VIDEO_SOURCE_BYTES_V1 UINT64_C(268435456)
 
 /* MIME metadata is small and bounded independently of the media payload. */
 #define RIN_MEDIA_MAX_MIME_TYPE_BYTES_V1 UINT64_C(4096)

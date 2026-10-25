@@ -1098,6 +1098,28 @@ RinResult rin_audio_decode_v1(RinMediaObject object,RinSliceV1 output,uint64_t* 
     return rin_media_sdk_client_audio_decode_v1(object, output, frames);
 }
 RinResult rin_video_decode_v1(RinMediaObject object,RinSurface target,uint64_t* timestamp_ns) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_VIDEO_DECODE,timestamp_ns,object,target,0,0,0,0); }
+RinResult rin_video_get_info_v1(RinMediaObject object, RinVideoInfoV1* info) {
+    RinResult result;
+    if (!versioned(info, sizeof(*info))) return RIN_ERROR_ABI_MISMATCH;
+    reset_versioned_output(info, sizeof(*info));
+    result = rin_media_sdk_client_video_info_v1(object, info);
+    if (result != RIN_SUCCESS) reset_versioned_output(info, sizeof(*info));
+    return result;
+}
+RinResult rin_video_decode_frame_v1(RinMediaObject object,
+                                     RinRenderTarget* target,
+                                     RinVideoFrameInfoV1* frame_info) {
+    RinResult result;
+    if (!versioned(frame_info, sizeof(*frame_info)))
+        return RIN_ERROR_ABI_MISMATCH;
+    reset_versioned_output(frame_info, sizeof(*frame_info));
+    if (target == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    result = rin_media_sdk_client_video_decode_frame_v1(
+        object, target, frame_info);
+    if (result != RIN_SUCCESS) reset_versioned_output(frame_info,
+                                                       sizeof(*frame_info));
+    return result;
+}
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_CONFIG)

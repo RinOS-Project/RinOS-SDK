@@ -14,14 +14,19 @@
 #include <unistd.h>
 
 #include <rin/base.h>
+#include <rin/gui/surface_abi.h>
 #include <rin/service.h>
 #include <rin/socket_abi.h>
 
 #define RIN_MEDIA_MDC1_MAGIC UINT32_C(0x3143444d)
-#define RIN_MEDIA_MDC1_VERSION UINT32_C(2)
+#define RIN_MEDIA_MDC1_VERSION UINT32_C(3)
 #define RIN_MEDIA_MDC1_TEXT_CAPACITY UINT32_C(4096)
 #define RIN_MEDIA_MDC1_MAX_FRAMES UINT32_C(1024)
 #define RIN_MEDIA_MDC1_SAMPLE_FORMAT_S16LE UINT32_C(1)
+#define RIN_MEDIA_MDC1_VIDEO_FRAME_ARGB8888 UINT32_C(2)
+#define RIN_MEDIA_MDC1_VIDEO_MAX_DIMENSION UINT32_C(4096)
+#define RIN_MEDIA_MDC1_VIDEO_MAX_PIXELS UINT64_C(16777216)
+#define RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES UINT64_C(67108864)
 #define RIN_MEDIA_MDC1_SOCKET_PATH "/run/rin/mediad.sock"
 #define RIN_MEDIA_MDC1_SOURCE_CHUNK UINT32_C(65536)
 #define RIN_MEDIA_MDC1_IO_TIMEOUT_MS 250
@@ -37,7 +42,8 @@ enum {
     RIN_MEDIA_MDC1_READ = 2,
     RIN_MEDIA_MDC1_SEEK = 3,
     RIN_MEDIA_MDC1_CLOSE = 4,
-    RIN_MEDIA_MDC1_CONFIGURE_OUTPUT = 5
+    RIN_MEDIA_MDC1_CONFIGURE_OUTPUT = 5,
+    RIN_MEDIA_MDC1_VIDEO_FRAME = 6
 };
 
 typedef struct RinMediaMdc1HeaderV1 {
@@ -51,12 +57,12 @@ typedef struct RinMediaMdc1HeaderV1 {
     uint64_t session_id;
 } RinMediaMdc1HeaderV1;
 
-typedef struct RinMediaMdc1OutputFormatV2 {
+typedef struct RinMediaMdc1OutputFormatV3 {
     uint32_t sample_rate;
     uint32_t channels;
     uint32_t sample_format;
-    uint32_t reserved0;
-} RinMediaMdc1OutputFormatV2;
+    uint32_t media_type;
+} RinMediaMdc1OutputFormatV3;
 
 typedef struct RinMediaMdc1OpenReplyV2 {
     uint64_t session_id;
@@ -88,6 +94,27 @@ typedef struct RinMediaMdc1SeekRequestV1 {
     int64_t position_ms;
 } RinMediaMdc1SeekRequestV1;
 
+typedef struct RinMediaMdc1VideoOpenReplyV1 {
+    uint64_t session_id;
+    uint32_t width;
+    uint32_t height;
+    uint32_t row_stride_bytes;
+    uint32_t format;
+    uint32_t frame_count;
+    uint32_t fps_numerator;
+    uint32_t fps_denominator;
+    uint32_t reserved0;
+    uint64_t duration_ns;
+    uint64_t reserved[2];
+} RinMediaMdc1VideoOpenReplyV1;
+
+typedef struct RinMediaMdc1VideoFrameRequestV1 {
+    uint32_t max_width;
+    uint32_t max_height;
+    uint32_t max_frame_bytes;
+    uint32_t reserved0;
+} RinMediaMdc1VideoFrameRequestV1;
+
 typedef struct RinMediaSdkSessionV1 {
     volatile uint32_t state; /* 0 free, 1 published, 2 reserved/closing */
     volatile uint32_t lock;
@@ -106,6 +133,7 @@ typedef struct RinMediaSdkSessionV1 {
     uint64_t image_source_generation;
     uint64_t image_decode_request_id;
     RinImageDecoderDecodeResponseV1 image_info;
+    RinVideoInfoV1 video_info;
 } RinMediaSdkSessionV1;
 
 static RinMediaSdkSessionV1 g_media_sessions[RIN_MEDIA_MDC1_MAX_SESSIONS];
@@ -121,12 +149,13 @@ static void rin_media_session_reset_image(RinMediaSdkSessionV1* session)
     session->image_source_generation = 0u;
     session->image_decode_request_id = 0u;
     memset(&session->image_info, 0, sizeof(session->image_info));
+    memset(&session->video_info, 0, sizeof(session->video_info));
 }
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinMediaMdc1HeaderV1) == 32u,
                "MDC1 header ABI drift");
-_Static_assert(sizeof(RinMediaMdc1OutputFormatV2) == 16u,
+_Static_assert(sizeof(RinMediaMdc1OutputFormatV3) == 16u,
                "MDC1 output format ABI drift");
 _Static_assert(sizeof(RinMediaMdc1OpenReplyV2) == 12336u,
                "MDC1 open reply ABI drift");
@@ -136,6 +165,10 @@ _Static_assert(sizeof(RinMediaMdc1ReadReplyV1) == 8u,
                "MDC1 read reply ABI drift");
 _Static_assert(sizeof(RinMediaMdc1SeekRequestV1) == 8u,
                "MDC1 seek request ABI drift");
+_Static_assert(sizeof(RinMediaMdc1VideoOpenReplyV1) == 64u,
+               "MDC1 video open reply ABI drift");
+_Static_assert(sizeof(RinMediaMdc1VideoFrameRequestV1) == 16u,
+               "MDC1 video frame request ABI drift");
 #endif
 
 static uint64_t rin_media_current_pid(void)
@@ -225,7 +258,7 @@ static int rin_media_transfer_exact(int fd, void* buffer, uint32_t size,
 
 static int rin_media_send_open_with_descriptor(
     int socket_fd, const RinMediaMdc1HeaderV1* header,
-    const RinMediaMdc1OutputFormatV2* format, int source_fd)
+    const RinMediaMdc1OutputFormatV3* format, int source_fd)
 {
     uint8_t frame[sizeof(*header) + sizeof(*format)];
     uint8_t control[CMSG_SPACE(sizeof(int))];
@@ -522,9 +555,11 @@ static int rin_media_header_valid(const RinMediaMdc1HeaderV1* header,
            header->session_id == session_id;
 }
 
-static int rin_media_rpc(RinMediaSdkSessionV1* session, uint16_t operation,
-                         const void* payload, uint32_t payload_bytes,
-                         RinMediaMdc1HeaderV1* reply)
+static int rin_media_rpc_timeout(RinMediaSdkSessionV1* session,
+                                 uint16_t operation, const void* payload,
+                                 uint32_t payload_bytes,
+                                 RinMediaMdc1HeaderV1* reply,
+                                 int timeout_ms)
 {
     RinMediaMdc1HeaderV1 request;
     RinMediaMdc1HeaderV1 response;
@@ -541,18 +576,29 @@ static int rin_media_rpc(RinMediaSdkSessionV1* session, uint16_t operation,
     request.request_id = session->next_request_id++;
     request.payload_bytes = payload_bytes;
     request.session_id = session->session_id;
-    if (!rin_media_transfer_exact(session->socket_fd, &request,
-                                  (uint32_t)sizeof(request), 0) ||
+    if (!rin_media_transfer_exact_timeout(
+            session->socket_fd, &request, (uint32_t)sizeof(request), 0,
+            timeout_ms) ||
         (payload_bytes != 0u &&
-         !rin_media_transfer_exact(session->socket_fd, (void*)payload,
-                                   payload_bytes, 0)) ||
-        !rin_media_transfer_exact(session->socket_fd, &response,
-                                  (uint32_t)sizeof(response), 1) ||
+         !rin_media_transfer_exact_timeout(
+             session->socket_fd, (void*)payload, payload_bytes, 0,
+             timeout_ms)) ||
+        !rin_media_transfer_exact_timeout(
+            session->socket_fd, &response, (uint32_t)sizeof(response), 1,
+            timeout_ms) ||
         !rin_media_header_valid(&response, operation, request.request_id,
                                 session->session_id))
         return 0;
     *reply = response;
     return 1;
+}
+
+static int rin_media_rpc(RinMediaSdkSessionV1* session, uint16_t operation,
+                         const void* payload, uint32_t payload_bytes,
+                         RinMediaMdc1HeaderV1* reply)
+{
+    return rin_media_rpc_timeout(session, operation, payload, payload_bytes,
+                                 reply, RIN_MEDIA_MDC1_IO_TIMEOUT_MS);
 }
 
 static int rin_media_snapshot_source(const RinMediaOpenV1* request,
@@ -700,7 +746,9 @@ static void rin_media_session_drop_locked(RinMediaSdkSessionV1* session,
                                           int send_close)
 {
     __atomic_store_n(&session->state, 2u, __ATOMIC_RELEASE);
-    if (send_close && session->media_type == RIN_MEDIA_TYPE_AUDIO &&
+    if (send_close &&
+        (session->media_type == RIN_MEDIA_TYPE_AUDIO ||
+         session->media_type == RIN_MEDIA_TYPE_VIDEO) &&
         session->socket_fd >= 0 && session->session_id != 0u) {
         RinMediaMdc1HeaderV1 reply;
         (void)rin_media_rpc(session, RIN_MEDIA_MDC1_CLOSE, NULL, 0u, &reply);
@@ -1050,8 +1098,9 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     RinMediaSdkSessionV1* session;
     RinMediaMdc1HeaderV1 request_header;
     RinMediaMdc1HeaderV1 reply_header;
-    RinMediaMdc1OutputFormatV2 output;
+    RinMediaMdc1OutputFormatV3 output;
     RinMediaMdc1OpenReplyV2 metadata;
+    RinMediaMdc1VideoOpenReplyV1 video_metadata;
     uint64_t owner_pid;
     int source_fd = -1;
     int socket_fd = -1;
@@ -1060,7 +1109,8 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     if (object == RIN_OBJECT_HANDLE_INVALID || request == NULL)
         return RIN_ERROR_INVALID_ARGUMENT;
     if (request->media_type != RIN_MEDIA_TYPE_AUDIO &&
-        request->media_type != RIN_MEDIA_TYPE_IMAGE)
+        request->media_type != RIN_MEDIA_TYPE_IMAGE &&
+        request->media_type != RIN_MEDIA_TYPE_VIDEO)
         return RIN_ERROR_NOT_SUPPORTED;
     if (request->struct_size < sizeof(*request) ||
         request->version != RIN_SDK_STRUCT_VERSION_1 ||
@@ -1076,6 +1126,9 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
         !rin_media_range_valid(request->source.address, request->source.size,
                                RIN_MEDIA_MAX_SOURCE_BYTES_V1, 0))
         return RIN_ERROR_INVALID_ARGUMENT;
+    if (request->media_type == RIN_MEDIA_TYPE_VIDEO &&
+        request->source.size > RIN_MEDIA_MAX_VIDEO_SOURCE_BYTES_V1)
+        return RIN_ERROR_LIMIT_EXCEEDED;
 
     owner_pid = rin_media_current_pid();
     if (owner_pid == 0u) return RIN_ERROR_IO;
@@ -1111,9 +1164,14 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     request_header.request_id = 1u;
     request_header.payload_bytes = sizeof(output);
     memset(&output, 0, sizeof(output));
-    output.sample_rate = 48000u;
-    output.channels = 2u;
-    output.sample_format = RIN_MEDIA_MDC1_SAMPLE_FORMAT_S16LE;
+    output.media_type = request->media_type;
+    if (request->media_type == RIN_MEDIA_TYPE_AUDIO) {
+        output.sample_rate = 48000u;
+        output.channels = 2u;
+        output.sample_format = RIN_MEDIA_MDC1_SAMPLE_FORMAT_S16LE;
+    } else {
+        output.sample_format = RIN_MEDIA_MDC1_VIDEO_FRAME_ARGB8888;
+    }
     if (!rin_media_send_open_with_descriptor(socket_fd, &request_header,
                                              &output, source_fd)) {
         (void)close(source_fd);
@@ -1124,6 +1182,61 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     (void)close(source_fd);
     source_fd = -1;
     memset(&reply_header, 0, sizeof(reply_header));
+    if (request->media_type == RIN_MEDIA_TYPE_VIDEO) {
+        memset(&video_metadata, 0, sizeof(video_metadata));
+        if (!rin_media_transfer_exact(socket_fd, &reply_header,
+                                      (uint32_t)sizeof(reply_header), 1) ||
+            !rin_media_header_valid(&reply_header, RIN_MEDIA_MDC1_OPEN,
+                                    request_header.request_id,
+                                    reply_header.session_id) ||
+            reply_header.status != 0 || reply_header.session_id == 0u ||
+            reply_header.payload_bytes != sizeof(video_metadata) ||
+            !rin_media_transfer_exact(socket_fd, &video_metadata,
+                                      (uint32_t)sizeof(video_metadata), 1) ||
+            video_metadata.session_id != reply_header.session_id ||
+            video_metadata.width == 0u ||
+            video_metadata.width > RIN_MEDIA_MDC1_VIDEO_MAX_DIMENSION ||
+            video_metadata.height == 0u ||
+            video_metadata.height > RIN_MEDIA_MDC1_VIDEO_MAX_DIMENSION ||
+            video_metadata.width > UINT32_MAX / 4u ||
+            video_metadata.row_stride_bytes != video_metadata.width * 4u ||
+            (uint64_t)video_metadata.width * video_metadata.height >
+                RIN_MEDIA_MDC1_VIDEO_MAX_PIXELS ||
+            (uint64_t)video_metadata.row_stride_bytes *
+                    video_metadata.height >
+                RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES ||
+            video_metadata.format != RIN_IMAGE_DECODE_FORMAT_ARGB8888 ||
+            video_metadata.fps_numerator == 0u ||
+            video_metadata.fps_denominator == 0u ||
+            video_metadata.reserved0 != 0u ||
+            video_metadata.reserved[0] != 0u ||
+            video_metadata.reserved[1] != 0u) {
+            (void)close(socket_fd);
+            rin_media_session_discard_reserved(session);
+            return RIN_ERROR_INTEGRITY;
+        }
+        session->object = object;
+        session->socket_fd = socket_fd;
+        session->next_request_id = 2u;
+        session->media_type = RIN_MEDIA_TYPE_VIDEO;
+        session->session_id = reply_header.session_id;
+        session->owner_pid = owner_pid;
+        memset(&session->video_info, 0, sizeof(session->video_info));
+        session->video_info.struct_size = sizeof(session->video_info);
+        session->video_info.version = RIN_SDK_STRUCT_VERSION_1;
+        session->video_info.width = video_metadata.width;
+        session->video_info.height = video_metadata.height;
+        session->video_info.format = video_metadata.format;
+        session->video_info.row_stride_bytes =
+            video_metadata.row_stride_bytes;
+        session->video_info.frame_count = video_metadata.frame_count;
+        session->video_info.flags = RIN_VIDEO_INFO_FRAME_COUNT_KNOWN;
+        session->video_info.duration_ns = video_metadata.duration_ns;
+        session->video_info.fps_numerator = video_metadata.fps_numerator;
+        session->video_info.fps_denominator = video_metadata.fps_denominator;
+        __atomic_store_n(&session->state, 1u, __ATOMIC_RELEASE);
+        return RIN_SUCCESS;
+    }
     memset(&metadata, 0, sizeof(metadata));
     if (!rin_media_transfer_exact(socket_fd, &reply_header,
                                   (uint32_t)sizeof(reply_header), 1) ||
@@ -1410,6 +1523,180 @@ RinResult rin_media_sdk_client_audio_decode_v1(RinObject object,
     result = RIN_SUCCESS;
     rin_media_session_unlock(session);
     return result;
+}
+
+RinResult rin_media_sdk_client_video_info_v1(RinObject object,
+                                              RinVideoInfoV1* info)
+{
+    RinMediaSdkSessionV1* session;
+    RinResult result;
+
+    if (info == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    result = rin_media_validate_object(object);
+    if (result != RIN_SUCCESS) return result;
+    session = rin_media_session_find_locked(object);
+    if (session == NULL) return RIN_ERROR_STALE_HANDLE;
+    if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
+        session->object != object) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_STALE_HANDLE;
+    }
+    if (session->media_type != RIN_MEDIA_TYPE_VIDEO) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_WRONG_TYPE;
+    }
+    if (!rin_media_session_pid_valid(session)) {
+        rin_media_session_drop_locked(session, 0);
+        rin_media_session_unlock_free(session);
+        return RIN_ERROR_STALE_HANDLE;
+    }
+    *info = session->video_info;
+    rin_media_session_unlock(session);
+    return RIN_SUCCESS;
+}
+
+RinResult rin_media_sdk_client_video_decode_frame_v1(
+    RinObject object, RinRenderTarget* target,
+    RinVideoFrameInfoV1* frame_info)
+{
+    RinMediaSdkSessionV1* session;
+    RinMediaMdc1VideoFrameRequestV1 request;
+    RinMediaMdc1HeaderV1 reply;
+    RinVideoFrameInfoV1 received_info;
+    uint8_t* pixels = NULL;
+    uint64_t expected_bytes;
+    uint64_t target_extent;
+    uint32_t source_row_stride_bytes;
+    uint32_t row;
+    RinResult result;
+
+    if (target == NULL || frame_info == NULL ||
+        !rin_surface_descriptor_valid((const RinSurfaceDescriptorV1*)target) ||
+        (target->flags & RIN_SURFACE_FLAG_WRITABLE) == 0u ||
+        target->width > RIN_MEDIA_MDC1_VIDEO_MAX_DIMENSION ||
+        target->height > RIN_MEDIA_MDC1_VIDEO_MAX_DIMENSION ||
+        (target->format != RIN_SURFACE_FORMAT_BGRA32 &&
+         target->format != RIN_SURFACE_FORMAT_RGBA32))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    target_extent = (uint64_t)target->pitch * target->height;
+    if ((uint64_t)target->pitch < (uint64_t)target->width * 4u ||
+        target_extent > RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES ||
+        target_extent > SIZE_MAX ||
+        (uintptr_t)target->pixels > UINTPTR_MAX - (uintptr_t)target_extent)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    result = rin_media_validate_object(object);
+    if (result != RIN_SUCCESS) return result;
+    session = rin_media_session_find_locked(object);
+    if (session == NULL) return RIN_ERROR_STALE_HANDLE;
+    if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
+        session->object != object) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_STALE_HANDLE;
+    }
+    if (session->media_type != RIN_MEDIA_TYPE_VIDEO) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_WRONG_TYPE;
+    }
+    if (!rin_media_session_pid_valid(session)) {
+        rin_media_session_drop_locked(session, 0);
+        rin_media_session_unlock_free(session);
+        return RIN_ERROR_STALE_HANDLE;
+    }
+    if (target->width < session->video_info.width ||
+        target->height < session->video_info.height) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_BUFFER_TOO_SMALL;
+    }
+
+    memset(&request, 0, sizeof(request));
+    request.max_width = target->width;
+    request.max_height = target->height;
+    request.max_frame_bytes = (uint32_t)RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES;
+    if (!rin_media_rpc_timeout(session, RIN_MEDIA_MDC1_VIDEO_FRAME,
+                               &request, sizeof(request), &reply,
+                               RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
+        reply.status != 0 ||
+        reply.payload_bytes < sizeof(received_info) ||
+        reply.payload_bytes > sizeof(received_info) +
+                                  RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES ||
+        !rin_media_transfer_exact_timeout(
+            session->socket_fd, &received_info,
+            (uint32_t)sizeof(received_info), 1,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS)) {
+        rin_media_session_drop_locked(session, 0);
+        rin_media_session_unlock_free(session);
+        return RIN_ERROR_IO;
+    }
+
+    source_row_stride_bytes = session->video_info.row_stride_bytes;
+    expected_bytes = (uint64_t)source_row_stride_bytes *
+                     (uint64_t)session->video_info.height;
+    if (received_info.struct_size != sizeof(received_info) ||
+        received_info.version != RIN_SDK_STRUCT_VERSION_1 ||
+        received_info.width != session->video_info.width ||
+        received_info.height != session->video_info.height ||
+        received_info.format != RIN_IMAGE_DECODE_FORMAT_ARGB8888 ||
+        received_info.reserved[0] != 0u ||
+        received_info.reserved[1] != 0u ||
+        session->video_info.flags != RIN_VIDEO_INFO_FRAME_COUNT_KNOWN ||
+        (received_info.flags & ~RIN_VIDEO_FRAME_FLAG_END_OF_STREAM) != 0u ||
+        expected_bytes > RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES ||
+        ((received_info.flags & RIN_VIDEO_FRAME_FLAG_END_OF_STREAM) != 0u
+             ? received_info.payload_size_bytes != 0u
+             : received_info.payload_size_bytes != expected_bytes) ||
+        reply.payload_bytes != sizeof(received_info) +
+                                   received_info.payload_size_bytes) {
+        rin_media_session_drop_locked(session, 0);
+        rin_media_session_unlock_free(session);
+        return RIN_ERROR_INTEGRITY;
+    }
+    if (received_info.payload_size_bytes != 0u &&
+        (uint64_t)target->pitch * received_info.height > target_extent) {
+        rin_media_session_drop_locked(session, 0);
+        rin_media_session_unlock_free(session);
+        return RIN_ERROR_INTEGRITY;
+    }
+    if (received_info.payload_size_bytes != 0u) {
+        pixels = (uint8_t*)malloc((size_t)received_info.payload_size_bytes);
+        if (pixels == NULL) {
+            rin_media_session_drop_locked(session, 0);
+            rin_media_session_unlock_free(session);
+            return RIN_ERROR_NO_MEMORY;
+        }
+        if (!rin_media_transfer_exact_timeout(
+                session->socket_fd, pixels,
+                (uint32_t)received_info.payload_size_bytes, 1,
+                RIN_MEDIA_IMAGE_IO_TIMEOUT_MS)) {
+            free(pixels);
+            rin_media_session_drop_locked(session, 0);
+            rin_media_session_unlock_free(session);
+            return RIN_ERROR_IO;
+        }
+        for (row = 0u; row < received_info.height; ++row) {
+            const uint8_t* source = pixels +
+                (size_t)row * source_row_stride_bytes;
+            uint8_t* destination = (uint8_t*)target->pixels +
+                (size_t)row * target->pitch;
+            if (target->format == RIN_SURFACE_FORMAT_BGRA32) {
+                memcpy(destination, source, source_row_stride_bytes);
+            } else {
+                uint32_t column;
+                for (column = 0u; column < received_info.width; ++column) {
+                    const uint8_t* source_pixel = source + (size_t)column * 4u;
+                    uint8_t* destination_pixel =
+                        destination + (size_t)column * 4u;
+                    destination_pixel[0] = source_pixel[2];
+                    destination_pixel[1] = source_pixel[1];
+                    destination_pixel[2] = source_pixel[0];
+                    destination_pixel[3] = source_pixel[3];
+                }
+            }
+        }
+        free(pixels);
+    }
+    *frame_info = received_info;
+    rin_media_session_unlock(session);
+    return RIN_SUCCESS;
 }
 
 void rin_media_sdk_client_object_close_hook_v1(RinObject object)

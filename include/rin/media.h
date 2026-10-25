@@ -2,6 +2,7 @@
 #define RIN_SDK_MEDIA_H
 #include "abi.h"
 #include "media_types.h"
+#include "render_target.h"
 #include "syscall_abi.h"
 #ifdef __cplusplus
 extern "C" {
@@ -42,12 +43,49 @@ typedef struct RinAudioInfoV1 {
     uint64_t reserved[2];
 } RinAudioInfoV1;
 
+enum {
+    RIN_VIDEO_INFO_FRAME_COUNT_KNOWN = 1u << 0,
+    RIN_VIDEO_FRAME_FLAG_END_OF_STREAM = 1u << 0
+};
+
+typedef struct RinVideoInfoV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t width;
+    uint32_t height;
+    uint32_t format;
+    uint32_t row_stride_bytes;
+    uint32_t frame_count;
+    uint32_t flags;
+    uint64_t duration_ns;
+    uint32_t fps_numerator;
+    uint32_t fps_denominator;
+    uint64_t reserved[2];
+} RinVideoInfoV1;
+
+typedef struct RinVideoFrameInfoV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t width;
+    uint32_t height;
+    uint32_t format;
+    uint32_t row_stride_bytes;
+    uint32_t flags;
+    uint64_t timestamp_ns;
+    uint64_t frame_index;
+    uint64_t payload_size_bytes;
+    uint64_t reserved[2];
+} RinVideoFrameInfoV1;
+
 /* V1 image decode returns the first frame in tightly packed ARGB8888 words;
  * row_stride_bytes is width * 4 and decoded_size_bytes is stride * height.
  * Image frame_count is the total frame count (1 for a still image), or zero
  * when the decoder cannot determine it. Audio decode returns interleaved
  * S16LE frames; query its rate and channel count before sizing the output
- * buffer. A clear FRAME_COUNT_KNOWN flag means audio frame_count is zero. */
+ * buffer. A clear FRAME_COUNT_KNOWN flag means audio frame_count is zero.
+ * Video frame decode writes the next AVI MJPEG/uncompressed frame into a
+ * writable RinRenderTarget acquired from the compositor runtime. The target
+ * mapping is never sent over IPC; call rinruntime_end_frame after success. */
 
 /* Keep the public values fixed even when enum declarations are reorganized. */
 #if defined(__cplusplus)
@@ -88,13 +126,28 @@ RIN_SDK_API RinResult rin_image_decode_v1(RinMediaObject object, uint32_t format
 RIN_SDK_API RinResult rin_audio_get_info_v1(RinMediaObject object, RinAudioInfoV1* info);
 RIN_SDK_API RinResult rin_audio_decode_v1(RinMediaObject object, RinSliceV1 output, uint64_t* frames);
 RIN_SDK_API RinResult rin_video_decode_v1(RinMediaObject object, RinSurface target, uint64_t* timestamp_ns);
+/* Decode one AVI frame into a caller-supplied writable render target. The
+ * caller must keep pixels valid and writable for the duration of the call.
+ * This API does not acquire or present a compositor surface; only bounded
+ * frame bytes cross the authenticated mediad socket. Closing the media object
+ * tears down the decoder session. */
+RIN_SDK_API RinResult rin_video_get_info_v1(RinMediaObject object, RinVideoInfoV1* info);
+RIN_SDK_API RinResult rin_video_decode_frame_v1(
+    RinMediaObject object, RinRenderTarget* target,
+    RinVideoFrameInfoV1* frame_info);
 
 #if defined(__cplusplus)
 static_assert(sizeof(RinImageInfoV1) == 56u, "RinImageInfoV1 ABI drift");
 static_assert(sizeof(RinAudioInfoV1) == 56u, "RinAudioInfoV1 ABI drift");
+static_assert(sizeof(RinVideoInfoV1) == 64u, "RinVideoInfoV1 ABI drift");
+static_assert(sizeof(RinVideoFrameInfoV1) == 72u,
+              "RinVideoFrameInfoV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinImageInfoV1) == 56u, "RinImageInfoV1 ABI drift");
 _Static_assert(sizeof(RinAudioInfoV1) == 56u, "RinAudioInfoV1 ABI drift");
+_Static_assert(sizeof(RinVideoInfoV1) == 64u, "RinVideoInfoV1 ABI drift");
+_Static_assert(sizeof(RinVideoFrameInfoV1) == 72u,
+               "RinVideoFrameInfoV1 ABI drift");
 #endif
 #ifdef __cplusplus
 }
