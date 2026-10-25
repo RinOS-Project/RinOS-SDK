@@ -34,7 +34,90 @@ extern "C" {
 #define RIN_GUI_NATIVE_KEYMOD_SHIFT 0x01u
 #define RIN_GUI_NATIVE_KEYMOD_CTRL 0x02u
 #define RIN_GUI_NATIVE_KEYMOD_ALT 0x04u
-#define RIN_GUI_NATIVE_KEYMOD_KNOWN_MASK 0x07u
+#define RIN_GUI_NATIVE_KEYMOD_CAPS 0x08u
+#define RIN_GUI_NATIVE_KEYMOD_SUPER 0x10u
+#define RIN_GUI_NATIVE_KEYMOD_KNOWN_MASK 0x1fu
+
+/* Per-seat modifier bookkeeping shared by kernel input projection and the
+ * Compositor.  Set-1's high bit identifies E0 keys; Caps is a lock state. */
+#define RIN_GUI_KEY_HELD_LSHIFT 0x0001u
+#define RIN_GUI_KEY_HELD_RSHIFT 0x0002u
+#define RIN_GUI_KEY_HELD_LCTRL  0x0004u
+#define RIN_GUI_KEY_HELD_RCTRL  0x0008u
+#define RIN_GUI_KEY_HELD_LALT   0x0010u
+#define RIN_GUI_KEY_HELD_RALT   0x0020u
+#define RIN_GUI_KEY_HELD_LSUPER 0x0040u
+#define RIN_GUI_KEY_HELD_RSUPER 0x0080u
+#define RIN_GUI_KEY_HELD_CAPS   0x0100u
+
+typedef struct RinGuiKeyboardModifierStateV1 {
+    uint8_t modifiers;
+    uint8_t reserved;
+    uint16_t held_keys;
+} RinGuiKeyboardModifierStateV1;
+
+static inline void rin_gui_keyboard_modifier_state_reset(
+    RinGuiKeyboardModifierStateV1* state, int preserve_caps_lock) {
+    if (!state) return;
+    state->modifiers = preserve_caps_lock
+        ? (uint8_t)(state->modifiers & RIN_GUI_NATIVE_KEYMOD_CAPS)
+        : 0u;
+    state->reserved = 0u;
+    state->held_keys = 0u;
+}
+
+static inline void rin_gui_keyboard_modifier_state_update(
+    RinGuiKeyboardModifierStateV1* state, uint8_t encoded_scancode,
+    int pressed) {
+    uint8_t scancode;
+    int extended;
+    uint16_t key = 0u;
+
+    if (!state || (pressed != 0 && pressed != 1)) return;
+    scancode = encoded_scancode & RIN_GUI_NATIVE_KEY_SCANCODE_MASK;
+    extended = (encoded_scancode & RIN_GUI_NATIVE_KEY_EXTENDED) != 0u;
+    if (!extended && scancode == 0x3au) {
+        if (pressed) {
+            if ((state->held_keys & RIN_GUI_KEY_HELD_CAPS) == 0u)
+                state->modifiers ^= RIN_GUI_NATIVE_KEYMOD_CAPS;
+            state->held_keys |= RIN_GUI_KEY_HELD_CAPS;
+        } else {
+            state->held_keys &= (uint16_t)~RIN_GUI_KEY_HELD_CAPS;
+        }
+        return;
+    }
+    switch (scancode) {
+        case 0x2au: if (!extended) key = RIN_GUI_KEY_HELD_LSHIFT; break;
+        case 0x36u: if (!extended) key = RIN_GUI_KEY_HELD_RSHIFT; break;
+        case 0x1du:
+            key = extended ? RIN_GUI_KEY_HELD_RCTRL
+                           : RIN_GUI_KEY_HELD_LCTRL;
+            break;
+        case 0x38u:
+            key = extended ? RIN_GUI_KEY_HELD_RALT
+                           : RIN_GUI_KEY_HELD_LALT;
+            break;
+        case 0x5bu: if (extended) key = RIN_GUI_KEY_HELD_LSUPER; break;
+        case 0x5cu: if (extended) key = RIN_GUI_KEY_HELD_RSUPER; break;
+        default: break;
+    }
+    if (key == 0u) return;
+    if (pressed) state->held_keys |= key;
+    else state->held_keys &= (uint16_t)~key;
+    state->modifiers &= RIN_GUI_NATIVE_KEYMOD_CAPS;
+    if ((state->held_keys & (RIN_GUI_KEY_HELD_LSHIFT |
+                             RIN_GUI_KEY_HELD_RSHIFT)) != 0u)
+        state->modifiers |= RIN_GUI_NATIVE_KEYMOD_SHIFT;
+    if ((state->held_keys & (RIN_GUI_KEY_HELD_LCTRL |
+                             RIN_GUI_KEY_HELD_RCTRL)) != 0u)
+        state->modifiers |= RIN_GUI_NATIVE_KEYMOD_CTRL;
+    if ((state->held_keys & (RIN_GUI_KEY_HELD_LALT |
+                             RIN_GUI_KEY_HELD_RALT)) != 0u)
+        state->modifiers |= RIN_GUI_NATIVE_KEYMOD_ALT;
+    if ((state->held_keys & (RIN_GUI_KEY_HELD_LSUPER |
+                             RIN_GUI_KEY_HELD_RSUPER)) != 0u)
+        state->modifiers |= RIN_GUI_NATIVE_KEYMOD_SUPER;
+}
 
 #define RIN_GUI_NATIVE_POINTER_LEFT 0x01u
 #define RIN_GUI_NATIVE_POINTER_RIGHT 0x02u
