@@ -19,7 +19,10 @@ extern "C" {
 #define RIN_GUI_NATIVE_EVENT_INPUT_DEVICE_RESET 19u
 
 #define RIN_GUI_NATIVE_EVENT_FLAG_KEY_REPEAT 0x0001u
-#define RIN_GUI_NATIVE_EVENT_FLAG_KNOWN_MASK 0x0001u
+/* Set on physical key events when the active physical keyboard map is JIS.
+ * This describes the keyboard, independently of the selected input method. */
+#define RIN_GUI_NATIVE_EVENT_FLAG_KEYBOARD_LAYOUT_JIS 0x0002u
+#define RIN_GUI_NATIVE_EVENT_FLAG_KNOWN_MASK 0x0003u
 #define RIN_GUI_NATIVE_LEGACY_KEY_REPEAT 0x20u
 
 #define RIN_GUI_NATIVE_KEY_SCANCODE_MASK 0x7fu
