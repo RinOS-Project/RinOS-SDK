@@ -966,6 +966,12 @@ RinResult rin_notification_show_v1(RinStringV1 title,RinStringV1 message,uint32_
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_MEDIA)
+static int rin_media_range_valid_v1(uint64_t address, uint64_t size) {
+    if (address == 0u || size == 0u || address > (uint64_t)UINTPTR_MAX)
+        return 0;
+    return size <= (uint64_t)UINTPTR_MAX - address;
+}
+
 RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object) {
     RinMediaOpenV1 request_snapshot;
     if (object != NULL) *object = RIN_HANDLE_INVALID;
@@ -978,6 +984,18 @@ RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object
         request_snapshot.media_type != RIN_MEDIA_TYPE_AUDIO &&
         request_snapshot.media_type != RIN_MEDIA_TYPE_VIDEO) {
         return RIN_ERROR_INVALID_ARGUMENT;
+    }
+    if (request_snapshot.flags != 0u ||
+        request_snapshot.mime_type.size == 0u ||
+        !rin_media_range_valid_v1(request_snapshot.mime_type.address,
+                                  request_snapshot.mime_type.size) ||
+        !rin_media_range_valid_v1(request_snapshot.source.address,
+                                  request_snapshot.source.size)) {
+        return RIN_ERROR_INVALID_ARGUMENT;
+    }
+    for (uint32_t index = 0u; index < 4u; ++index) {
+        if (request_snapshot.reserved[index] != 0u)
+            return RIN_ERROR_INVALID_ARGUMENT;
     }
     return rin_sdk_invoke_handle_output_v1(
         RIN_SDK_LIBRARY_MEDIA, MEDIA_OPEN, &request_snapshot,
