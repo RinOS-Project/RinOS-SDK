@@ -1710,7 +1710,9 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
 
     if (target == NULL || frame_info == NULL ||
         !rin_surface_descriptor_valid((const RinSurfaceDescriptorV1*)target) ||
-        (target->flags & RIN_SURFACE_FLAG_WRITABLE) == 0u ||
+        (target->flags & (RIN_SURFACE_FLAG_WRITABLE |
+                          RIN_SURFACE_FLAG_EXTERNAL)) !=
+            (RIN_SURFACE_FLAG_WRITABLE | RIN_SURFACE_FLAG_EXTERNAL) ||
         target->width > RIN_MEDIA_MDC1_VIDEO_MAX_DIMENSION ||
         target->height > RIN_MEDIA_MDC1_VIDEO_MAX_DIMENSION ||
         (target->format != RIN_SURFACE_FORMAT_BGRA32 &&
