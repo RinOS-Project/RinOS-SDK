@@ -58,6 +58,10 @@ typedef struct RinNetPrimaryInfo {
  * separate from RinNetPrimaryInfo so the identity/configuration ABI remains
  * stable while statistics can be sampled with its own generation binding. */
 #define RIN_NET_STATISTICS_VERSION 1u
+/* POSIX interface indices are local ordinals.  The current libc snapshot
+ * publishes only the primary interface, so its index is stable at one and
+ * must not be confused with the generation carried by the statistics ABI. */
+#define RIN_NET_PRIMARY_INTERFACE_INDEX 1u
 typedef struct RinNetInterfaceStatisticsV1 {
     uint32_t version;
     uint32_t struct_size;
