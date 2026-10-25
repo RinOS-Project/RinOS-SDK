@@ -78,9 +78,10 @@ typedef struct RinVideoFrameInfoV1 {
     uint64_t reserved[2];
 } RinVideoFrameInfoV1;
 
-/* Optional local cancellation hook for one synchronous frame request. The
- * callback and context are process-local and are never sent over IPC. Keep
- * the callback nonblocking and do not re-enter the media SDK from it. */
+/* Optional local cancellation hook for one synchronous frame request. A
+ * nonzero callback result requests cancellation. The callback and context
+ * are process-local and are never sent over IPC. Keep the callback
+ * nonblocking and do not re-enter the media SDK from it. */
 typedef int (*RinMediaCancellationFunctionV1)(void* context);
 typedef struct RinVideoDecodeOptionsV1 {
     uint32_t struct_size;
