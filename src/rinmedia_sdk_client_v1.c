@@ -1842,6 +1842,10 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
             return failure;
         }
         for (row = 0u; row < received_info.height; ++row) {
+            if (cancellation != NULL && cancellation(cancellation_context)) {
+                cancelled = 1;
+                break;
+            }
             const uint8_t* source = pixels +
                 (size_t)row * source_row_stride_bytes;
             uint8_t* destination = (uint8_t*)target->pixels +
@@ -1860,6 +1864,15 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
                     destination_pixel[3] = source_pixel[3];
                 }
             }
+        }
+        if (!cancelled && cancellation != NULL &&
+            cancellation(cancellation_context))
+            cancelled = 1;
+        if (cancelled) {
+            free(pixels);
+            rin_media_session_drop_locked(session, 0);
+            rin_media_session_unlock_free(session);
+            return RIN_ERROR_CANCELLED;
         }
         free(pixels);
     }
