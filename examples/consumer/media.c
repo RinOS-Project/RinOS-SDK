@@ -67,15 +67,46 @@ static int open_media(uint32_t media_type, const char* mime_type,
     return 0;
 }
 
-static int open_png(void)
+static int decode_png(void)
 {
     static const char mime_type[] = "image/png";
+    uint32_t decoded_pixel = 0u;
+    RinImageInfoV1 info = {0};
     RinMediaObject object = RIN_HANDLE_INVALID;
-    int result = open_media(RIN_MEDIA_TYPE_IMAGE, mime_type,
+    RinSliceV1 output = {0};
+    uint64_t required_bytes = 0u;
+    RinResult result;
+    int status = open_media(RIN_MEDIA_TYPE_IMAGE, mime_type,
                             sizeof(mime_type) - 1u, sample_png,
                             sizeof(sample_png), &object);
-    if (result != 0) return result;
-    puts("typed PNG media object opened and closed");
+    if (status != 0) return status;
+
+    info.struct_size = sizeof(info);
+    info.version = RIN_SDK_STRUCT_VERSION_1;
+    result = rin_image_get_info_v1(object, &info);
+    if (result != RIN_SUCCESS) {
+        printf("image metadata query failed: %d\n", (int)result);
+        return close_media(object, 1);
+    }
+    if (info.width != 1u || info.height != 1u ||
+        info.format != RIN_IMAGE_DECODE_FORMAT_ARGB8888 ||
+        info.row_stride_bytes != sizeof(decoded_pixel) ||
+        info.frame_count != 1u ||
+        info.decoded_size_bytes != sizeof(decoded_pixel)) {
+        puts("image metadata did not match the self-contained PNG fixture");
+        return close_media(object, 1);
+    }
+
+    output.address = (uint64_t)(uintptr_t)&decoded_pixel;
+    output.size = sizeof(decoded_pixel);
+    result = rin_image_decode_v1(
+        object, RIN_IMAGE_DECODE_FORMAT_ARGB8888, output, &required_bytes);
+    if (result != RIN_SUCCESS || required_bytes != sizeof(decoded_pixel)) {
+        printf("image decode failed: %d (bytes=%llu)\n", (int)result,
+               (unsigned long long)required_bytes);
+        return close_media(object, 1);
+    }
+    puts("typed PNG metadata queried and one ARGB8888 pixel decoded");
     return close_media(object, 0);
 }
 
@@ -125,7 +156,7 @@ static int decode_wav(void)
 
 int main(void)
 {
-    int result = open_png();
+    int result = decode_png();
     if (result != 0) return result;
     return decode_wav();
 }

@@ -45,8 +45,9 @@ Explorer requests `process-control`, and it starts children with an empty
 capability mask; each sample package still declares and requests its own
 capabilities. It is not included in the standard application set.
 
-`media` opens a self-contained 1x1 PNG through `RIN_MEDIA_TYPE_IMAGE`, then
-opens a two-frame PCM WAV through `RIN_MEDIA_TYPE_AUDIO`, checks its
+`media` opens a self-contained 1x1 PNG through `RIN_MEDIA_TYPE_IMAGE`, checks
+its metadata, and decodes one ARGB8888 pixel into a four-byte output slice. It
+then opens a two-frame PCM WAV through `RIN_MEDIA_TYPE_AUDIO`, checks its
 S16LE/8-kHz/mono metadata, and decodes both frames into a bounded four-byte
 output slice. It handles `RIN_ERROR_NOT_SUPPORTED` explicitly and requests no
 filesystem, camera, or microphone capability. This is a portable consumer

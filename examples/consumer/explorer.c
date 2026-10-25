@@ -22,7 +22,7 @@ static const ExampleEntry examples[] = {
     {"window", "org.rinos.sdk.window",
      "rin_window_create_v1 / rin_window_next_event_v1", "gui-control"},
     {"media", "org.rinos.sdk.media",
-     "rin_media_open_v1 / rin_audio_get_info_v1 / rin_audio_decode_v1",
+     "rin_media_open_v1 / image and audio metadata/decode",
      "none"},
     {"keyring", "org.rinos.sdk.keyring",
      "RIN_KEYRING_OP_STATUS / authenticated Unix service identity", "none"},
