@@ -105,6 +105,9 @@ typedef struct RinVideoDecodeOptionsV1 {
  * metadata marks timestamp availability separately from end-of-stream.
  * Video frame decode writes the next supported AVI, Matroska/WebM, MOV/MP4,
  * or MPEG-TS frame into a writable RinRenderTarget acquired from RinRuntime.
+ * The wire's ARGB8888 words are little-endian 0xAARRGGBB (BGRA bytes),
+ * matching RinRuntime's BGRA32 target; RGBA32 targets are converted by the
+ * SDK.
  * The configured FFmpeg fallback includes H.264, HEVC, AV1, VP8, VP9, Theora,
  * and MJPEG; the bounded AVI path also supports uncompressed frames. The
  * target mapping is never sent over IPC; after success release it and present
