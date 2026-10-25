@@ -153,6 +153,7 @@ enum RinCompositorMsgType {
     RIN_COMPOSITOR_PRESENT_GPU_READBACK_LEASE = 43,
     RIN_COMPOSITOR_SET_SURFACE_EFFECT = 44,
     RIN_COMPOSITOR_GET_SURFACE_GENERATION = 45,
+    RIN_COMPOSITOR_UPDATE_CURSOR_SURFACE = 46,
 };
 
 typedef struct RinCompositorHeader {
@@ -569,6 +570,22 @@ typedef struct RinCompositorSetCursorV1 {
     uint32_t reserved[2];
 } RinCompositorSetCursorV1;
 
+/* A cursor-role surface publishes a process-owned image through the normal
+ * shared-buffer commit path, then selects it with this generation-ordered
+ * request. Cursor pixels never cross the control socket. */
+typedef struct RinCompositorUpdateCursorSurfaceV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t surface_id;
+    uint32_t enabled;
+    uint32_t visible;
+    int32_t hotspot_x;
+    int32_t hotspot_y;
+    uint64_t cursor_generation;
+    uint32_t reserved[2];
+} RinCompositorUpdateCursorSurfaceV1;
+
 /* Window metadata is exposed only to the authenticated desktop shell.  The
  * bounded cursor lets a shell consume more than one page without leaking the
  * owning PID or session credentials to userspace. */
@@ -699,6 +716,8 @@ static_assert(sizeof(RinCompositorInputEventV1) == 56u,
               "compositor input event size");
 static_assert(sizeof(RinCompositorSetCursorV1) == 24u,
               "compositor semantic cursor size");
+static_assert(sizeof(RinCompositorUpdateCursorSurfaceV1) == 44u,
+              "compositor cursor surface update size");
 static_assert(sizeof(RinCompositorGpuExportImageV1) == 32u,
               "compositor GPU export size");
 static_assert(sizeof(RinCompositorGpuImageV1) == 80u,
@@ -760,6 +779,8 @@ _Static_assert(sizeof(RinCompositorInputEventV1) == 56u,
                "compositor input event size");
 _Static_assert(sizeof(RinCompositorSetCursorV1) == 24u,
                "compositor semantic cursor size");
+_Static_assert(sizeof(RinCompositorUpdateCursorSurfaceV1) == 44u,
+               "compositor cursor surface update size");
 _Static_assert(sizeof(RinCompositorGpuExportImageV1) == 32u,
                "compositor GPU export size");
 _Static_assert(sizeof(RinCompositorGpuImageV1) == 80u,
