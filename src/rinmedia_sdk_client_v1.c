@@ -527,6 +527,13 @@ static RinResult rin_media_validate_object(RinObject object)
     info.struct_size = sizeof(info);
     info.version = RIN_SDK_STRUCT_VERSION_1;
     result = rin_object_query_v1(object, &info);
+    if (result == RIN_ERROR_STALE_HANDLE) {
+        /* Raw kernel close paths cannot notify the SDK hook. Retire any
+         * matching service-side session when its typed token is already
+         * stale, so a descriptor does not stay open until process exit. */
+        rin_media_sdk_client_object_close_hook_v1(object);
+        return result;
+    }
     if (result != RIN_SUCCESS) return result;
     return info.type == RIN_OBJECT_MEDIA ? RIN_SUCCESS
                                          : RIN_ERROR_WRONG_TYPE;
