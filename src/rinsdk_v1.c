@@ -1012,13 +1012,130 @@ RinResult rin_socket_shutdown_v1(RinSocket socket, uint32_t flags) { SIMPLE_CALL
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GUI)
-RinResult rin_window_create_v1(const RinWindowCreateV1* request, RinWindow* window) { if (!versioned(request,sizeof(*request))) return RIN_ERROR_ABI_MISMATCH; return rin_sdk_invoke_handle_output_v1(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_CREATE,request,sizeof(*request),window); }
-RinResult rin_window_next_event_v1(RinWindow window, uint64_t timeout_ns, RinGuiEventV1* event) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_NEXT_EVENT,event,window,timeout_ns,0,0,0,0); }
-RinResult rin_surface_create_v1(uint32_t width,uint32_t height,uint32_t format,RinSurface* surface) { HANDLE_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_SURFACE_CREATE,surface,width,height,format,0,0,0); }
-RinResult rin_window_present_v1(RinWindow window,RinSurface surface,RinSliceV1 damage) { SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_WINDOW_PRESENT,(RinResult*)0,window,surface,damage.address,damage.size,0,0); }
+static void rin_sdk_gui_copy(uint8_t* destination, const uint8_t* source,
+                             uint64_t size);
+static int rin_sdk_gui_utf8_valid(const uint8_t* bytes, uint64_t size);
+static int rin_sdk_gui_text_snapshot(RinStringV1 input, uint64_t max_bytes,
+                                     char* output);
+
+RinResult rin_window_create_v1(const RinWindowCreateV1* request,
+                               RinWindow* window) {
+    RinWindowCreateV1 snapshot;
+    char title[RIN_GUI_WINDOW_TITLE_MAX_BYTES + 1u];
+    uint64_t pixel_count;
+    if (!window) return RIN_ERROR_INVALID_ARGUMENT;
+    *window = RIN_HANDLE_INVALID;
+    if (!versioned(request, sizeof(*request)))
+        return RIN_ERROR_ABI_MISMATCH;
+    rin_sdk_gui_copy((uint8_t*)&snapshot, (const uint8_t*)request,
+                     sizeof(snapshot));
+    if (!versioned(&snapshot, sizeof(snapshot)))
+        return RIN_ERROR_ABI_MISMATCH;
+    if (snapshot.flags != 0u || snapshot.pixel_format >
+                                    RIN_GUI_PIXEL_FORMAT_RGBA32 ||
+        snapshot.bounds.width == 0u || snapshot.bounds.height == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    pixel_count = (uint64_t)snapshot.bounds.width *
+                  (uint64_t)snapshot.bounds.height;
+    if (pixel_count > RIN_GUI_SURFACE_MAX_BYTES / 4u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    for (uint32_t index = 0u; index < 4u; ++index)
+        if (snapshot.reserved[index] != 0u)
+            return RIN_ERROR_INVALID_ARGUMENT;
+    if (!rin_sdk_gui_text_snapshot(snapshot.title,
+                                   RIN_GUI_WINDOW_TITLE_MAX_BYTES, title))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    snapshot.title.address = snapshot.title.size == 0u
+                                 ? 0u
+                                 : (uint64_t)(uintptr_t)title;
+    if (snapshot.title.size == 0u) title[0] = '\0';
+    return rin_sdk_invoke_handle_output_v1(
+        RIN_SDK_LIBRARY_GUI, GUI_WINDOW_CREATE, &snapshot,
+        sizeof(snapshot), window);
+}
+
+RinResult rin_window_next_event_v1(RinWindow window, uint64_t timeout_ns,
+                                   RinGuiEventV1* event) {
+    RinSdkArgsV1 request;
+    RinResult call_result;
+    if (!versioned(event, sizeof(*event))) return RIN_ERROR_ABI_MISMATCH;
+    reset_versioned_output(event, sizeof(*event));
+    if (window == RIN_HANDLE_INVALID) return RIN_ERROR_INVALID_ARGUMENT;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = window;
+    request.value[1] = timeout_ns;
+    call_result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_GUI, GUI_WINDOW_NEXT_EVENT, &request,
+        sizeof(request), event, sizeof(*event));
+    return finalize_versioned_output(call_result, event, sizeof(*event));
+}
+
+RinResult rin_surface_create_v1(uint32_t width, uint32_t height,
+                                uint32_t format, RinSurface* surface) {
+    uint64_t pixels;
+    if (!surface) return RIN_ERROR_INVALID_ARGUMENT;
+    *surface = RIN_HANDLE_INVALID;
+    if (width == 0u || height == 0u ||
+        format > RIN_GUI_PIXEL_FORMAT_RGBA32)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    pixels = (uint64_t)width * (uint64_t)height;
+    if (pixels > RIN_GUI_SURFACE_MAX_BYTES / 4u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    HANDLE_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI, GUI_SURFACE_CREATE,
+                              surface, width, height, format, 0, 0, 0);
+}
+
+RinResult rin_window_present_v1(RinWindow window, RinSurface surface,
+                                RinSliceV1 damage) {
+    RinRectV1 damage_snapshot[RIN_GUI_DAMAGE_MAX_RECTS];
+    uint64_t count;
+    if (window == RIN_HANDLE_INVALID || surface == RIN_HANDLE_INVALID ||
+        damage.size > sizeof(damage_snapshot) ||
+        damage.size % sizeof(RinRectV1) != 0u ||
+        (damage.size != 0u &&
+         (damage.address == 0u ||
+          damage.address > (uint64_t)UINTPTR_MAX ||
+          damage.size > (uint64_t)UINTPTR_MAX - damage.address)))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    count = damage.size / sizeof(RinRectV1);
+    if (damage.size == 0u) damage.address = 0u;
+    if (count != 0u) {
+        rin_sdk_gui_copy((uint8_t*)damage_snapshot,
+                         (const uint8_t*)(uintptr_t)damage.address,
+                         damage.size);
+        for (uint64_t index = 0u; index < count; ++index)
+            if (damage_snapshot[index].x < 0 || damage_snapshot[index].y < 0 ||
+                damage_snapshot[index].width == 0u ||
+                damage_snapshot[index].height == 0u)
+                return RIN_ERROR_INVALID_ARGUMENT;
+        damage.address = (uint64_t)(uintptr_t)damage_snapshot;
+    }
+    SIMPLE_CALL(RIN_SDK_LIBRARY_GUI, GUI_WINDOW_PRESENT, (RinResult*)0,
+                window, surface, damage.address, damage.size, 0, 0);
+}
 RinResult rin_clipboard_set_v1(uint32_t format,RinSliceV1 data) { SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_CLIPBOARD_SET,(RinResult*)0,format,data.address,data.size,0,0,0); }
 RinResult rin_clipboard_get_v1(uint32_t format,RinSliceV1 data,uint64_t* required) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_CLIPBOARD_GET,required,format,data.address,data.size,0,0,0); }
-RinResult rin_dialog_show_v1(RinStringV1 title,RinStringV1 message,uint32_t flags,uint32_t* result) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_DIALOG_SHOW,result,title.address,title.size,message.address,message.size,flags,0); }
+RinResult rin_dialog_show_v1(RinStringV1 title, RinStringV1 message,
+                             uint32_t flags, uint32_t* result) {
+    char title_snapshot[RIN_GUI_WINDOW_TITLE_MAX_BYTES + 1u];
+    char message_snapshot[RIN_GUI_DIALOG_TEXT_MAX_BYTES + 1u];
+    if (result) *result = 0u;
+    if (!result || flags != 0u ||
+        !rin_sdk_gui_text_snapshot(title, RIN_GUI_WINDOW_TITLE_MAX_BYTES,
+                                   title_snapshot) ||
+        !rin_sdk_gui_text_snapshot(message, RIN_GUI_DIALOG_TEXT_MAX_BYTES,
+                                   message_snapshot))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    title.address = title.size == 0u
+                        ? 0u : (uint64_t)(uintptr_t)title_snapshot;
+    message.address = message.size == 0u
+                          ? 0u : (uint64_t)(uintptr_t)message_snapshot;
+    SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI, GUI_DIALOG_SHOW, result,
+                              title.address, title.size, message.address,
+                              message.size, flags, 0);
+}
 static void rin_sdk_gui_copy(uint8_t* destination, const uint8_t* source,
                              uint64_t size) {
     while (size-- != 0u) *destination++ = *source++;
@@ -1062,6 +1179,25 @@ static int rin_sdk_gui_utf8_valid(const uint8_t* bytes, uint64_t size) {
             (codepoint >= 0xd800u && codepoint <= 0xdfffu))
             return 0;
     }
+    return 1;
+}
+
+static int rin_sdk_gui_text_snapshot(RinStringV1 input, uint64_t max_bytes,
+                                     char* output) {
+    if (!output || input.size > max_bytes ||
+        (input.size != 0u &&
+         (input.address == 0u ||
+          input.address > (uint64_t)UINTPTR_MAX ||
+          input.size > (uint64_t)UINTPTR_MAX - input.address)))
+        return 0;
+    if (input.size != 0u) {
+        rin_sdk_gui_copy((uint8_t*)output,
+                         (const uint8_t*)(uintptr_t)input.address,
+                         input.size);
+        if (!rin_sdk_gui_utf8_valid((const uint8_t*)output, input.size))
+            return 0;
+    }
+    output[input.size] = '\0';
     return 1;
 }
 
