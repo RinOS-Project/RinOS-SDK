@@ -74,12 +74,15 @@ EXAMPLES = {
         "dependencies": ["rincrt", "rinbase", "rinmedia"],
         "imports": [
             ("rinmedia", "rin_media_open_v1"),
+            ("rinmedia", "rin_audio_get_info_v1"),
+            ("rinmedia", "rin_audio_decode_v1"),
             ("rinbase", "rin_object_close_v1"),
             ("rincrt", "printf"),
+            ("rincrt", "puts"),
         ],
         "capabilities": [],
         "gui": False,
-        "description": "Typed image-open consumer with explicit unsupported handling.",
+        "description": "Typed image and PCM audio consumer with explicit unsupported handling.",
     },
     "keyring": {
         "dependencies": ["rincrt", "rinbase"],
