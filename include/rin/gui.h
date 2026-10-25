@@ -1,6 +1,7 @@
 #ifndef RIN_SDK_GUI_H
 #define RIN_SDK_GUI_H
 #include "abi.h"
+#include "contract_abi.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -33,6 +34,8 @@ RIN_SDK_API RinResult rin_window_present_v1(RinWindow window, RinSurface surface
 RIN_SDK_API RinResult rin_clipboard_set_v1(uint32_t format, RinSliceV1 data);
 RIN_SDK_API RinResult rin_clipboard_get_v1(uint32_t format, RinSliceV1 data, uint64_t* required);
 RIN_SDK_API RinResult rin_dialog_show_v1(RinStringV1 title, RinStringV1 message, uint32_t flags, uint32_t* result);
+/* flags selects RIN_NOTIFICATION_KIND_INFO/SUCCESS/WARNING/ERROR. The SDK
+ * submits the bounded request to the authenticated notification syscall. */
 RIN_SDK_API RinResult rin_notification_show_v1(RinStringV1 title, RinStringV1 message, uint32_t flags);
 
 #ifdef __cplusplus

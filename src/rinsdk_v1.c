@@ -1,6 +1,10 @@
 #include <rin/sdk.h>
 #include <rin/contract_abi.h>
 
+#if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GUI)
+#include <sys/syscall.h>
+#endif
+
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_MEDIA)
 #include "rinmedia_sdk_client_v1.h"
 #endif
@@ -1015,7 +1019,104 @@ RinResult rin_window_present_v1(RinWindow window,RinSurface surface,RinSliceV1 d
 RinResult rin_clipboard_set_v1(uint32_t format,RinSliceV1 data) { SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_CLIPBOARD_SET,(RinResult*)0,format,data.address,data.size,0,0,0); }
 RinResult rin_clipboard_get_v1(uint32_t format,RinSliceV1 data,uint64_t* required) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_CLIPBOARD_GET,required,format,data.address,data.size,0,0,0); }
 RinResult rin_dialog_show_v1(RinStringV1 title,RinStringV1 message,uint32_t flags,uint32_t* result) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_DIALOG_SHOW,result,title.address,title.size,message.address,message.size,flags,0); }
-RinResult rin_notification_show_v1(RinStringV1 title,RinStringV1 message,uint32_t flags) { SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_NOTIFICATION_SHOW,(RinResult*)0,title.address,title.size,message.address,message.size,flags,0); }
+static void rin_sdk_gui_copy(uint8_t* destination, const uint8_t* source,
+                             uint64_t size) {
+    while (size-- != 0u) *destination++ = *source++;
+}
+
+static int rin_sdk_gui_utf8_valid(const uint8_t* bytes, uint64_t size) {
+    uint64_t offset = 0u;
+    while (offset < size) {
+        const uint8_t lead = bytes[offset++];
+        uint32_t codepoint;
+        uint32_t continuation_count;
+        uint8_t second = 0u;
+        if (lead == 0u) return 0;
+        if (lead < 0x80u) continue;
+        if (lead >= 0xc2u && lead <= 0xdfu) {
+            codepoint = (uint32_t)(lead & 0x1fu);
+            continuation_count = 1u;
+        } else if (lead >= 0xe0u && lead <= 0xefu) {
+            codepoint = (uint32_t)(lead & 0x0fu);
+            continuation_count = 2u;
+        } else if (lead >= 0xf0u && lead <= 0xf4u) {
+            codepoint = (uint32_t)(lead & 0x07u);
+            continuation_count = 3u;
+        } else {
+            return 0;
+        }
+        if (continuation_count > size - offset) return 0;
+        second = bytes[offset];
+        if ((second & 0xc0u) != 0x80u ||
+            (lead == 0xe0u && second < 0xa0u) ||
+            (lead == 0xedu && second >= 0xa0u) ||
+            (lead == 0xf0u && second < 0x90u) ||
+            (lead == 0xf4u && second > 0x8fu))
+            return 0;
+        while (continuation_count-- != 0u) {
+            const uint8_t continuation = bytes[offset++];
+            if ((continuation & 0xc0u) != 0x80u) return 0;
+            codepoint = (codepoint << 6u) | (continuation & 0x3fu);
+        }
+        if (codepoint > 0x10ffffu ||
+            (codepoint >= 0xd800u && codepoint <= 0xdfffu))
+            return 0;
+    }
+    return 1;
+}
+
+static RinResult rin_sdk_gui_syscall_result(intptr_t result) {
+    if (result == RIN_SUCCESS) return RIN_SUCCESS;
+    if (result <= RIN_ERROR_INVALID_ARGUMENT &&
+        result >= RIN_ERROR_WRONG_TYPE)
+        return (RinResult)result;
+    return RIN_ERROR_IO;
+}
+
+RinResult rin_notification_show_v1(RinStringV1 title, RinStringV1 message,
+                                   uint32_t flags) {
+    RinNotificationPostV1 request;
+    char title_copy[RIN_NOTIFICATION_TITLE_MAX_BYTES + 1u];
+    char message_copy[RIN_NOTIFICATION_MESSAGE_MAX_BYTES + 1u];
+    uintptr_t title_address;
+    uintptr_t message_address;
+
+    if (flags > RIN_NOTIFICATION_KIND_ERROR || title.size == 0u ||
+        title.size > RIN_NOTIFICATION_TITLE_MAX_BYTES ||
+        message.size == 0u ||
+        message.size > RIN_NOTIFICATION_MESSAGE_MAX_BYTES ||
+        title.address == 0u || message.address == 0u ||
+        title.address > (uint64_t)UINTPTR_MAX ||
+        message.address > (uint64_t)UINTPTR_MAX)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    title_address = (uintptr_t)title.address;
+    message_address = (uintptr_t)message.address;
+    if (title.size > (uint64_t)UINTPTR_MAX - title_address ||
+        message.size > (uint64_t)UINTPTR_MAX - message_address)
+        return RIN_ERROR_INVALID_ARGUMENT;
+
+    rin_sdk_gui_copy((uint8_t*)title_copy, (const uint8_t*)title_address,
+                     title.size);
+    rin_sdk_gui_copy((uint8_t*)message_copy,
+                     (const uint8_t*)message_address, message.size);
+    if (!rin_sdk_gui_utf8_valid((const uint8_t*)title_copy, title.size) ||
+        !rin_sdk_gui_utf8_valid((const uint8_t*)message_copy, message.size))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    title_copy[title.size] = '\0';
+    message_copy[message.size] = '\0';
+
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = (uint32_t)sizeof(request);
+    request.version = RIN_NOTIFICATION_V1_VERSION;
+    request.kind = (uint16_t)flags;
+    request.title = (uint64_t)(uintptr_t)title_copy;
+    request.title_bytes = (uint32_t)title.size;
+    request.message = (uint64_t)(uintptr_t)message_copy;
+    request.message_bytes = (uint32_t)message.size;
+    return rin_sdk_gui_syscall_result(_syscall1(
+        (uintptr_t)RIN_SYS_GUI_NOTIFICATION_POST,
+        (uintptr_t)&request));
+}
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_MEDIA)
