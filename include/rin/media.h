@@ -71,11 +71,24 @@ typedef struct RinVideoFrameInfoV1 {
     uint32_t format;
     uint32_t row_stride_bytes;
     uint32_t flags;
+    uint32_t reserved0;
     uint64_t timestamp_ns;
     uint64_t frame_index;
     uint64_t payload_size_bytes;
     uint64_t reserved[2];
 } RinVideoFrameInfoV1;
+
+/* Optional local cancellation hook for one synchronous frame request. The
+ * callback and context are process-local and are never sent over IPC. Keep
+ * the callback nonblocking and do not re-enter the media SDK from it. */
+typedef int (*RinMediaCancellationFunctionV1)(void* context);
+typedef struct RinVideoDecodeOptionsV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinMediaCancellationFunctionV1 cancellation;
+    void* cancellation_context;
+    uint64_t reserved[2];
+} RinVideoDecodeOptionsV1;
 
 /* V1 image decode returns the first frame in tightly packed ARGB8888 words;
  * row_stride_bytes is width * 4 and decoded_size_bytes is stride * height.
@@ -84,8 +97,10 @@ typedef struct RinVideoFrameInfoV1 {
  * S16LE frames; query its rate and channel count before sizing the output
  * buffer. A clear FRAME_COUNT_KNOWN flag means audio frame_count is zero.
  * Video frame decode writes the next AVI MJPEG/uncompressed frame into a
- * writable RinRenderTarget acquired from the compositor runtime. The target
- * mapping is never sent over IPC; call rinruntime_end_frame after success. */
+ * writable RinRenderTarget acquired from RinRuntime. The target mapping is
+ * never sent over IPC; after success release the target and present its window
+ * with wnd_release_render_target() and wnd_present(). A canceled in-flight
+ * request retires its media session, which must be reopened before decoding. */
 
 /* Keep the public values fixed even when enum declarations are reorganized. */
 #if defined(__cplusplus)
@@ -135,6 +150,10 @@ RIN_SDK_API RinResult rin_video_get_info_v1(RinMediaObject object, RinVideoInfoV
 RIN_SDK_API RinResult rin_video_decode_frame_v1(
     RinMediaObject object, RinRenderTarget* target,
     RinVideoFrameInfoV1* frame_info);
+RIN_SDK_API RinResult rin_video_decode_frame_with_options_v1(
+    RinMediaObject object, RinRenderTarget* target,
+    const RinVideoDecodeOptionsV1* options,
+    RinVideoFrameInfoV1* frame_info);
 
 #if defined(__cplusplus)
 static_assert(sizeof(RinImageInfoV1) == 56u, "RinImageInfoV1 ABI drift");
@@ -142,12 +161,22 @@ static_assert(sizeof(RinAudioInfoV1) == 56u, "RinAudioInfoV1 ABI drift");
 static_assert(sizeof(RinVideoInfoV1) == 64u, "RinVideoInfoV1 ABI drift");
 static_assert(sizeof(RinVideoFrameInfoV1) == 72u,
               "RinVideoFrameInfoV1 ABI drift");
+static_assert(sizeof(RinVideoDecodeOptionsV1) ==
+                  (sizeof(void*) == 8u ? 40u : 32u),
+              "RinVideoDecodeOptionsV1 ABI drift");
+static_assert(offsetof(RinVideoFrameInfoV1, timestamp_ns) == 32u,
+              "RinVideoFrameInfoV1 timestamp offset drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinImageInfoV1) == 56u, "RinImageInfoV1 ABI drift");
 _Static_assert(sizeof(RinAudioInfoV1) == 56u, "RinAudioInfoV1 ABI drift");
 _Static_assert(sizeof(RinVideoInfoV1) == 64u, "RinVideoInfoV1 ABI drift");
 _Static_assert(sizeof(RinVideoFrameInfoV1) == 72u,
                "RinVideoFrameInfoV1 ABI drift");
+_Static_assert(sizeof(RinVideoDecodeOptionsV1) ==
+                   (sizeof(void*) == 8u ? 40u : 32u),
+               "RinVideoDecodeOptionsV1 ABI drift");
+_Static_assert(offsetof(RinVideoFrameInfoV1, timestamp_ns) == 32u,
+               "RinVideoFrameInfoV1 timestamp offset drift");
 #endif
 #ifdef __cplusplus
 }

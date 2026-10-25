@@ -31,6 +31,7 @@
 #define RIN_MEDIA_MDC1_SOURCE_CHUNK UINT32_C(65536)
 #define RIN_MEDIA_MDC1_IO_TIMEOUT_MS 250
 #define RIN_MEDIA_MDC1_IO_RETRY_LIMIT UINT32_C(16)
+#define RIN_MEDIA_MDC1_CANCEL_POLL_MS 100
 #define RIN_MEDIA_MDC1_MAX_SESSIONS UINT32_C(64)
 #define RIN_MEDIA_IMAGE_DECODE_DEADLINE_MS UINT64_C(5000)
 #define RIN_MEDIA_IMAGE_IO_TIMEOUT_MS 5000
@@ -239,6 +240,82 @@ static int rin_media_transfer_exact_timeout(int fd, void* buffer,
         if (count <= 0 || (uint64_t)count > (uint64_t)(size - offset))
             return 0;
         offset += (uint32_t)count;
+    }
+    return 1;
+}
+
+static int rin_media_transfer_exact_timeout_cancellable(
+    int fd, void* buffer, uint32_t size, int receiving, int timeout_ms,
+    RinMediaCancellationFunctionV1 cancellation, void* cancellation_context,
+    int* cancelled_out)
+{
+    uint8_t* cursor = (uint8_t*)buffer;
+    uint32_t offset = 0u;
+
+    if (cancelled_out != NULL) *cancelled_out = 0;
+    if (fd < 0 || (size != 0u && buffer == NULL) || timeout_ms <= 0)
+        return 0;
+    while (offset < size) {
+        struct pollfd item;
+        uint32_t waited_ms = 0u;
+        uint32_t interrupted = 0u;
+        uint32_t readiness_races = 0u;
+        const short readiness = receiving ? POLLIN : POLLOUT;
+        ssize_t count;
+        memset(&item, 0, sizeof(item));
+        item.fd = fd;
+        item.events = readiness;
+        while (waited_ms < (uint32_t)timeout_ms) {
+            const uint32_t remaining = (uint32_t)timeout_ms - waited_ms;
+            const int wait_ms = cancellation != NULL &&
+                    remaining > RIN_MEDIA_MDC1_CANCEL_POLL_MS
+                ? RIN_MEDIA_MDC1_CANCEL_POLL_MS
+                : (int)remaining;
+            int poll_result;
+            if (cancellation != NULL && cancellation(cancellation_context)) {
+                if (cancelled_out != NULL) *cancelled_out = 1;
+                return 0;
+            }
+            poll_result = poll(&item, 1u, wait_ms);
+            if (poll_result < 0) {
+                if (errno == EINTR &&
+                    ++interrupted < RIN_MEDIA_MDC1_IO_RETRY_LIMIT)
+                    continue;
+                return 0;
+            }
+            if (poll_result == 0) {
+                waited_ms += (uint32_t)wait_ms;
+                continue;
+            }
+            if ((item.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0)
+                return 0;
+            if ((item.revents & readiness) != 0) break;
+            item.revents = 0;
+            waited_ms += (uint32_t)wait_ms;
+        }
+        if (waited_ms >= (uint32_t)timeout_ms) return 0;
+        if (cancellation != NULL && cancellation(cancellation_context)) {
+            if (cancelled_out != NULL) *cancelled_out = 1;
+            return 0;
+        }
+        count = receiving
+            ? recv(fd, cursor + offset, (size_t)(size - offset), 0)
+            : send(fd, cursor + offset, (size_t)(size - offset), MSG_NOSIGNAL);
+        if (count < 0 && errno == EINTR) {
+            if (++interrupted < RIN_MEDIA_MDC1_IO_RETRY_LIMIT) continue;
+            return 0;
+        }
+        if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            if (++readiness_races < RIN_MEDIA_MDC1_IO_RETRY_LIMIT) continue;
+            return 0;
+        }
+        if (count <= 0 || (uint64_t)count > (uint64_t)(size - offset))
+            return 0;
+        offset += (uint32_t)count;
+    }
+    if (cancellation != NULL && cancellation(cancellation_context)) {
+        if (cancelled_out != NULL) *cancelled_out = 1;
+        return 0;
     }
     return 1;
 }
@@ -586,6 +663,45 @@ static int rin_media_rpc_timeout(RinMediaSdkSessionV1* session,
         !rin_media_transfer_exact_timeout(
             session->socket_fd, &response, (uint32_t)sizeof(response), 1,
             timeout_ms) ||
+        !rin_media_header_valid(&response, operation, request.request_id,
+                                session->session_id))
+        return 0;
+    *reply = response;
+    return 1;
+}
+
+static int rin_media_rpc_timeout_cancellable(
+    RinMediaSdkSessionV1* session, uint16_t operation, const void* payload,
+    uint32_t payload_bytes, RinMediaMdc1HeaderV1* reply, int timeout_ms,
+    RinMediaCancellationFunctionV1 cancellation, void* cancellation_context,
+    int* cancelled_out)
+{
+    RinMediaMdc1HeaderV1 request;
+    RinMediaMdc1HeaderV1 response;
+
+    if (cancelled_out != NULL) *cancelled_out = 0;
+    if (session == NULL || reply == NULL || session->socket_fd < 0 ||
+        session->session_id == 0u ||
+        (payload_bytes != 0u && payload == NULL))
+        return 0;
+    if (session->next_request_id == 0u) session->next_request_id = 1u;
+    memset(&request, 0, sizeof(request));
+    request.magic = RIN_MEDIA_MDC1_MAGIC;
+    request.version = RIN_MEDIA_MDC1_VERSION;
+    request.operation = operation;
+    request.request_id = session->next_request_id++;
+    request.payload_bytes = payload_bytes;
+    request.session_id = session->session_id;
+    if (!rin_media_transfer_exact_timeout_cancellable(
+            session->socket_fd, &request, (uint32_t)sizeof(request), 0,
+            timeout_ms, cancellation, cancellation_context, cancelled_out) ||
+        (payload_bytes != 0u &&
+         !rin_media_transfer_exact_timeout_cancellable(
+             session->socket_fd, (void*)payload, payload_bytes, 0,
+             timeout_ms, cancellation, cancellation_context, cancelled_out)) ||
+        !rin_media_transfer_exact_timeout_cancellable(
+            session->socket_fd, &response, (uint32_t)sizeof(response), 1,
+            timeout_ms, cancellation, cancellation_context, cancelled_out) ||
         !rin_media_header_valid(&response, operation, request.request_id,
                                 session->session_id))
         return 0;
@@ -1557,6 +1673,7 @@ RinResult rin_media_sdk_client_video_info_v1(RinObject object,
 
 RinResult rin_media_sdk_client_video_decode_frame_v1(
     RinObject object, RinRenderTarget* target,
+    const RinVideoDecodeOptionsV1* options,
     RinVideoFrameInfoV1* frame_info)
 {
     RinMediaSdkSessionV1* session;
@@ -1568,6 +1685,11 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
     uint64_t target_extent;
     uint32_t source_row_stride_bytes;
     uint32_t row;
+    int cancelled = 0;
+    RinMediaCancellationFunctionV1 cancellation =
+        options != NULL ? options->cancellation : NULL;
+    void* cancellation_context =
+        options != NULL ? options->cancellation_context : NULL;
     RinResult result;
 
     if (target == NULL || frame_info == NULL ||
@@ -1602,6 +1724,10 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
         rin_media_session_unlock_free(session);
         return RIN_ERROR_STALE_HANDLE;
     }
+    if (cancellation != NULL && cancellation(cancellation_context)) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_CANCELLED;
+    }
     if (target->width < session->video_info.width ||
         target->height < session->video_info.height) {
         rin_media_session_unlock(session);
@@ -1612,20 +1738,24 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
     request.max_width = target->width;
     request.max_height = target->height;
     request.max_frame_bytes = (uint32_t)RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES;
-    if (!rin_media_rpc_timeout(session, RIN_MEDIA_MDC1_VIDEO_FRAME,
-                               &request, sizeof(request), &reply,
-                               RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
+    if (!rin_media_rpc_timeout_cancellable(
+            session, RIN_MEDIA_MDC1_VIDEO_FRAME, &request, sizeof(request),
+            &reply, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, cancellation,
+            cancellation_context, &cancelled) ||
         reply.status != 0 ||
         reply.payload_bytes < sizeof(received_info) ||
         reply.payload_bytes > sizeof(received_info) +
                                   RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES ||
-        !rin_media_transfer_exact_timeout(
+        !rin_media_transfer_exact_timeout_cancellable(
             session->socket_fd, &received_info,
             (uint32_t)sizeof(received_info), 1,
-            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS)) {
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, cancellation,
+            cancellation_context, &cancelled)) {
+        const RinResult failure = cancelled ? RIN_ERROR_CANCELLED
+                                            : RIN_ERROR_IO;
         rin_media_session_drop_locked(session, 0);
         rin_media_session_unlock_free(session);
-        return RIN_ERROR_IO;
+        return failure;
     }
 
     source_row_stride_bytes = session->video_info.row_stride_bytes;
@@ -1636,6 +1766,9 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
         received_info.width != session->video_info.width ||
         received_info.height != session->video_info.height ||
         received_info.format != RIN_IMAGE_DECODE_FORMAT_ARGB8888 ||
+        received_info.row_stride_bytes !=
+            session->video_info.row_stride_bytes ||
+        received_info.reserved0 != 0u ||
         received_info.reserved[0] != 0u ||
         received_info.reserved[1] != 0u ||
         session->video_info.flags != RIN_VIDEO_INFO_FRAME_COUNT_KNOWN ||
@@ -1663,14 +1796,17 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
             rin_media_session_unlock_free(session);
             return RIN_ERROR_NO_MEMORY;
         }
-        if (!rin_media_transfer_exact_timeout(
+        if (!rin_media_transfer_exact_timeout_cancellable(
                 session->socket_fd, pixels,
                 (uint32_t)received_info.payload_size_bytes, 1,
-                RIN_MEDIA_IMAGE_IO_TIMEOUT_MS)) {
+                RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, cancellation,
+                cancellation_context, &cancelled)) {
             free(pixels);
+            const RinResult failure = cancelled ? RIN_ERROR_CANCELLED
+                                                : RIN_ERROR_IO;
             rin_media_session_drop_locked(session, 0);
             rin_media_session_unlock_free(session);
-            return RIN_ERROR_IO;
+            return failure;
         }
         for (row = 0u; row < received_info.height; ++row) {
             const uint8_t* source = pixels +

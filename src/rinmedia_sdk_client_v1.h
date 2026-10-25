@@ -21,6 +21,7 @@ RinResult rin_media_sdk_client_video_info_v1(RinObject object,
                                               RinVideoInfoV1* info);
 RinResult rin_media_sdk_client_video_decode_frame_v1(
     RinObject object, RinRenderTarget* target,
+    const RinVideoDecodeOptionsV1* options,
     RinVideoFrameInfoV1* frame_info);
 void rin_media_sdk_client_object_close_hook_v1(RinObject object);
 

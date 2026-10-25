@@ -1109,13 +1109,24 @@ RinResult rin_video_get_info_v1(RinMediaObject object, RinVideoInfoV1* info) {
 RinResult rin_video_decode_frame_v1(RinMediaObject object,
                                      RinRenderTarget* target,
                                      RinVideoFrameInfoV1* frame_info) {
+    return rin_video_decode_frame_with_options_v1(object, target, NULL,
+                                                   frame_info);
+}
+RinResult rin_video_decode_frame_with_options_v1(
+    RinMediaObject object, RinRenderTarget* target,
+    const RinVideoDecodeOptionsV1* options,
+    RinVideoFrameInfoV1* frame_info) {
     RinResult result;
     if (!versioned(frame_info, sizeof(*frame_info)))
         return RIN_ERROR_ABI_MISMATCH;
     reset_versioned_output(frame_info, sizeof(*frame_info));
     if (target == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    if (options != NULL &&
+        (!versioned(options, sizeof(*options)) ||
+         options->reserved[0] != 0u || options->reserved[1] != 0u))
+        return RIN_ERROR_ABI_MISMATCH;
     result = rin_media_sdk_client_video_decode_frame_v1(
-        object, target, frame_info);
+        object, target, options, frame_info);
     if (result != RIN_SUCCESS) reset_versioned_output(frame_info,
                                                        sizeof(*frame_info));
     return result;
