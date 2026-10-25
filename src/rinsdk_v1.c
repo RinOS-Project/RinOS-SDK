@@ -987,6 +987,7 @@ RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object
     }
     if (request_snapshot.flags != 0u ||
         request_snapshot.mime_type.size == 0u ||
+        request_snapshot.mime_type.size > RIN_MEDIA_MAX_MIME_TYPE_BYTES_V1 ||
         !rin_media_range_valid_v1(request_snapshot.mime_type.address,
                                   request_snapshot.mime_type.size) ||
         request_snapshot.source.size > RIN_MEDIA_MAX_SOURCE_BYTES_V1 ||
