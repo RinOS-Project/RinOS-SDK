@@ -29,6 +29,11 @@ typedef struct RinCrtAlignedAllocationMeta {
     void* raw;
 } RinCrtAlignedAllocationMeta;
 
+/* Processes begin with an empty environment unless an entry ABI supplies one.
+ * environment_runtime.c atomically replaces this pointer on the first update. */
+static char* g_rincrt_empty_environment[1];
+char** environ = g_rincrt_empty_environment;
+
 static RinCrtAlignedAllocationMeta* rincrt_aligned_meta_from_ptr(void* pointer)
 {
     return pointer
@@ -1165,6 +1170,13 @@ void exit(int status)
         function();
     }
     _exit(status);
+}
+
+/* libc's public stdlib.h routes exit through rin_exit so that all userland
+ * callers share the CRT-owned atexit stack before terminating the process. */
+void rin_exit(int status)
+{
+    exit(status);
 }
 
 int close(int descriptor)
