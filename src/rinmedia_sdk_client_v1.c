@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
-/* Public SDK audio-object adapter for the private authenticated MDC1 service. */
+/* Public SDK media-object adapters for authenticated media services. */
 #include "rinmedia_sdk_client_v1.h"
+#include <rin/internal/imagedecoder_ipc_v1.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -26,6 +27,10 @@
 #define RIN_MEDIA_MDC1_IO_TIMEOUT_MS 250
 #define RIN_MEDIA_MDC1_IO_RETRY_LIMIT UINT32_C(16)
 #define RIN_MEDIA_MDC1_MAX_SESSIONS UINT32_C(64)
+#define RIN_MEDIA_IMAGE_DECODE_DEADLINE_MS UINT64_C(5000)
+#define RIN_MEDIA_IMAGE_IO_TIMEOUT_MS 5000
+#define RIN_MEDIA_IMAGE_MAX_FRAMES UINT32_C(1024)
+#define RIN_MEDIA_IMAGE_SOURCE_CHUNK UINT32_C(8192)
 
 enum {
     RIN_MEDIA_MDC1_OPEN = 1,
@@ -91,11 +96,32 @@ typedef struct RinMediaSdkSessionV1 {
     uint32_t next_request_id;
     uint32_t sample_rate;
     uint32_t channels;
+    uint32_t media_type;
+    uint32_t image_decoded;
     uint64_t session_id;
     uint64_t owner_pid;
+    uint64_t image_connection_id;
+    uint64_t image_source_size;
+    uint64_t image_source_capability;
+    uint64_t image_source_generation;
+    uint64_t image_decode_request_id;
+    RinImageDecoderDecodeResponseV1 image_info;
 } RinMediaSdkSessionV1;
 
 static RinMediaSdkSessionV1 g_media_sessions[RIN_MEDIA_MDC1_MAX_SESSIONS];
+
+static void rin_media_session_reset_image(RinMediaSdkSessionV1* session)
+{
+    if (session == NULL) return;
+    session->media_type = 0u;
+    session->image_decoded = 0u;
+    session->image_connection_id = 0u;
+    session->image_source_size = 0u;
+    session->image_source_capability = 0u;
+    session->image_source_generation = 0u;
+    session->image_decode_request_id = 0u;
+    memset(&session->image_info, 0, sizeof(session->image_info));
+}
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinMediaMdc1HeaderV1) == 32u,
@@ -129,7 +155,7 @@ static int rin_media_range_valid(uint64_t address, uint64_t size,
     return size <= (uint64_t)UINTPTR_MAX - address;
 }
 
-static int rin_media_wait_fd(int fd, short events)
+static int rin_media_wait_fd_timeout(int fd, short events, int timeout_ms)
 {
     struct pollfd item;
     uint32_t attempt;
@@ -138,7 +164,7 @@ static int rin_media_wait_fd(int fd, short events)
     item.fd = fd;
     item.events = events;
     for (attempt = 0u; attempt < RIN_MEDIA_MDC1_IO_RETRY_LIMIT; ++attempt) {
-        const int result = poll(&item, 1u, RIN_MEDIA_MDC1_IO_TIMEOUT_MS);
+        const int result = poll(&item, 1u, timeout_ms);
         if (result < 0) {
             if (errno == EINTR) continue;
             return 0;
@@ -152,8 +178,9 @@ static int rin_media_wait_fd(int fd, short events)
     return 0;
 }
 
-static int rin_media_transfer_exact(int fd, void* buffer, uint32_t size,
-                                    int receiving)
+static int rin_media_transfer_exact_timeout(int fd, void* buffer,
+                                            uint32_t size, int receiving,
+                                            int timeout_ms)
 {
     uint8_t* cursor = (uint8_t*)buffer;
     uint32_t offset = 0u;
@@ -163,7 +190,7 @@ static int rin_media_transfer_exact(int fd, void* buffer, uint32_t size,
         ssize_t count;
         uint32_t attempt = 0u;
         const short readiness = receiving ? POLLIN : POLLOUT;
-        if (!rin_media_wait_fd(fd, readiness)) return 0;
+        if (!rin_media_wait_fd_timeout(fd, readiness, timeout_ms)) return 0;
         do {
             count = receiving
                 ? recv(fd, cursor + offset, (size_t)(size - offset), 0)
@@ -181,6 +208,19 @@ static int rin_media_transfer_exact(int fd, void* buffer, uint32_t size,
         offset += (uint32_t)count;
     }
     return 1;
+}
+
+static int rin_media_wait_fd(int fd, short events)
+{
+    return rin_media_wait_fd_timeout(fd, events,
+                                     RIN_MEDIA_MDC1_IO_TIMEOUT_MS);
+}
+
+static int rin_media_transfer_exact(int fd, void* buffer, uint32_t size,
+                                    int receiving)
+{
+    return rin_media_transfer_exact_timeout(
+        fd, buffer, size, receiving, RIN_MEDIA_MDC1_IO_TIMEOUT_MS);
 }
 
 static int rin_media_send_open_with_descriptor(
@@ -294,6 +334,176 @@ static int rin_media_connect_service(void)
     return -1;
 }
 
+static RinResult rin_media_image_status_result(int32_t status)
+{
+    switch (status) {
+    case RIN_IMAGE_DECODER_TRANSPORT_OK:
+        return RIN_SUCCESS;
+    case RIN_IMAGE_DECODER_TRANSPORT_INVALID_ARGUMENT:
+        return RIN_ERROR_INVALID_ARGUMENT;
+    case RIN_IMAGE_DECODER_TRANSPORT_UNAVAILABLE:
+        return RIN_ERROR_NOT_SUPPORTED;
+    case RIN_IMAGE_DECODER_TRANSPORT_UNAUTHORIZED:
+        return RIN_ERROR_ACCESS_DENIED;
+    case RIN_IMAGE_DECODER_TRANSPORT_TIMED_OUT:
+        return RIN_ERROR_TIMEOUT;
+    case RIN_IMAGE_DECODER_TRANSPORT_CANCELLED:
+        return RIN_ERROR_CANCELLED;
+    case RIN_IMAGE_DECODER_TRANSPORT_NOT_FOUND:
+        return RIN_ERROR_STALE_HANDLE;
+    case RIN_IMAGE_DECODER_TRANSPORT_PROTOCOL:
+        return RIN_ERROR_INTEGRITY;
+    default:
+        return RIN_ERROR_INTEGRITY;
+    }
+}
+
+static void rin_media_image_header_init(
+    RinImageDecoderServiceListenerHeaderV1* header, uint16_t operation,
+    uint64_t request_id, uint64_t connection_id, uint32_t payload_size)
+{
+    memset(header, 0, sizeof(*header));
+    header->magic = RIN_IMAGE_DECODER_SERVICE_PROTOCOL_MAGIC;
+    header->version = RIN_IMAGE_DECODER_SERVICE_PROTOCOL_VERSION;
+    header->operation = operation;
+    header->request_id = request_id;
+    header->payload_size = payload_size;
+    header->connection_id = connection_id;
+}
+
+static int rin_media_image_service_identity_valid(int fd)
+{
+    rin_unix_service_identity_v1 identity;
+    socklen_t size = (socklen_t)sizeof(identity);
+    uint32_t expected_slot = 0u;
+
+    if (fd < 0 || rin_service_find_system_slot(
+                      RIN_IMAGE_DECODER_SERVICE_ID, &expected_slot) != 0 ||
+        expected_slot == 0u)
+        return 0;
+    memset(&identity, 0, sizeof(identity));
+    if (getsockopt(fd, SOL_SOCKET, SO_RIN_UNIX_SERVICE_IDENTITY,
+                   &identity, &size) != 0 || size != sizeof(identity))
+        return 0;
+    return identity.slot_id == expected_slot && identity.owner_uid == 0u &&
+           identity.scope == RIN_UNIX_SCOPE_SYSTEM &&
+           identity.flags == RIN_UNIX_SERVICE_IDENTITY_FLAG_PUBLISHED;
+}
+
+static int rin_media_image_connect_once(uint64_t* connection_id_out)
+{
+    RinImageDecoderServiceListenerHeaderV1 request;
+    RinImageDecoderServiceListenerHeaderV1 response;
+    struct sockaddr_un address;
+    int fd;
+
+    if (connection_id_out != NULL) *connection_id_out = 0u;
+    if (connection_id_out == NULL) return -1;
+    fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if (fd < 0) return -1;
+    memset(&address, 0, sizeof(address));
+    address.sun_family = AF_UNIX;
+    if (strlen(RIN_IMAGE_DECODER_SERVICE_SOCKET_PATH) >=
+            sizeof(address.sun_path)) {
+        (void)close(fd);
+        return -1;
+    }
+    memcpy(address.sun_path, RIN_IMAGE_DECODER_SERVICE_SOCKET_PATH,
+           strlen(RIN_IMAGE_DECODER_SERVICE_SOCKET_PATH) + 1u);
+    if (connect(fd, (const struct sockaddr*)&address,
+                (socklen_t)sizeof(address)) != 0 ||
+        !rin_media_image_service_identity_valid(fd)) {
+        (void)close(fd);
+        return -1;
+    }
+    rin_media_image_header_init(
+        &request, RIN_IMAGE_DECODER_SERVICE_LISTENER_HELLO, 0u, 0u, 0u);
+    memset(&response, 0, sizeof(response));
+    if (!rin_media_transfer_exact_timeout(
+            fd, &request, (uint32_t)sizeof(request), 0,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
+        !rin_media_transfer_exact_timeout(
+            fd, &response, (uint32_t)sizeof(response), 1,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
+        response.magic != RIN_IMAGE_DECODER_SERVICE_PROTOCOL_MAGIC ||
+        response.version != RIN_IMAGE_DECODER_SERVICE_PROTOCOL_VERSION ||
+        response.operation != RIN_IMAGE_DECODER_SERVICE_LISTENER_HELLO ||
+        response.flags != 0u || response.request_id != 0u ||
+        response.payload_size != 0u || response.status != 0 ||
+        response.connection_id == 0u || response.reserved != 0u) {
+        (void)close(fd);
+        return -1;
+    }
+    *connection_id_out = response.connection_id;
+    return fd;
+}
+
+static int rin_media_connect_image_service(uint64_t* connection_id_out)
+{
+    int fd;
+    uint32_t elapsed;
+
+    if (connection_id_out != NULL) *connection_id_out = 0u;
+    if (connection_id_out == NULL) return -1;
+    fd = rin_media_image_connect_once(connection_id_out);
+    if (fd >= 0) return fd;
+    (void)rin_service_start(RIN_SERVICE_SCOPE_SYSTEM,
+                            RIN_IMAGE_DECODER_SERVICE_ID);
+    for (elapsed = 0u; elapsed < 500u; elapsed += 25u) {
+        (void)poll(NULL, 0u, 25);
+        fd = rin_media_image_connect_once(connection_id_out);
+        if (fd >= 0) return fd;
+    }
+    return -1;
+}
+
+static int rin_media_image_response_header(
+    RinMediaSdkSessionV1* session, uint16_t operation, uint64_t request_id,
+    RinImageDecoderServiceListenerHeaderV1* response)
+{
+    if (session == NULL || response == NULL || session->socket_fd < 0 ||
+        session->image_connection_id == 0u || request_id == 0u ||
+        !rin_media_transfer_exact_timeout(
+            session->socket_fd, response, (uint32_t)sizeof(*response), 1,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
+        return 0;
+    return response->magic == RIN_IMAGE_DECODER_SERVICE_PROTOCOL_MAGIC &&
+           response->version == RIN_IMAGE_DECODER_SERVICE_PROTOCOL_VERSION &&
+           response->operation == operation && response->flags == 0u &&
+           response->request_id == request_id &&
+           response->connection_id == session->image_connection_id &&
+           response->reserved == 0u &&
+           response->status <= RIN_IMAGE_DECODER_TRANSPORT_OK &&
+           response->status >= RIN_IMAGE_DECODER_TRANSPORT_PROTOCOL &&
+           (response->status == RIN_IMAGE_DECODER_TRANSPORT_OK ||
+            response->payload_size == 0u);
+}
+
+static RinResult rin_media_image_begin_request(
+    RinMediaSdkSessionV1* session, uint16_t operation, uint64_t request_id,
+    const void* payload, uint32_t payload_size,
+    RinImageDecoderServiceListenerHeaderV1* response)
+{
+    RinImageDecoderServiceListenerHeaderV1 header;
+
+    if (session == NULL || session->socket_fd < 0 ||
+        session->image_connection_id == 0u || request_id == 0u ||
+        (payload_size != 0u && payload == NULL) || response == NULL)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    rin_media_image_header_init(&header, operation, request_id,
+                                session->image_connection_id, payload_size);
+    if (!rin_media_transfer_exact_timeout(
+            session->socket_fd, &header, (uint32_t)sizeof(header), 0,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
+        (payload_size != 0u && !rin_media_transfer_exact_timeout(
+             session->socket_fd, (void*)payload, payload_size, 0,
+             RIN_MEDIA_IMAGE_IO_TIMEOUT_MS)) ||
+        !rin_media_image_response_header(session, operation, request_id,
+                                         response))
+        return RIN_ERROR_IO;
+    return rin_media_image_status_result(response->status);
+}
+
 static int rin_media_header_valid(const RinMediaMdc1HeaderV1* header,
                                   uint16_t operation, uint32_t request_id,
                                   uint64_t session_id)
@@ -388,6 +598,41 @@ static int rin_media_snapshot_source(const RinMediaOpenV1* request,
     return 1;
 }
 
+/* The image service receives a byte stream rather than an SCM_RIGHTS source
+ * descriptor. Send from our unlinked snapshot so a caller modifying its
+ * original slice concurrently cannot change bytes midway through OPEN. */
+static int rin_media_transfer_snapshot_timeout(int source_fd, int socket_fd,
+                                               uint64_t size)
+{
+    uint8_t buffer[RIN_MEDIA_IMAGE_SOURCE_CHUNK];
+    uint64_t remaining = size;
+    int success = 0;
+
+    if (source_fd < 0 || socket_fd < 0 || size == 0u) return 0;
+    while (remaining != 0u) {
+        const uint32_t chunk = remaining < sizeof(buffer)
+            ? (uint32_t)remaining : (uint32_t)sizeof(buffer);
+        uint32_t received = 0u;
+        while (received < chunk) {
+            const ssize_t count = read(source_fd, buffer + received,
+                                      (size_t)(chunk - received));
+            if (count < 0 && errno == EINTR) continue;
+            if (count <= 0 || (uint64_t)count > (uint64_t)(chunk - received))
+                goto done;
+            received += (uint32_t)count;
+        }
+        if (!rin_media_transfer_exact_timeout(
+                socket_fd, buffer, chunk, 0, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
+            goto done;
+        remaining -= chunk;
+    }
+    success = 1;
+
+done:
+    memset(buffer, 0, sizeof(buffer));
+    return success;
+}
+
 static int rin_media_session_lock(RinMediaSdkSessionV1* session)
 {
     while (__sync_lock_test_and_set(&session->lock, 1u) != 0u)
@@ -412,6 +657,7 @@ static RinMediaSdkSessionV1* rin_media_session_reserve(void)
             session->next_request_id = 1u;
             session->sample_rate = 0u;
             session->channels = 0u;
+            rin_media_session_reset_image(session);
             session->session_id = 0u;
             session->owner_pid = 0u;
             return session;
@@ -431,6 +677,7 @@ static void rin_media_session_discard_reserved(
     session->next_request_id = 1u;
     session->sample_rate = 0u;
     session->channels = 0u;
+    rin_media_session_reset_image(session);
     session->owner_pid = 0u;
     __atomic_store_n(&session->state, 0u, __ATOMIC_RELEASE);
 }
@@ -441,7 +688,8 @@ static void rin_media_session_drop_locked(RinMediaSdkSessionV1* session,
                                           int send_close)
 {
     __atomic_store_n(&session->state, 2u, __ATOMIC_RELEASE);
-    if (send_close && session->socket_fd >= 0 && session->session_id != 0u) {
+    if (send_close && session->media_type == RIN_MEDIA_TYPE_AUDIO &&
+        session->socket_fd >= 0 && session->session_id != 0u) {
         RinMediaMdc1HeaderV1 reply;
         (void)rin_media_rpc(session, RIN_MEDIA_MDC1_CLOSE, NULL, 0u, &reply);
     }
@@ -452,6 +700,7 @@ static void rin_media_session_drop_locked(RinMediaSdkSessionV1* session,
     session->next_request_id = 1u;
     session->sample_rate = 0u;
     session->channels = 0u;
+    rin_media_session_reset_image(session);
     session->owner_pid = 0u;
 }
 
@@ -482,6 +731,7 @@ static void rin_media_session_discard_inherited(
     session->next_request_id = 1u;
     session->sample_rate = 0u;
     session->channels = 0u;
+    rin_media_session_reset_image(session);
     session->owner_pid = 0u;
     session->lock = 0u;
     if (socket_fd >= 0) (void)close(socket_fd);
@@ -508,6 +758,240 @@ static RinMediaSdkSessionV1* rin_media_session_find_locked(RinObject object)
         rin_media_session_unlock(session);
     }
     return NULL;
+}
+
+static RinResult rin_media_image_register_source(
+    RinMediaSdkSessionV1* session, const RinMediaOpenV1* request)
+{
+    RinImageDecoderSourceRegisterRequestV1 register_request;
+    RinImageDecoderSourceRegisterResponseV1 register_response;
+    RinImageDecoderServiceListenerHeaderV1 header;
+    RinImageDecoderServiceListenerHeaderV1 response_header;
+    uint64_t connection_id = 0u;
+    uint64_t payload_size;
+    int source_fd = -1;
+    int fd;
+    RinResult result;
+
+    if (session == NULL || request == NULL ||
+        request->media_type != RIN_MEDIA_TYPE_IMAGE ||
+        request->source.size == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (request->source.size >
+        RIN_IMAGE_DECODER_TRANSPORT_MAX_SOURCE_BYTES)
+        return RIN_ERROR_LIMIT_EXCEEDED;
+    if (!rin_media_snapshot_source(request, &source_fd))
+        return RIN_ERROR_IO;
+    fd = rin_media_connect_image_service(&connection_id);
+    if (fd < 0 || connection_id == 0u) {
+        (void)close(source_fd);
+        return RIN_ERROR_NOT_SUPPORTED;
+    }
+
+    session->socket_fd = fd;
+    session->image_connection_id = connection_id;
+    session->media_type = RIN_MEDIA_TYPE_IMAGE;
+    session->image_source_size = request->source.size;
+    session->image_decode_request_id = 1u;
+
+    memset(&register_request, 0, sizeof(register_request));
+    register_request.struct_size = sizeof(register_request);
+    register_request.version = RIN_IMAGE_DECODER_TRANSPORT_VERSION;
+    register_request.operation = RIN_IMAGE_DECODER_TRANSPORT_REGISTER_SOURCE;
+    register_request.request_id = 1u;
+    register_request.source_size = request->source.size;
+    register_request.max_width = RIN_IMAGE_DECODER_TRANSPORT_MAX_DIMENSION;
+    register_request.max_height = RIN_IMAGE_DECODER_TRANSPORT_MAX_DIMENSION;
+    register_request.max_pixels = RIN_IMAGE_DECODER_TRANSPORT_MAX_PIXELS;
+    register_request.max_frames = RIN_MEDIA_IMAGE_MAX_FRAMES;
+    register_request.max_output_bytes =
+        RIN_IMAGE_DECODER_TRANSPORT_MAX_OUTPUT_BYTES;
+    payload_size = sizeof(register_request) + request->source.size;
+    if (payload_size > UINT32_MAX) {
+        (void)close(source_fd);
+        return RIN_ERROR_LIMIT_EXCEEDED;
+    }
+
+    rin_media_image_header_init(
+        &header, RIN_IMAGE_DECODER_SERVICE_LISTENER_REGISTER_SOURCE,
+        register_request.request_id, connection_id, (uint32_t)payload_size);
+    if (!rin_media_transfer_exact_timeout(
+            fd, &header, (uint32_t)sizeof(header), 0,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
+        !rin_media_transfer_exact_timeout(
+            fd, &register_request, (uint32_t)sizeof(register_request), 0,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
+        !rin_media_transfer_snapshot_timeout(
+            source_fd, fd, request->source.size)) {
+        (void)close(source_fd);
+        return RIN_ERROR_IO;
+    }
+    if (close(source_fd) != 0) return RIN_ERROR_IO;
+    source_fd = -1;
+    if (!rin_media_image_response_header(
+            session, RIN_IMAGE_DECODER_SERVICE_LISTENER_REGISTER_SOURCE,
+            register_request.request_id, &response_header))
+        return RIN_ERROR_IO;
+    result = rin_media_image_status_result(response_header.status);
+    if (result != RIN_SUCCESS) return result;
+    if (response_header.payload_size != sizeof(register_response) ||
+        !rin_media_transfer_exact_timeout(
+            fd, &register_response, (uint32_t)sizeof(register_response), 1,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
+        register_response.struct_size != sizeof(register_response) ||
+        register_response.version != RIN_IMAGE_DECODER_TRANSPORT_VERSION ||
+        register_response.status != RIN_IMAGE_DECODER_TRANSPORT_OK ||
+        register_response.flags != 0u ||
+        register_response.request_id != register_request.request_id ||
+        register_response.source_size != request->source.size ||
+        register_response.source_capability == 0u ||
+        register_response.source_generation == 0u ||
+        register_response.reserved1[0] != 0u ||
+        register_response.reserved1[1] != 0u)
+        return RIN_ERROR_INTEGRITY;
+
+    session->image_source_capability = register_response.source_capability;
+    session->image_source_generation = register_response.source_generation;
+    return RIN_SUCCESS;
+}
+
+static RinResult rin_media_image_decode_locked(
+    RinMediaSdkSessionV1* session)
+{
+    RinImageDecoderDecodeRequestV1 request;
+    RinImageDecoderDecodeResponseV1 response;
+    RinImageDecoderServiceListenerHeaderV1 response_header;
+    uint64_t request_id;
+    uint64_t pixel_count;
+    uint64_t pixel_bytes;
+    RinResult result;
+
+    if (session == NULL || session->media_type != RIN_MEDIA_TYPE_IMAGE ||
+        session->socket_fd < 0 || session->image_source_capability == 0u ||
+        session->image_source_generation == 0u ||
+        session->image_source_size == 0u)
+        return RIN_ERROR_STALE_HANDLE;
+    if (session->image_decoded == 1u) return RIN_SUCCESS;
+    if (session->image_decode_request_id == UINT64_MAX)
+        return RIN_ERROR_LIMIT_EXCEEDED;
+
+    request_id = session->image_decode_request_id + 1u;
+    memset(&request, 0, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_IMAGE_DECODER_TRANSPORT_VERSION;
+    request.operation = RIN_IMAGE_DECODER_TRANSPORT_DECODE;
+    request.request_id = request_id;
+    request.source_capability = session->image_source_capability;
+    request.source_generation = session->image_source_generation;
+    request.source_size = session->image_source_size;
+    request.deadline_ms = RIN_MEDIA_IMAGE_DECODE_DEADLINE_MS;
+    request.max_width = RIN_IMAGE_DECODER_TRANSPORT_MAX_DIMENSION;
+    request.max_height = RIN_IMAGE_DECODER_TRANSPORT_MAX_DIMENSION;
+    request.max_pixels = RIN_IMAGE_DECODER_TRANSPORT_MAX_PIXELS;
+    request.max_frames = RIN_MEDIA_IMAGE_MAX_FRAMES;
+    request.max_output_bytes =
+        RIN_IMAGE_DECODER_TRANSPORT_MAX_OUTPUT_BYTES;
+    result = rin_media_image_begin_request(
+        session, RIN_IMAGE_DECODER_SERVICE_LISTENER_DECODE, request_id,
+        &request, (uint32_t)sizeof(request), &response_header);
+    if (result != RIN_SUCCESS) return result;
+    if (response_header.payload_size != sizeof(response))
+        return RIN_ERROR_INTEGRITY;
+    memset(&response, 0, sizeof(response));
+    if (!rin_media_transfer_exact_timeout(
+            session->socket_fd, &response, (uint32_t)sizeof(response), 1,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
+        return RIN_ERROR_IO;
+    if (response.struct_size != sizeof(response) ||
+        response.version != RIN_IMAGE_DECODER_TRANSPORT_VERSION ||
+        response.status != RIN_IMAGE_DECODER_TRANSPORT_OK ||
+        response.flags != 0u || response.request_id != request_id ||
+        response.source_generation != session->image_source_generation ||
+        response.width == 0u || response.height == 0u ||
+        response.width > RIN_IMAGE_DECODER_TRANSPORT_MAX_DIMENSION ||
+        response.height > RIN_IMAGE_DECODER_TRANSPORT_MAX_DIMENSION ||
+        response.stride_bytes != response.width * 4u ||
+        response.frame_count != 1u ||
+        response.pixel_format !=
+            RIN_IMAGE_DECODER_TRANSPORT_PIXEL_FORMAT_ARGB8888 ||
+        response.reserved0 != 0u || response.reserved1[0] != 0u ||
+        response.reserved1[1] != 0u)
+        return RIN_ERROR_INTEGRITY;
+    pixel_count = (uint64_t)response.width * response.height;
+    pixel_bytes = pixel_count * 4u;
+    if (pixel_count == 0u ||
+        pixel_count > RIN_IMAGE_DECODER_TRANSPORT_MAX_PIXELS ||
+        pixel_bytes > RIN_IMAGE_DECODER_TRANSPORT_MAX_OUTPUT_BYTES ||
+        response.pixel_bytes != pixel_bytes)
+        return RIN_ERROR_INTEGRITY;
+
+    response.status = RIN_IMAGE_DECODER_TRANSPORT_OK;
+    session->image_info = response;
+    session->image_decode_request_id = request_id;
+    session->image_decoded = 1u;
+    return RIN_SUCCESS;
+}
+
+static RinResult rin_media_image_read_pixels_locked(
+    RinMediaSdkSessionV1* session, uint8_t* output)
+{
+    uint64_t offset = 0u;
+    const uint64_t total = session->image_info.pixel_bytes;
+
+    if (output == NULL || total == 0u ||
+        session->image_decode_request_id == 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    while (offset < total) {
+        RinImageDecoderPixelReadRequestV1 request;
+        RinImageDecoderPixelReadResponseV1 response;
+        RinImageDecoderServiceListenerHeaderV1 response_header;
+        uint64_t remaining = total - offset;
+        const uint32_t capacity = remaining <
+                RIN_IMAGE_DECODER_TRANSPORT_MAX_PIXEL_CHUNK
+            ? (uint32_t)remaining
+            : RIN_IMAGE_DECODER_TRANSPORT_MAX_PIXEL_CHUNK;
+        RinResult result;
+
+        memset(&request, 0, sizeof(request));
+        request.struct_size = sizeof(request);
+        request.version = RIN_IMAGE_DECODER_TRANSPORT_VERSION;
+        request.operation = RIN_IMAGE_DECODER_TRANSPORT_READ_PIXELS;
+        request.request_id = session->image_decode_request_id;
+        request.source_generation = session->image_source_generation;
+        request.offset = offset;
+        request.capacity = capacity;
+        result = rin_media_image_begin_request(
+            session, RIN_IMAGE_DECODER_SERVICE_LISTENER_READ_PIXELS,
+            request.request_id, &request, (uint32_t)sizeof(request),
+            &response_header);
+        if (result != RIN_SUCCESS) return result;
+        if (response_header.payload_size < sizeof(response) ||
+            response_header.payload_size > sizeof(response) + capacity)
+            return RIN_ERROR_INTEGRITY;
+        memset(&response, 0, sizeof(response));
+        if (!rin_media_transfer_exact_timeout(
+                session->socket_fd, &response, (uint32_t)sizeof(response), 1,
+                RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
+            return RIN_ERROR_IO;
+        if (response.struct_size != sizeof(response) ||
+            response.version != RIN_IMAGE_DECODER_TRANSPORT_VERSION ||
+            response.status != RIN_IMAGE_DECODER_TRANSPORT_OK ||
+            response.flags != 0u ||
+            response.request_id != request.request_id ||
+            response.source_generation != request.source_generation ||
+            response.offset != offset || response.total_bytes != total ||
+            response.bytes_read == 0u || response.bytes_read > capacity ||
+            response_header.payload_size != sizeof(response) +
+                response.bytes_read || response.reserved0 != 0u ||
+            response.reserved1[0] != 0u || response.reserved1[1] != 0u)
+            return RIN_ERROR_INTEGRITY;
+        if (!rin_media_transfer_exact_timeout(
+                session->socket_fd, output + (size_t)offset,
+                response.bytes_read, 1, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
+            return RIN_ERROR_IO;
+        offset += response.bytes_read;
+    }
+    return RIN_SUCCESS;
 }
 
 static int rin_media_session_pid_valid(RinMediaSdkSessionV1* session)
@@ -552,8 +1036,10 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     int socket_fd = -1;
     uint32_t index;
 
-    if (object == RIN_OBJECT_HANDLE_INVALID || request == NULL ||
-        request->media_type != RIN_MEDIA_TYPE_AUDIO)
+    if (object == RIN_OBJECT_HANDLE_INVALID || request == NULL)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (request->media_type != RIN_MEDIA_TYPE_AUDIO &&
+        request->media_type != RIN_MEDIA_TYPE_IMAGE)
         return RIN_ERROR_NOT_SUPPORTED;
     if (request->struct_size < sizeof(*request) ||
         request->version != RIN_SDK_STRUCT_VERSION_1 ||
@@ -574,6 +1060,18 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     if (owner_pid == 0u) return RIN_ERROR_IO;
     session = rin_media_session_reserve();
     if (session == NULL) return RIN_ERROR_TABLE_FULL;
+    if (request->media_type == RIN_MEDIA_TYPE_IMAGE) {
+        RinResult image_result;
+        session->object = object;
+        session->owner_pid = owner_pid;
+        image_result = rin_media_image_register_source(session, request);
+        if (image_result != RIN_SUCCESS) {
+            rin_media_session_discard_reserved(session);
+            return image_result;
+        }
+        __atomic_store_n(&session->state, 1u, __ATOMIC_RELEASE);
+        return RIN_SUCCESS;
+    }
     if (!rin_media_snapshot_source(request, &source_fd)) {
         rin_media_session_discard_reserved(session);
         return RIN_ERROR_IO;
@@ -643,6 +1141,7 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     session->next_request_id = 2u;
     session->sample_rate = output.sample_rate;
     session->channels = output.channels;
+    session->media_type = RIN_MEDIA_TYPE_AUDIO;
     session->session_id = reply_header.session_id;
     session->owner_pid = owner_pid;
     __atomic_store_n(&session->state, 1u, __ATOMIC_RELEASE);
@@ -660,9 +1159,15 @@ RinResult rin_media_sdk_client_audio_info_v1(RinObject object,
     session = rin_media_session_find_locked(object);
     if (session == NULL) return RIN_ERROR_STALE_HANDLE;
     if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
-        session->object != object) {
+        session->object != object ||
+        session->media_type != RIN_MEDIA_TYPE_AUDIO) {
+        const RinResult invalid_result =
+            session->object == object &&
+                    session->media_type != RIN_MEDIA_TYPE_AUDIO
+                ? RIN_ERROR_WRONG_TYPE
+                : RIN_ERROR_STALE_HANDLE;
         rin_media_session_unlock(session);
-        return RIN_ERROR_STALE_HANDLE;
+        return invalid_result;
     }
     if (!rin_media_session_pid_valid(session)) {
         rin_media_session_drop_locked(session, 0);
@@ -679,6 +1184,129 @@ RinResult rin_media_sdk_client_audio_info_v1(RinObject object,
     /* MDC1 v2 reports duration but not an exact decoded frame count. */
     info->frame_count = 0u;
     info->flags = 0u;
+    rin_media_session_unlock(session);
+    return RIN_SUCCESS;
+}
+
+RinResult rin_media_sdk_client_image_info_v1(RinObject object,
+                                              RinImageInfoV1* info)
+{
+    RinMediaSdkSessionV1* session;
+    RinResult result;
+
+    if (info == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    result = rin_media_validate_object(object);
+    if (result != RIN_SUCCESS) return result;
+    session = rin_media_session_find_locked(object);
+    if (session == NULL) return RIN_ERROR_STALE_HANDLE;
+    if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
+        session->object != object) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_STALE_HANDLE;
+    }
+    if (session->media_type != RIN_MEDIA_TYPE_IMAGE) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_WRONG_TYPE;
+    }
+    if (!rin_media_session_pid_valid(session)) {
+        rin_media_session_drop_locked(session, 0);
+        rin_media_session_unlock_free(session);
+        return RIN_ERROR_STALE_HANDLE;
+    }
+    result = rin_media_image_decode_locked(session);
+    if (result != RIN_SUCCESS) {
+        if (result == RIN_ERROR_IO || result == RIN_ERROR_INTEGRITY ||
+            result == RIN_ERROR_STALE_HANDLE)
+            rin_media_session_drop_locked(session, 0);
+        if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 2u)
+            rin_media_session_unlock_free(session);
+        else
+            rin_media_session_unlock(session);
+        return result;
+    }
+    memset(info, 0, sizeof(*info));
+    info->struct_size = sizeof(*info);
+    info->version = RIN_SDK_STRUCT_VERSION_1;
+    info->width = session->image_info.width;
+    info->height = session->image_info.height;
+    info->format = RIN_IMAGE_DECODE_FORMAT_ARGB8888;
+    info->row_stride_bytes = session->image_info.stride_bytes;
+    /* The internal first-frame wire response does not carry total animation
+     * frame count, so report unknown instead of claiming every source is still. */
+    info->frame_count = 0u;
+    info->decoded_size_bytes = session->image_info.pixel_bytes;
+    rin_media_session_unlock(session);
+    return RIN_SUCCESS;
+}
+
+RinResult rin_media_sdk_client_image_decode_v1(RinObject object,
+                                                uint32_t format,
+                                                RinSliceV1 output,
+                                                uint64_t* required)
+{
+    RinMediaSdkSessionV1* session;
+    RinResult result;
+    uint64_t needed;
+
+    if (required != NULL) *required = 0u;
+    if (required == NULL ||
+        !rin_media_range_valid(output.address, output.size, UINT64_MAX, 1))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (format != RIN_IMAGE_DECODE_FORMAT_ARGB8888)
+        return RIN_ERROR_NOT_SUPPORTED;
+    result = rin_media_validate_object(object);
+    if (result != RIN_SUCCESS) return result;
+    session = rin_media_session_find_locked(object);
+    if (session == NULL) return RIN_ERROR_STALE_HANDLE;
+    if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
+        session->object != object) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_STALE_HANDLE;
+    }
+    if (session->media_type != RIN_MEDIA_TYPE_IMAGE) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_WRONG_TYPE;
+    }
+    if (!rin_media_session_pid_valid(session)) {
+        rin_media_session_drop_locked(session, 0);
+        rin_media_session_unlock_free(session);
+        return RIN_ERROR_STALE_HANDLE;
+    }
+    result = rin_media_image_decode_locked(session);
+    if (result != RIN_SUCCESS) {
+        if (result == RIN_ERROR_IO || result == RIN_ERROR_INTEGRITY ||
+            result == RIN_ERROR_STALE_HANDLE)
+            rin_media_session_drop_locked(session, 0);
+        if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 2u)
+            rin_media_session_unlock_free(session);
+        else
+            rin_media_session_unlock(session);
+        return result;
+    }
+    needed = session->image_info.pixel_bytes;
+    *required = needed;
+    if (output.size < needed) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_BUFFER_TOO_SMALL;
+    }
+    if (!rin_media_range_valid(output.address, needed, UINT64_MAX, 0)) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_INVALID_ARGUMENT;
+    }
+    memset((void*)(uintptr_t)output.address, 0, (size_t)needed);
+    result = rin_media_image_read_pixels_locked(
+        session, (uint8_t*)(uintptr_t)output.address);
+    if (result != RIN_SUCCESS) {
+        memset((void*)(uintptr_t)output.address, 0, (size_t)needed);
+        if (result == RIN_ERROR_IO || result == RIN_ERROR_INTEGRITY ||
+            result == RIN_ERROR_STALE_HANDLE)
+            rin_media_session_drop_locked(session, 0);
+        if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 2u)
+            rin_media_session_unlock_free(session);
+        else
+            rin_media_session_unlock(session);
+        return result;
+    }
     rin_media_session_unlock(session);
     return RIN_SUCCESS;
 }
@@ -705,9 +1333,15 @@ RinResult rin_media_sdk_client_audio_decode_v1(RinObject object,
     session = rin_media_session_find_locked(object);
     if (session == NULL) return RIN_ERROR_STALE_HANDLE;
     if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
-        session->object != object) {
+        session->object != object ||
+        session->media_type != RIN_MEDIA_TYPE_AUDIO) {
+        const RinResult invalid_result =
+            session->object == object &&
+                    session->media_type != RIN_MEDIA_TYPE_AUDIO
+                ? RIN_ERROR_WRONG_TYPE
+                : RIN_ERROR_STALE_HANDLE;
         rin_media_session_unlock(session);
-        return RIN_ERROR_STALE_HANDLE;
+        return invalid_result;
     }
     if (!rin_media_session_pid_valid(session)) {
         rin_media_session_drop_locked(session, 0);

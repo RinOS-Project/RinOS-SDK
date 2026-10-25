@@ -1069,8 +1069,21 @@ RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object
     *object = kernel_object;
     return RIN_SUCCESS;
 }
-RinResult rin_image_get_info_v1(RinMediaObject object,RinImageInfoV1* info) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_IMAGE_INFO,info,object,0,0,0,0,0); }
-RinResult rin_image_decode_v1(RinMediaObject object,uint32_t format,RinSliceV1 output,uint64_t* required) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_IMAGE_DECODE,required,object,format,output.address,output.size,0,0); }
+RinResult rin_image_get_info_v1(RinMediaObject object, RinImageInfoV1* info) {
+    RinResult result;
+    if (!versioned(info, sizeof(*info))) return RIN_ERROR_ABI_MISMATCH;
+    reset_versioned_output(info, sizeof(*info));
+    result = rin_media_sdk_client_image_info_v1(object, info);
+    if (result != RIN_SUCCESS) reset_versioned_output(info, sizeof(*info));
+    return result;
+}
+RinResult rin_image_decode_v1(RinMediaObject object, uint32_t format,
+                              RinSliceV1 output, uint64_t* required) {
+    if (required != NULL) *required = 0u;
+    if (required == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_media_sdk_client_image_decode_v1(object, format, output,
+                                                 required);
+}
 RinResult rin_audio_get_info_v1(RinMediaObject object,RinAudioInfoV1* info) {
     RinResult result;
     if (!versioned(info, sizeof(*info))) return RIN_ERROR_ABI_MISMATCH;
