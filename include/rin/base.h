@@ -5,6 +5,14 @@
 extern "C" {
 #endif
 
+/* SDK libraries may register one process-local cleanup callback. The base
+ * object-close wrapper invokes registered callbacks immediately before the
+ * kernel close, allowing libraries to serialize and release service-side
+ * state keyed by the same opaque object without making rinbase depend on them. */
+typedef void (*RinSdkObjectCloseHookV1)(RinObject object);
+RIN_SDK_API RinResult rin_sdk_register_object_close_hook_v1(
+    RinSdkObjectCloseHookV1 hook);
+
 #ifndef RIN_SDK_OBJECT_INFO_ABI_DEFINED
 #define RIN_SDK_OBJECT_INFO_ABI_DEFINED
 typedef struct RinObjectInfoV1 {

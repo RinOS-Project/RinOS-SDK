@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#define RIN_SDK_ABI_VERSION UINT32_C(0x0001000D)
+#define RIN_SDK_ABI_VERSION UINT32_C(0x0001000E)
 #define RIN_SDK_STRUCT_VERSION_1 UINT32_C(1)
 #define RIN_SDK_INFINITE UINT64_MAX
 
@@ -98,7 +98,8 @@ typedef enum RinObjectType {
     RIN_OBJECT_LIBRARY = 11,
     RIN_OBJECT_INSTALL_SOURCE = 12,
     RIN_OBJECT_INSTALL_TARGET = 13,
-    RIN_OBJECT_CHANNEL = 14
+    RIN_OBJECT_CHANNEL = 14,
+    RIN_OBJECT_MEDIA = 15
 } RinObjectType;
 
 typedef enum RinProcessPersonality {

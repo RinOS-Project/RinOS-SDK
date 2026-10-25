@@ -1,10 +1,16 @@
 #include <rin/sdk.h>
 #include <rin/contract_abi.h>
 
+#if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_MEDIA)
+#include "rinmedia_sdk_client_v1.h"
+#endif
+
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE)
 #include <limits.h>
 #include <stddef.h>
 #include <sys/syscall.h>
+static RinSdkObjectCloseHookV1 g_object_close_hooks[8];
+static volatile uint32_t g_object_close_hooks_lock;
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_CORE) || \
@@ -424,8 +430,55 @@ int rin_service_find_system_slot(const char* service_id, uint32_t* slot_id) {
 }
 #endif /* !RINSDK_NO_RUNTIME_SERVICE_ADAPTERS */
 
+RinResult rin_sdk_register_object_close_hook_v1(
+    RinSdkObjectCloseHookV1 hook) {
+    const uint32_t hook_count = (uint32_t)(sizeof(g_object_close_hooks) /
+                                           sizeof(g_object_close_hooks[0]));
+    if (hook == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    while (__sync_lock_test_and_set(&g_object_close_hooks_lock, 1u) != 0u) {
+    }
+    for (uint32_t index = 0u; index < hook_count; ++index) {
+        if (__atomic_load_n(&g_object_close_hooks[index], __ATOMIC_ACQUIRE) ==
+            hook) {
+            __sync_lock_release(&g_object_close_hooks_lock);
+            return RIN_SUCCESS;
+        }
+    }
+    for (uint32_t index = 0u; index < hook_count; ++index) {
+        if (__atomic_load_n(&g_object_close_hooks[index], __ATOMIC_RELAXED) ==
+            NULL) {
+            __atomic_store_n(&g_object_close_hooks[index], hook,
+                             __ATOMIC_RELEASE);
+            __sync_lock_release(&g_object_close_hooks_lock);
+            return RIN_SUCCESS;
+        }
+    }
+    __sync_lock_release(&g_object_close_hooks_lock);
+    return RIN_ERROR_LIMIT_EXCEEDED;
+}
+
+static void rin_sdk_notify_object_close_v1(RinObject object) {
+    const uint32_t hook_count = (uint32_t)(sizeof(g_object_close_hooks) /
+                                           sizeof(g_object_close_hooks[0]));
+    for (uint32_t index = 0u; index < hook_count; ++index) {
+        RinSdkObjectCloseHookV1 hook = __atomic_load_n(
+            &g_object_close_hooks[index], __ATOMIC_ACQUIRE);
+        if (hook != NULL) hook(object);
+    }
+}
+
 RinResult rin_object_close_v1(RinObject object) {
-    SIMPLE_CALL(RIN_SDK_LIBRARY_BASE, BASE_OBJECT_CLOSE, (RinResult*)0, object,0,0,0,0,0);
+    RinSdkArgsV1 request;
+    RinResult result;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = object;
+    rin_sdk_notify_object_close_v1(object);
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_BASE, BASE_OBJECT_CLOSE, &request, sizeof(request),
+        NULL, 0u);
+    return result;
 }
 RinResult rin_object_query_v1(RinObject object, RinObjectInfoV1* info) {
     RinSdkArgsV1 request;
@@ -974,7 +1027,9 @@ static int rin_media_range_valid_v1(uint64_t address, uint64_t size) {
 
 RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object) {
     RinMediaOpenV1 request_snapshot;
+    RinMediaObject kernel_object = RIN_HANDLE_INVALID;
     if (object != NULL) *object = RIN_HANDLE_INVALID;
+    if (object == NULL) return RIN_ERROR_INVALID_ARGUMENT;
     if (!versioned(request, sizeof(*request)))
         return RIN_ERROR_ABI_MISMATCH;
     request_snapshot = *request;
@@ -999,14 +1054,36 @@ RinResult rin_media_open_v1(const RinMediaOpenV1* request,RinMediaObject* object
         if (request_snapshot.reserved[index] != 0u)
             return RIN_ERROR_INVALID_ARGUMENT;
     }
-    return rin_sdk_invoke_handle_output_v1(
+    RinResult result = rin_sdk_register_object_close_hook_v1(
+        rin_media_sdk_client_object_close_hook_v1);
+    if (result != RIN_SUCCESS) return result;
+    result = rin_sdk_invoke_handle_output_v1(
         RIN_SDK_LIBRARY_MEDIA, MEDIA_OPEN, &request_snapshot,
-        sizeof(request_snapshot), object);
+        sizeof(request_snapshot), &kernel_object);
+    if (result != RIN_SUCCESS) return result;
+    result = rin_media_sdk_client_open_v1(kernel_object, &request_snapshot);
+    if (result != RIN_SUCCESS) {
+        (void)rin_object_close_v1(kernel_object);
+        return result;
+    }
+    *object = kernel_object;
+    return RIN_SUCCESS;
 }
 RinResult rin_image_get_info_v1(RinMediaObject object,RinImageInfoV1* info) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_IMAGE_INFO,info,object,0,0,0,0,0); }
 RinResult rin_image_decode_v1(RinMediaObject object,uint32_t format,RinSliceV1 output,uint64_t* required) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_IMAGE_DECODE,required,object,format,output.address,output.size,0,0); }
-RinResult rin_audio_get_info_v1(RinMediaObject object,RinAudioInfoV1* info) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_AUDIO_INFO,info,object,0,0,0,0,0); }
-RinResult rin_audio_decode_v1(RinMediaObject object,RinSliceV1 output,uint64_t* frames) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_AUDIO_DECODE,frames,object,output.address,output.size,0,0,0); }
+RinResult rin_audio_get_info_v1(RinMediaObject object,RinAudioInfoV1* info) {
+    RinResult result;
+    if (!versioned(info, sizeof(*info))) return RIN_ERROR_ABI_MISMATCH;
+    reset_versioned_output(info, sizeof(*info));
+    result = rin_media_sdk_client_audio_info_v1(object, info);
+    if (result != RIN_SUCCESS) reset_versioned_output(info, sizeof(*info));
+    return result;
+}
+RinResult rin_audio_decode_v1(RinMediaObject object,RinSliceV1 output,uint64_t* frames) {
+    if (frames != NULL) *frames = 0u;
+    if (frames == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_media_sdk_client_audio_decode_v1(object, output, frames);
+}
 RinResult rin_video_decode_v1(RinMediaObject object,RinSurface target,uint64_t* timestamp_ns) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_VIDEO_DECODE,timestamp_ns,object,target,0,0,0,0); }
 #endif
 
