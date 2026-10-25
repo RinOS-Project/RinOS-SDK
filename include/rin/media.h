@@ -45,7 +45,10 @@ typedef struct RinAudioInfoV1 {
 
 enum {
     RIN_VIDEO_INFO_FRAME_COUNT_KNOWN = 1u << 0,
-    RIN_VIDEO_FRAME_FLAG_END_OF_STREAM = 1u << 0
+    RIN_VIDEO_INFO_FPS_KNOWN = 1u << 1,
+    RIN_VIDEO_INFO_DURATION_KNOWN = 1u << 2,
+    RIN_VIDEO_FRAME_FLAG_END_OF_STREAM = 1u << 0,
+    RIN_VIDEO_FRAME_FLAG_TIMESTAMP_KNOWN = 1u << 1
 };
 
 typedef struct RinVideoInfoV1 {
@@ -97,9 +100,15 @@ typedef struct RinVideoDecodeOptionsV1 {
  * when the decoder cannot determine it. Audio decode returns interleaved
  * S16LE frames; query its rate and channel count before sizing the output
  * buffer. A clear FRAME_COUNT_KNOWN flag means audio frame_count is zero.
- * Video frame decode writes the next AVI MJPEG/uncompressed frame into a
- * writable RinRenderTarget acquired from RinRuntime. The target mapping is
- * never sent over IPC; after success release the target and present its window
+ * Video metadata independently marks known frame count, average FPS, and
+ * duration. A clear flag requires the corresponding value to be zero. Frame
+ * metadata marks timestamp availability separately from end-of-stream.
+ * Video frame decode writes the next supported AVI, Matroska/WebM, MOV/MP4,
+ * or MPEG-TS frame into a writable RinRenderTarget acquired from RinRuntime.
+ * The configured FFmpeg fallback includes H.264, HEVC, AV1, VP8, VP9, Theora,
+ * and MJPEG; the bounded AVI path also supports uncompressed frames. The
+ * target mapping is never sent over IPC; after success release it and present
+ * its window
  * with wnd_release_render_target() and wnd_present(). A canceled in-flight
  * request retires its media session, which must be reopened before decoding. */
 
@@ -142,8 +151,8 @@ RIN_SDK_API RinResult rin_image_decode_v1(RinMediaObject object, uint32_t format
 RIN_SDK_API RinResult rin_audio_get_info_v1(RinMediaObject object, RinAudioInfoV1* info);
 RIN_SDK_API RinResult rin_audio_decode_v1(RinMediaObject object, RinSliceV1 output, uint64_t* frames);
 RIN_SDK_API RinResult rin_video_decode_v1(RinMediaObject object, RinSurface target, uint64_t* timestamp_ns);
-/* Decode one AVI frame into a caller-supplied writable render target. The
- * caller must keep pixels valid and writable for the duration of the call.
+/* Decode the next supported frame into a caller-supplied writable render
+ * target. Keep pixels valid and writable for the duration of the call.
  * This API does not acquire or present a compositor surface; only bounded
  * frame bytes cross the authenticated mediad socket. Closing the media object
  * tears down the decoder session. */

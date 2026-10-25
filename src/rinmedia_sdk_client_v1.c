@@ -19,7 +19,7 @@
 #include <rin/socket_abi.h>
 
 #define RIN_MEDIA_MDC1_MAGIC UINT32_C(0x3143444d)
-#define RIN_MEDIA_MDC1_VERSION UINT32_C(3)
+#define RIN_MEDIA_MDC1_VERSION UINT32_C(4)
 #define RIN_MEDIA_MDC1_TEXT_CAPACITY UINT32_C(4096)
 #define RIN_MEDIA_MDC1_MAX_FRAMES UINT32_C(1024)
 #define RIN_MEDIA_MDC1_SAMPLE_FORMAT_S16LE UINT32_C(1)
@@ -104,7 +104,7 @@ typedef struct RinMediaMdc1VideoOpenReplyV1 {
     uint32_t frame_count;
     uint32_t fps_numerator;
     uint32_t fps_denominator;
-    uint32_t reserved0;
+    uint32_t flags;
     uint64_t duration_ns;
     uint64_t reserved[2];
 } RinMediaMdc1VideoOpenReplyV1;
@@ -135,6 +135,7 @@ typedef struct RinMediaSdkSessionV1 {
     uint64_t image_decode_request_id;
     RinImageDecoderDecodeResponseV1 image_info;
     RinVideoInfoV1 video_info;
+    uint64_t video_next_frame_index;
 } RinMediaSdkSessionV1;
 
 static RinMediaSdkSessionV1 g_media_sessions[RIN_MEDIA_MDC1_MAX_SESSIONS];
@@ -151,6 +152,7 @@ static void rin_media_session_reset_image(RinMediaSdkSessionV1* session)
     session->image_decode_request_id = 0u;
     memset(&session->image_info, 0, sizeof(session->image_info));
     memset(&session->video_info, 0, sizeof(session->video_info));
+    session->video_next_frame_index = 0u;
 }
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
@@ -1322,9 +1324,22 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
                     video_metadata.height >
                 RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES ||
             video_metadata.format != RIN_IMAGE_DECODE_FORMAT_ARGB8888 ||
-            video_metadata.fps_numerator == 0u ||
-            video_metadata.fps_denominator == 0u ||
-            video_metadata.reserved0 != 0u ||
+            (video_metadata.flags &
+             ~(RIN_VIDEO_INFO_FRAME_COUNT_KNOWN |
+               RIN_VIDEO_INFO_FPS_KNOWN |
+               RIN_VIDEO_INFO_DURATION_KNOWN)) != 0u ||
+            (((video_metadata.flags & RIN_VIDEO_INFO_FRAME_COUNT_KNOWN) != 0u) !=
+             (video_metadata.frame_count != 0u)) ||
+            (((video_metadata.flags & RIN_VIDEO_INFO_FPS_KNOWN) != 0u) !=
+             (video_metadata.fps_numerator != 0u &&
+              video_metadata.fps_denominator != 0u)) ||
+            (video_metadata.fps_numerator != 0u &&
+             (uint64_t)video_metadata.fps_numerator >
+                 (uint64_t)video_metadata.fps_denominator * 1000u) ||
+            ((video_metadata.fps_numerator == 0u) !=
+             (video_metadata.fps_denominator == 0u)) ||
+            (((video_metadata.flags & RIN_VIDEO_INFO_DURATION_KNOWN) == 0u) &&
+             video_metadata.duration_ns != 0u) ||
             video_metadata.reserved[0] != 0u ||
             video_metadata.reserved[1] != 0u) {
             (void)close(socket_fd);
@@ -1346,10 +1361,11 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
         session->video_info.row_stride_bytes =
             video_metadata.row_stride_bytes;
         session->video_info.frame_count = video_metadata.frame_count;
-        session->video_info.flags = RIN_VIDEO_INFO_FRAME_COUNT_KNOWN;
+        session->video_info.flags = video_metadata.flags;
         session->video_info.duration_ns = video_metadata.duration_ns;
         session->video_info.fps_numerator = video_metadata.fps_numerator;
         session->video_info.fps_denominator = video_metadata.fps_denominator;
+        session->video_next_frame_index = 0u;
         __atomic_store_n(&session->state, 1u, __ATOMIC_RELEASE);
         return RIN_SUCCESS;
     }
@@ -1771,8 +1787,15 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
         received_info.reserved0 != 0u ||
         received_info.reserved[0] != 0u ||
         received_info.reserved[1] != 0u ||
-        session->video_info.flags != RIN_VIDEO_INFO_FRAME_COUNT_KNOWN ||
-        (received_info.flags & ~RIN_VIDEO_FRAME_FLAG_END_OF_STREAM) != 0u ||
+        received_info.frame_index != session->video_next_frame_index ||
+        (received_info.flags & ~(RIN_VIDEO_FRAME_FLAG_END_OF_STREAM |
+                                 RIN_VIDEO_FRAME_FLAG_TIMESTAMP_KNOWN)) != 0u ||
+        (((session->video_info.flags & RIN_VIDEO_INFO_FRAME_COUNT_KNOWN) != 0u) &&
+         ((received_info.flags & RIN_VIDEO_FRAME_FLAG_END_OF_STREAM) != 0u
+              ? received_info.frame_index != session->video_info.frame_count
+              : received_info.frame_index >= session->video_info.frame_count)) ||
+        (((received_info.flags & RIN_VIDEO_FRAME_FLAG_TIMESTAMP_KNOWN) == 0u) &&
+         received_info.timestamp_ns != 0u) ||
         expected_bytes > RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES ||
         ((received_info.flags & RIN_VIDEO_FRAME_FLAG_END_OF_STREAM) != 0u
              ? received_info.payload_size_bytes != 0u
@@ -1782,6 +1805,14 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
         rin_media_session_drop_locked(session, 0);
         rin_media_session_unlock_free(session);
         return RIN_ERROR_INTEGRITY;
+    }
+    if (received_info.payload_size_bytes != 0u) {
+        if (session->video_next_frame_index == UINT64_MAX) {
+            rin_media_session_drop_locked(session, 0);
+            rin_media_session_unlock_free(session);
+            return RIN_ERROR_INTEGRITY;
+        }
+        ++session->video_next_frame_index;
     }
     if (received_info.payload_size_bytes != 0u &&
         (uint64_t)target->pitch * received_info.height > target_extent) {
