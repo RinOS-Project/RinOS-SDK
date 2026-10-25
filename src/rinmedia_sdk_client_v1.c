@@ -461,16 +461,49 @@ static void rin_media_session_unlock_free(RinMediaSdkSessionV1* session)
     __atomic_store_n(&session->state, 0u, __ATOMIC_RELEASE);
 }
 
+/* A forked child has a private copy of the session table but shares the
+ * inherited socket description with its parent.  The copied lock may have
+ * been held by a thread that does not exist in the child, so retire a
+ * foreign-owner row without acquiring that lock and without sending CLOSE. */
+static void rin_media_session_discard_inherited(
+    RinMediaSdkSessionV1* session)
+{
+    uint32_t expected_state = 1u;
+    int socket_fd;
+
+    if (session == NULL ||
+        !__atomic_compare_exchange_n(&session->state, &expected_state, 2u, 0,
+                                     __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE))
+        return;
+    socket_fd = session->socket_fd;
+    session->socket_fd = -1;
+    session->session_id = 0u;
+    session->object = RIN_OBJECT_HANDLE_INVALID;
+    session->next_request_id = 1u;
+    session->sample_rate = 0u;
+    session->channels = 0u;
+    session->owner_pid = 0u;
+    session->lock = 0u;
+    if (socket_fd >= 0) (void)close(socket_fd);
+    __atomic_store_n(&session->state, 0u, __ATOMIC_RELEASE);
+}
+
 static RinMediaSdkSessionV1* rin_media_session_find_locked(RinObject object)
 {
+    const uint64_t caller_pid = rin_media_current_pid();
     uint32_t index;
+    if (caller_pid == 0u) return NULL;
     for (index = 0u; index < RIN_MEDIA_MDC1_MAX_SESSIONS; ++index) {
         RinMediaSdkSessionV1* session = &g_media_sessions[index];
         if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u)
             continue;
+        if (session->owner_pid != caller_pid) {
+            rin_media_session_discard_inherited(session);
+            continue;
+        }
         rin_media_session_lock(session);
         if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 1u &&
-            session->object == object)
+            session->object == object && session->owner_pid == caller_pid)
             return session;
         rin_media_session_unlock(session);
     }
