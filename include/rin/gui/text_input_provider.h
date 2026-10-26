@@ -168,9 +168,10 @@ typedef struct RinImePreeditV1 {
 } RinImePreeditV1;
 
 typedef struct RinImeCommitV1 {
-    /* request_id is the delivery ID: retrying the same commit in the same
-     * context generation must reuse this ID and identical UTF-8 bytes. New
-     * commits in that context use strictly increasing IDs. */
+    /* request_id is a delivery ID scoped to the authenticated provider
+     * process and session. New commits use strictly increasing IDs across
+     * context generations. A retry after a lost acknowledgement reuses the
+     * original ID and identical UTF-8 bytes, even after channel reconnect. */
     RinImeWireHeaderV1 header;
     uint32_t text_bytes;
     uint32_t flags;
