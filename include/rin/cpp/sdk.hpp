@@ -816,6 +816,10 @@ window_create(const RinWindowCreateV1& request) noexcept {
     return {rin_window_create_v1(&request, &window), window};
 }
 
+[[nodiscard]] inline status window_close(RinWindow window) noexcept {
+    return status{rin_window_close_v1(window)};
+}
+
 [[nodiscard]] inline outcome<RinGuiEventV1>
 window_next_event(RinWindow window,
                   uint64_t timeout_ns = RIN_SDK_INFINITE) noexcept {
@@ -837,6 +841,21 @@ window_next_event(RinWindow window,
 surface_create(uint32_t width, uint32_t height, uint32_t format) noexcept {
     RinSurface surface = RIN_HANDLE_INVALID;
     return {rin_surface_create_v1(width, height, format, &surface), surface};
+}
+
+[[nodiscard]] inline outcome<RinGuiSurfaceMapV1>
+surface_map(RinSurface surface) noexcept {
+    auto mapping = versioned<RinGuiSurfaceMapV1>();
+    return {rin_surface_map_v1(surface, &mapping), mapping};
+}
+
+[[nodiscard]] inline status surface_unmap(
+    RinSurface surface, const RinGuiSurfaceMapV1& mapping) noexcept {
+    return status{rin_surface_unmap_v1(surface, &mapping)};
+}
+
+[[nodiscard]] inline status surface_destroy(RinSurface surface) noexcept {
+    return status{rin_surface_destroy_v1(surface)};
 }
 
 [[nodiscard]] inline status window_present(

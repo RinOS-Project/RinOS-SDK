@@ -60,11 +60,11 @@ EXAMPLES = {
         "description": "Read-only durable File Portal grant consumer.",
     },
     "window": {
-        "dependencies": ["rincrt", "rinbase", "rinipc", "ringui"],
+        "dependencies": ["rincrt", "rinruntime"],
         "imports": [
-            ("ringui", "rin_window_create_v1"),
-            ("ringui", "rin_window_next_event_v1"),
-            ("rinbase", "rin_object_close_v1"),
+            ("rinruntime", "rin_window_create_v1"),
+            ("rinruntime", "rin_window_next_event_v1"),
+            ("rinruntime", "rin_window_close_v1"),
         ],
         "capabilities": ["gui-control"],
         "gui": True,
@@ -218,6 +218,15 @@ def build(args: argparse.Namespace) -> None:
     libraries = metadata.get("libraries")
     if not isinstance(libraries, dict):
         raise RuntimeError("SDK runtime library metadata is malformed")
+    libraries = dict(libraries)
+    libraries["rinruntime"] = {"shared": "RinRuntime.rll"}
+    rinruntime_rll = Path(args.rinruntime_rll).expanduser()
+    if rinruntime_rll.is_symlink() or not rinruntime_rll.is_file() or \
+            rinruntime_rll.name != "RinRuntime.rll":
+        raise RuntimeError(
+            "--rinruntime-rll must name a regular installed RinRuntime.rll"
+        )
+    rinruntime_rll = rinruntime_rll.resolve(strict=True)
 
     if not re.fullmatch(r"[0-9]+(?:\.[0-9]+){0,3}", args.runtime_version):
         raise RuntimeError("runtime version must be numeric")
@@ -276,10 +285,12 @@ def build(args: argparse.Namespace) -> None:
                 if not isinstance(shared, str) or Path(shared).name != shared or \
                         not shared.endswith(".rll"):
                     raise RuntimeError(f"SDK runtime metadata is invalid for {library}")
-                shared_path = sdk_root / shared
+                shared_path = rinruntime_rll if library == "rinruntime" else \
+                    sdk_root / shared
                 if shared_path.is_symlink() or not shared_path.is_file() or \
-                        hashlib.sha256(shared_path.read_bytes()).hexdigest() != \
-                        receipt["artifacts"].get(shared):
+                        (library != "rinruntime" and
+                         hashlib.sha256(shared_path.read_bytes()).hexdigest() !=
+                         receipt["artifacts"].get(shared)):
                     raise RuntimeError(
                         f"SDK runtime artifact does not match its install receipt: {shared}"
                     )
@@ -394,6 +405,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sdk-root", required=True,
                         help="one installed target prefix from package_rinsdk_v1.py")
+    parser.add_argument("--rinruntime-rll", required=True,
+                        help="signed RinRuntime.rll built with GUI support")
     parser.add_argument("--target", choices=(
         "i686-unknown-rinos", "x86_64-unknown-rinos",
     ), required=True)

@@ -10,7 +10,10 @@ separate objects. It does not link for RinOS.
 either SDK target. Pass one installed target prefix produced by
 `package_rinsdk_v1.py`;
 the helper verifies its manifest, public headers, runtime-library hashes, and
-signatures before producing application packages. The prefix contains the
+signatures before producing application packages. Supply the signed
+`RinRuntime.rll` built with GUI support using `--rinruntime-rll`; the `window`
+example imports window ownership APIs from RinRuntime, while the SDK `ringui`
+library retains clipboard and notification calls. The prefix contains the
 declared RinGPU and RinResource public-header dependencies.
 
 Example PowerShell invocation:
@@ -18,6 +21,7 @@ Example PowerShell invocation:
 ```powershell
 python build.py `
   --sdk-root E:/RinOS/build/sdk/x86_64-unknown-rinos `
+  --rinruntime-rll E:/RinOS/build/rinruntime/RinRuntime.rll `
   --target x86_64-unknown-rinos `
   --output-dir E:/RinOS/build/sdk-consumer-packages `
   --rcc E:/RinOS/public-base/toolchain/RinCompiler/rcc.exe `
