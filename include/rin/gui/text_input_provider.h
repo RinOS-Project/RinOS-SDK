@@ -144,7 +144,7 @@ typedef struct RinImeKeyEventV1 {
     uint32_t key_code;
     uint32_t state;
     uint32_t modifiers;
-    uint32_t unicode_scalar; /* zero when the key has no text scalar */
+    uint32_t unicode_scalar; /* zero on release or when the key has no text */
     uint32_t reserved[2];
 } RinImeKeyEventV1;
 
@@ -359,6 +359,7 @@ static inline int rin_ime_wire_payload_v1(const void *message,
             (m->header.flags == 0u ||
              (m->header.flags == RIN_IME_WIRE_FLAG_NO_REPLY &&
               m->state == RIN_IME_KEY_RELEASED && cp == 0u)) &&
+            (m->state != RIN_IME_KEY_RELEASED || cp == 0u) &&
             (cp == 0u || (cp <= UINT32_C(0x10ffff) &&
                           !(cp >= UINT32_C(0xd800) && cp <= UINT32_C(0xdfff)))) &&
             rin_ime_wire_all_zero_v1((const uint8_t *)m->reserved,
