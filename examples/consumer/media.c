@@ -216,6 +216,9 @@ static int query_video_metadata(void)
     static const char mime_type[] = "video/x-msvideo";
     RinVideoInfoV1 info = {0};
     RinMediaObject object = RIN_HANDLE_INVALID;
+    RinRenderTarget target = {0};
+    RinVideoFrameInfoV1 frame_info = {0};
+    uint32_t decoded_pixel = 0u;
     RinResult result;
     int status = open_media(RIN_MEDIA_TYPE_VIDEO, mime_type,
                             sizeof(mime_type) - 1u, sample_avi,
@@ -246,7 +249,69 @@ static int query_video_metadata(void)
         return close_media(object, 1);
     }
 
-    puts("typed AVI video metadata queried (1x1, one frame, 25 fps)");
+    /* Exercise the SDK's bounded local copy path. This is not a compositor
+     * lease and the sample does not present this buffer. */
+    target.struct_size = (uint32_t)sizeof(target);
+    target.version = RIN_RENDER_TARGET_VERSION;
+    target.pixels = &decoded_pixel;
+    target.width = 1u;
+    target.height = 1u;
+    target.pitch = (uint32_t)sizeof(decoded_pixel);
+    target.format = RIN_RENDER_TARGET_FORMAT_BGRA32;
+    target.generation = 1u;
+    target.buffer_slot = 0u;
+    target.flags = RIN_RENDER_TARGET_FLAG_WRITABLE |
+                   RIN_RENDER_TARGET_FLAG_EXTERNAL;
+    frame_info.struct_size = (uint32_t)sizeof(frame_info);
+    frame_info.version = RIN_SDK_STRUCT_VERSION_1;
+    result = rin_video_decode_frame_v1(object, &target, &frame_info);
+    if (result == RIN_ERROR_NOT_SUPPORTED) {
+        puts("video frame decoder is not available on this target");
+        return close_media(object, 3);
+    }
+    if (result != RIN_SUCCESS ||
+        frame_info.struct_size != sizeof(frame_info) ||
+        frame_info.version != RIN_SDK_STRUCT_VERSION_1 ||
+        frame_info.width != 1u ||
+        frame_info.height != 1u || frame_info.frame_index != 0u ||
+        frame_info.format != RIN_IMAGE_DECODE_FORMAT_ARGB8888 ||
+        frame_info.row_stride_bytes != sizeof(decoded_pixel) ||
+        frame_info.flags != RIN_VIDEO_FRAME_FLAG_TIMESTAMP_KNOWN ||
+        frame_info.reserved0 != 0u || frame_info.reserved[0] != 0u ||
+        frame_info.reserved[1] != 0u ||
+        frame_info.timestamp_ns != 0u ||
+        frame_info.payload_size_bytes != sizeof(decoded_pixel) ||
+        decoded_pixel != UINT32_C(0xff000000)) {
+        printf("video frame decode failed: %d (index=%llu, pixel=%08x)\n",
+               (int)result, (unsigned long long)frame_info.frame_index,
+               decoded_pixel);
+        return close_media(object, 1);
+    }
+
+    frame_info.struct_size = (uint32_t)sizeof(frame_info);
+    frame_info.version = RIN_SDK_STRUCT_VERSION_1;
+    result = rin_video_decode_frame_v1(object, &target, &frame_info);
+    if (result != RIN_SUCCESS ||
+        frame_info.struct_size != sizeof(frame_info) ||
+        frame_info.version != RIN_SDK_STRUCT_VERSION_1 ||
+        frame_info.width != 1u || frame_info.height != 1u ||
+        frame_info.format != RIN_IMAGE_DECODE_FORMAT_ARGB8888 ||
+        frame_info.row_stride_bytes != sizeof(decoded_pixel) ||
+        frame_info.flags != (RIN_VIDEO_FRAME_FLAG_END_OF_STREAM |
+                             RIN_VIDEO_FRAME_FLAG_TIMESTAMP_KNOWN) ||
+        frame_info.reserved0 != 0u || frame_info.reserved[0] != 0u ||
+        frame_info.reserved[1] != 0u ||
+        frame_info.frame_index != 1u ||
+        frame_info.timestamp_ns != UINT64_C(40000000) ||
+        frame_info.payload_size_bytes != 0u ||
+        decoded_pixel != UINT32_C(0xff000000)) {
+        printf("video EOS decode failed: %d (index=%llu, flags=%u)\n",
+               (int)result, (unsigned long long)frame_info.frame_index,
+               frame_info.flags);
+        return close_media(object, 1);
+    }
+
+    puts("typed AVI metadata, one BGRA frame, and end-of-stream queried");
     return close_media(object, 0);
 }
 
