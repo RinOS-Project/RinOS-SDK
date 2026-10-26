@@ -156,7 +156,9 @@ RIN_SDK_API RinResult rin_audio_get_info_v1(RinMediaObject object, RinAudioInfoV
 RIN_SDK_API RinResult rin_audio_decode_v1(RinMediaObject object, RinSliceV1 output, uint64_t* frames);
 RIN_SDK_API RinResult rin_video_decode_v1(RinMediaObject object, RinSurface target, uint64_t* timestamp_ns);
 /* Decode the next supported frame into a caller-supplied writable render
- * target. Keep pixels valid and writable for the duration of the call.
+ * target. The SDK snapshots the target and options records before resetting
+ * frame_info; the target's pixel mapping must remain valid and writable for
+ * the duration of the call.
  * This API does not acquire or present a compositor surface; only bounded
  * frame bytes cross the authenticated mediad socket. Closing the media object
  * tears down the decoder session. */

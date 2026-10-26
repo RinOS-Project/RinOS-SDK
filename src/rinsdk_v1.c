@@ -1353,17 +1353,29 @@ RinResult rin_video_decode_frame_with_options_v1(
     RinMediaObject object, RinRenderTarget* target,
     const RinVideoDecodeOptionsV1* options,
     RinVideoFrameInfoV1* frame_info) {
+    RinRenderTarget target_snapshot;
+    RinVideoDecodeOptionsV1 options_snapshot;
     RinResult result;
     if (!versioned(frame_info, sizeof(*frame_info)))
         return RIN_ERROR_ABI_MISMATCH;
+    if (target == NULL) {
+        reset_versioned_output(frame_info, sizeof(*frame_info));
+        return RIN_ERROR_INVALID_ARGUMENT;
+    }
+    target_snapshot = *target;
+    if (options != NULL) {
+        options_snapshot = *options;
+        if (!versioned(&options_snapshot, sizeof(options_snapshot)) ||
+            options_snapshot.reserved[0] != 0u ||
+            options_snapshot.reserved[1] != 0u) {
+            reset_versioned_output(frame_info, sizeof(*frame_info));
+            return RIN_ERROR_ABI_MISMATCH;
+        }
+    }
     reset_versioned_output(frame_info, sizeof(*frame_info));
-    if (target == NULL) return RIN_ERROR_INVALID_ARGUMENT;
-    if (options != NULL &&
-        (!versioned(options, sizeof(*options)) ||
-         options->reserved[0] != 0u || options->reserved[1] != 0u))
-        return RIN_ERROR_ABI_MISMATCH;
     result = rin_media_sdk_client_video_decode_frame_v1(
-        object, target, options, frame_info);
+        object, &target_snapshot,
+        options != NULL ? &options_snapshot : NULL, frame_info);
     if (result != RIN_SUCCESS) reset_versioned_output(frame_info,
                                                        sizeof(*frame_info));
     return result;
