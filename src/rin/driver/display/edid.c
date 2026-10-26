@@ -139,7 +139,8 @@ static RinDisplayEdidResult edid_parse_base_descriptor(
     ++info->detailed_timing_count;
     if (descriptor_index == 0u && (info->flags &
             RIN_DISPLAY_EDID_INFO_HAS_PREFERRED_MODE) != 0u) {
-        info->preferred_mode = mode;
+        edid_copy((uint8_t*)&info->preferred_mode,
+                  (const uint8_t*)&mode, sizeof(mode));
     }
     return RIN_DISPLAY_EDID_OK;
 }
@@ -482,7 +483,9 @@ static RinDisplayEdidResult edid_mode_list_append(
     if (list->mode_count >= RIN_DISPLAY_EDID_MAX_MODES) {
         return RIN_DISPLAY_EDID_UNSUPPORTED;
     }
-    list->modes[list->mode_count++] = *mode;
+    edid_copy((uint8_t*)&list->modes[list->mode_count],
+              (const uint8_t*)mode, sizeof(*mode));
+    ++list->mode_count;
     return RIN_DISPLAY_EDID_OK;
 }
 
@@ -577,7 +580,7 @@ RinDisplayEdidResult rin_display_edid_admit(
             return RIN_DISPLAY_EDID_MALFORMED;
         }
     }
-    *info = candidate;
+    edid_copy((uint8_t*)info, (const uint8_t*)&candidate, sizeof(candidate));
     return RIN_DISPLAY_EDID_OK;
 }
 
@@ -687,6 +690,7 @@ RinDisplayEdidResult rin_display_edid_collect_modes(
         }
     }
 
-    *modes = candidate;
+    edid_copy((uint8_t*)modes, (const uint8_t*)&candidate,
+              sizeof(candidate));
     return RIN_DISPLAY_EDID_OK;
 }
