@@ -99,8 +99,11 @@ enum RinImeReplyStatusV1 {
 
 /* Every record starts with this header. Integers are little-endian on the
  * wire. There are no pointers, native handles, or size_t fields. A request
- * ID is nonzero and is echoed by its asynchronous reply. Context generation
- * is zero only for HELLO/HELLO_ACK and otherwise binds data to one focus. */
+ * ID is nonzero and is echoed by its asynchronous reply. A sender must not
+ * reuse request IDs during one process instance; on exhaustion it must close
+ * the channel and restart under a new authenticated process identity. Context
+ * generation is zero only for HELLO/HELLO_ACK and otherwise binds data to one
+ * focus. */
 typedef struct RinImeWireHeaderV1 {
     uint32_t magic;
     uint16_t version_major;
@@ -191,7 +194,9 @@ typedef struct RinImeCandidatesV1 {
     RinImeWireHeaderV1 header;
     uint32_t candidate_count;
     uint32_t selected_index; /* RIN_IME_NO_CANDIDATE when none is selected */
-    uint64_t candidate_generation; /* changes whenever the list is replaced */
+    /* Changes whenever the list is replaced and never wraps within one
+     * authenticated provider process instance. */
+    uint64_t candidate_generation;
     uint32_t reserved[2];
     RinImeCandidateV1 candidates[RIN_IME_MAX_CANDIDATES];
 } RinImeCandidatesV1;
