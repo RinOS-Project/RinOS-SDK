@@ -57,6 +57,7 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define SO_RIN_UNIX_PEER_APPLICATION_METADATA 0x5009
 #define SO_RIN_UNIX_PEER_APPLICATION_IMAGE_PATH 0x500A
 #define SO_RIN_UNIX_PEER_ACCOUNT_IDENTITY 0x500B
+#define SO_RIN_UNIX_PEER_SERVICE_IDENTITY 0x500C
 
 #define RIN_UNIX_SCOPE_SYSTEM UINT16_C(1)
 #define RIN_UNIX_SCOPE_USER UINT16_C(2)
@@ -73,6 +74,7 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define RIN_UNIX_PEER_APPLICATION_METADATA_VERSION 1u
 #define RIN_UNIX_PEER_APPLICATION_IMAGE_PATH_VERSION 1u
 #define RIN_UNIX_PEER_ACCOUNT_IDENTITY_VERSION 1u
+#define RIN_UNIX_PEER_SERVICE_IDENTITY_VERSION 1u
 #define RIN_UNIX_ACCOUNT_IDENTITY_SIZE 15u
 #define RIN_UNIX_SESSION_STATE_NONE UINT32_C(0)
 #define RIN_UNIX_SESSION_STATE_CREATING UINT32_C(1)
@@ -92,6 +94,7 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define RIN_UNIX_APPLICATION_ID_SIZE 32u
 #define RIN_UNIX_APPLICATION_NAME_MAX 64u
 #define RIN_UNIX_APPLICATION_IMAGE_PATH_MAX 96u
+#define RIN_UNIX_SERVICE_ID_MAX 64u
 
 typedef struct rin_unix_service_identity_v1 {
     uint32_t slot_id;
@@ -99,6 +102,22 @@ typedef struct rin_unix_service_identity_v1 {
     uint16_t scope;
     uint16_t flags;
 } rin_unix_service_identity_v1;
+
+/* Authenticated service identity for the connected peer. service_id is
+ * resolved by the kernel from the service-manager slot attached to the peer
+ * socket; callers must still check the expected ID, scope, owner, and session. */
+typedef struct rin_unix_peer_service_identity_v1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t scope;
+    uint32_t flags;
+    uint32_t service_slot_id;
+    uint32_t owner_uid;
+    uint32_t reserved;
+    uint64_t process_id;
+    uint64_t process_instance_cookie;
+    char service_id[RIN_UNIX_SERVICE_ID_MAX];
+} rin_unix_peer_service_identity_v1;
 
 /* Returned by SO_RIN_UNIX_PEER_IDENTITY on one connected local socket. The
  * kernel, not the remote endpoint, supplies every field. */
@@ -348,11 +367,51 @@ static inline int rin_unix_peer_application_image_path_valid(
            image->reserved[0] == 0u && image->reserved[1] == 0u;
 }
 
+static inline int rin_unix_peer_service_identity_valid(
+    const rin_unix_peer_service_identity_v1* identity)
+{
+    size_t length = 0u;
+    if (identity == NULL || identity->struct_size != sizeof(*identity) ||
+        identity->version != RIN_UNIX_PEER_SERVICE_IDENTITY_VERSION ||
+        (identity->scope != RIN_UNIX_SCOPE_SYSTEM &&
+         identity->scope != RIN_UNIX_SCOPE_USER) ||
+        identity->flags != RIN_UNIX_SERVICE_IDENTITY_FLAG_PUBLISHED ||
+        identity->service_slot_id == 0u ||
+        (identity->scope == RIN_UNIX_SCOPE_USER &&
+         identity->owner_uid == 0u) ||
+        identity->reserved != 0u ||
+        !rin_sdk_live_identity(identity->process_id) ||
+        !rin_sdk_live_identity(identity->process_instance_cookie) ||
+        identity->service_id[0] == '\0')
+        return 0;
+    while (length < RIN_UNIX_SERVICE_ID_MAX &&
+           identity->service_id[length] != '\0') {
+        const unsigned char value =
+            (unsigned char)identity->service_id[length];
+        if (!((value >= 'a' && value <= 'z') ||
+              (value >= '0' && value <= '9') || value == '-' ||
+              value == '_' || value == '.'))
+            return 0;
+        ++length;
+    }
+    if (length == 0u || length >= RIN_UNIX_SERVICE_ID_MAX ||
+        (length == 1u && identity->service_id[0] == '.') ||
+        (length == 2u && identity->service_id[0] == '.' &&
+         identity->service_id[1] == '.'))
+        return 0;
+    for (size_t index = length + 1u; index < RIN_UNIX_SERVICE_ID_MAX;
+         ++index)
+        if (identity->service_id[index] != '\0') return 0;
+    return 1;
+}
+
 #endif /* !MIDL_PASS */
 
 #if defined(__cplusplus) && !defined(MIDL_PASS)
 static_assert(sizeof(rin_unix_service_identity_v1) == 12u,
               "Rin Unix service identity ABI drift");
+static_assert(sizeof(rin_unix_peer_service_identity_v1) == 104u,
+              "Rin Unix peer service identity ABI drift");
 static_assert(sizeof(rin_unix_peer_identity_v1) == 48u,
               "Rin Unix peer identity ABI drift");
 static_assert(sizeof(rin_unix_peer_app_identity_v1) == 80u,
@@ -372,6 +431,8 @@ static_assert(sizeof(rin_unix_peer_application_image_path_v1) == 176u,
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(MIDL_PASS)
 _Static_assert(sizeof(rin_unix_service_identity_v1) == 12u,
                "Rin Unix service identity ABI drift");
+_Static_assert(sizeof(rin_unix_peer_service_identity_v1) == 104u,
+               "Rin Unix peer service identity ABI drift");
 _Static_assert(sizeof(rin_unix_peer_identity_v1) == 48u,
                "Rin Unix peer identity ABI drift");
 _Static_assert(sizeof(rin_unix_peer_app_identity_v1) == 80u,
