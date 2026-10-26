@@ -265,6 +265,8 @@
 #define RIN_SYS_DLINVENTORY_UNWIND          278u
 #define RIN_SYS_DLINVENTORY_UNWIND_LEASE_BEGIN 279u
 #define RIN_SYS_DLINVENTORY_UNWIND_LEASE_END 280u
+/* Copies the pending RLL error to a caller buffer and consumes on success. */
+#define RIN_SYS_DLERROR_COPY_V1             281u
 /* storage. */
 #define RIN_SYS_RINFS_FORMAT                300u
 #define RIN_SYS_RINFS_MOUNT                 301u
