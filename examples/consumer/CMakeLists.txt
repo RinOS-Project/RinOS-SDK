@@ -103,6 +103,9 @@ if(UNIX)
   add_library(rinosdk_example_keyring OBJECT keyring.c)
   target_include_directories(rinosdk_example_keyring PRIVATE
                              ${_rinos_sdk_public_include_dirs})
+  add_library(rinosdk_example_ime_provider OBJECT ime_provider.c)
+  target_include_directories(rinosdk_example_ime_provider PRIVATE
+                             ${_rinos_sdk_public_include_dirs})
 endif()
 
 add_library(rinosdk_example_cpp OBJECT example_cpp.cpp)

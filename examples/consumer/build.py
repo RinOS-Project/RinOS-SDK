@@ -97,6 +97,19 @@ EXAMPLES = {
         "gui": False,
         "description": "Read-only authenticated Keyring service-status consumer.",
     },
+    "ime_provider": {
+        "dependencies": ["rincrt", "rinbase"],
+        "imports": [
+            ("rinbase", "rin_service_find_system_slot"),
+            ("rinbase", "rin_service_should_stop"),
+            ("rinbase", "rin_service_health"),
+            ("rincrt", "puts"),
+        ],
+        "capabilities": [],
+        "gui": False,
+        "description": "Authenticated public IME Provider wire-protocol example.",
+        "service_entry_points": [{"name": "ime", "path": "ime_provider.rin"}],
+    },
     "explorer": {
         "dependencies": ["rincrt", "rinbase"],
         "imports": [
@@ -145,6 +158,13 @@ def package_manifest(name: str, package_id: str, title: str, version: str,
         ", min_version = " + toml_string(version) + ', max_version = ""}'
         for library in dependencies
     ]
+    entry_points = [{"name": "main", "path": payload_name}]
+    entry_points.extend(EXAMPLES[name].get("service_entry_points", []))
+    encoded_entry_points = "[" + ", ".join(
+        "{name = " + toml_string(entry["name"]) + ", path = " +
+        toml_string(entry["path"]) + "}"
+        for entry in entry_points
+    ) + "]"
     return "\n".join([
         "[package]",
         f"package_id = {toml_string(package_id)}",
@@ -161,8 +181,7 @@ def package_manifest(name: str, package_id: str, title: str, version: str,
         "optional_dependencies = []",
         "conflicts = []",
         "provides = []",
-        "entry_points = [{name = \"main\", path = " +
-        toml_string(payload_name) + "}]",
+        "entry_points = " + encoded_entry_points,
         'flags = ["security"]',
         "capabilities = [" + ", ".join(
             toml_string(value) for value in capabilities
@@ -237,6 +256,13 @@ def build(args: argparse.Namespace) -> None:
             package_path = output / f"{package_id}-{architecture}.rpk"
             if package_path.exists() or package_path.is_symlink():
                 raise RuntimeError(f"output package already exists: {package_path}")
+            service_manifest = None
+            if name == "ime_provider":
+                service_manifest = output / "ime-provider-user-service.SVC"
+                if service_manifest.exists() or service_manifest.is_symlink():
+                    raise RuntimeError(
+                        f"output service manifest already exists: {service_manifest}"
+                    )
 
             dependency_names = spec["dependencies"]
             for library in dependency_names:
@@ -338,6 +364,29 @@ def build(args: argparse.Namespace) -> None:
                 str(rinpack), "verify", "--package", str(package_path),
                 "--public-key", str(publisher_public_key), "--json",
             ], timeout)
+            if name == "ime_provider":
+                assert service_manifest is not None
+                service_manifest.write_text(
+                    "\n".join([
+                        "[Service]",
+                        "Id=ime",
+                        "Name=SDK IME Provider Example",
+                        "Exec=/Apps/org.rinos.sdk.ime-provider/ime_provider.rin",
+                        "Scope=user",
+                        "Capabilities=none",
+                        "AutoStart=login",
+                        "Restart=always",
+                        "BackoffMs=500",
+                        "StopTimeoutMs=3000",
+                        "MaxRestarts=0",
+                        "CrashWindowMs=30000",
+                        "HealthIntervalMs=5000",
+                        "HealthTimeoutMs=20000",
+                        "",
+                    ]),
+                    encoding="utf-8",
+                )
+                print(f"created example user-service manifest: {service_manifest}")
             print(f"created SDK consumer package: {package_path}")
 
 

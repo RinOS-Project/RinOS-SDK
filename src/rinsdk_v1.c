@@ -397,6 +397,24 @@ RinResult rin_service_start(int scope, const char* id) {
         (uintptr_t)(unsigned int)scope, (uintptr_t)id));
 }
 
+int rin_service_should_stop(void) {
+    const intptr_t result = _syscall0((uintptr_t)RIN_SYS_SERVICE_SHOULD_STOP);
+    if (result == 0 || result == 1) return (int)result;
+    return (int)rin_sdk_service_status_result(result);
+}
+
+int rin_service_health(uint32_t status) {
+    return (int)rin_sdk_service_status_result(_syscall1(
+        (uintptr_t)RIN_SYS_SERVICE_HEALTH, (uintptr_t)status));
+}
+
+int rin_service_wait_stop(uint32_t timeout_ms) {
+    const intptr_t result = _syscall1(
+        (uintptr_t)RIN_SYS_SERVICE_WAIT_STOP, (uintptr_t)timeout_ms);
+    if (result == 0 || result == 1) return (int)result;
+    return (int)rin_sdk_service_status_result(result);
+}
+
 int rin_service_find_system_slot(const char* service_id, uint32_t* slot_id) {
     RinSdkServiceInfoV1 info;
     intptr_t raw_count;

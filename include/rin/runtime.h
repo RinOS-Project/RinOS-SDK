@@ -16,6 +16,10 @@ extern "C" {
  * and must not replace a missing runtime with a success path. */
 RIN_SDK_API int rin_service_should_stop(void);
 RIN_SDK_API int rin_service_health(uint32_t status);
+/* Wait for a service stop request for at most timeout_ms. A zero result means
+ * the timeout elapsed; one means shutdown was requested. Non-zero errors are
+ * returned unchanged. */
+RIN_SDK_API int rin_service_wait_stop(uint32_t timeout_ms);
 
 RIN_SDK_API uint64_t rin_monotonic_ms(void);
 RIN_SDK_API unsigned long rin_time(void);

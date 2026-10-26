@@ -6,7 +6,7 @@ separate objects. It does not link for RinOS.
 
 `build.py` cross-compiles, links, validates, and packages the C examples
 (`hello`, `process`, `channel`, `file_portal`, `window`, `media`, `keyring`,
-and `explorer`) for
+`ime_provider`, and `explorer`) for
 either SDK target. Pass one installed target prefix produced by
 `package_rinsdk_v1.py`;
 the helper verifies its manifest, public headers, runtime-library hashes, and
@@ -65,3 +65,18 @@ identity and availability without granting application access to credentials.
 The bounded socket I/O and response validation are local to this small sample;
 applications performing secret operations should use the authenticated
 RinRuntime Keyring client rather than extending this status-only example.
+
+`ime_provider` is a minimal user-service provider for
+`rin/gui/text_input_provider.h`. It authenticates the connected Compositor by
+the kernel-reported published service slot and matching process identity,
+negotiates the required v1 features, validates bounded frames, handles context
+and cancel/reset, and passes already translated Unicode scalars through as
+UTF-8 commits. It does not implement a layout, composition, dictionary, or
+candidate conversion engine. The builder adds the signed `ime` service
+entrypoint and emits `ime-provider-user-service.SVC` beside the package. After
+installing the package, install that service descriptor under the user's
+`services/` directory to select this sample in place of the standard `ime`
+service; restore the previous descriptor to switch back. Removing the
+descriptor disables the provider service and leaves Compositor's direct-input
+fallback available. Service-directory installation and Settings UI integration
+are product operations and are not performed by this example builder.
