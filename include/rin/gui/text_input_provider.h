@@ -31,7 +31,9 @@ extern "C" {
 #define RIN_IME_FEATURE_ASYNC_REQUESTS UINT64_C(0x0000000000000008)
 #define RIN_IME_FEATURE_CANCEL_RESET UINT64_C(0x0000000000000010)
 #define RIN_IME_FEATURE_CARET_RECT UINT64_C(0x0000000000000020)
-#define RIN_IME_FEATURE_KNOWN_MASK UINT64_C(0x000000000000003f)
+#define RIN_IME_FEATURE_ASYNC_KEY_RELEASES UINT64_C(0x0000000000000040)
+#define RIN_IME_FEATURE_KNOWN_MASK UINT64_C(0x000000000000007f)
+#define RIN_IME_WIRE_FLAG_NO_REPLY UINT32_C(0x00000001)
 
 #define RIN_IME_CONTEXT_MULTILINE UINT32_C(0x00000001)
 #define RIN_IME_CONTEXT_NO_SUGGESTIONS UINT32_C(0x00000002)
@@ -296,7 +298,10 @@ static inline int rin_ime_wire_header_v1(const RinImeWireHeaderV1 *h,
         h->version_minor != RIN_IME_WIRE_VERSION_MINOR ||
         h->message_type != expected_type ||
         h->header_bytes != (uint32_t)sizeof(*h) ||
-        h->message_bytes != bytes || h->flags != 0u ||
+        h->message_bytes != bytes ||
+        (h->flags != 0u &&
+         (expected_type != RIN_IME_WIRE_KEY_EVENT_V1 ||
+          h->flags != RIN_IME_WIRE_FLAG_NO_REPLY)) ||
         h->request_id == 0u || h->reserved[0] != 0u ||
         h->reserved[1] != 0u) return 0;
     if (expected_type == RIN_IME_WIRE_HELLO_V1 ||
@@ -351,6 +356,9 @@ static inline int rin_ime_wire_payload_v1(const void *message,
             rin_ime_wire_header_v1(&m->header, bytes, h->message_type) &&
             m->key_code != 0u && m->state <= RIN_IME_KEY_PRESSED &&
             (m->modifiers & ~RIN_IME_MODIFIER_KNOWN_MASK) == 0u &&
+            (m->header.flags == 0u ||
+             (m->header.flags == RIN_IME_WIRE_FLAG_NO_REPLY &&
+              m->state == RIN_IME_KEY_RELEASED && cp == 0u)) &&
             (cp == 0u || (cp <= UINT32_C(0x10ffff) &&
                           !(cp >= UINT32_C(0xd800) && cp <= UINT32_C(0xdfff)))) &&
             rin_ime_wire_all_zero_v1((const uint8_t *)m->reserved,
