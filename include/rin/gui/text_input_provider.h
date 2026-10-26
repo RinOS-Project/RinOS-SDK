@@ -99,11 +99,12 @@ enum RinImeReplyStatusV1 {
 
 /* Every record starts with this header. Integers are little-endian on the
  * wire. There are no pointers, native handles, or size_t fields. A request
- * ID is nonzero and is echoed by its asynchronous reply. A sender must not
- * reuse request IDs during one process instance; on exhaustion it must close
- * the channel and restart under a new authenticated process identity. Context
- * generation is zero only for HELLO/HELLO_ACK and otherwise binds data to one
- * focus. */
+ * ID is nonzero and is echoed by its asynchronous reply, except for an
+ * explicitly one-way key release or caret rectangle marked NO_REPLY. A
+ * sender must not reuse request IDs during one process instance; on exhaustion
+ * it must close the channel and restart under a new authenticated process
+ * identity. Context generation is zero only for HELLO/HELLO_ACK and otherwise
+ * binds data to one focus. */
 typedef struct RinImeWireHeaderV1 {
     uint32_t magic;
     uint16_t version_major;
@@ -209,6 +210,8 @@ typedef struct RinImeCandidateSelectionV1 {
 } RinImeCandidateSelectionV1;
 
 typedef struct RinImeCaretRectV1 {
+    /* A sender may mark this update NO_REPLY to keep caret movement off the
+     * synchronous key response path. Its request ID remains unique. */
     RinImeWireHeaderV1 header;
     int32_t x;
     int32_t y;
@@ -306,7 +309,8 @@ static inline int rin_ime_wire_header_v1(const RinImeWireHeaderV1 *h,
         h->header_bytes != (uint32_t)sizeof(*h) ||
         h->message_bytes != bytes ||
         (h->flags != 0u &&
-         (expected_type != RIN_IME_WIRE_KEY_EVENT_V1 ||
+         ((expected_type != RIN_IME_WIRE_KEY_EVENT_V1 &&
+           expected_type != RIN_IME_WIRE_CARET_RECT_V1) ||
           h->flags != RIN_IME_WIRE_FLAG_NO_REPLY)) ||
         h->request_id == 0u || h->reserved[0] != 0u ||
         h->reserved[1] != 0u) return 0;
