@@ -27,6 +27,9 @@
 #define RIN_WEBCONTENT_PERMISSION_DESCRIPTION_MAX UINT32_C(192)
 #define RIN_WEBCONTENT_ACCESSIBILITY_MAX_NODES UINT32_C(128)
 #define RIN_WEBCONTENT_ACCESSIBILITY_MAX_TEXT_BYTES UINT16_C(192)
+#define RIN_WEBCONTENT_COMPOSITION_MAX_BYTES UINT32_C(400)
+#define RIN_WEBCONTENT_COMPOSITION_VERSION UINT32_C(1)
+#define RIN_WEBCONTENT_COMPOSITION_FLAG_ACTIVE UINT32_C(0x00000001)
 
 enum {
     RIN_WEBCONTENT_ACCESSIBILITY_ROLE_WINDOW = 0,
@@ -155,7 +158,8 @@ enum {
     RIN_WEBCONTENT_CMD_REVOKE_MICROPHONE_V1 = 34,
     RIN_WEBCONTENT_CMD_CAMERA_CAPTURE_OWNER_V1 = 35,
     RIN_WEBCONTENT_CMD_REVOKE_CAMERA_V1 = 36,
-    RIN_WEBCONTENT_CMD_REVOKE_LOCATION_V1 = 39
+    RIN_WEBCONTENT_CMD_REVOKE_LOCATION_V1 = 39,
+    RIN_WEBCONTENT_CMD_DISPATCH_COMPOSITION_V1 = 40
 };
 
 enum {
@@ -533,6 +537,86 @@ typedef struct RinWebContentKeyOrTextRequest {
     /* UTF-8 text must contain a NUL terminator within this fixed array. */
     char text[RIN_WEBCONTENT_TEXT_MAX];
 } RinWebContentKeyOrTextRequest;
+
+/* Authenticated Browser-to-WebContent IME preedit delivery. The record is
+ * pointer-free and fixed-size so the service can validate the full payload
+ * before exposing any text to a page. Inactive requests carry zero text. */
+typedef struct RinWebContentCompositionRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t flags;
+    uint32_t text_bytes;
+    uint32_t selection_start;
+    uint32_t selection_end;
+    uint32_t reserved;
+    char text[RIN_WEBCONTENT_COMPOSITION_MAX_BYTES];
+} RinWebContentCompositionRequestV1;
+
+static inline int rin_webcontent_composition_request_valid(
+    const RinWebContentCompositionRequestV1* request)
+{
+    uint32_t offset = 0u;
+    int start_boundary;
+    int end_boundary;
+    if (request == NULL || request->struct_size != sizeof(*request) ||
+        request->version != RIN_WEBCONTENT_COMPOSITION_VERSION ||
+        (request->flags & ~RIN_WEBCONTENT_COMPOSITION_FLAG_ACTIVE) != 0u ||
+        request->reserved != 0u ||
+        request->text_bytes > RIN_WEBCONTENT_COMPOSITION_MAX_BYTES ||
+        request->selection_start > request->text_bytes ||
+        request->selection_end > request->text_bytes ||
+        request->selection_start > request->selection_end)
+        return 0;
+    for (uint32_t index = request->text_bytes;
+         index < RIN_WEBCONTENT_COMPOSITION_MAX_BYTES; ++index) {
+        if (request->text[index] != '\0') return 0;
+    }
+    if ((request->flags & RIN_WEBCONTENT_COMPOSITION_FLAG_ACTIVE) == 0u)
+        return request->text_bytes == 0u && request->selection_start == 0u &&
+               request->selection_end == 0u;
+    if (request->text_bytes == 0u) return 0;
+
+    start_boundary = request->selection_start == 0u;
+    end_boundary = request->selection_end == 0u;
+    while (offset < request->text_bytes) {
+        const uint8_t first = (uint8_t)request->text[offset];
+        uint32_t codepoint = 0u;
+        uint32_t length = 0u;
+        if (first <= 0x7fu) {
+            codepoint = first;
+            length = 1u;
+        } else if (first >= 0xc2u && first <= 0xdfu) {
+            codepoint = first & 0x1fu;
+            length = 2u;
+        } else if (first >= 0xe0u && first <= 0xefu) {
+            codepoint = first & 0x0fu;
+            length = 3u;
+        } else if (first >= 0xf0u && first <= 0xf4u) {
+            codepoint = first & 0x07u;
+            length = 4u;
+        } else {
+            return 0;
+        }
+        if (length > request->text_bytes - offset) return 0;
+        for (uint32_t index = 1u; index < length; ++index) {
+            const uint8_t continuation =
+                (uint8_t)request->text[offset + index];
+            if ((continuation & 0xc0u) != 0x80u) return 0;
+            codepoint = (codepoint << 6u) | (continuation & 0x3fu);
+        }
+        if ((length == 2u && codepoint < 0x80u) ||
+            (length == 3u && codepoint < 0x800u) ||
+            (length == 4u && codepoint < 0x10000u) ||
+            codepoint > 0x10ffffu ||
+            (codepoint >= 0xd800u && codepoint <= 0xdfffu) ||
+            codepoint == 0u)
+            return 0;
+        offset += length;
+        start_boundary = start_boundary || offset == request->selection_start;
+        end_boundary = end_boundary || offset == request->selection_end;
+    }
+    return start_boundary && end_boundary;
+}
 
 typedef struct RinWebContentScrollRequest {
     int32_t x;
@@ -1167,6 +1251,8 @@ _Static_assert(sizeof(RinWebContentDownloadResumeV1) == 2488u,
                "WebContent download resume ABI drift");
 _Static_assert(sizeof(RinWebContentDownloadResumeV2) == 4536u,
                "WebContent download resume v2 ABI drift");
+_Static_assert(sizeof(RinWebContentCompositionRequestV1) == 428u,
+               "WebContent composition request ABI drift");
 _Static_assert(sizeof(RinWebContentAccessibilityTextV1) == 196u,
                "WebContent accessibility text ABI drift");
 _Static_assert(sizeof(RinWebContentAccessibilityRequestV1) == 8u,
