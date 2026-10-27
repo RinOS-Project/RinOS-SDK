@@ -55,6 +55,10 @@ enum {
     IPC_SHARED_MEMORY_CREATE, IPC_SERVICE_CONNECT, IPC_WAIT_SET_CREATE,
     IPC_WAIT_SET_SET_ITEMS, IPC_WAIT_SET_WAIT, IPC_SERVICE_REGISTER,
     IPC_SERVICE_ACCEPT, IPC_CHANNEL_RECEIVE_WITH_PEER = 14,
+    IPC_POSIX_MQ_OPEN = 15, IPC_POSIX_MQ_UNLINK, IPC_POSIX_MQ_SEND,
+    IPC_POSIX_MQ_RECEIVE, IPC_POSIX_MQ_GETATTR, IPC_POSIX_MQ_SETATTR,
+    IPC_POSIX_MQ_NOTIFY, IPC_POSIX_MQ_WAIT_RECEIVE_BEGIN,
+    IPC_POSIX_MQ_WAIT_RECEIVE_END, IPC_EVENT_QUERY = 24,
     FS_FILE_OPEN = 1, FS_FILE_READ, FS_FILE_WRITE, FS_FILE_FLUSH,
     FS_DIRECTORY_NEXT, FS_PATH_NORMALIZE, FS_FILE_WATCH,
     FS_FILE_READ_ASYNC, FS_FILE_WRITE_ASYNC, FS_FILE_IO_RESULT,
@@ -696,6 +700,18 @@ RinResult rin_event_create_v1(uint32_t flags, RinEvent* event) {
 RinResult rin_event_signal_v1(RinEvent event, uint64_t value) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_IPC, IPC_EVENT_SIGNAL, (RinResult*)0, event,value,0,0,0,0);
 }
+RinResult rin_event_query_v1(RinEvent event, uint64_t* value_out) {
+    RinSdkArgsV1 request;
+    if (!value_out) return RIN_ERROR_INVALID_ARGUMENT;
+    *value_out = 0u;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = event;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_IPC, IPC_EVENT_QUERY,
+                             &request, sizeof(request), value_out,
+                             sizeof(*value_out));
+}
 RinResult rin_wait_many_v1(RinSliceV1 items, uint64_t timeout_ns, uint32_t* index) {
     SCALAR_OUTPUT_SIMPLE_CALL(
         RIN_SDK_LIBRARY_IPC, IPC_WAIT_MANY, index,
@@ -749,6 +765,150 @@ RinResult rin_service_accept_v1(RinService service, uint64_t timeout_ns, RinChan
     HANDLE_OUTPUT_SIMPLE_CALL(
         RIN_SDK_LIBRARY_IPC, IPC_SERVICE_ACCEPT, channel,
         service,timeout_ns,0,0,0,0);
+}
+RinResult rin_posix_mq_open_v1(
+    RinStringV1 name, uint32_t flags, uint32_t mode,
+    const RinPosixMqAttrV1* attributes, RinObjectHandle* queue_out) {
+    RinSdkArgsV1 request;
+    if (!queue_out || !name.address || name.size == 0u ||
+        name.size > RIN_POSIX_MQ_NAME_MAX ||
+        ((flags & RIN_POSIX_MQ_OPEN_CREATE) == 0u && attributes != NULL) ||
+        (attributes && !versioned_exact(attributes, sizeof(*attributes))))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    *queue_out = RIN_OBJECT_HANDLE_INVALID;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = name.address;
+    request.value[1] = name.size;
+    request.value[2] = flags;
+    request.value[3] = mode;
+    request.value[4] = (uint64_t)(uintptr_t)attributes;
+    return rin_sdk_invoke_handle_output_v1(
+        RIN_SDK_LIBRARY_IPC, IPC_POSIX_MQ_OPEN, &request, sizeof(request),
+        queue_out);
+}
+RinResult rin_posix_mq_unlink_v1(RinStringV1 name) {
+    if (!name.address || name.size == 0u ||
+        name.size > RIN_POSIX_MQ_NAME_MAX)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_IPC, IPC_POSIX_MQ_UNLINK, (RinResult*)0,
+                name.address, name.size, 0u, 0u, 0u, 0u);
+}
+RinResult rin_posix_mq_send_v1(
+    RinObjectHandle queue, RinSliceV1 message, uint32_t priority) {
+    SIMPLE_CALL(RIN_SDK_LIBRARY_IPC, IPC_POSIX_MQ_SEND, (RinResult*)0,
+                queue, message.address, message.size, priority, 0u, 0u);
+}
+RinResult rin_posix_mq_receive_v1(
+    RinObjectHandle queue, RinSliceV1 buffer,
+    RinPosixMqReceiveResultV1* result_out) {
+    RinSdkArgsV1 request;
+    RinResult result;
+    if (!result_out)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    rin_sdk_zero_bytes(result_out, sizeof(*result_out));
+    result_out->struct_size = sizeof(*result_out);
+    result_out->version = RIN_POSIX_MQ_ABI_VERSION;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = queue;
+    request.value[1] = buffer.address;
+    request.value[2] = buffer.size;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_IPC, IPC_POSIX_MQ_RECEIVE, &request, sizeof(request),
+        result_out, sizeof(*result_out));
+    if (result == RIN_SUCCESS &&
+        (!versioned_exact(result_out, sizeof(*result_out)) ||
+         result_out->reserved0 != 0u || result_out->reserved[0] != 0u ||
+         result_out->reserved[1] != 0u ||
+         result_out->length > buffer.size))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(result_out, sizeof(*result_out));
+        result_out->struct_size = sizeof(*result_out);
+        result_out->version = RIN_POSIX_MQ_ABI_VERSION;
+    }
+    return result;
+}
+RinResult rin_posix_mq_getattr_v1(
+    RinObjectHandle queue, RinPosixMqAttrV1* attributes_out) {
+    RinSdkArgsV1 request;
+    RinResult result;
+    if (!attributes_out) return RIN_ERROR_INVALID_ARGUMENT;
+    rin_sdk_zero_bytes(attributes_out, sizeof(*attributes_out));
+    attributes_out->struct_size = sizeof(*attributes_out);
+    attributes_out->version = RIN_POSIX_MQ_ABI_VERSION;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = queue;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_IPC, IPC_POSIX_MQ_GETATTR, &request, sizeof(request),
+        attributes_out, sizeof(*attributes_out));
+    if (result == RIN_SUCCESS &&
+        !versioned_exact(attributes_out, sizeof(*attributes_out)))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(attributes_out, sizeof(*attributes_out));
+        attributes_out->struct_size = sizeof(*attributes_out);
+        attributes_out->version = RIN_POSIX_MQ_ABI_VERSION;
+    }
+    return result;
+}
+RinResult rin_posix_mq_setattr_v1(
+    RinObjectHandle queue, const RinPosixMqAttrV1* attributes,
+    RinPosixMqAttrV1* old_attributes_out) {
+    RinSdkArgsV1 request;
+    RinResult result;
+    if (!attributes || !old_attributes_out ||
+        !versioned_exact(attributes, sizeof(*attributes)))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    rin_sdk_zero_bytes(old_attributes_out, sizeof(*old_attributes_out));
+    old_attributes_out->struct_size = sizeof(*old_attributes_out);
+    old_attributes_out->version = RIN_POSIX_MQ_ABI_VERSION;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = queue;
+    request.value[1] = (uint64_t)(uintptr_t)attributes;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_IPC, IPC_POSIX_MQ_SETATTR, &request, sizeof(request),
+        old_attributes_out, sizeof(*old_attributes_out));
+    if (result == RIN_SUCCESS &&
+        !versioned_exact(old_attributes_out, sizeof(*old_attributes_out)))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(old_attributes_out, sizeof(*old_attributes_out));
+        old_attributes_out->struct_size = sizeof(*old_attributes_out);
+        old_attributes_out->version = RIN_POSIX_MQ_ABI_VERSION;
+    }
+    return result;
+}
+RinResult rin_posix_mq_notify_v1(
+    RinObjectHandle queue, RinEvent event, uint32_t action) {
+    SIMPLE_CALL(RIN_SDK_LIBRARY_IPC, IPC_POSIX_MQ_NOTIFY, (RinResult*)0,
+                queue, event, action, 0u, 0u, 0u);
+}
+RinResult rin_posix_mq_wait_receive_begin_v1(
+    RinObjectHandle queue, RinPosixMqWaitTokenV1* token_out) {
+    RinSdkArgsV1 request;
+    if (!token_out) return RIN_ERROR_INVALID_ARGUMENT;
+    *token_out = RIN_POSIX_MQ_WAIT_TOKEN_INVALID;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.value[0] = queue;
+    return rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_IPC, IPC_POSIX_MQ_WAIT_RECEIVE_BEGIN, &request,
+        sizeof(request), token_out, sizeof(*token_out));
+}
+RinResult rin_posix_mq_wait_receive_end_v1(
+    RinPosixMqWaitTokenV1 token) {
+    if (token == RIN_POSIX_MQ_WAIT_TOKEN_INVALID) return RIN_SUCCESS;
+    SIMPLE_CALL(RIN_SDK_LIBRARY_IPC, IPC_POSIX_MQ_WAIT_RECEIVE_END,
+                (RinResult*)0, token, 0u, 0u, 0u, 0u, 0u);
 }
 #endif
 

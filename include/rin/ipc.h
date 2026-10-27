@@ -2,6 +2,10 @@
 #define RIN_SDK_IPC_H
 #include "abi.h"
 #include "ipc_peer_abi.h"
+#include "posix_mqueue_abi.h"
+
+#define RIN_EVENT_CREATE_FLAG_CLOSE_ON_EXEC UINT32_C(1)
+#define RIN_EVENT_CREATE_FLAGS_ALL RIN_EVENT_CREATE_FLAG_CLOSE_ON_EXEC
 
 /* Kernel code imports IPC wire contracts while intentionally suppressing the
  * public convenience aliases in abi.h. Keep this header independently
@@ -77,6 +81,8 @@ RIN_SDK_API RIN_IPC_RESULT_TYPE rin_channel_receive_with_peer_v1(
     RinIpcPeerIdentityV1* peer_identity_out);
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_event_create_v1(uint32_t flags, RinEvent* event);
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_event_signal_v1(RinEvent event, uint64_t value);
+/* 最後に通知された値を返す。未通知の場合はRIN_ERROR_WOULD_BLOCK。 */
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_event_query_v1(RinEvent event, uint64_t* value_out);
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_wait_many_v1(RinSliceV1 items, uint64_t timeout_ns, uint32_t* index);
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_shared_memory_create_v1(uint64_t size, uint32_t flags, RinSharedMemory* memory);
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_service_connect_v1(RinStringV1 name, RinChannel* channel);
@@ -85,6 +91,27 @@ RIN_SDK_API RIN_IPC_RESULT_TYPE rin_wait_set_set_items_v1(RinWaitSet wait_set, R
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_wait_set_wait_v1(RinWaitSet wait_set, uint64_t timeout_ns, RinWaitResultV1* result);
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_service_register_v1(RinStringV1 name, uint32_t flags, RinService* service);
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_service_accept_v1(RinService service, uint64_t timeout_ns, RinChannel* channel);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_posix_mq_open_v1(
+    RinStringV1 name, uint32_t flags, uint32_t mode,
+    const RinPosixMqAttrV1* attributes, RinObjectHandle* queue_out);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_posix_mq_unlink_v1(RinStringV1 name);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_posix_mq_send_v1(
+    RinObjectHandle queue, RinSliceV1 message, uint32_t priority);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_posix_mq_receive_v1(
+    RinObjectHandle queue, RinSliceV1 buffer,
+    RinPosixMqReceiveResultV1* result_out);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_posix_mq_getattr_v1(
+    RinObjectHandle queue, RinPosixMqAttrV1* attributes_out);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_posix_mq_setattr_v1(
+    RinObjectHandle queue, const RinPosixMqAttrV1* attributes,
+    RinPosixMqAttrV1* old_attributes_out);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_posix_mq_notify_v1(
+    RinObjectHandle queue, RinEvent event, uint32_t action);
+/* 受信待ちの開始・終了を記録する。tokenが0なら登録前に受信可能。 */
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_posix_mq_wait_receive_begin_v1(
+    RinObjectHandle queue, RinPosixMqWaitTokenV1* token_out);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_posix_mq_wait_receive_end_v1(
+    RinPosixMqWaitTokenV1 token);
 
 #ifdef __cplusplus
 }
