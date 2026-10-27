@@ -33,7 +33,9 @@ extern "C" {
 #define RIN_IME_FEATURE_CARET_RECT UINT64_C(0x0000000000000020)
 #define RIN_IME_FEATURE_ASYNC_KEY_RELEASES UINT64_C(0x0000000000000040)
 #define RIN_IME_FEATURE_SURFACE_CONTEXT UINT64_C(0x0000000000000080)
-#define RIN_IME_FEATURE_KNOWN_MASK UINT64_C(0x00000000000000ff)
+#define RIN_IME_FEATURE_SURFACE_CONTEXT_ROSTER UINT64_C(0x0000000000000100)
+#define RIN_IME_FEATURE_KNOWN_MASK UINT64_C(0x00000000000001ff)
+#define RIN_IME_SURFACE_CONTEXT_MAX_SURFACES 128u
 #define RIN_IME_WIRE_FLAG_NO_REPLY UINT32_C(0x00000001)
 
 #define RIN_IME_CONTEXT_MULTILINE UINT32_C(0x00000001)
@@ -63,6 +65,7 @@ enum RinImeWireMessageTypeV1 {
     RIN_IME_WIRE_RESET_V1 = 12,
     RIN_IME_WIRE_REPLY_V1 = 13,
     RIN_IME_WIRE_CONTEXT_V2 = 14,
+    RIN_IME_WIRE_CONTEXT_V3 = 15,
 };
 
 enum RinImeContentPurposeV1 {
@@ -154,6 +157,18 @@ typedef struct RinImeProviderContextV2 {
     uint32_t max_commit_bytes;
     uint32_t reserved[4];
 } RinImeProviderContextV2;
+
+/* 生存中のsurface一覧を添え、破棄済みsurfaceの状態を回収する。 */
+typedef struct RinImeProviderContextV3 {
+    RinImeWireHeaderV1 header;
+    uint32_t surface_id;
+    uint32_t content_purpose;
+    uint32_t flags;
+    uint32_t max_commit_bytes;
+    uint32_t live_surface_count;
+    uint32_t reserved[3];
+    uint32_t live_surface_ids[RIN_IME_SURFACE_CONTEXT_MAX_SURFACES];
+} RinImeProviderContextV3;
 
 typedef struct RinImeKeyEventV1 {
     RinImeWireHeaderV1 header;
@@ -383,6 +398,35 @@ static inline int rin_ime_wire_payload_v1(const void *message,
             rin_ime_wire_all_zero_v1((const uint8_t *)m->reserved,
                                      (uint32_t)sizeof(m->reserved));
     }
+    case RIN_IME_WIRE_CONTEXT_V3: {
+        const RinImeProviderContextV3 *m = (const RinImeProviderContextV3 *)message;
+        uint32_t index;
+        uint32_t prior;
+        int has_current_surface = 0;
+        if (bytes != (uint32_t)sizeof(*m) ||
+            !rin_ime_wire_header_v1(&m->header, bytes, h->message_type) ||
+            m->surface_id == 0u || m->surface_id > INT32_MAX ||
+            m->content_purpose > RIN_IME_CONTENT_NUMBER ||
+            m->content_purpose == RIN_IME_CONTENT_PASSWORD ||
+            (m->flags & ~RIN_IME_CONTEXT_KNOWN_FLAGS) != 0u ||
+            m->max_commit_bytes == 0u ||
+            m->max_commit_bytes > RIN_IME_MAX_TEXT_BYTES ||
+            m->live_surface_count == 0u ||
+            m->live_surface_count > RIN_IME_SURFACE_CONTEXT_MAX_SURFACES ||
+            !rin_ime_wire_all_zero_v1((const uint8_t *)m->reserved,
+                                      (uint32_t)sizeof(m->reserved)))
+            return 0;
+        for (index = 0u; index < m->live_surface_count; ++index) {
+            const uint32_t surface_id = m->live_surface_ids[index];
+            if (surface_id == 0u || surface_id > INT32_MAX) return 0;
+            if (surface_id == m->surface_id) has_current_surface = 1;
+            for (prior = 0u; prior < index; ++prior)
+                if (m->live_surface_ids[prior] == surface_id) return 0;
+        }
+        for (; index < RIN_IME_SURFACE_CONTEXT_MAX_SURFACES; ++index)
+            if (m->live_surface_ids[index] != 0u) return 0;
+        return has_current_surface;
+    }
     case RIN_IME_WIRE_KEY_EVENT_V1: {
         const RinImeKeyEventV1 *m = (const RinImeKeyEventV1 *)message;
         uint32_t cp = m->unicode_scalar;
@@ -520,6 +564,7 @@ static_assert(sizeof(RinImeWireHeaderV1) == 48u, "IME wire header ABI drift");
 static_assert(sizeof(RinImeProviderHelloV1) == 88u, "IME hello ABI drift");
 static_assert(sizeof(RinImeProviderContextV1) == 72u, "IME context ABI drift");
 static_assert(sizeof(RinImeProviderContextV2) == 80u, "IME context v2 ABI drift");
+static_assert(sizeof(RinImeProviderContextV3) == 592u, "IME context v3 ABI drift");
 static_assert(sizeof(RinImeKeyEventV1) == 72u, "IME key event ABI drift");
 static_assert(sizeof(RinImePreeditAttributeV1) == 12u, "IME attribute ABI drift");
 static_assert(sizeof(RinImePreeditV1) == 1480u, "IME preedit ABI drift");
@@ -543,6 +588,7 @@ _Static_assert(sizeof(RinImeWireHeaderV1) == 48u, "IME wire header ABI drift");
 _Static_assert(sizeof(RinImeProviderHelloV1) == 88u, "IME hello ABI drift");
 _Static_assert(sizeof(RinImeProviderContextV1) == 72u, "IME context ABI drift");
 _Static_assert(sizeof(RinImeProviderContextV2) == 80u, "IME context v2 ABI drift");
+_Static_assert(sizeof(RinImeProviderContextV3) == 592u, "IME context v3 ABI drift");
 _Static_assert(sizeof(RinImeKeyEventV1) == 72u, "IME key event ABI drift");
 _Static_assert(sizeof(RinImePreeditAttributeV1) == 12u, "IME attribute ABI drift");
 _Static_assert(sizeof(RinImePreeditV1) == 1480u, "IME preedit ABI drift");

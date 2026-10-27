@@ -26,6 +26,7 @@ typedef union ImeProviderMessageBuffer {
     RinImeProviderHelloV1 hello;
     RinImeProviderContextV1 context;
     RinImeProviderContextV2 context_v2;
+    RinImeProviderContextV3 context_v3;
     RinImeKeyEventV1 key;
     RinImeCandidateSelectionV1 selection;
     RinImeCaretRectV1 caret;
@@ -109,6 +110,8 @@ static uint32_t message_size(uint32_t type)
         return (uint32_t)sizeof(RinImeProviderContextV1);
     case RIN_IME_WIRE_CONTEXT_V2:
         return (uint32_t)sizeof(RinImeProviderContextV2);
+    case RIN_IME_WIRE_CONTEXT_V3:
+        return (uint32_t)sizeof(RinImeProviderContextV3);
     case RIN_IME_WIRE_KEY_EVENT_V1:
         return (uint32_t)sizeof(RinImeKeyEventV1);
     case RIN_IME_WIRE_PREEDIT_V1:
@@ -311,7 +314,8 @@ static int negotiate(int descriptor)
                                RIN_IME_FEATURE_CANDIDATES |
                                RIN_IME_FEATURE_CANCEL_RESET |
                                RIN_IME_FEATURE_ASYNC_KEY_RELEASES |
-                               RIN_IME_FEATURE_SURFACE_CONTEXT;
+                               RIN_IME_FEATURE_SURFACE_CONTEXT |
+                               RIN_IME_FEATURE_SURFACE_CONTEXT_ROSTER;
     if (read_frame(descriptor, &buffer, &size) != 0 ||
         size != sizeof(RinImeProviderHelloV1) ||
         buffer.header.message_type != RIN_IME_WIRE_HELLO_V1 ||
@@ -370,6 +374,10 @@ static int handle_frame(int descriptor, ImeProviderMessageBuffer *buffer)
         return send_reply(descriptor, request_id, generation, RIN_IME_REPLY_OK) != 0
             ? -1 : send_state(descriptor, request_id, generation);
     case RIN_IME_WIRE_CONTEXT_V2:
+        g_state.context_generation = generation;
+        return send_reply(descriptor, request_id, generation, RIN_IME_REPLY_OK) != 0
+            ? -1 : send_state(descriptor, request_id, generation);
+    case RIN_IME_WIRE_CONTEXT_V3:
         g_state.context_generation = generation;
         return send_reply(descriptor, request_id, generation, RIN_IME_REPLY_OK) != 0
             ? -1 : send_state(descriptor, request_id, generation);
