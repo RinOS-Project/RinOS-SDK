@@ -504,6 +504,8 @@
 /* file. */
 #define RIN_SYS_ISO_OPEN_FILE_V1            0x808Eu
 #define RIN_SYS_ISO_READ_FILE_V1            0x808Fu
+/* time. */
+#define RIN_SYS_CLOCKSOURCE_RESOLUTION      0x8090u
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
