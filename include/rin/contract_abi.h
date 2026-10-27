@@ -316,8 +316,6 @@ typedef int32_t RinResultCode;
 #define RIN_MANAGEMENT_OPERATION_PACKAGE_LAUNCH 1027u
 #define RIN_MANAGEMENT_OPERATION_PACKAGE_RECOVERY_LAUNCH 1028u
 #define RIN_MANAGEMENT_OPERATION_IME_PROVIDER_GET 1029u
-#define RIN_MANAGEMENT_IME_PROVIDER_FLAG_SIGNED 1u
-#define RIN_MANAGEMENT_IME_PROVIDER_FLAG_MASK 1u
 #define RIN_MANAGEMENT_PACKAGE_SOURCE_LOCAL 0u
 #define RIN_MANAGEMENT_PACKAGE_SOURCE_REPOSITORY 1u
 #define RIN_MANAGEMENT_KIND_DEVICE          1u
@@ -1383,22 +1381,6 @@ typedef struct RinManagementPackageStorageInfoV1 {
     uint64_t reserved[2];
 } RinManagementPackageStorageInfoV1;
 
-/* A signed, generation-bound service entrypoint exposed to Settings for the
- * installed IME provider catalog. The query form carries only package_name;
- * all output fields and reserved bytes must be zero. */
-typedef struct RinManagementImeProviderV1 {
-    uint32_t struct_size;
-    uint16_t version;
-    uint16_t flags;
-    uint64_t namespace_generation;
-    uint8_t package_name[64];
-    uint8_t package_version[32];
-    uint8_t display_name[64];
-    uint8_t service_path[96];
-    uint8_t publisher_key_id[32];
-    uint8_t reserved[32];
-} RinManagementImeProviderV1;
-
 typedef struct RinDeviceResourceRequestV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -2249,18 +2231,6 @@ static_assert(offsetof(RinManagementPackageStorageInfoV1, data_bytes) == 48, "Ri
 static_assert(offsetof(RinManagementPackageStorageInfoV1, cache_bytes) == 56, "RinManagementPackageStorageInfoV1.cache_bytes ABI drift");
 static_assert(offsetof(RinManagementPackageStorageInfoV1, entry_count) == 64, "RinManagementPackageStorageInfoV1.entry_count ABI drift");
 static_assert(offsetof(RinManagementPackageStorageInfoV1, reserved) == 72, "RinManagementPackageStorageInfoV1.reserved ABI drift");
-static_assert(sizeof(RinManagementImeProviderV1) == 336, "RinManagementImeProviderV1 ABI drift");
-static_assert(offsetof(RinManagementImeProviderV1, struct_size) == 0, "RinManagementImeProviderV1.struct_size ABI drift");
-static_assert(offsetof(RinManagementImeProviderV1, version) == 4, "RinManagementImeProviderV1.version ABI drift");
-static_assert(offsetof(RinManagementImeProviderV1, flags) == 6, "RinManagementImeProviderV1.flags ABI drift");
-static_assert(offsetof(RinManagementImeProviderV1, namespace_generation) == 8, "RinManagementImeProviderV1.namespace_generation ABI drift");
-static_assert(offsetof(RinManagementImeProviderV1, package_name) == 16, "RinManagementImeProviderV1.package_name ABI drift");
-static_assert(offsetof(RinManagementImeProviderV1, package_version) == 80, "RinManagementImeProviderV1.package_version ABI drift");
-static_assert(offsetof(RinManagementImeProviderV1, display_name) == 112, "RinManagementImeProviderV1.display_name ABI drift");
-static_assert(offsetof(RinManagementImeProviderV1, service_path) == 176, "RinManagementImeProviderV1.service_path ABI drift");
-static_assert(offsetof(RinManagementImeProviderV1, publisher_key_id) == 272, "RinManagementImeProviderV1.publisher_key_id ABI drift");
-static_assert(offsetof(RinManagementImeProviderV1, reserved) == 304, "RinManagementImeProviderV1.reserved ABI drift");
-static_assert(sizeof(RinManagementImeProviderV1) <= sizeof(((RinManagementRequestV1*)0)->payload), "IME provider ABI no longer fits management request");
 static_assert(sizeof(RinDeviceResourceRequestV1) == 48, "RinDeviceResourceRequestV1 ABI drift");
 static_assert(offsetof(RinDeviceResourceRequestV1, struct_size) == 0, "RinDeviceResourceRequestV1.struct_size ABI drift");
 static_assert(offsetof(RinDeviceResourceRequestV1, version) == 4, "RinDeviceResourceRequestV1.version ABI drift");
@@ -3087,18 +3057,6 @@ _Static_assert(offsetof(RinManagementPackageStorageInfoV1, data_bytes) == 48, "R
 _Static_assert(offsetof(RinManagementPackageStorageInfoV1, cache_bytes) == 56, "RinManagementPackageStorageInfoV1.cache_bytes ABI drift");
 _Static_assert(offsetof(RinManagementPackageStorageInfoV1, entry_count) == 64, "RinManagementPackageStorageInfoV1.entry_count ABI drift");
 _Static_assert(offsetof(RinManagementPackageStorageInfoV1, reserved) == 72, "RinManagementPackageStorageInfoV1.reserved ABI drift");
-_Static_assert(sizeof(RinManagementImeProviderV1) == 336, "RinManagementImeProviderV1 ABI drift");
-_Static_assert(offsetof(RinManagementImeProviderV1, struct_size) == 0, "RinManagementImeProviderV1.struct_size ABI drift");
-_Static_assert(offsetof(RinManagementImeProviderV1, version) == 4, "RinManagementImeProviderV1.version ABI drift");
-_Static_assert(offsetof(RinManagementImeProviderV1, flags) == 6, "RinManagementImeProviderV1.flags ABI drift");
-_Static_assert(offsetof(RinManagementImeProviderV1, namespace_generation) == 8, "RinManagementImeProviderV1.namespace_generation ABI drift");
-_Static_assert(offsetof(RinManagementImeProviderV1, package_name) == 16, "RinManagementImeProviderV1.package_name ABI drift");
-_Static_assert(offsetof(RinManagementImeProviderV1, package_version) == 80, "RinManagementImeProviderV1.package_version ABI drift");
-_Static_assert(offsetof(RinManagementImeProviderV1, display_name) == 112, "RinManagementImeProviderV1.display_name ABI drift");
-_Static_assert(offsetof(RinManagementImeProviderV1, service_path) == 176, "RinManagementImeProviderV1.service_path ABI drift");
-_Static_assert(offsetof(RinManagementImeProviderV1, publisher_key_id) == 272, "RinManagementImeProviderV1.publisher_key_id ABI drift");
-_Static_assert(offsetof(RinManagementImeProviderV1, reserved) == 304, "RinManagementImeProviderV1.reserved ABI drift");
-_Static_assert(sizeof(RinManagementImeProviderV1) <= sizeof(((RinManagementRequestV1*)0)->payload), "IME provider ABI no longer fits management request");
 _Static_assert(sizeof(RinDeviceResourceRequestV1) == 48, "RinDeviceResourceRequestV1 ABI drift");
 _Static_assert(offsetof(RinDeviceResourceRequestV1, struct_size) == 0, "RinDeviceResourceRequestV1.struct_size ABI drift");
 _Static_assert(offsetof(RinDeviceResourceRequestV1, version) == 4, "RinDeviceResourceRequestV1.version ABI drift");
