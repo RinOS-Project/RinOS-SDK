@@ -1,5 +1,6 @@
 #include <rin/sdk.h>
 #include <rin/contract_abi.h>
+#include <rin/service_directory.h>
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GUI)
 #include <sys/syscall.h>
@@ -413,6 +414,14 @@ int rin_service_wait_stop(uint32_t timeout_ms) {
         (uintptr_t)RIN_SYS_SERVICE_WAIT_STOP, (uintptr_t)timeout_ms);
     if (result == 0 || result == 1) return (int)result;
     return (int)rin_sdk_service_status_result(result);
+}
+
+int rin_service_rescan(uint32_t scope) {
+    if (scope != RIN_SERVICE_SCOPE_SYSTEM &&
+        scope != RIN_SERVICE_SCOPE_USER)
+        return -1;
+    return (int)rin_sdk_service_status_result(_syscall1(
+        (uintptr_t)RIN_SYS_SERVICE_RESCAN, (uintptr_t)scope));
 }
 
 int rin_service_find_system_slot(const char* service_id, uint32_t* slot_id) {

@@ -18,6 +18,11 @@ extern "C" {
 RIN_SDK_API int rin_service_find_system_slot(const char* service_id,
                                               uint32_t* slot_id);
 
+/* Rescan a service directory in the current session. User-scope rescans are
+ * confined to the caller's authenticated home directory; system-scope scans
+ * require the service-control capability and an administrator session. */
+RIN_SDK_API int rin_service_rescan(uint32_t scope);
+
 #ifdef __cplusplus
 }
 #endif
