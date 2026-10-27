@@ -103,7 +103,7 @@ EXAMPLES = {
             ("rinbase", "rin_service_find_system_slot"),
             ("rinbase", "rin_service_should_stop"),
             ("rinbase", "rin_service_health"),
-            ("rincrt", "puts"),
+            ("rincrt", "rin_log"),
         ],
         "capabilities": [],
         "gui": False,

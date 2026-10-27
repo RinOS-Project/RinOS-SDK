@@ -73,10 +73,12 @@ RinRuntime Keyring client rather than extending this status-only example.
 `ime_provider` is a minimal user-service provider for
 `rin/gui/text_input_provider.h`. It authenticates the connected Compositor by
 the kernel-reported published service slot and matching process identity,
-negotiates the required v1 features, validates bounded frames, handles context
-and cancel/reset, and passes already translated Unicode scalars through as
-UTF-8 commits. It does not implement a layout, composition, dictionary, or
-candidate conversion engine. The builder adds the signed `ime` service
+negotiates the required v1 features, validates bounded frames, retains and
+replaces the validated live-surface roster for each connection, rejects input
+without a current live context, handles cancel/reset, and passes already
+translated Unicode scalars through as UTF-8 commits. It does not implement a
+layout, composition, dictionary, or candidate conversion engine. The builder
+adds the signed `ime` service
 entrypoint and emits `ime-provider-user-service.SVC` beside the package. After
 installing the package, install that service descriptor under the user's
 `services/` directory to select this sample in place of the standard `ime`

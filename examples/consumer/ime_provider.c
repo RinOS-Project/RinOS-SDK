@@ -3,8 +3,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -37,9 +37,14 @@ typedef union ImeProviderMessageBuffer {
 
 typedef struct ImeProviderState {
     RinSessionIdentityV1 session;
+    uint64_t negotiated_features;
     uint64_t context_generation;
     uint64_t candidate_generation;
     uint64_t next_commit_id;
+    uint32_t active_surface_id;
+    uint32_t live_surface_count;
+    uint32_t live_surface_ids[RIN_IME_SURFACE_CONTEXT_MAX_SURFACES];
+    size_t socket_path_bytes;
     char socket_path[64];
     int identity_socket;
 } ImeProviderState;
@@ -205,12 +210,12 @@ static int send_empty_candidates(int descriptor, uint64_t request_id,
                                  uint64_t context_generation)
 {
     RinImeCandidatesV1 candidates;
+    if (g_state.candidate_generation == UINT64_MAX) return -1;
+    ++g_state.candidate_generation;
     memset(&candidates, 0, sizeof(candidates));
     init_header(&candidates.header, RIN_IME_WIRE_CANDIDATES_V1,
                 sizeof(candidates), request_id, context_generation);
     candidates.selected_index = RIN_IME_NO_CANDIDATE;
-    if (++g_state.candidate_generation == 0u)
-        g_state.candidate_generation = 1u;
     candidates.candidate_generation = g_state.candidate_generation;
     return write_frame(descriptor, &candidates, sizeof(candidates));
 }
@@ -294,7 +299,7 @@ static int authenticate_compositor(int descriptor)
         !rin_unix_peer_service_identity_valid(&service) ||
         service.scope != RIN_UNIX_SCOPE_SYSTEM || service.owner_uid != 0u ||
         service.service_slot_id != compositor_slot ||
-        strcmp(service.service_id, "compositor") != 0 ||
+        memcmp(service.service_id, "compositor", sizeof("compositor")) != 0 ||
         getsockopt(descriptor, SOL_SOCKET, SO_RIN_UNIX_PEER_APP_IDENTITY,
                    &app, &app_size) != 0 || app_size != sizeof(app) ||
         !rin_unix_peer_app_identity_valid(&app) ||
@@ -319,6 +324,9 @@ static int negotiate(int descriptor)
     if (read_frame(descriptor, &buffer, &size) != 0 ||
         size != sizeof(RinImeProviderHelloV1) ||
         buffer.header.message_type != RIN_IME_WIRE_HELLO_V1 ||
+        ((buffer.hello.features & RIN_IME_FEATURE_SURFACE_CONTEXT_ROSTER) !=
+             0u &&
+         (buffer.hello.features & RIN_IME_FEATURE_SURFACE_CONTEXT) == 0u) ||
         (buffer.hello.required_features & supported) !=
             buffer.hello.required_features ||
         buffer.hello.max_message_bytes < sizeof(RinImeCandidatesV1))
@@ -337,7 +345,81 @@ static int negotiate(int descriptor)
         ack.max_message_bytes = sizeof(RinImeCandidatesV1);
     if (ack.max_message_bytes > RIN_IME_WIRE_MAX_MESSAGE_BYTES)
         ack.max_message_bytes = RIN_IME_WIRE_MAX_MESSAGE_BYTES;
-    return write_frame(descriptor, &ack, sizeof(ack));
+    if (write_frame(descriptor, &ack, sizeof(ack)) != 0) return -1;
+    g_state.negotiated_features = ack.features;
+    return 0;
+}
+
+static int surface_is_live(uint32_t surface_id, const uint32_t *surface_ids,
+                           uint32_t surface_count)
+{
+    uint32_t index;
+    if (surface_id == 0u || surface_ids == NULL || surface_count == 0u ||
+        surface_count > RIN_IME_SURFACE_CONTEXT_MAX_SURFACES)
+        return 0;
+    for (index = 0u; index < surface_count; ++index)
+        if (surface_ids[index] == surface_id) return 1;
+    return 0;
+}
+
+static void clear_surface_context(void)
+{
+    g_state.active_surface_id = 0u;
+    g_state.live_surface_count = 0u;
+    memset(g_state.live_surface_ids, 0, sizeof(g_state.live_surface_ids));
+}
+
+static int set_single_surface_context(uint32_t surface_id)
+{
+    if (surface_id == 0u) return -1;
+    clear_surface_context();
+    g_state.active_surface_id = surface_id;
+    g_state.live_surface_count = 1u;
+    g_state.live_surface_ids[0] = surface_id;
+    return 0;
+}
+
+static int update_surface_roster(const RinImeProviderContextV3 *context)
+{
+    if (context == NULL ||
+        (g_state.negotiated_features &
+         RIN_IME_FEATURE_SURFACE_CONTEXT_ROSTER) == 0u ||
+        !rin_ime_wire_payload_v1(context, (uint32_t)sizeof(*context)) ||
+        !surface_is_live(context->surface_id, context->live_surface_ids,
+                         context->live_surface_count))
+        return -1;
+
+    /* The ABI validator guarantees unique IDs and zeroed unused entries.
+     * Publish the complete validated roster atomically from this single-threaded
+     * service loop so later input can never observe a partial roster. */
+    memcpy(g_state.live_surface_ids, context->live_surface_ids,
+           sizeof(g_state.live_surface_ids));
+    g_state.live_surface_count = context->live_surface_count;
+    g_state.active_surface_id = context->surface_id;
+    return 0;
+}
+
+static int active_context_is_live(void)
+{
+    if (g_state.context_generation == 0u) return 0;
+    if ((g_state.negotiated_features &
+         RIN_IME_FEATURE_SURFACE_CONTEXT_ROSTER) != 0u)
+        return surface_is_live(g_state.active_surface_id,
+                               g_state.live_surface_ids,
+                               g_state.live_surface_count);
+    if ((g_state.negotiated_features & RIN_IME_FEATURE_SURFACE_CONTEXT) != 0u)
+        return g_state.active_surface_id != 0u &&
+               g_state.live_surface_count == 1u &&
+               g_state.live_surface_ids[0] == g_state.active_surface_id;
+    return g_state.active_surface_id == 0u &&
+           g_state.live_surface_count == 0u;
+}
+
+static void reset_connection_context(void)
+{
+    g_state.negotiated_features = 0u;
+    g_state.context_generation = 0u;
+    clear_surface_context();
 }
 
 static int handle_key(int descriptor, const RinImeKeyEventV1 *key)
@@ -347,7 +429,7 @@ static int handle_key(int descriptor, const RinImeKeyEventV1 *key)
     if (key->state == RIN_IME_KEY_RELEASED &&
         key->header.flags == RIN_IME_WIRE_FLAG_NO_REPLY)
         return 0;
-    if (key->state != RIN_IME_KEY_PRESSED ||
+    if (!active_context_is_live() || key->state != RIN_IME_KEY_PRESSED ||
         generation != g_state.context_generation)
         return send_reply(descriptor, request_id, generation,
                           RIN_IME_REPLY_REJECTED);
@@ -370,14 +452,25 @@ static int handle_frame(int descriptor, ImeProviderMessageBuffer *buffer)
     const uint64_t generation = buffer->header.context_generation;
     switch (buffer->header.message_type) {
     case RIN_IME_WIRE_CONTEXT_V1:
+        if ((g_state.negotiated_features & RIN_IME_FEATURE_SURFACE_CONTEXT) !=
+            0u)
+            return -1;
+        clear_surface_context();
         g_state.context_generation = generation;
         return send_reply(descriptor, request_id, generation, RIN_IME_REPLY_OK) != 0
             ? -1 : send_state(descriptor, request_id, generation);
     case RIN_IME_WIRE_CONTEXT_V2:
+        if ((g_state.negotiated_features & RIN_IME_FEATURE_SURFACE_CONTEXT) ==
+                0u ||
+            (g_state.negotiated_features &
+             RIN_IME_FEATURE_SURFACE_CONTEXT_ROSTER) != 0u ||
+            set_single_surface_context(buffer->context_v2.surface_id) != 0)
+            return -1;
         g_state.context_generation = generation;
         return send_reply(descriptor, request_id, generation, RIN_IME_REPLY_OK) != 0
             ? -1 : send_state(descriptor, request_id, generation);
     case RIN_IME_WIRE_CONTEXT_V3:
+        if (update_surface_roster(&buffer->context_v3) != 0) return -1;
         g_state.context_generation = generation;
         return send_reply(descriptor, request_id, generation, RIN_IME_REPLY_OK) != 0
             ? -1 : send_state(descriptor, request_id, generation);
@@ -388,7 +481,8 @@ static int handle_frame(int descriptor, ImeProviderMessageBuffer *buffer)
                           RIN_IME_REPLY_REJECTED);
     case RIN_IME_WIRE_CANCEL_V1:
     case RIN_IME_WIRE_RESET_V1:
-        if (generation != g_state.context_generation)
+        if (!active_context_is_live() ||
+            generation != g_state.context_generation)
             return send_reply(descriptor, request_id, generation,
                               RIN_IME_REPLY_REJECTED);
         return send_reply(descriptor, request_id, generation, RIN_IME_REPLY_OK) != 0
@@ -409,11 +503,12 @@ static int identify_session(void)
     memset(&g_state.session, 0, sizeof(g_state.session));
     if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, pair) != 0)
         return -1;
+    /* The peer endpoint was created by this process; its session identity is
+     * supplied by the kernel, so no userspace UID query is needed here. */
     if (getsockopt(pair[0], SOL_SOCKET, SO_RIN_UNIX_PEER_SESSION_IDENTITY,
                    &g_state.session, &identity_size) != 0 ||
         identity_size != sizeof(g_state.session) ||
-        !rin_unix_peer_session_identity_valid(&g_state.session) ||
-        g_state.session.uid != (uint32_t)getuid()) {
+        !rin_unix_peer_session_identity_valid(&g_state.session)) {
         (void)close(pair[0]);
         (void)close(pair[1]);
         return -1;
@@ -425,10 +520,26 @@ static int identify_session(void)
 
 static int build_socket_path(void)
 {
-    int count = snprintf(g_state.socket_path, sizeof(g_state.socket_path),
-                         IME_PROVIDER_SOCKET_PREFIX "%u.sock",
-                         g_state.session.session_id);
-    return count > 0 && (size_t)count < sizeof(g_state.socket_path) ? 0 : -1;
+    static const char prefix[] = IME_PROVIDER_SOCKET_PREFIX;
+    static const char suffix[] = ".sock";
+    uint8_t digits[10];
+    uint32_t value = g_state.session.session_id;
+    size_t digit_count = 0u;
+    size_t position = sizeof(prefix) - 1u;
+
+    if (position + sizeof(digits) + sizeof(suffix) >
+        sizeof(g_state.socket_path))
+        return -1;
+    memcpy(g_state.socket_path, prefix, position);
+    do {
+        digits[digit_count++] = (uint8_t)('0' + (value % 10u));
+        value /= 10u;
+    } while (value != 0u);
+    while (digit_count != 0u)
+        g_state.socket_path[position++] = (char)digits[--digit_count];
+    memcpy(g_state.socket_path + position, suffix, sizeof(suffix));
+    g_state.socket_path_bytes = position + sizeof(suffix) - 1u;
+    return 0;
 }
 
 static int make_listener(void)
@@ -436,12 +547,15 @@ static int make_listener(void)
     struct sockaddr_un address;
     int descriptor;
     memset(&address, 0, sizeof(address));
-    if (strlen(g_state.socket_path) >= sizeof(address.sun_path)) return -1;
+    if (g_state.socket_path_bytes == 0u ||
+        g_state.socket_path_bytes >= sizeof(address.sun_path) ||
+        g_state.socket_path[g_state.socket_path_bytes] != '\0')
+        return -1;
     descriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
     if (descriptor < 0) return -1;
     address.sun_family = AF_UNIX;
     memcpy(address.sun_path, g_state.socket_path,
-           strlen(g_state.socket_path) + 1u);
+           g_state.socket_path_bytes + 1u);
     if (bind(descriptor, (struct sockaddr *)&address, sizeof(address)) != 0 ||
         listen(descriptor, 4) != 0) {
         (void)close(descriptor);
@@ -454,15 +568,24 @@ static int serve_connection(int descriptor)
 {
     ImeProviderMessageBuffer buffer;
     uint32_t size = 0u;
-    if (authenticate_compositor(descriptor) != 0 || negotiate(descriptor) != 0)
+    reset_connection_context();
+    if (authenticate_compositor(descriptor) != 0 || negotiate(descriptor) != 0) {
+        reset_connection_context();
         return -1;
+    }
     while (!service_stopping()) {
         if (read_frame(descriptor, &buffer, &size) != 0 ||
             !rin_ime_wire_payload_v1(buffer.bytes, size) ||
-            handle_frame(descriptor, &buffer) != 0)
+            handle_frame(descriptor, &buffer) != 0) {
+            reset_connection_context();
             return -1;
-        if (rin_service_health(0u) != 0) return -1;
+        }
+        if (rin_service_health(0u) != 0) {
+            reset_connection_context();
+            return -1;
+        }
     }
+    reset_connection_context();
     return 0;
 }
 
@@ -476,11 +599,11 @@ int main(void)
     g_state.candidate_generation = 1u;
     if (identify_session() != 0 || build_socket_path() != 0 ||
         (listener = make_listener()) < 0) {
-        puts("IME Provider sample could not initialize its session socket.");
+        rin_log("IME Provider sample could not initialize its session socket.");
         goto done;
     }
     if (rin_service_health(0u) != 0) goto done;
-    puts("IME Provider sample ready; it passes Unicode text through unchanged.");
+    rin_log("IME Provider sample ready; it passes Unicode text through unchanged.");
     while (!service_stopping()) {
         struct pollfd item;
         int ready;
