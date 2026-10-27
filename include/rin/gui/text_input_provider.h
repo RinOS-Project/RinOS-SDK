@@ -32,7 +32,8 @@ extern "C" {
 #define RIN_IME_FEATURE_CANCEL_RESET UINT64_C(0x0000000000000010)
 #define RIN_IME_FEATURE_CARET_RECT UINT64_C(0x0000000000000020)
 #define RIN_IME_FEATURE_ASYNC_KEY_RELEASES UINT64_C(0x0000000000000040)
-#define RIN_IME_FEATURE_KNOWN_MASK UINT64_C(0x000000000000007f)
+#define RIN_IME_FEATURE_SURFACE_CONTEXT UINT64_C(0x0000000000000080)
+#define RIN_IME_FEATURE_KNOWN_MASK UINT64_C(0x00000000000000ff)
 #define RIN_IME_WIRE_FLAG_NO_REPLY UINT32_C(0x00000001)
 
 #define RIN_IME_CONTEXT_MULTILINE UINT32_C(0x00000001)
@@ -61,6 +62,7 @@ enum RinImeWireMessageTypeV1 {
     RIN_IME_WIRE_CANCEL_V1 = 11,
     RIN_IME_WIRE_RESET_V1 = 12,
     RIN_IME_WIRE_REPLY_V1 = 13,
+    RIN_IME_WIRE_CONTEXT_V2 = 14,
 };
 
 enum RinImeContentPurposeV1 {
@@ -142,6 +144,16 @@ typedef struct RinImeProviderContextV1 {
     uint32_t max_commit_bytes;
     uint32_t reserved[3];
 } RinImeProviderContextV1;
+
+/* コンテキストをsurfaceごとに識別し、ImeContextと確定FIFOを分離する。 */
+typedef struct RinImeProviderContextV2 {
+    RinImeWireHeaderV1 header;
+    uint32_t surface_id;
+    uint32_t content_purpose;
+    uint32_t flags;
+    uint32_t max_commit_bytes;
+    uint32_t reserved[4];
+} RinImeProviderContextV2;
 
 typedef struct RinImeKeyEventV1 {
     RinImeWireHeaderV1 header;
@@ -359,6 +371,18 @@ static inline int rin_ime_wire_payload_v1(const void *message,
             rin_ime_wire_all_zero_v1((const uint8_t *)m->reserved,
                                      (uint32_t)sizeof(m->reserved));
     }
+    case RIN_IME_WIRE_CONTEXT_V2: {
+        const RinImeProviderContextV2 *m = (const RinImeProviderContextV2 *)message;
+        return bytes == (uint32_t)sizeof(*m) &&
+            rin_ime_wire_header_v1(&m->header, bytes, h->message_type) &&
+            m->surface_id != 0u && m->surface_id <= INT32_MAX &&
+            m->content_purpose <= RIN_IME_CONTENT_NUMBER &&
+            m->content_purpose != RIN_IME_CONTENT_PASSWORD &&
+            (m->flags & ~RIN_IME_CONTEXT_KNOWN_FLAGS) == 0u &&
+            m->max_commit_bytes > 0u && m->max_commit_bytes <= RIN_IME_MAX_TEXT_BYTES &&
+            rin_ime_wire_all_zero_v1((const uint8_t *)m->reserved,
+                                     (uint32_t)sizeof(m->reserved));
+    }
     case RIN_IME_WIRE_KEY_EVENT_V1: {
         const RinImeKeyEventV1 *m = (const RinImeKeyEventV1 *)message;
         uint32_t cp = m->unicode_scalar;
@@ -495,6 +519,7 @@ static inline int rin_ime_wire_payload_v1(const void *message,
 static_assert(sizeof(RinImeWireHeaderV1) == 48u, "IME wire header ABI drift");
 static_assert(sizeof(RinImeProviderHelloV1) == 88u, "IME hello ABI drift");
 static_assert(sizeof(RinImeProviderContextV1) == 72u, "IME context ABI drift");
+static_assert(sizeof(RinImeProviderContextV2) == 80u, "IME context v2 ABI drift");
 static_assert(sizeof(RinImeKeyEventV1) == 72u, "IME key event ABI drift");
 static_assert(sizeof(RinImePreeditAttributeV1) == 12u, "IME attribute ABI drift");
 static_assert(sizeof(RinImePreeditV1) == 1480u, "IME preedit ABI drift");
@@ -517,6 +542,7 @@ static_assert(offsetof(RinImeSurroundingTextV1, text) == 64u, "IME context text 
 _Static_assert(sizeof(RinImeWireHeaderV1) == 48u, "IME wire header ABI drift");
 _Static_assert(sizeof(RinImeProviderHelloV1) == 88u, "IME hello ABI drift");
 _Static_assert(sizeof(RinImeProviderContextV1) == 72u, "IME context ABI drift");
+_Static_assert(sizeof(RinImeProviderContextV2) == 80u, "IME context v2 ABI drift");
 _Static_assert(sizeof(RinImeKeyEventV1) == 72u, "IME key event ABI drift");
 _Static_assert(sizeof(RinImePreeditAttributeV1) == 12u, "IME attribute ABI drift");
 _Static_assert(sizeof(RinImePreeditV1) == 1480u, "IME preedit ABI drift");
