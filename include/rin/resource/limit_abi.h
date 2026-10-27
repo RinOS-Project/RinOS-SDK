@@ -14,9 +14,23 @@
 #define RIN_RESOURCE_LIMIT_CALL_SET UINT16_C(2)
 #define RIN_RESOURCE_LIMIT_CALL_PRLIMIT UINT16_C(3)
 
+#define RIN_RESOURCE_LIMIT_CALL_CPU UINT32_C(0)
+#define RIN_RESOURCE_LIMIT_CALL_FSIZE UINT32_C(1)
+#define RIN_RESOURCE_LIMIT_CALL_DATA UINT32_C(2)
+#define RIN_RESOURCE_LIMIT_CALL_STACK UINT32_C(3)
+#define RIN_RESOURCE_LIMIT_CALL_CORE UINT32_C(4)
+#define RIN_RESOURCE_LIMIT_CALL_RSS UINT32_C(5)
+#define RIN_RESOURCE_LIMIT_CALL_NPROC UINT32_C(6)
 #define RIN_RESOURCE_LIMIT_CALL_NOFILE UINT32_C(7)
 #define RIN_RESOURCE_LIMIT_CALL_MEMLOCK UINT32_C(8)
 #define RIN_RESOURCE_LIMIT_CALL_AS UINT32_C(9)
+#define RIN_RESOURCE_LIMIT_CALL_LOCKS UINT32_C(10)
+#define RIN_RESOURCE_LIMIT_CALL_SIGPENDING UINT32_C(11)
+#define RIN_RESOURCE_LIMIT_CALL_MSGQUEUE UINT32_C(12)
+#define RIN_RESOURCE_LIMIT_CALL_NICE UINT32_C(13)
+#define RIN_RESOURCE_LIMIT_CALL_RTPRIO UINT32_C(14)
+#define RIN_RESOURCE_LIMIT_CALL_RTTIME UINT32_C(15)
+#define RIN_RESOURCE_LIMIT_CALL_COUNT UINT32_C(16)
 
 typedef struct RinResourceLimitCallRequestV1 {
     uint32_t struct_size;
@@ -26,6 +40,8 @@ typedef struct RinResourceLimitCallRequestV1 {
     uint32_t resource;
     uint32_t target_process_id; /* zero selects the current process. */
     uint32_t reserved0;
+    /* Zero resolves the process ID to its current generation while holding
+     * a scheduler process lease for the complete operation. */
     uint64_t target_instance_cookie;
     uint64_t new_current;
     uint64_t new_maximum;
