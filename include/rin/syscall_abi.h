@@ -501,6 +501,9 @@
 #define RIN_SYS_KEYBOARD_LAYOUT_SET         0x808Cu
 /* process. */
 #define RIN_SYS_PROCESS_IMAGE_RANGE_GET     0x808Du
+/* file. */
+#define RIN_SYS_ISO_OPEN_FILE_V1            0x808Eu
+#define RIN_SYS_ISO_READ_FILE_V1            0x808Fu
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
