@@ -143,6 +143,7 @@
 [RIN_SYS_SETHOSTNAME] = "sethostname",
 [RIN_SYS_SETDOMAINNAME] = "setdomainname",
 [RIN_SYS_DUP3] = "dup3",
+[RIN_SYS_RT_SIGTIMEDWAIT] = "rt_sigtimedwait",
 [RIN_SYS_GUI_CREATE_WINDOW] = "gui_create_window",
 [RIN_SYS_GUI_CLOSE_WINDOW] = "gui_close_window",
 [RIN_SYS_GUI_DRAW_TEXT] = "gui_draw_text",

@@ -186,6 +186,8 @@
 #define RIN_SYS_SETDOMAINNAME               194u
 /* object. */
 #define RIN_SYS_DUP3                        195u
+/* signal. */
+#define RIN_SYS_RT_SIGTIMEDWAIT             196u
 /* gui. */
 #define RIN_SYS_GUI_CREATE_WINDOW           200u
 #define RIN_SYS_GUI_CLOSE_WINDOW            201u
