@@ -316,6 +316,8 @@ typedef int32_t RinResultCode;
 #define RIN_MANAGEMENT_OPERATION_PACKAGE_LAUNCH 1027u
 #define RIN_MANAGEMENT_OPERATION_PACKAGE_RECOVERY_LAUNCH 1028u
 #define RIN_MANAGEMENT_OPERATION_IME_PROVIDER_GET 1029u
+#define RIN_MANAGEMENT_IME_PROVIDER_FLAG_SIGNED 1u
+#define RIN_MANAGEMENT_IME_PROVIDER_FLAG_MASK 1u
 #define RIN_MANAGEMENT_PACKAGE_SOURCE_LOCAL 0u
 #define RIN_MANAGEMENT_PACKAGE_SOURCE_REPOSITORY 1u
 #define RIN_MANAGEMENT_KIND_DEVICE          1u
@@ -1346,9 +1348,7 @@ typedef struct RinManagementPackageInfoV1 {
     uint8_t install_path[96];
 } RinManagementPackageInfoV1;
 
-/* Query with package_name set and every other output field zero. The kernel
- * returns a provider only when that signed package declares exactly one
- * entrypoint named "ime" and the executable identity is currently valid. */
+/* Query with package_name set and every other output field zero. The kernel returns a provider only when that signed package declares exactly one entrypoint named "ime" and the executable identity is currently valid. */
 typedef struct RinManagementImeProviderV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -1361,9 +1361,6 @@ typedef struct RinManagementImeProviderV1 {
     uint8_t publisher_key_id[32];
     uint8_t reserved[32];
 } RinManagementImeProviderV1;
-#define RIN_MANAGEMENT_IME_PROVIDER_FLAG_SIGNED 1u
-#define RIN_MANAGEMENT_IME_PROVIDER_FLAG_MASK \
-    RIN_MANAGEMENT_IME_PROVIDER_FLAG_SIGNED
 
 typedef struct RinManagementPackageStorageInfoV1 {
     uint32_t struct_size;
@@ -2215,8 +2212,16 @@ static_assert(offsetof(RinManagementPackageInfoV1, package_version) == 128, "Rin
 static_assert(offsetof(RinManagementPackageInfoV1, publisher) == 160, "RinManagementPackageInfoV1.publisher ABI drift");
 static_assert(offsetof(RinManagementPackageInfoV1, install_path) == 224, "RinManagementPackageInfoV1.install_path ABI drift");
 static_assert(sizeof(RinManagementImeProviderV1) == 432, "RinManagementImeProviderV1 ABI drift");
+static_assert(offsetof(RinManagementImeProviderV1, struct_size) == 0, "RinManagementImeProviderV1.struct_size ABI drift");
+static_assert(offsetof(RinManagementImeProviderV1, version) == 4, "RinManagementImeProviderV1.version ABI drift");
+static_assert(offsetof(RinManagementImeProviderV1, flags) == 6, "RinManagementImeProviderV1.flags ABI drift");
+static_assert(offsetof(RinManagementImeProviderV1, namespace_generation) == 8, "RinManagementImeProviderV1.namespace_generation ABI drift");
 static_assert(offsetof(RinManagementImeProviderV1, package_name) == 16, "RinManagementImeProviderV1.package_name ABI drift");
+static_assert(offsetof(RinManagementImeProviderV1, package_version) == 80, "RinManagementImeProviderV1.package_version ABI drift");
+static_assert(offsetof(RinManagementImeProviderV1, display_name) == 112, "RinManagementImeProviderV1.display_name ABI drift");
 static_assert(offsetof(RinManagementImeProviderV1, service_path) == 176, "RinManagementImeProviderV1.service_path ABI drift");
+static_assert(offsetof(RinManagementImeProviderV1, publisher_key_id) == 368, "RinManagementImeProviderV1.publisher_key_id ABI drift");
+static_assert(offsetof(RinManagementImeProviderV1, reserved) == 400, "RinManagementImeProviderV1.reserved ABI drift");
 static_assert(sizeof(RinManagementPackageStorageInfoV1) == 88, "RinManagementPackageStorageInfoV1 ABI drift");
 static_assert(offsetof(RinManagementPackageStorageInfoV1, struct_size) == 0, "RinManagementPackageStorageInfoV1.struct_size ABI drift");
 static_assert(offsetof(RinManagementPackageStorageInfoV1, version) == 4, "RinManagementPackageStorageInfoV1.version ABI drift");
@@ -3041,8 +3046,16 @@ _Static_assert(offsetof(RinManagementPackageInfoV1, package_version) == 128, "Ri
 _Static_assert(offsetof(RinManagementPackageInfoV1, publisher) == 160, "RinManagementPackageInfoV1.publisher ABI drift");
 _Static_assert(offsetof(RinManagementPackageInfoV1, install_path) == 224, "RinManagementPackageInfoV1.install_path ABI drift");
 _Static_assert(sizeof(RinManagementImeProviderV1) == 432, "RinManagementImeProviderV1 ABI drift");
+_Static_assert(offsetof(RinManagementImeProviderV1, struct_size) == 0, "RinManagementImeProviderV1.struct_size ABI drift");
+_Static_assert(offsetof(RinManagementImeProviderV1, version) == 4, "RinManagementImeProviderV1.version ABI drift");
+_Static_assert(offsetof(RinManagementImeProviderV1, flags) == 6, "RinManagementImeProviderV1.flags ABI drift");
+_Static_assert(offsetof(RinManagementImeProviderV1, namespace_generation) == 8, "RinManagementImeProviderV1.namespace_generation ABI drift");
 _Static_assert(offsetof(RinManagementImeProviderV1, package_name) == 16, "RinManagementImeProviderV1.package_name ABI drift");
+_Static_assert(offsetof(RinManagementImeProviderV1, package_version) == 80, "RinManagementImeProviderV1.package_version ABI drift");
+_Static_assert(offsetof(RinManagementImeProviderV1, display_name) == 112, "RinManagementImeProviderV1.display_name ABI drift");
 _Static_assert(offsetof(RinManagementImeProviderV1, service_path) == 176, "RinManagementImeProviderV1.service_path ABI drift");
+_Static_assert(offsetof(RinManagementImeProviderV1, publisher_key_id) == 368, "RinManagementImeProviderV1.publisher_key_id ABI drift");
+_Static_assert(offsetof(RinManagementImeProviderV1, reserved) == 400, "RinManagementImeProviderV1.reserved ABI drift");
 _Static_assert(sizeof(RinManagementPackageStorageInfoV1) == 88, "RinManagementPackageStorageInfoV1 ABI drift");
 _Static_assert(offsetof(RinManagementPackageStorageInfoV1, struct_size) == 0, "RinManagementPackageStorageInfoV1.struct_size ABI drift");
 _Static_assert(offsetof(RinManagementPackageStorageInfoV1, version) == 4, "RinManagementPackageStorageInfoV1.version ABI drift");

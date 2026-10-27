@@ -267,8 +267,8 @@
 #define RIN_SYS_DLINVENTORY_UNWIND_LEASE_END 280u
 /* Copies the pending RLL error to a caller buffer and consumes on success. */
 #define RIN_SYS_DLERROR_COPY_V1             281u
-/* Loads legacy RLL caller memory after comparing it with authenticated bytes. */
-#define RIN_SYS_DLOPEN_MEMORY_V1             282u
+/* Loads caller memory only after exact comparison with the authenticated installed or system RLL snapshot. */
+#define RIN_SYS_DLOPEN_MEMORY_V1            282u
 /* storage. */
 #define RIN_SYS_RINFS_FORMAT                300u
 #define RIN_SYS_RINFS_MOUNT                 301u
