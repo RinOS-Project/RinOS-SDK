@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #ifndef RIN_SDK_MEDIA_H
 #define RIN_SDK_MEDIA_H
 #include "abi.h"
