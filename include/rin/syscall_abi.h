@@ -188,6 +188,8 @@
 #define RIN_SYS_DUP3                        195u
 /* signal. */
 #define RIN_SYS_RT_SIGTIMEDWAIT             196u
+#define RIN_SYS_RT_SIGQUEUEINFO             197u
+#define RIN_SYS_RT_TGSIGQUEUEINFO           198u
 /* gui. */
 #define RIN_SYS_GUI_CREATE_WINDOW           200u
 #define RIN_SYS_GUI_CLOSE_WINDOW            201u
