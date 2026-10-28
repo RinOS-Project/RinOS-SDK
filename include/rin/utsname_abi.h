@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MIT */
-/* Stable userspace wire layout for SYS_UNAME. */
+/* Stable userspace wire layouts for SYS_UNAME and SYS_UNAME_V2. */
 
 #ifndef RIN_SDK_UTSNAME_ABI_H
 #define RIN_SDK_UTSNAME_ABI_H
@@ -13,9 +13,23 @@
     char machine[RIN_UTSNAME_ABI_V1_FIELD_SIZE];                        \
     char domainname[RIN_UTSNAME_ABI_V1_FIELD_SIZE]
 
+#define RIN_UTSNAME_ABI_V2_VERSION 2u
+#define RIN_UTSNAME_ABI_V2_FIELD_SIZE 256u
+#define RIN_UTSNAME_ABI_V2_FIELDS                                      \
+    char sysname[RIN_UTSNAME_ABI_V2_FIELD_SIZE];                        \
+    char nodename[RIN_UTSNAME_ABI_V2_FIELD_SIZE];                       \
+    char release[RIN_UTSNAME_ABI_V2_FIELD_SIZE];                        \
+    char version[RIN_UTSNAME_ABI_V2_FIELD_SIZE];                        \
+    char machine[RIN_UTSNAME_ABI_V2_FIELD_SIZE];                        \
+    char domainname[RIN_UTSNAME_ABI_V2_FIELD_SIZE]
+
 typedef struct RinUtsnameAbiV1 {
     RIN_UTSNAME_ABI_V1_FIELDS;
 } RinUtsnameAbiV1;
+
+typedef struct RinUtsnameAbiV2 {
+    RIN_UTSNAME_ABI_V2_FIELDS;
+} RinUtsnameAbiV2;
 
 #ifndef MIDL_PASS
 static inline void rin_utsname_abi_v1_copy(
@@ -44,6 +58,34 @@ static inline void rin_utsname_abi_v1_fill(RinUtsnameAbiV1* value,
     rin_utsname_abi_v1_copy(value->release, "2.1.0");
     rin_utsname_abi_v1_copy(value->version, "RinOS Kernel 2.1.0");
     rin_utsname_abi_v1_copy(value->machine, machine);
+}
+
+static inline void rin_utsname_abi_v2_copy(
+    char output[RIN_UTSNAME_ABI_V2_FIELD_SIZE], const char* input)
+{
+    unsigned int index = 0u;
+    if (!input) return;
+    while (index + 1u < RIN_UTSNAME_ABI_V2_FIELD_SIZE && input[index]) {
+        output[index] = input[index];
+        ++index;
+    }
+    output[index] = '\0';
+}
+
+static inline void rin_utsname_abi_v2_fill(RinUtsnameAbiV2* value,
+                                            const char* machine)
+{
+    volatile unsigned char* bytes;
+    unsigned int index;
+    if (!value) return;
+    bytes = (volatile unsigned char*)value;
+    for (index = 0u; index < (unsigned int)sizeof(*value); ++index)
+        bytes[index] = 0u;
+    rin_utsname_abi_v2_copy(value->sysname, "RinOS");
+    rin_utsname_abi_v2_copy(value->nodename, "rin");
+    rin_utsname_abi_v2_copy(value->release, "2.1.0");
+    rin_utsname_abi_v2_copy(value->version, "RinOS Kernel 2.1.0");
+    rin_utsname_abi_v2_copy(value->machine, machine);
 }
 #endif /* !MIDL_PASS */
 

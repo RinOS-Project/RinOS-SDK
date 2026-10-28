@@ -204,6 +204,7 @@
 /* Reserved legacy compatibility aliases; new user code must use the native ABI. */
 #define SYS_REALLOC                     RIN_SYS_REALLOC
 #define SYS_SERVICE_HEALTH              RIN_SYS_SERVICE_HEALTH
+#define SYS_UNAME_V2                    RIN_SYS_UNAME_V2
 #define SYS_TIME_NS                     RIN_SYS_TIME_NS
 #define SYS_DLSYM                       RIN_SYS_DLSYM
 #define SYS_DLOPEN                      RIN_SYS_DLOPEN

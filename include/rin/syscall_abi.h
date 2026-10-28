@@ -243,6 +243,8 @@
 #define RIN_SYS_REALLOC                     252u /* reserved */
 /* service. */
 #define RIN_SYS_SERVICE_HEALTH              253u
+/* system. */
+#define RIN_SYS_UNAME_V2                    254u
 /* time. */
 #define RIN_SYS_TIME_NS                     260u
 /* library. */

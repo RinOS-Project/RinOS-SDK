@@ -191,3 +191,4 @@
 [RIN_SYS_FREE] = "free",
 [RIN_SYS_REALLOC] = "realloc",
 [RIN_SYS_SERVICE_HEALTH] = "service_health",
+[RIN_SYS_UNAME_V2] = "uname_v2",
