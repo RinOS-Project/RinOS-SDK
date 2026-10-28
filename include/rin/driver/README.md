@@ -6,6 +6,12 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 
 | Header | Purpose |
 | --- | --- |
+| `framework_v3.h` | Convenience include for the public driver, device, resource, PCI, Port I/O, MMIO, IRQ, DMA, Block, Serial, and lifecycle contracts. |
+| `driver.h`, `device.h` | Focused entrypoints for NDRV v3 callbacks, device identity/admission, and capability-gated services. |
+| `resource.h`, `pci.h` | Checked generation-bound leases and the public PCI catalog/configuration contract. |
+| `portio.h`, `mmio.h`, `irq.h`, `dma.h`, `iommu.h` | Focused resource APIs. Drivers request bounded leases; physical addresses, interrupt routing, DMA domains, and IOMMU page tables remain OS-Core owned. |
+| `block.h`, `lifecycle.h`, `power.h` | Block operations and the versioned image lifecycle callback contracts. Kernel registration and suspend coordination remain OS-Core services. |
+| `gpu/device.h`, `gpu/memory.h` | Public display/device resources and DMA-based memory operations for GPU drivers. GPU process mappings and hardware queue scheduling remain OS-Core owned. |
 | `image_abi_v3.h` | Image ABI values, result codes, opaque handles, Driver context, resource descriptors, and PCI match records. |
 | `admission_v3.h` and `src/rin/driver/admission_v3.c` | Public device identity and portable image-to-device matching. OS-Core retains admission policy and resource authorization. |
 | `bus/pci/catalog_v3.h` and `src/rin/driver/bus/pci/catalog_v3.c` | Callback-driven PCI config-space cataloging and signed-image matching, with OS-authorized config reads supplied by the caller. |
@@ -29,6 +35,17 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `usb/fido/ctaphid.h` | CTAP-HID packet framing and transaction state for FIDO authenticators. |
 
 `module_api_v3.h` is the canonical OS-Core callback table. `resource_runtime_v3.h` supplies checked wrappers for the BAR, DMA, IRQ, timer, and registration records; call `rin_driver_runtime_init` before `rin_driver_runtime_start`, then release every acquired lease before stopping. Other callbacks, including DMA scatter/gather synchronization, PCI configuration, and extended service brokers, are provided by the canonical table and `services_v3.h`. The record layouts and numeric ABI values remain defined by their original types and macros.
+
+The focused headers above are stable SDK include roots over those canonical
+records; they do not expose OS-Core object layouts or grant a capability by
+being included. A Driver gets a resource only when the signed image is admitted
+and the OS supplies the corresponding callback and a live, generation-bound
+lease. `portio.h` uses a measured I/O BAR lease, `mmio.h` uses an OS-mapped BAR
+lease, and `dma.h` exposes IOVA segments without exposing physical pages. The
+`iommu.h` contract intentionally presents DMA operations only: domain creation,
+page-table writes, invalidation, and device isolation remain private to
+OS-Core. PCI enumeration and resource proof are OS-Core operations; the public
+PCI catalog is for consuming OS-authorized config reads and device identities.
 
 ## Shared components
 
