@@ -8,8 +8,8 @@
 
 #include <rin/driver/module_api_v3.h>
 #include <rin/driver/usb/hid/gamepad_v1.h>
-#include <rin/driver/usb/hid/pen_v1.h"
-#include <rin/driver/usb/hid/boot_report.h"
+#include <rin/driver/usb/hid/pen_v1.h>
+#include <rin/driver/usb/hid/boot_report.h>
 #include <rin/contract_abi.h>
 #define RIN_DRIVER_USB_HID_V3_VERSION UINT32_C(0x00010002)
 #define RIN_DRIVER_USB_HID_V3_MAGIC UINT32_C(0x33444948)
