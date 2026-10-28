@@ -38,7 +38,8 @@ typedef int (*RinSerialServiceCancelV1Fn)(
 
 /* A Kernel-provided serial service is scoped by the capability and owner
  * passed to each operation. context is opaque provider state and must not be
- * inspected by clients. The provider validates every capability and owner. */
+ * inspected by clients. The provider validates every capability and owner;
+ * its callbacks and context remain valid until the Kernel revokes the service. */
 typedef struct RinSerialServiceV1 {
     uint32_t version;
     uint32_t struct_size;
