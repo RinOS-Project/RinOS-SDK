@@ -23,6 +23,7 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `ps2/set1_decoder.h` and `src/rin/driver/ps2/set1_decoder.c` | Portable PS/2 Set 1 scancode decoding, key-repeat eligibility, and US ASCII translation. |
 | `validation_v3.h` | Inline validation for API tables, DMA/BAR/IRQ leases, timers, Block requests/completions, USB transfers/topology, and safe utility functions. |
 | `serial.h` | Serial/TTY line configuration, memory-lease transfers, completion, and modem-line contracts. |
+| `capture/transport_service_v1.h` | Registers a permanent capture transport while OS-Core retains capability endpoint and session state. |
 | `bluetooth/hci.h` | Bluetooth HCI command/data packet, controller, event, and completion contracts. |
 | `bluetooth/hci_runtime_v1.h` and `src/rin/driver/bluetooth/hci_runtime_v1.c` | Portable HCI controller state machine and event processing over a caller-owned transport. |
 | `bluetooth/hci_transport_v1.h` | Callback contract for HCI command transport and monotonic time. |
