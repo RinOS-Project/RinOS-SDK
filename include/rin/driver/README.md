@@ -19,6 +19,7 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `serial.h` | Serial/TTY line configuration, memory-lease transfers, completion, and modem-line contracts. |
 | `bluetooth/hci.h` | Bluetooth HCI command/data packet, controller, event, and completion contracts. |
 | `wifi.h` | Wi-Fi scanning, regulatory channels, secure association, events, and the shared Network data path. |
+| `wifi/*.h` and `src/rin/driver/wifi/*.c` | Portable 802.11 discovery, association sequencing, WPA2/CCMP, and supplicant state machines. WPA2 crypto sources use RinTLS public crypto headers; OS-Core still owns regulatory authorization and key policy. |
 | `usb/audio/*.h` | USB Audio Class 1/2 descriptors, runtime stream negotiation, isochronous packet planning, and transport contracts. |
 | `usb/hid/*.h` | HID boot reports, pen and gamepad parsing, mapping/calibration support, and force-feedback records. |
 | `usb/fido/ctaphid.h` | CTAP-HID packet framing and transaction state for FIDO authenticators. |
