@@ -34,6 +34,7 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `usb/audio/*.h` | USB Audio Class 1/2 descriptors, runtime stream negotiation, isochronous packet planning, and transport contracts. |
 | `usb/hid/*.h` | HID boot reports, pen and gamepad parsing, mapping/calibration support, and force-feedback records. |
 | `usb/fido/ctaphid.h` | CTAP-HID packet framing and transaction state for FIDO authenticators. |
+| `usb/fido/broker_v1.h` and `src/rin/driver/usb/fido/broker_v1.c` | Portable bounded CTAP-HID device broker and transfer lifecycle for USB FIDO drivers. |
 
 `module_api_v3.h` is the canonical OS-Core callback table. `resource_runtime_v3.h` supplies checked wrappers for the BAR, DMA, IRQ, timer, and registration records; call `rin_driver_runtime_init` before `rin_driver_runtime_start`, then release every acquired lease before stopping. Other callbacks, including DMA scatter/gather synchronization, PCI configuration, and extended service brokers, are provided by the canonical table and `services_v3.h`. The record layouts and numeric ABI values remain defined by their original types and macros.
 
