@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #include <rin/driver/module_api_v3.h>
-#include <rin/driver/usb/hid/gamepad_v1.h"
+#include <rin/driver/usb/hid/gamepad_v1.h>
 #include <rin/driver/usb/hid/pen_v1.h"
 #include <rin/driver/usb/hid/boot_report.h"
 #include <rin/contract_abi.h>
