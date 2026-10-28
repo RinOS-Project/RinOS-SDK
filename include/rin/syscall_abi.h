@@ -306,7 +306,7 @@
 /* thread. */
 #define RIN_SYS_GETTID                      0x800Bu
 /* storage. */
-#define RIN_SYS_SYSTEM_UPDATE_STAGE         0x800Cu
+#define RIN_SYS_SYSTEM_UPDATE_STAGE         0x800Cu /* reserved */
 /* process. */
 #define RIN_SYS_PROCESS_TARGET_CONTROL      0x800Du
 /* gui. */
