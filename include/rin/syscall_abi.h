@@ -533,6 +533,8 @@
 #define RIN_SYS_FUTEX_TIME64                0x8092u
 /* filesystem. */
 #define RIN_SYS_FILESYSTEM_NAME_MAX_GET_FD  0x8093u
+#define RIN_SYS_FILESYSTEM_MOUNT            0x8094u
+#define RIN_SYS_FILESYSTEM_UNMOUNT          0x8095u
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u

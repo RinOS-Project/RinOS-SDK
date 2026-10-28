@@ -18,6 +18,8 @@
 typedef int32_t RinResultCode;
 
 /* Public fixed-value constants shared by all RinNative clients. */
+#define RIN_SYSCALL_IA32_REGISTER_WIDTH_BITS 32u
+#define RIN_SYSCALL_IA32_WIDE_ARGUMENT_ORDER_LOW_WORD_FIRST 1u
 #define RIN_INSTALL_SOURCE_PAYLOAD_COUNT    6u
 #define RIN_ITIMER_ABI_VERSION              1u
 #define RIN_TIMER_ABI_VERSION               1u
@@ -47,9 +49,13 @@ typedef int32_t RinResultCode;
 #define RIN_SYSTEM_INFO_FLAG_PAGEFILE_VALID 16u
 #define RIN_SYSTEM_INFO_FLAG_VIRTUAL_MEMORY_VALID 32u
 #define RIN_FILESYSTEM_USAGE_VERSION        1u
+#define RIN_FILESYSTEM_MOUNT_TYPE_TMPFS     5u
+#define RIN_FILESYSTEM_MOUNT_TYPE_ISO9660   9u
+#define RIN_FILESYSTEM_MOUNT_TYPE_DEVPTS    10u
 #define RIN_VOLUME_MOUNT_IDENTITY_V1_VERSION 1u
 #define RIN_FILESYSTEM_TYPE_UNKNOWN         0u
 #define RIN_FILESYSTEM_TYPE_RINFS           1u
+#define RIN_FILESYSTEM_TYPE_TMPFS           2u
 #define RIN_FILESYSTEM_USAGE_FLAG_BLOCKS_VALID 1u
 #define RIN_FILESYSTEM_USAGE_FLAG_INODES_VALID 2u
 #define RIN_FILESYSTEM_USAGE_FLAG_READ_ONLY 4u
@@ -931,6 +937,15 @@ typedef struct RinInstallElevationRequestV1 {
     uint64_t source_session;
     uint64_t request_generation;
 } RinInstallElevationRequestV1;
+
+/* IA-32 carrier for calls that exceed six 32-bit registers or return a 64-bit lease token. Each logical argument is one little-endian u64 value; result is written only by token-returning begin calls. */
+typedef struct RinSyscallWideArgsV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t argument_count;
+    uint64_t arguments[5];
+    uint64_t result;
+} RinSyscallWideArgsV1;
 
 typedef struct RinProcessTargetControlV1 {
     uint32_t struct_size;
@@ -1855,6 +1870,12 @@ static_assert(offsetof(RinInstallElevationRequestV1, flags) == 6, "RinInstallEle
 static_assert(offsetof(RinInstallElevationRequestV1, target_session) == 8, "RinInstallElevationRequestV1.target_session ABI drift");
 static_assert(offsetof(RinInstallElevationRequestV1, source_session) == 16, "RinInstallElevationRequestV1.source_session ABI drift");
 static_assert(offsetof(RinInstallElevationRequestV1, request_generation) == 24, "RinInstallElevationRequestV1.request_generation ABI drift");
+static_assert(sizeof(RinSyscallWideArgsV1) == 56, "RinSyscallWideArgsV1 ABI drift");
+static_assert(offsetof(RinSyscallWideArgsV1, struct_size) == 0, "RinSyscallWideArgsV1.struct_size ABI drift");
+static_assert(offsetof(RinSyscallWideArgsV1, version) == 4, "RinSyscallWideArgsV1.version ABI drift");
+static_assert(offsetof(RinSyscallWideArgsV1, argument_count) == 6, "RinSyscallWideArgsV1.argument_count ABI drift");
+static_assert(offsetof(RinSyscallWideArgsV1, arguments) == 8, "RinSyscallWideArgsV1.arguments ABI drift");
+static_assert(offsetof(RinSyscallWideArgsV1, result) == 48, "RinSyscallWideArgsV1.result ABI drift");
 static_assert(sizeof(RinProcessTargetControlV1) == 128, "RinProcessTargetControlV1 ABI drift");
 static_assert(offsetof(RinProcessTargetControlV1, struct_size) == 0, "RinProcessTargetControlV1.struct_size ABI drift");
 static_assert(offsetof(RinProcessTargetControlV1, version) == 4, "RinProcessTargetControlV1.version ABI drift");
@@ -2697,6 +2718,12 @@ _Static_assert(offsetof(RinInstallElevationRequestV1, flags) == 6, "RinInstallEl
 _Static_assert(offsetof(RinInstallElevationRequestV1, target_session) == 8, "RinInstallElevationRequestV1.target_session ABI drift");
 _Static_assert(offsetof(RinInstallElevationRequestV1, source_session) == 16, "RinInstallElevationRequestV1.source_session ABI drift");
 _Static_assert(offsetof(RinInstallElevationRequestV1, request_generation) == 24, "RinInstallElevationRequestV1.request_generation ABI drift");
+_Static_assert(sizeof(RinSyscallWideArgsV1) == 56, "RinSyscallWideArgsV1 ABI drift");
+_Static_assert(offsetof(RinSyscallWideArgsV1, struct_size) == 0, "RinSyscallWideArgsV1.struct_size ABI drift");
+_Static_assert(offsetof(RinSyscallWideArgsV1, version) == 4, "RinSyscallWideArgsV1.version ABI drift");
+_Static_assert(offsetof(RinSyscallWideArgsV1, argument_count) == 6, "RinSyscallWideArgsV1.argument_count ABI drift");
+_Static_assert(offsetof(RinSyscallWideArgsV1, arguments) == 8, "RinSyscallWideArgsV1.arguments ABI drift");
+_Static_assert(offsetof(RinSyscallWideArgsV1, result) == 48, "RinSyscallWideArgsV1.result ABI drift");
 _Static_assert(sizeof(RinProcessTargetControlV1) == 128, "RinProcessTargetControlV1 ABI drift");
 _Static_assert(offsetof(RinProcessTargetControlV1, struct_size) == 0, "RinProcessTargetControlV1.struct_size ABI drift");
 _Static_assert(offsetof(RinProcessTargetControlV1, version) == 4, "RinProcessTargetControlV1.version ABI drift");
