@@ -34,8 +34,18 @@ static inline int rin_clock_settime_v1_valid(
     return value && value->struct_size == sizeof(*value) &&
            value->version == RIN_CLOCK_SETTIME_ABI_VERSION &&
            value->flags == 0u && value->clock_id == 0 &&
-           value->reserved0 == 0 && value->tv_sec >= 0 &&
+           value->reserved0 == 0 &&
            value->tv_nsec >= 0 && value->tv_nsec < INT64_C(1000000000);
+}
+
+static inline int rin_clock_gettime_v1_valid(
+    const RinClockGettimeV1* value, int32_t expected_clock_id)
+{
+    return value && value->struct_size == sizeof(*value) &&
+           value->version == RIN_CLOCK_GETTIME_ABI_VERSION &&
+           value->flags == 0u && value->clock_id == expected_clock_id &&
+           value->reserved0 == 0 && value->tv_nsec >= 0 &&
+           value->tv_nsec < INT64_C(1000000000);
 }
 
 static inline int rin_clock_settime_v1_to_ns(
@@ -43,7 +53,8 @@ static inline int rin_clock_settime_v1_to_ns(
 {
     uint64_t seconds;
     uint64_t nanoseconds;
-    if (!nanoseconds_out || !rin_clock_settime_v1_valid(value)) return -1;
+    if (!nanoseconds_out || !rin_clock_settime_v1_valid(value) ||
+        value->tv_sec < 0) return -1;
     seconds = (uint64_t)value->tv_sec;
     nanoseconds = (uint64_t)value->tv_nsec;
     if (seconds > (UINT64_MAX - nanoseconds) / UINT64_C(1000000000))

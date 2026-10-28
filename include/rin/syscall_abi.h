@@ -528,6 +528,9 @@
 #define RIN_SYS_ISO_READ_FILE_V1            0x808Fu
 /* time. */
 #define RIN_SYS_CLOCKSOURCE_RESOLUTION      0x8090u
+#define RIN_SYS_CLOCK_GETTIME64             0x8091u
+/* thread. */
+#define RIN_SYS_FUTEX_TIME64                0x8092u
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u

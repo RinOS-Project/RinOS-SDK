@@ -27,6 +27,7 @@ typedef int32_t RinResultCode;
 #define RIN_TIMER_NOTIFY_THREAD             2u
 #define RIN_TIMER_THREAD_SIGNAL             31u
 #define RIN_CLOCK_SETTIME_ABI_VERSION       1u
+#define RIN_CLOCK_GETTIME_ABI_VERSION       1u
 #define RIN_TIMER_ABSTIME                   1u
 #define RIN_NOTIFICATION_V1_VERSION         1u
 #define RIN_NOTIFICATION_KIND_INFO          0u
@@ -1490,6 +1491,16 @@ typedef struct RinClockSettimeV1 {
     int64_t tv_nsec;
 } RinClockSettimeV1;
 
+typedef struct RinClockGettimeV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    int32_t clock_id;
+    int32_t reserved0;
+    int64_t tv_sec;
+    int64_t tv_nsec;
+} RinClockGettimeV1;
+
 #endif /* RIN_SDK_TIME_ABI_DEFINED */
 
 #if defined(__cplusplus)
@@ -2326,6 +2337,14 @@ static_assert(offsetof(RinClockSettimeV1, clock_id) == 8, "RinClockSettimeV1.clo
 static_assert(offsetof(RinClockSettimeV1, reserved0) == 12, "RinClockSettimeV1.reserved0 ABI drift");
 static_assert(offsetof(RinClockSettimeV1, tv_sec) == 16, "RinClockSettimeV1.tv_sec ABI drift");
 static_assert(offsetof(RinClockSettimeV1, tv_nsec) == 24, "RinClockSettimeV1.tv_nsec ABI drift");
+static_assert(sizeof(RinClockGettimeV1) == 32, "RinClockGettimeV1 ABI drift");
+static_assert(offsetof(RinClockGettimeV1, struct_size) == 0, "RinClockGettimeV1.struct_size ABI drift");
+static_assert(offsetof(RinClockGettimeV1, version) == 4, "RinClockGettimeV1.version ABI drift");
+static_assert(offsetof(RinClockGettimeV1, flags) == 6, "RinClockGettimeV1.flags ABI drift");
+static_assert(offsetof(RinClockGettimeV1, clock_id) == 8, "RinClockGettimeV1.clock_id ABI drift");
+static_assert(offsetof(RinClockGettimeV1, reserved0) == 12, "RinClockGettimeV1.reserved0 ABI drift");
+static_assert(offsetof(RinClockGettimeV1, tv_sec) == 16, "RinClockGettimeV1.tv_sec ABI drift");
+static_assert(offsetof(RinClockGettimeV1, tv_nsec) == 24, "RinClockGettimeV1.tv_nsec ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinEventV1) == 48, "RinEventV1 ABI drift");
 _Static_assert(offsetof(RinEventV1, struct_size) == 0, "RinEventV1.struct_size ABI drift");
@@ -3160,6 +3179,14 @@ _Static_assert(offsetof(RinClockSettimeV1, clock_id) == 8, "RinClockSettimeV1.cl
 _Static_assert(offsetof(RinClockSettimeV1, reserved0) == 12, "RinClockSettimeV1.reserved0 ABI drift");
 _Static_assert(offsetof(RinClockSettimeV1, tv_sec) == 16, "RinClockSettimeV1.tv_sec ABI drift");
 _Static_assert(offsetof(RinClockSettimeV1, tv_nsec) == 24, "RinClockSettimeV1.tv_nsec ABI drift");
+_Static_assert(sizeof(RinClockGettimeV1) == 32, "RinClockGettimeV1 ABI drift");
+_Static_assert(offsetof(RinClockGettimeV1, struct_size) == 0, "RinClockGettimeV1.struct_size ABI drift");
+_Static_assert(offsetof(RinClockGettimeV1, version) == 4, "RinClockGettimeV1.version ABI drift");
+_Static_assert(offsetof(RinClockGettimeV1, flags) == 6, "RinClockGettimeV1.flags ABI drift");
+_Static_assert(offsetof(RinClockGettimeV1, clock_id) == 8, "RinClockGettimeV1.clock_id ABI drift");
+_Static_assert(offsetof(RinClockGettimeV1, reserved0) == 12, "RinClockGettimeV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinClockGettimeV1, tv_sec) == 16, "RinClockGettimeV1.tv_sec ABI drift");
+_Static_assert(offsetof(RinClockGettimeV1, tv_nsec) == 24, "RinClockGettimeV1.tv_nsec ABI drift");
 #endif
 
 #endif /* RIN_SDK_CONTRACT_ABI_H */
