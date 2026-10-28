@@ -10,11 +10,18 @@
 #define RIN_SYSCALL_ABI_MINOR 0u
 #define RIN_SYS_CORE_DISPATCH_LIMIT 256u
 #define RIN_SYS_PRIVATE_BASE 0x8000u
+#define RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED 0u
+#define RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED 1u
+#define RIN_SYSCALL_ARCH_SUPPORT_CONDITIONAL 2u
 
 /* process. */
 #define RIN_SYS_EXIT                        0u
 #define RIN_SYS_FORK                        1u
 #define RIN_SYS_EXEC                        2u
+/* EXEC availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_EXEC_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_EXEC_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_EXEC_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_CONDITIONAL
 #define RIN_SYS_WAIT                        3u
 #define RIN_SYS_GETPID                      4u
 #define RIN_SYS_GETPPID                     5u
