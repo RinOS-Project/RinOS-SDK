@@ -33,6 +33,7 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `wifi/*.h` and `src/rin/driver/wifi/*.c` | Portable 802.11 discovery, association sequencing, WPA2/CCMP, and supplicant state machines. WPA2 crypto sources use RinTLS public crypto headers; OS-Core still owns regulatory authorization and key policy. |
 | `usb/audio/*.h` | USB Audio Class 1/2 descriptors, runtime stream negotiation, isochronous packet planning, and transport contracts. |
 | `usb/hid/*.h` | HID boot reports, pen and gamepad parsing, mapping/calibration support, and force-feedback records. |
+| `usb/hid/device_v3.h` | NDRV v3 USB HID driver adapter, attachment, publication, and memory callback ABI. |
 | `usb/fido/ctaphid.h` | CTAP-HID packet framing and transaction state for FIDO authenticators. |
 | `usb/fido/broker_v1.h` and `src/rin/driver/usb/fido/broker_v1.c` | Portable bounded CTAP-HID device broker and transfer lifecycle for USB FIDO drivers. |
 
