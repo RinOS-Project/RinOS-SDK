@@ -18,6 +18,9 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `validation_v3.h` | Inline validation for API tables, DMA/BAR/IRQ leases, timers, Block requests/completions, USB transfers/topology, and safe utility functions. |
 | `serial.h` | Serial/TTY line configuration, memory-lease transfers, completion, and modem-line contracts. |
 | `bluetooth/hci.h` | Bluetooth HCI command/data packet, controller, event, and completion contracts. |
+| `bluetooth/hci_runtime_v1.h` and `src/rin/driver/bluetooth/hci_runtime_v1.c` | Portable HCI controller state machine and event processing over a caller-owned transport. |
+| `bluetooth/hci_transport_v1.h` | Callback contract for HCI command transport and monotonic time. |
+| `atomic_u64.h` | Aligned 64-bit storage type for shared driver records on 32-bit targets. |
 | `wifi.h` | Wi-Fi scanning, regulatory channels, secure association, events, and the shared Network data path. |
 | `wifi/*.h` and `src/rin/driver/wifi/*.c` | Portable 802.11 discovery, association sequencing, WPA2/CCMP, and supplicant state machines. WPA2 crypto sources use RinTLS public crypto headers; OS-Core still owns regulatory authorization and key policy. |
 | `usb/audio/*.h` | USB Audio Class 1/2 descriptors, runtime stream negotiation, isochronous packet planning, and transport contracts. |
