@@ -121,6 +121,7 @@
 [RIN_SYS_THREAD_SCHED_RR_INTERVAL] = "thread_sched_rr_interval",
 [RIN_SYS_SPAWN_PROCESS_ACTIONS] = "spawn_process_actions",
 [RIN_SYS_PRCTL] = "prctl",
+[RIN_SYS_PTRACE] = "ptrace",
 [RIN_SYS_RT_SIGRETURN] = "rt_sigreturn",
 [RIN_SYS_RT_SIGACTION] = "rt_sigaction",
 [RIN_SYS_RT_SIGPROCMASK] = "rt_sigprocmask",
