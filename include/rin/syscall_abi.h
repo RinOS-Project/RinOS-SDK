@@ -287,6 +287,12 @@
 #define RIN_SYS_ISO_READ                    311u
 #define RIN_SYS_GET_HDDBOOT                 312u
 #define RIN_SYS_SYSTEM_IMAGE_VERIFY         313u
+/* security. */
+/* bounded kernel CSPRNG */
+#define RIN_SYS_GETRANDOM                   350u
+/* thread. */
+/* clear_child_tid on thread exit */
+#define RIN_SYS_SET_TID_ADDRESS             351u
 /* signal. */
 #define RIN_SYS_TKILL                       500u
 #define RIN_SYS_TGKILL                      501u
