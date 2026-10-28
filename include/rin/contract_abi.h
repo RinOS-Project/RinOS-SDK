@@ -1518,6 +1518,16 @@ typedef struct RinClockGettimeV1 {
 
 #endif /* RIN_SDK_TIME_ABI_DEFINED */
 
+typedef struct RinDynlinkOpenMemoryContractV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t image_address;
+    uint64_t image_size;
+    uint8_t library_name[64];
+    uint64_t reserved[2];
+} RinDynlinkOpenMemoryContractV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinEventV1) == 48, "RinEventV1 ABI drift");
 static_assert(offsetof(RinEventV1, struct_size) == 0, "RinEventV1.struct_size ABI drift");
@@ -2366,6 +2376,14 @@ static_assert(offsetof(RinClockGettimeV1, clock_id) == 8, "RinClockGettimeV1.clo
 static_assert(offsetof(RinClockGettimeV1, reserved0) == 12, "RinClockGettimeV1.reserved0 ABI drift");
 static_assert(offsetof(RinClockGettimeV1, tv_sec) == 16, "RinClockGettimeV1.tv_sec ABI drift");
 static_assert(offsetof(RinClockGettimeV1, tv_nsec) == 24, "RinClockGettimeV1.tv_nsec ABI drift");
+static_assert(sizeof(RinDynlinkOpenMemoryContractV1) == 104, "RinDynlinkOpenMemoryContractV1 ABI drift");
+static_assert(offsetof(RinDynlinkOpenMemoryContractV1, struct_size) == 0, "RinDynlinkOpenMemoryContractV1.struct_size ABI drift");
+static_assert(offsetof(RinDynlinkOpenMemoryContractV1, version) == 4, "RinDynlinkOpenMemoryContractV1.version ABI drift");
+static_assert(offsetof(RinDynlinkOpenMemoryContractV1, flags) == 6, "RinDynlinkOpenMemoryContractV1.flags ABI drift");
+static_assert(offsetof(RinDynlinkOpenMemoryContractV1, image_address) == 8, "RinDynlinkOpenMemoryContractV1.image_address ABI drift");
+static_assert(offsetof(RinDynlinkOpenMemoryContractV1, image_size) == 16, "RinDynlinkOpenMemoryContractV1.image_size ABI drift");
+static_assert(offsetof(RinDynlinkOpenMemoryContractV1, library_name) == 24, "RinDynlinkOpenMemoryContractV1.library_name ABI drift");
+static_assert(offsetof(RinDynlinkOpenMemoryContractV1, reserved) == 88, "RinDynlinkOpenMemoryContractV1.reserved ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinEventV1) == 48, "RinEventV1 ABI drift");
 _Static_assert(offsetof(RinEventV1, struct_size) == 0, "RinEventV1.struct_size ABI drift");
@@ -3214,6 +3232,14 @@ _Static_assert(offsetof(RinClockGettimeV1, clock_id) == 8, "RinClockGettimeV1.cl
 _Static_assert(offsetof(RinClockGettimeV1, reserved0) == 12, "RinClockGettimeV1.reserved0 ABI drift");
 _Static_assert(offsetof(RinClockGettimeV1, tv_sec) == 16, "RinClockGettimeV1.tv_sec ABI drift");
 _Static_assert(offsetof(RinClockGettimeV1, tv_nsec) == 24, "RinClockGettimeV1.tv_nsec ABI drift");
+_Static_assert(sizeof(RinDynlinkOpenMemoryContractV1) == 104, "RinDynlinkOpenMemoryContractV1 ABI drift");
+_Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, struct_size) == 0, "RinDynlinkOpenMemoryContractV1.struct_size ABI drift");
+_Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, version) == 4, "RinDynlinkOpenMemoryContractV1.version ABI drift");
+_Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, flags) == 6, "RinDynlinkOpenMemoryContractV1.flags ABI drift");
+_Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, image_address) == 8, "RinDynlinkOpenMemoryContractV1.image_address ABI drift");
+_Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, image_size) == 16, "RinDynlinkOpenMemoryContractV1.image_size ABI drift");
+_Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, library_name) == 24, "RinDynlinkOpenMemoryContractV1.library_name ABI drift");
+_Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, reserved) == 88, "RinDynlinkOpenMemoryContractV1.reserved ABI drift");
 #endif
 
 #endif /* RIN_SDK_CONTRACT_ABI_H */
