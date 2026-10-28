@@ -3111,8 +3111,8 @@ static int gpu_direct_display_request_valid(
             request->queue_family_index != 0u || request->queue_flags != 0u ||
             request->queue_count != 0u ||
             present->struct_size != sizeof(*present) ||
-            present->version !=
-                RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V1 ||
+            !rin_gpu_process_direct_display_present_version_valid_v1(
+                present->version) ||
             present->display_cookie == 0u || present->mode_cookie == 0u ||
             present->allocation == 0u || present->allocation_size == 0u ||
             present->allocation_offset >

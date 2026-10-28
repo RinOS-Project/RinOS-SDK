@@ -98,6 +98,7 @@ extern "C" {
 #define RIN_GPU_PROCESS_DIRECT_DISPLAY_REQUEST_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_DIRECT_DISPLAY_RESPONSE_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V1 UINT32_C(1)
+#define RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V2 UINT32_C(2)
 #define RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_STATUS_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_DIRECT_DISPLAY_IMAGE_LAYOUT_VERSION_V1 UINT32_C(1)
 #define RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_DISPLAYS_V1 UINT32_C(16)
@@ -586,6 +587,17 @@ typedef struct RinGpuProcessDirectDisplayPresentRequestV1 {
     uint64_t reserved[2];
 } RinGpuProcessDirectDisplayPresentRequestV1;
 
+/* V2 revisions the present semantics without changing the fixed payload
+ * layout; the version field distinguishes it inside the V1 outer dispatch. */
+typedef RinGpuProcessDirectDisplayPresentRequestV1
+    RinGpuProcessDirectDisplayPresentRequestV2;
+
+static inline int rin_gpu_process_direct_display_present_version_valid_v1(
+    uint32_t version) {
+    return version == RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V1 ||
+           version == RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V2;
+}
+
 /* Validate the row-pitch lower bound for pixel formats defined by this SDK
  * contract. Unknown formats retain the generic nonzero-pitch requirement and
  * are left for the backend to report as unsupported. */
@@ -601,6 +613,11 @@ static inline int rin_gpu_process_direct_display_row_pitch_valid_v1(
         return 1;
     minimum_row_pitch = (uint64_t)present->width * UINT64_C(4);
     return row_pitch >= minimum_row_pitch;
+}
+
+static inline int rin_gpu_process_direct_display_row_pitch_valid_v2(
+    const RinGpuProcessDirectDisplayPresentRequestV2* present) {
+    return rin_gpu_process_direct_display_row_pitch_valid_v1(present);
 }
 
 typedef struct RinGpuProcessDirectDisplayV1 {
@@ -1050,6 +1067,8 @@ static_assert(sizeof(RinGpuProcessDirectDisplayImageLayoutV1) == 136u,
               "RinGpuProcessDirectDisplayImageLayoutV1 ABI drift");
 static_assert(sizeof(RinGpuProcessDirectDisplayPresentRequestV1) == 248u,
               "RinGpuProcessDirectDisplayPresentRequestV1 ABI drift");
+static_assert(sizeof(RinGpuProcessDirectDisplayPresentRequestV2) == 248u,
+              "RinGpuProcessDirectDisplayPresentRequestV2 ABI drift");
 static_assert(sizeof(RinGpuProcessDirectDisplayV1) == 160u,
               "RinGpuProcessDirectDisplayV1 ABI drift");
 static_assert(sizeof(RinGpuProcessDirectDisplayModeV1) == 64u,
@@ -1121,6 +1140,8 @@ _Static_assert(sizeof(RinGpuProcessDirectDisplayImageLayoutV1) == 136u,
                "RinGpuProcessDirectDisplayImageLayoutV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessDirectDisplayPresentRequestV1) == 248u,
                "RinGpuProcessDirectDisplayPresentRequestV1 ABI drift");
+_Static_assert(sizeof(RinGpuProcessDirectDisplayPresentRequestV2) == 248u,
+               "RinGpuProcessDirectDisplayPresentRequestV2 ABI drift");
 _Static_assert(sizeof(RinGpuProcessDirectDisplayV1) == 160u,
                "RinGpuProcessDirectDisplayV1 ABI drift");
 _Static_assert(sizeof(RinGpuProcessDirectDisplayModeV1) == 64u,
