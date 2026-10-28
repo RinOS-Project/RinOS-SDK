@@ -442,6 +442,10 @@ typedef int32_t RinResultCode;
 #define RIN_MANAGEMENT_ACTION_MOUNT         53u
 #define RIN_MANAGEMENT_ACTION_UNMOUNT       54u
 #define RIN_MANAGEMENT_ACTION_RESIZE        55u
+#define RIN_SERVICE_SCOPE_SYSTEM            1u
+#define RIN_SERVICE_SCOPE_USER              2u
+#define RIN_SERVICE_INFO_SIZE               688u
+#define RIN_SERVICE_ID_MAX_BYTES            64u
 
 /* Rin-native result namespace; these are not POSIX errno values. */
 #define RIN_RESULT_OK                       ((RinResultCode)0)
