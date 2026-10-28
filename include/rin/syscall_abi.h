@@ -157,6 +157,7 @@
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS       147u
 #define RIN_SYS_PRCTL                       148u
 #define RIN_SYS_PTRACE                      149u
+#define RIN_SYS_SECCOMP                     150u
 /* signal. */
 #define RIN_SYS_RT_SIGRETURN                173u /* reserved */
 #define RIN_SYS_RT_SIGACTION                174u /* reserved */

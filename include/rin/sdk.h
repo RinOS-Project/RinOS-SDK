@@ -41,6 +41,7 @@
 #include "process/namespace_abi.h"
 #include "process/posix_spawn_abi.h"
 #include "process/process_group_abi.h"
+#include "seccomp_abi.h"
 #include "thread/name_abi.h"
 #include "thread/sched_abi.h"
 #include "time/abi.h"
