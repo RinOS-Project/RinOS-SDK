@@ -33,7 +33,7 @@ typedef struct RinRtcCmosConfigV1 {
     uint8_t century_register;
     uint8_t has_century_register;
     uint16_t reserved0;
-    uint64_t reserved[2];
+    uint64_t reserved[3];
 } RinRtcCmosConfigV1;
 
 typedef struct RinRtcCmosBackendV1 {
