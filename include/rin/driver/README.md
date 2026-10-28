@@ -11,6 +11,7 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `module_api_v3.h` | The NDRV v3 callback table and core Block, Network, Input, Display, Audio, and USB Controller contracts. |
 | `services_v3.h` | Checked capability brokers for port I/O, IRQ events, authenticated firmware, child devices, and typed device properties. |
 | `resource_runtime_v3.h` | Header-only checked wrappers for resource callbacks and generation-bound leases. |
+| `cpu_relax.h` | Inline architecture-aware processor wait hints for bounded driver polling loops. |
 | `validation_v3.h` | Inline validation for API tables, DMA/BAR/IRQ leases, timers, Block requests/completions, USB transfers/topology, and safe utility functions. |
 | `serial.h` | Serial/TTY line configuration, memory-lease transfers, completion, and modem-line contracts. |
 | `bluetooth/hci.h` | Bluetooth HCI command/data packet, controller, event, and completion contracts. |
@@ -32,5 +33,9 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 The shared VirtIO and EDID sources are executable SDK implementations intended for direct use by external Driver packages. Header-only broker and device-class APIs validate requests, results, and operation tables, then call the granted OS-Core operation table. A capability is usable only when OS-Core grants it with a complete provider. OS-Core policy, kernel object layouts, and NDRV v1/v2 compatibility interfaces remain outside this public include tree.
 
 The USB Audio, HID, and CTAP-HID parsers and packet helpers are also executable SDK sources under `src/rin/driver/usb/`; build them directly into the relevant Driver package or SDK library. USB descriptors, reports, and packet sizes are checked against fixed bounds before any data is exposed to a Driver.
+
+Drivers that need a processor wait hint should include
+`rin/driver/cpu_relax.h`. These inline helpers keep polling code independent
+of OS-Core's private architecture headers and link-time symbols.
 
 `services_v3.h` defines the public firmware and child-device records and checked calls. NDRV v3 packages may embed authenticated firmware with repeated `make_drv.py --firmware=NAME=PATH` options. The kernel verifies the signed resource catalog and payload digests, then returns bounded reads through a generation-bound lease. Child publication uses the kernel's bounded child catalog and returns a kernel-generated device identity. Neither capability is granted when its backing runtime service is unavailable.
