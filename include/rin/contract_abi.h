@@ -21,7 +21,7 @@ typedef int32_t RinResultCode;
 #define RIN_INSTALL_SOURCE_PAYLOAD_COUNT    6u
 #define RIN_ITIMER_ABI_VERSION              1u
 #define RIN_TIMER_ABI_VERSION               1u
-#define RIN_TIMER_MAX_SLOTS                 16u
+#define RIN_TIMER_MAX_SLOTS                 32u
 #define RIN_TIMER_NOTIFY_SIGNAL             0u
 #define RIN_TIMER_NOTIFY_NONE               1u
 #define RIN_TIMER_NOTIFY_THREAD             2u
