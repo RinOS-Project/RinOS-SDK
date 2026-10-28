@@ -21,6 +21,7 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `bluetooth/hci_runtime_v1.h` and `src/rin/driver/bluetooth/hci_runtime_v1.c` | Portable HCI controller state machine and event processing over a caller-owned transport. |
 | `bluetooth/hci_transport_v1.h` | Callback contract for HCI command transport and monotonic time. |
 | `atomic_u64.h` | Aligned 64-bit storage type for shared driver records on 32-bit targets. |
+| `gpu/pci_resource_v1.h` | OS-Core-granted BAR mapping and PCI configuration callbacks shared by GPU platform and driver owners. |
 | `wifi.h` | Wi-Fi scanning, regulatory channels, secure association, events, and the shared Network data path. |
 | `wifi/*.h` and `src/rin/driver/wifi/*.c` | Portable 802.11 discovery, association sequencing, WPA2/CCMP, and supplicant state machines. WPA2 crypto sources use RinTLS public crypto headers; OS-Core still owns regulatory authorization and key policy. |
 | `usb/audio/*.h` | USB Audio Class 1/2 descriptors, runtime stream negotiation, isochronous packet planning, and transport contracts. |
