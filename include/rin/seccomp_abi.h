@@ -25,9 +25,10 @@
 #define RIN_SECCOMP_IOCTL_NOTIF_SEND UINT32_C(0xc0182101)
 #define RIN_SECCOMP_IOCTL_NOTIF_ID_VALID UINT32_C(0x40082102)
 
-/* NOTIF_RECV returns -EAGAIN while the queue is empty; poll(POLLIN) can wait
- * for listener readiness. pid is zero when the tracee is outside the
- * listener creator's PID namespace or that creator has exited. */
+/* NOTIF_RECV blocks for a queued request unless O_NONBLOCK is set; blocked
+ * receive is interrupted with -EINTR and poll(POLLIN) reports queued work.
+ * Notification creation fails with -ESRCH when the tracee has no TID
+ * representable in the listener creator's PID namespace. */
 
 typedef struct RinSeccompNotifData {
     int32_t syscall_number;
