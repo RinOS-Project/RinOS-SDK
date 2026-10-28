@@ -63,8 +63,6 @@ typedef struct RinUvcCaptureAttachV1 {
 int32_t rin_uvc_capture_owner_is_initialized(
     const RinUvcCaptureOwner* owner);
 int32_t rin_uvc_capture_owner_init(RinUvcCaptureOwner* owner);
-int32_t rin_uvc_capture_owner_is_initialized(
-    const RinUvcCaptureOwner* owner);
 int32_t rin_uvc_capture_owner_attach(
     RinUvcCaptureOwner* owner, const RinUvcCaptureAttachV1* attach);
 int32_t rin_uvc_capture_owner_detach(
