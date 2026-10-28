@@ -12,6 +12,7 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `services_v3.h` | Checked capability brokers for port I/O, IRQ events, authenticated firmware, child devices, and typed device properties. |
 | `resource_runtime_v3.h` | Header-only checked wrappers for resource callbacks and generation-bound leases. |
 | `cpu_relax.h` | Inline architecture-aware processor wait hints for bounded driver polling loops. |
+| `ps2/set1_decoder.h` and `src/rin/driver/ps2/set1_decoder.c` | Portable PS/2 Set 1 scancode decoding, key-repeat eligibility, and US ASCII translation. |
 | `validation_v3.h` | Inline validation for API tables, DMA/BAR/IRQ leases, timers, Block requests/completions, USB transfers/topology, and safe utility functions. |
 | `serial.h` | Serial/TTY line configuration, memory-lease transfers, completion, and modem-line contracts. |
 | `bluetooth/hci.h` | Bluetooth HCI command/data packet, controller, event, and completion contracts. |
@@ -29,6 +30,7 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `virtio/pci_transport_v3.h` and `src/rin/driver/virtio/pci_transport_v3.c` | VirtIO PCI capability discovery, transport access, and queue setup shared by device Drivers. |
 | `virtio/virtqueue_v3.h` and `src/rin/driver/virtio/virtqueue_v3.c` | Virtqueue descriptor management and completion processing. |
 | `display/edid.h` and `src/rin/driver/display/edid.c` | EDID validation and display-mode parsing. |
+| `ps2/set1_decoder.h` and `src/rin/driver/ps2/set1_decoder.c` | Stateful Set 1 scan-code parsing shared by kernel input and PS/2 drivers. |
 
 The shared VirtIO and EDID sources are executable SDK implementations intended for direct use by external Driver packages. Header-only broker and device-class APIs validate requests, results, and operation tables, then call the granted OS-Core operation table. A capability is usable only when OS-Core grants it with a complete provider. OS-Core policy, kernel object layouts, and NDRV v1/v2 compatibility interfaces remain outside this public include tree.
 
