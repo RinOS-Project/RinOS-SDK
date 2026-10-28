@@ -620,6 +620,55 @@ static inline int rin_gpu_process_direct_display_row_pitch_valid_v2(
     return rin_gpu_process_direct_display_row_pitch_valid_v1(present);
 }
 
+/* Canonical byte-layout contract for a process direct-display present. V2
+ * carries the same fixed layout payload but selects its own present semantic
+ * version; all OS-Core boundaries use this helper so bounds and modifier
+ * checks cannot drift between the SDK and physical adapter. */
+static inline int
+rin_gpu_process_direct_display_present_image_layout_valid_v1(
+    const RinGpuProcessDirectDisplayPresentRequestV1* present) {
+    const RinGpuProcessDirectDisplayImageLayoutV1* layout;
+    uint32_t plane;
+    int row_pitch_valid;
+    if (!present || present->width == 0u || present->height == 0u ||
+        present->allocation_size == 0u)
+        return 0;
+    if (present->version == RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V1)
+        row_pitch_valid =
+            rin_gpu_process_direct_display_row_pitch_valid_v1(present);
+    else if (present->version ==
+             RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V2)
+        row_pitch_valid =
+            rin_gpu_process_direct_display_row_pitch_valid_v2(present);
+    else
+        return 0;
+    layout = &present->image_layout;
+    if (!row_pitch_valid || layout->struct_size != sizeof(*layout) ||
+        layout->version !=
+            RIN_GPU_PROCESS_DIRECT_DISPLAY_IMAGE_LAYOUT_VERSION_V1 ||
+        layout->kind != RIN_GPU_PROCESS_DIRECT_DISPLAY_LAYOUT_LINEAR_V1 ||
+        layout->plane_count != 1u || layout->modifier != 0u ||
+        layout->reserved[0] != 0u || layout->reserved[1] != 0u ||
+        layout->planes[0].row_pitch_bytes == 0u ||
+        layout->planes[0].size_bytes == 0u ||
+        layout->planes[0].offset_bytes > present->allocation_size ||
+        layout->planes[0].size_bytes >
+            present->allocation_size - layout->planes[0].offset_bytes ||
+        present->height >
+            UINT64_MAX / layout->planes[0].row_pitch_bytes ||
+        layout->planes[0].row_pitch_bytes * present->height !=
+            layout->planes[0].size_bytes)
+        return 0;
+    for (plane = 1u;
+         plane < RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_LAYOUT_PLANES_V1;
+         ++plane)
+        if (layout->planes[plane].offset_bytes != 0u ||
+            layout->planes[plane].row_pitch_bytes != 0u ||
+            layout->planes[plane].size_bytes != 0u)
+            return 0;
+    return 1;
+}
+
 typedef struct RinGpuProcessDirectDisplayV1 {
     uint32_t struct_size;
     uint32_t version;

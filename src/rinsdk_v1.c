@@ -3102,18 +3102,6 @@ static int gpu_direct_display_request_valid(
     case RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_V1: {
         const RinGpuProcessDirectDisplayPresentRequestV1* present =
             &request->present;
-        const RinGpuProcessDirectDisplayImageLayoutV1* layout =
-            &present->image_layout;
-        uint32_t index;
-        const int row_pitch_valid =
-            present->version ==
-                    RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V2
-                ? rin_gpu_process_direct_display_row_pitch_valid_v2(present)
-                : present->version ==
-                          RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V1
-                      ? rin_gpu_process_direct_display_row_pitch_valid_v1(
-                            present)
-                      : 0;
         if (request->capacity != 0u || request->display_cookie != 0u ||
             request->output_generation != 0u || request->mode_cookie != 0u ||
             request->present_token != 0u || request->plane_index != 0u ||
@@ -3135,30 +3123,9 @@ static int gpu_direct_display_request_valid(
             present->flags != 0u ||
             !gpu_direct_display_bytes_zero(present->reserved,
                                             sizeof(present->reserved)) ||
-            layout->struct_size != sizeof(*layout) ||
-            layout->version !=
-                RIN_GPU_PROCESS_DIRECT_DISPLAY_IMAGE_LAYOUT_VERSION_V1 ||
-            layout->kind != RIN_GPU_PROCESS_DIRECT_DISPLAY_LAYOUT_LINEAR_V1 ||
-            layout->plane_count != 1u || layout->modifier != 0u ||
-            !gpu_direct_display_bytes_zero(layout->reserved,
-                                            sizeof(layout->reserved)) ||
-            !row_pitch_valid ||
-            layout->planes[0].row_pitch_bytes == 0u ||
-            layout->planes[0].size_bytes == 0u ||
-            layout->planes[0].offset_bytes > present->allocation_size ||
-            layout->planes[0].size_bytes >
-                present->allocation_size - layout->planes[0].offset_bytes ||
-            present->height > UINT64_MAX /
-                                  layout->planes[0].row_pitch_bytes ||
-            layout->planes[0].row_pitch_bytes * present->height !=
-                layout->planes[0].size_bytes)
+            !rin_gpu_process_direct_display_present_image_layout_valid_v1(
+                present))
             return 0;
-        for (index = 1u;
-             index < RIN_GPU_PROCESS_DIRECT_DISPLAY_MAX_LAYOUT_PLANES_V1;
-             ++index)
-            if (!gpu_direct_display_bytes_zero(&layout->planes[index],
-                                                sizeof(layout->planes[index])))
-                return 0;
         break;
     }
     case RIN_GPU_PROCESS_DIRECT_DISPLAY_POLL_V1:
