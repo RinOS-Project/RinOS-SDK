@@ -18,8 +18,18 @@
 
 #define RIN_POSIX_SEMAPHORE_OPEN_CREAT UINT32_C(0x00000001)
 #define RIN_POSIX_SEMAPHORE_OPEN_EXCL  UINT32_C(0x00000002)
+#define RIN_POSIX_SEMAPHORE_OPEN_MODE_SHIFT 8u
+#define RIN_POSIX_SEMAPHORE_OPEN_MODE_MASK \
+    (UINT32_C(0777) << RIN_POSIX_SEMAPHORE_OPEN_MODE_SHIFT)
+#define RIN_POSIX_SEMAPHORE_OPEN_MODE_PRESENT UINT32_C(0x00020000)
 #define RIN_POSIX_SEMAPHORE_OPEN_FLAG_MASK \
-    (RIN_POSIX_SEMAPHORE_OPEN_CREAT | RIN_POSIX_SEMAPHORE_OPEN_EXCL)
+    (RIN_POSIX_SEMAPHORE_OPEN_CREAT | RIN_POSIX_SEMAPHORE_OPEN_EXCL | \
+     RIN_POSIX_SEMAPHORE_OPEN_MODE_MASK | \
+     RIN_POSIX_SEMAPHORE_OPEN_MODE_PRESENT)
+
+/* POSIX_SEM_OPENの3引数ABIを維持するためmodeをflagsに格納する。
+ * MODE_PRESENTにより明示mode 000とmodeを送らない旧callerを区別する。
+ * 旧O_CREAT callerのmodeは0666としてprocess umaskを適用する。 */
 
 /* The public sem_t begins at value.  The preamble stays private to the
  * kernel and lets close reject arbitrary shared-memory mappings. */
