@@ -155,6 +155,7 @@
 #define RIN_SYS_THREAD_SCHED_RR_INTERVAL    146u
 /* process. */
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS       147u
+#define RIN_SYS_PRCTL                       148u
 /* signal. */
 #define RIN_SYS_RT_SIGRETURN                173u /* reserved */
 #define RIN_SYS_RT_SIGACTION                174u /* reserved */
