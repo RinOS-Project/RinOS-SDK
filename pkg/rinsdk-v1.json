@@ -8,7 +8,7 @@
     {"project": "RinResource", "include_subdirectory": "rinresource"}
   ],
   "libraries": {
-    "rincrt": {"archive": "librincrt.ra", "shared": "rincrt.rll", "define": "RINSDK_BUILD_CORE", "dependencies": [], "extra_sources": ["rincrt_bootstrap_v1.c", "../../libs/libc/rin_user_allocator.c", "../../libs/libc/string_runtime.c", "../../libs/libc/fcntl_runtime.c", "../../libs/libunicode/core.c"]},
+    "rincrt": {"archive": "librincrt.ra", "shared": "rincrt.rll", "define": "RINSDK_BUILD_CORE", "dependencies": [], "extra_sources": ["rincrt_bootstrap_v1.c", "../../libs/libc/rin_user_allocator.c", "../../libs/libc/string_runtime.c", "../../libs/libc/fcntl_runtime.c", "../../libs/libc/pthread_atfork_runtime.c", "../../libs/libunicode/core.c"]},
     "rinbase": {"archive": "librinbase.ra", "shared": "rinbase.rll", "define": "RINSDK_BUILD_BASE", "dependencies": ["rincrt"]},
     "rinipc": {"archive": "librinipc.ra", "shared": "rinipc.rll", "define": "RINSDK_BUILD_IPC", "dependencies": ["rincrt", "rinbase"]},
     "rinfs": {"archive": "librinfs.ra", "shared": "rinfs.rll", "define": "RINSDK_BUILD_FS", "dependencies": ["rincrt", "rinbase", "rinipc"]},
