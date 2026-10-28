@@ -3105,6 +3105,15 @@ static int gpu_direct_display_request_valid(
         const RinGpuProcessDirectDisplayImageLayoutV1* layout =
             &present->image_layout;
         uint32_t index;
+        const int row_pitch_valid =
+            present->version ==
+                    RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V2
+                ? rin_gpu_process_direct_display_row_pitch_valid_v2(present)
+                : present->version ==
+                          RIN_GPU_PROCESS_DIRECT_DISPLAY_PRESENT_VERSION_V1
+                      ? rin_gpu_process_direct_display_row_pitch_valid_v1(
+                            present)
+                      : 0;
         if (request->capacity != 0u || request->display_cookie != 0u ||
             request->output_generation != 0u || request->mode_cookie != 0u ||
             request->present_token != 0u || request->plane_index != 0u ||
@@ -3133,7 +3142,7 @@ static int gpu_direct_display_request_valid(
             layout->plane_count != 1u || layout->modifier != 0u ||
             !gpu_direct_display_bytes_zero(layout->reserved,
                                             sizeof(layout->reserved)) ||
-            !rin_gpu_process_direct_display_row_pitch_valid_v1(present) ||
+            !row_pitch_valid ||
             layout->planes[0].row_pitch_bytes == 0u ||
             layout->planes[0].size_bytes == 0u ||
             layout->planes[0].offset_bytes > present->allocation_size ||
