@@ -1467,7 +1467,7 @@ typedef struct RinTimerCreateV1 {
     int32_t notify;
     int32_t signo;
     int32_t reserved0;
-    uint64_t value; /* Raw union sigval bits for SIGEV_SIGNAL. */
+    uint64_t value;
 } RinTimerCreateV1;
 
 typedef struct RinTimerSpecV1 {
