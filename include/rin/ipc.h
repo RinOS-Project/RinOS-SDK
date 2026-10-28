@@ -3,6 +3,7 @@
 #define RIN_SDK_IPC_H
 #include "abi.h"
 #include "ipc_peer_abi.h"
+#include "ipc_limits.h"
 #include "posix_mqueue_abi.h"
 
 #define RIN_EVENT_CREATE_FLAG_CLOSE_ON_EXEC UINT32_C(1)
