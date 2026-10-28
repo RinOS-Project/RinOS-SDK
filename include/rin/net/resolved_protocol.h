@@ -19,6 +19,7 @@
 #define RIN_RESOLVED_EAI_NONAME (-2)
 #define RIN_RESOLVED_EAI_AGAIN (-3)
 #define RIN_RESOLVED_EAI_FAIL (-4)
+#define RIN_RESOLVED_EAI_NODATA (-5)
 #define RIN_RESOLVED_EAI_FAMILY (-6)
 #define RIN_RESOLVED_EAI_SOCKTYPE (-7)
 #define RIN_RESOLVED_EAI_SERVICE (-8)
@@ -377,6 +378,7 @@ static inline int rin_resolved_getaddrinfo_status_valid(int32_t status)
            status == RIN_RESOLVED_EAI_NONAME ||
            status == RIN_RESOLVED_EAI_AGAIN ||
            status == RIN_RESOLVED_EAI_FAIL ||
+           status == RIN_RESOLVED_EAI_NODATA ||
            status == RIN_RESOLVED_EAI_FAMILY ||
            status == RIN_RESOLVED_EAI_SOCKTYPE ||
            status == RIN_RESOLVED_EAI_SERVICE ||
