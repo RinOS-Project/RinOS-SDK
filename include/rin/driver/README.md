@@ -7,6 +7,8 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | Header | Purpose |
 | --- | --- |
 | `image_abi_v3.h` | Image ABI values, result codes, opaque handles, Driver context, resource descriptors, and PCI match records. |
+| `admission_v3.h` and `src/rin/driver/admission_v3.c` | Public device identity and portable image-to-device matching. OS-Core retains admission policy and resource authorization. |
+| `bus/pci/catalog_v3.h` and `src/rin/driver/bus/pci/catalog_v3.c` | Callback-driven PCI config-space cataloging and signed-image matching, with OS-authorized config reads supplied by the caller. |
 | `resource_contract_v3.h` | Fixed-width resource and operation records for BAR, DMA, IRQ, timers, registration, block, network, input, and logging. |
 | `module_api_v3.h` | The NDRV v3 callback table and core Block, Network, Input, Display, Audio, and USB Controller contracts. |
 | `services_v3.h` | Checked capability brokers for port I/O, IRQ events, authenticated firmware, child devices, and typed device properties. |
