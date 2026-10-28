@@ -34,6 +34,10 @@ These headers are the public C interface for NDRV v3 modules. They use fixed-wid
 | `usb/audio/*.h` | USB Audio Class 1/2 descriptors, runtime stream negotiation, isochronous packet planning, and transport contracts. |
 | `usb/hid/*.h` | HID boot reports, pen and gamepad parsing, mapping/calibration support, and force-feedback records. |
 | `usb/hid/device_v3.h` | NDRV v3 USB HID driver adapter, attachment, publication, and memory callback ABI. |
+| `usb/hid/gamepad_calibration_v1.h` and `src/rin/driver/usb/hid/gamepad_calibration_v1.c` | Portable axis calibration and normalization for USB HID Gamepad samples. |
+| `usb/hid/gamepad_mapping_database_v1.h` and `src/rin/driver/usb/hid/gamepad_mapping_database_v1.c` | Bounded, generation-checked profile lookup and persistence over caller-owned storage callbacks. |
+| `usb/hid/pen_calibration_v1.h` and `src/rin/driver/usb/hid/pen_calibration_v1.c` | Portable bounds calibration for USB HID pen samples. |
+| `usb/hid/pen_mapping_v1.h` and `src/rin/driver/usb/hid/pen_mapping_v1.c` | Portable canvas mapping for calibrated USB HID pen samples. |
 | `usb/fido/ctaphid.h` | CTAP-HID packet framing and transaction state for FIDO authenticators. |
 | `usb/fido/broker_v1.h` and `src/rin/driver/usb/fido/broker_v1.c` | Portable bounded CTAP-HID device broker and transfer lifecycle for USB FIDO drivers. |
 
