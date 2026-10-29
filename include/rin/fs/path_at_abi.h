@@ -45,6 +45,20 @@
 /* Return the generation-bound identity of an open RinFS descriptor. */
 #define RIN_PATH_AT_FGETIDENTITY    21u
 #define RIN_PATH_AT_FILE_IDENTITY_V1_VERSION 1u
+/* Return the NUL-separated xattr names for an open RinFS descriptor. */
+#define RIN_PATH_AT_FLISTXATTR      22u
+#define RIN_PATH_AT_XATTR_LIST_MAX  16384u
+/* Path-bound xattr operations use path1 as the object and path2 as the name
+ * (empty for LIST). SYMLINK_NOFOLLOW targets the final link itself. SET keeps
+ * XATTR_CREATE/REPLACE in mode so path resolution flags remain independent. */
+#define RIN_PATH_AT_GETXATTR        23u
+#define RIN_PATH_AT_LISTXATTR       24u
+#define RIN_PATH_AT_SETXATTR        25u
+#define RIN_PATH_AT_REMOVEXATTR     26u
+
+/* FSETXATTR accepts these flags in addition to EMPTY_PATH. */
+#define RIN_PATH_AT_XATTR_CREATE    0x0001u
+#define RIN_PATH_AT_XATTR_REPLACE   0x0002u
 
 typedef struct RinPathAtFileIdentityV1 {
     uint32_t struct_size;
