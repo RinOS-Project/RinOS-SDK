@@ -10,9 +10,7 @@
 #include "resolved_nameinfo_policy.h"
 
 #define RIN_RESOLVED_MAGIC 0x52445631u /* "RDV1" */
-#define RIN_RESOLVED_VERSION_V1 1u
-#define RIN_RESOLVED_VERSION_V2 2u
-#define RIN_RESOLVED_VERSION RIN_RESOLVED_VERSION_V2
+#define RIN_RESOLVED_VERSION 1u
 #define RIN_RESOLVED_SERVICE_ID "resolved"
 #define RIN_RESOLVED_SERVICE_SOCKET_PATH "/run/rin/resolved.sock"
 #define RIN_RESOLVED_APP_SCOPE 0u
@@ -95,23 +93,6 @@ typedef struct RinResolvedMsgHeader {
     uint32_t payload_len;
     uint32_t reserved0;
 } RinResolvedMsgHeader;
-
-/* Protocol V2 attaches this bounded record to EAI_SYSTEM responses. V1
- * clients and requests keep the original header-only error representation. */
-typedef struct RinResolvedSystemErrorV2 {
-    uint32_t struct_size;
-    uint32_t version;
-    int32_t error_number;
-    uint32_t reserved0;
-} RinResolvedSystemErrorV2;
-
-#if defined(__cplusplus)
-static_assert(sizeof(RinResolvedSystemErrorV2) == 16u,
-              "resolved system error ABI drift");
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinResolvedSystemErrorV2) == 16u,
-               "resolved system error ABI drift");
-#endif
 
 /* The scope source is copied byte-for-byte between the resolved service and
  * the runtime adapter.  It carries no address, pathname, socket, or pointer;
@@ -355,9 +336,7 @@ static inline int rin_resolved_request_header_valid(
     uint32_t maximum_payload)
 {
     return header != NULL && header->magic == RIN_RESOLVED_MAGIC &&
-           (header->version == RIN_RESOLVED_VERSION_V1 ||
-            header->version == RIN_RESOLVED_VERSION_V2) &&
-           header->status == 0 &&
+           header->version == RIN_RESOLVED_VERSION && header->status == 0 &&
            header->reserved0 == 0u && header->payload_len <= maximum_payload;
 }
 
@@ -370,18 +349,6 @@ static inline int rin_resolved_response_header_valid(
            header->version == RIN_RESOLVED_VERSION &&
            header->command == expected_command && header->reserved0 == 0u &&
            header->payload_len <= payload_capacity;
-}
-
-static inline int rin_resolved_system_error_v2_valid(
-    const RinResolvedSystemErrorV2* error, uint32_t payload_size,
-    int32_t status)
-{
-    return error != NULL && status == RIN_RESOLVED_EAI_SYSTEM &&
-           payload_size == sizeof(*error) &&
-           error->struct_size == sizeof(*error) &&
-           error->version == RIN_RESOLVED_VERSION_V2 &&
-           error->error_number > 0 && error->error_number <= 4095 &&
-           error->reserved0 == 0u;
 }
 
 static inline uint32_t rin_resolved_address_bytes_for_family(int32_t family)
