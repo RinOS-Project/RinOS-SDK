@@ -387,6 +387,8 @@ static int rin_sdk_service_result_valid(intptr_t result) {
     case RIN_ERROR_TABLE_FULL:
     case RIN_ERROR_LIMIT_EXCEEDED:
     case RIN_ERROR_WRONG_TYPE:
+    case RIN_ERROR_INVALID_ADDRESS:
+    case RIN_ERROR_EXISTS:
         return 1;
     default:
         return 0;
