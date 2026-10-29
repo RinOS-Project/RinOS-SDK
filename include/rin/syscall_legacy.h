@@ -97,7 +97,6 @@
 #define SYS_SHUTDOWN                    RIN_SYS_SHUTDOWN
 #define SYS_SYSINFO                     RIN_SYS_SYSINFO
 #define SYS_UNAME                       RIN_SYS_UNAME
-#define SYS_EVENTFD2                    RIN_SYS_EVENTFD2
 #define SYS_ATA_INIT                    RIN_SYS_ATA_INIT
 #define SYS_ATA_GET_COUNT               RIN_SYS_ATA_GET_COUNT
 #define SYS_ATA_GET_INFO                RIN_SYS_ATA_GET_INFO

@@ -89,7 +89,6 @@
 [RIN_SYS_SHUTDOWN] = "shutdown",
 [RIN_SYS_SYSINFO] = "sysinfo",
 [RIN_SYS_UNAME] = "uname",
-[RIN_SYS_EVENTFD2] = "eventfd2",
 [RIN_SYS_ATA_INIT] = "ata_init",
 [RIN_SYS_ATA_GET_COUNT] = "ata_get_count",
 [RIN_SYS_ATA_GET_INFO] = "ata_get_info",

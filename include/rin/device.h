@@ -19,13 +19,32 @@ extern "C" {
 #define RIN_SDK_DEVICE_CLASS_BUS UINT32_C(7)
 #define RIN_SDK_DEVICE_CLASS_POWER UINT32_C(8)
 
+#ifndef RIN_DEVICE_RIGHT_READ
+#define RIN_DEVICE_RIGHT_READ UINT32_C(0x00000001)
+#endif
+#define RIN_DEVICE_RIGHT_WRITE UINT32_C(0x00000002)
+#ifndef RIN_DEVICE_RIGHT_CONTROL
+#define RIN_DEVICE_RIGHT_CONTROL UINT32_C(0x00000004)
+#endif
+#define RIN_DEVICE_RIGHT_MAP UINT32_C(0x00000008)
+#define RIN_DEVICE_RIGHT_QUERY UINT32_C(0x00000010)
+#define RIN_DEVICE_RIGHT_DUPLICATE UINT32_C(0x00000020)
+#define RIN_DEVICE_RIGHT_MASK (RIN_DEVICE_RIGHT_READ | \
+                               RIN_DEVICE_RIGHT_CONTROL | \
+                               RIN_DEVICE_RIGHT_QUERY | \
+                               RIN_DEVICE_RIGHT_DUPLICATE)
+
+/* Class-specific operations. Unsupported class/operation pairs return
+ * RIN_ERROR_NOT_SUPPORTED; controls never accept untyped kernel pointers. */
+#define RIN_DEVICE_CONTROL_STORAGE_FLUSH UINT32_C(1)
+
 typedef struct RinDeviceInfoV1 {
     uint32_t struct_size;
     uint32_t version;
     uint64_t device_id;
     uint32_t device_class;
     uint32_t state;
-    RinStringV1 name;
+    char name[64];
     uint64_t capabilities;
     uint64_t generation;
     uint64_t reserved[3];

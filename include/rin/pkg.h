@@ -5,11 +5,20 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define RIN_PACKAGE_INSTALL_FLAG_RESTORE_ARCHIVED_DATA UINT32_C(0x00000001)
+#define RIN_PACKAGE_INSTALL_FLAG_DISCARD_ARCHIVED_DATA UINT32_C(0x00000002)
+#define RIN_PACKAGE_INSTALL_FLAG_MASK UINT32_C(0x00000003)
+#define RIN_PACKAGE_REMOVE_FLAG_PRESERVE_USER_DATA UINT32_C(0x00000001)
+#define RIN_PACKAGE_REMOVE_FLAG_MASK RIN_PACKAGE_REMOVE_FLAG_PRESERVE_USER_DATA
+#define RIN_PACKAGE_INFO_NAME_CAPACITY 64u
+#define RIN_PACKAGE_INFO_VERSION_CAPACITY 32u
+
 typedef struct RinPackageInfoV1 {
     uint32_t struct_size;
     uint32_t version;
-    RinStringV1 name;
-    RinStringV1 package_version;
+    char name[RIN_PACKAGE_INFO_NAME_CAPACITY];
+    char package_version[RIN_PACKAGE_INFO_VERSION_CAPACITY];
     uint8_t identity_hash[32];
     uint32_t state;
     uint32_t flags;

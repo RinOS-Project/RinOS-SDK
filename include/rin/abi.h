@@ -104,7 +104,10 @@ typedef enum RinObjectType {
     RIN_OBJECT_CHANNEL = 14,
     RIN_OBJECT_MEDIA = 15,
     RIN_OBJECT_MESSAGE_QUEUE = 16,
-    RIN_OBJECT_TLS_SESSION = 17
+    RIN_OBJECT_TLS_SESSION = 17,
+    RIN_OBJECT_CONFIG_STORE = 18,
+    RIN_OBJECT_PACKAGE = 19,
+    RIN_OBJECT_DEVICE = 20
 } RinObjectType;
 
 typedef enum RinProcessPersonality {
