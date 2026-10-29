@@ -2136,6 +2136,13 @@
 #define RIN_SYS_SIGNALFD4_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SIGNALFD4_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_SIGNALFD4_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+/* process. */
+/* Copies the current process's kernel-bound login-session username. Credentials and LOGNAME do not select the returned identity. */
+#define RIN_SYS_GETLOGIN_R                  0x80A9u
+/* GETLOGIN_R availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETLOGIN_R_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETLOGIN_R_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETLOGIN_R_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 
 /* Returns UNKNOWN for syscall numbers outside this active ABI table. */
 static inline uint32_t rin_syscall_arch_support(
@@ -4856,6 +4863,13 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SIGNALFD4_SUPPORT_X86_NATIVE;
         case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SIGNALFD4_SUPPORT_X86_64_NATIVE;
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SIGNALFD4_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETLOGIN_R:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETLOGIN_R_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETLOGIN_R_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETLOGIN_R_SUPPORT_X86_64_COMPAT32;
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
     default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
