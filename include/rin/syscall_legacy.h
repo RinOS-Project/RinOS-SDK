@@ -97,6 +97,7 @@
 #define SYS_SHUTDOWN                    RIN_SYS_SHUTDOWN
 #define SYS_SYSINFO                     RIN_SYS_SYSINFO
 #define SYS_UNAME                       RIN_SYS_UNAME
+#define SYS_EVENTFD2                    RIN_SYS_EVENTFD2
 #define SYS_ATA_INIT                    RIN_SYS_ATA_INIT
 #define SYS_ATA_GET_COUNT               RIN_SYS_ATA_GET_COUNT
 #define SYS_ATA_GET_INFO                RIN_SYS_ATA_GET_INFO
@@ -407,6 +408,9 @@
 #define SYS_SYSTEM_INFO_SNAPSHOT_V1     RIN_SYS_SYSTEM_INFO_SNAPSHOT_V1
 #define SYS_PREADV2                     RIN_SYS_PREADV2
 #define SYS_PWRITEV2                    RIN_SYS_PWRITEV2
+#define SYS_TIMERFD_CREATE              RIN_SYS_TIMERFD_CREATE
+#define SYS_TIMERFD_SETTIME             RIN_SYS_TIMERFD_SETTIME
+#define SYS_TIMERFD_GETTIME             RIN_SYS_TIMERFD_GETTIME
 
 #define SYS_CPU_TIME_ABI_VERSION        RIN_CPU_TIME_ABI_VERSION
 #define SYS_AUDIO_CTL_START             RIN_AUDIO_CTL_START
