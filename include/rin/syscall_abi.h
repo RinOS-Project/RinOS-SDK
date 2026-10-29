@@ -1229,6 +1229,7 @@
 #define RIN_SYS_NET_APPLY_IPV4_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NET_APPLY_IPV4_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NET_APPLY_IPV4_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* Copies at most 255 hostname bytes plus NUL. Invalid, unterminated, or overlong input reports EFAULT. */
 #define RIN_SYS_DNS_RESOLVE_BEGIN           0x8004u
 /* DNS_RESOLVE_BEGIN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_DNS_RESOLVE_BEGIN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
