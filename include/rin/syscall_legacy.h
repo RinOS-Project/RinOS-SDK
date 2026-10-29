@@ -92,6 +92,7 @@
 #define SYS_SOCK_SHUTDOWN               RIN_SYS_SOCK_SHUTDOWN
 #define SYS_ACCEPT4                     RIN_SYS_ACCEPT4
 #define SYS_OPENAT_MOUNT_IDENTITY       RIN_SYS_OPENAT_MOUNT_IDENTITY
+#define SYS_SYNCFS                      RIN_SYS_SYNCFS
 #define SYS_REBOOT                      RIN_SYS_REBOOT
 #define SYS_SHUTDOWN                    RIN_SYS_SHUTDOWN
 #define SYS_SYSINFO                     RIN_SYS_SYSINFO
