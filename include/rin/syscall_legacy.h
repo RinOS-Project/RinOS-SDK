@@ -393,6 +393,8 @@
 #define SYS_FILESYSTEM_UNMOUNT          RIN_SYS_FILESYSTEM_UNMOUNT
 #define SYS_FCNTL_LOCK64                RIN_SYS_FCNTL_LOCK64
 #define SYS_READDIR64                   RIN_SYS_READDIR64
+#define SYS_PREADV                      RIN_SYS_PREADV
+#define SYS_PWRITEV                     RIN_SYS_PWRITEV
 
 #define SYS_CPU_TIME_ABI_VERSION        RIN_CPU_TIME_ABI_VERSION
 #define SYS_AUDIO_CTL_START             RIN_AUDIO_CTL_START

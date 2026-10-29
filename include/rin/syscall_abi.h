@@ -539,6 +539,8 @@
 #define RIN_SYS_FCNTL_LOCK64                0x8096u
 /* filesystem. */
 #define RIN_SYS_READDIR64                   0x8097u
+#define RIN_SYS_PREADV                      0x8099u
+#define RIN_SYS_PWRITEV                     0x809Au
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
