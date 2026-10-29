@@ -27,6 +27,12 @@ enum {
                                   RIN_NET_SOCKET_IO_DONT_WAIT
 };
 
+/* HTTP v1 uses bounded HTTP/1.1 messages. `headers` is a byte string of
+ * CRLF-separated field lines without a final blank line. The returned
+ * response channel contains one message with the raw HTTP/1.1 response. */
+#define RIN_HTTP_REQUEST_HEADERS_MAX_BYTES UINT64_C(16384)
+#define RIN_HTTP_RESPONSE_MAX_BYTES UINT64_C(65536)
+
 typedef struct RinHttpRequestV1 {
     uint32_t struct_size;
     uint32_t version;
