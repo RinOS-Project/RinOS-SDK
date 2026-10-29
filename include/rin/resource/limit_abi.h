@@ -6,8 +6,7 @@
 
 #include <stdint.h>
 
-#define RIN_RESOURCE_LIMIT_ABI_LEGACY_VERSION UINT16_C(1)
-#define RIN_RESOURCE_LIMIT_ABI_VERSION UINT16_C(2)
+#define RIN_RESOURCE_LIMIT_ABI_VERSION UINT16_C(1)
 #define RIN_RESOURCE_LIMIT_CALL_SIZE UINT32_C(64)
 #define RIN_RESOURCE_LIMIT_CALL_FLAG_SET UINT32_C(1)
 
@@ -46,15 +45,8 @@ typedef struct RinResourceLimitCallRequestV1 {
     uint64_t target_instance_cookie;
     uint64_t new_current;
     uint64_t new_maximum;
-    /* V2 passes caller rlimit pointers as values for kernel copyin/copyout.
-     * V1 callers leave these two words zero. */
-    uint64_t new_limit_address;
-    uint64_t old_limit_address;
+    uint64_t reserved[2];
 } RinResourceLimitCallRequestV1;
-
-/* Source-compatible name for the current request layout. V1 request
- * instances remain accepted when their former reserved words are zero. */
-typedef RinResourceLimitCallRequestV1 RinResourceLimitCallRequestV2;
 
 typedef struct RinResourceLimitCallResponseV1 {
     uint32_t struct_size;
@@ -74,9 +66,6 @@ typedef struct RinResourceLimitCallResponseV1 {
 _Static_assert(sizeof(RinResourceLimitCallRequestV1) ==
                    RIN_RESOURCE_LIMIT_CALL_SIZE,
                "resource-limit request ABI drift");
-_Static_assert(sizeof(RinResourceLimitCallRequestV2) ==
-                   RIN_RESOURCE_LIMIT_CALL_SIZE,
-               "resource-limit v2 request ABI drift");
 _Static_assert(sizeof(RinResourceLimitCallResponseV1) ==
                    RIN_RESOURCE_LIMIT_CALL_SIZE,
                "resource-limit response ABI drift");

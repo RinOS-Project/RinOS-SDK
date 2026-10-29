@@ -36,7 +36,8 @@
 #define RIN_PATH_AT_MKDIR_OPEN      16u
 #define RIN_PATH_AT_RMDIR_MATCH     17u
 /* Descriptor-bound xattr access uses EMPTY_PATH, path1="", and path2 as
- * the attribute name. GET returns the value length; SET and REMOVE return 0. */
+ * the attribute name. GET with buffer_size=0 queries value length; GET with
+ * a short nonzero buffer returns ERANGE. SET and REMOVE return 0. */
 #define RIN_PATH_AT_FGETXATTR       18u
 #define RIN_PATH_AT_FSETXATTR       19u
 #define RIN_PATH_AT_FREMOVEXATTR    20u
