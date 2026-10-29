@@ -542,8 +542,8 @@ RinResult rin_sdk_register_object_close_hook_owned_v1(
         entry->in_flight = 0u;
         entry->process_lifetime = 0u;
         entry->active = 1u;
-        *token_out = token;
         __sync_lock_release(&g_object_close_hooks_lock);
+        *token_out = token;
         return RIN_SUCCESS;
     }
     __sync_lock_release(&g_object_close_hooks_lock);
