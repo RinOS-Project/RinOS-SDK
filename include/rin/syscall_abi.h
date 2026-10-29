@@ -544,6 +544,11 @@
 /* file. */
 #define RIN_SYS_PREADV                      0x8099u
 #define RIN_SYS_PWRITEV                     0x809Au
+/* network. */
+/* mmsghdr配列ABI。各messageのdata上限16 MiB、件数上限64、合計data上限1 GiB。 */
+#define RIN_SYS_SENDMMSG                    0x809Bu
+/* 受信はlibcがpollで待機・timeout残量を管理し、kernelがnonblocking message batchを処理する。 */
+#define RIN_SYS_RECVMMSG                    0x809Cu
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
