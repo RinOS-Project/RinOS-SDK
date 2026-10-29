@@ -14,7 +14,10 @@
 static inline int rin_timer_create_v1_valid(const RinTimerCreateV1* value)
 {
     return value && value->struct_size == sizeof(*value) &&
-           value->version == RIN_TIMER_ABI_VERSION && value->flags == 0u &&
+           value->version == RIN_TIMER_ABI_VERSION &&
+           (value->flags & ~RIN_TIMER_CREATE_FLAG_VALUE_TIMER_ID) == 0u &&
+           (value->flags == 0u ||
+            value->notify == RIN_TIMER_NOTIFY_SIGNAL) &&
            value->reserved0 == 0 &&
            (value->notify == RIN_TIMER_NOTIFY_SIGNAL ||
             value->notify == RIN_TIMER_NOTIFY_NONE ||

@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #define RIN_TIMER_ABI_VERSION 1u
+#define RIN_TIMER_CREATE_FLAG_VALUE_TIMER_ID 1u
 #define RIN_ITIMER_ABI_VERSION 1u
 #define RIN_TIMER_MAX_SLOTS 32u
 #define RIN_TIMER_NOTIFY_SIGNAL 0u

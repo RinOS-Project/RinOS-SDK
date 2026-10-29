@@ -18,6 +18,7 @@
 typedef int32_t RinResultCode;
 
 /* Public fixed-value constants shared by all RinNative clients. */
+#define RIN_TIMER_CREATE_FLAG_VALUE_TIMER_ID 1u
 #define RIN_SYSCALL_IA32_REGISTER_WIDTH_BITS 32u
 #define RIN_SYSCALL_IA32_WIDE_ARGUMENT_ORDER_LOW_WORD_FIRST 1u
 #define RIN_INSTALL_SOURCE_PAYLOAD_COUNT    6u
