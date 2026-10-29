@@ -182,6 +182,26 @@ static inline int rin_ipv6_text_append(char* output, size_t capacity,
     return 0;
 }
 
+static inline int rin_ipv6_text_append_decimal_byte(char* output,
+                                                     size_t capacity,
+                                                     size_t* size,
+                                                     uint8_t value)
+{
+    char digits[3];
+    unsigned int count = 0u;
+    do {
+        digits[count++] = (char)('0' + (value % 10u));
+        value = (uint8_t)(value / 10u);
+    } while (value != 0u);
+    while (count != 0u) {
+        if (rin_ipv6_text_append(output, capacity, size,
+                                 digits[--count]) != 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
 /* Format in RFC 5952 form: lowercase hexadecimal, no leading zeroes, and the
  * first longest run of at least two zero words compressed with ::. */
 static inline int rin_ipv6_text_format(const uint8_t address[16],
@@ -193,9 +213,31 @@ static inline int rin_ipv6_text_format(const uint8_t address[16],
     unsigned int best_length = 0u;
     unsigned int index;
     size_t size = 0u;
+    static const char mapped_prefix[] = "::ffff:";
 
     if (output && capacity != 0u) output[0] = '\0';
     if (!address || !output || capacity == 0u) return -1;
+    for (index = 0u; index < 10u && address[index] == 0u; ++index) { }
+    if (index == 10u && address[10] == 0xffu && address[11] == 0xffu) {
+        for (index = 0u; index < sizeof(mapped_prefix) - 1u; ++index) {
+            if (rin_ipv6_text_append(output, capacity, &size,
+                                     mapped_prefix[index]) != 0) {
+                goto fail;
+            }
+        }
+        for (index = 12u; index < RIN_IPV6_ADDRESS_BYTES; ++index) {
+            if (index != 12u &&
+                rin_ipv6_text_append(output, capacity, &size, '.') != 0) {
+                goto fail;
+            }
+            if (rin_ipv6_text_append_decimal_byte(
+                    output, capacity, &size, address[index]) != 0) {
+                goto fail;
+            }
+        }
+        output[size] = '\0';
+        return 0;
+    }
     for (index = 0u; index < 8u; ++index) {
         words[index] = (uint16_t)(((uint16_t)address[index * 2u] << 8) |
                                   address[index * 2u + 1u]);
