@@ -2045,16 +2045,6 @@
 #define RIN_SYS_PWRITEV_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PWRITEV_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PWRITEV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_PREADV2                     0x80A2u
-/* PREADV2 uses two offset words and a flags word in the sixth syscall slot. */
-#define RIN_SYS_PREADV2_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_PREADV2_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_PREADV2_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_PWRITEV2                    0x80A3u
-/* PWRITEV2 uses two offset words and a flags word in the sixth syscall slot. */
-#define RIN_SYS_PWRITEV2_SUPPORT_X86_NATIVE          RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_PWRITEV2_SUPPORT_X86_64_NATIVE       RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_PWRITEV2_SUPPORT_X86_64_COMPAT32     RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 /* mmsghdr配列ABI。各messageのdata上限16 MiB、件数上限64、合計data上限1 GiB。 */
 #define RIN_SYS_SENDMMSG                    0x809Bu
@@ -2100,6 +2090,19 @@
 #define RIN_SYS_SYSTEM_INFO_SNAPSHOT_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SYSTEM_INFO_SNAPSHOT_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SYSTEM_INFO_SNAPSHOT_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* file. */
+/* Six slots carry fd, iovec, count, offset low/high, and RWF flags. Offset UINT64_MAX uses and advances the shared open-description position; other offsets must be nonnegative. RWF_HIPRI is currently unsupported. */
+#define RIN_SYS_PREADV2                     0x80A2u
+/* PREADV2 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PREADV2_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PREADV2_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PREADV2_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* Six slots carry fd, iovec, count, offset low/high, and RWF flags. Offset UINT64_MAX uses and advances the shared open-description position; other offsets must be nonnegative. RWF_APPEND may override the explicit position; RWF_HIPRI is currently unsupported. */
+#define RIN_SYS_PWRITEV2                    0x80A3u
+/* PWRITEV2 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PWRITEV2_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PWRITEV2_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PWRITEV2_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 
 /* Returns UNKNOWN for syscall numbers outside this active ABI table. */
 static inline uint32_t rin_syscall_arch_support(
@@ -4717,20 +4720,6 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PWRITEV_SUPPORT_X86_64_COMPAT32;
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
-    case RIN_SYS_PREADV2:
-        switch (mode) {
-        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PREADV2_SUPPORT_X86_NATIVE;
-        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PREADV2_SUPPORT_X86_64_NATIVE;
-        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PREADV2_SUPPORT_X86_64_COMPAT32;
-        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
-        }
-    case RIN_SYS_PWRITEV2:
-        switch (mode) {
-        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PWRITEV2_SUPPORT_X86_NATIVE;
-        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PWRITEV2_SUPPORT_X86_64_NATIVE;
-        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PWRITEV2_SUPPORT_X86_64_COMPAT32;
-        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
-        }
     case RIN_SYS_SENDMMSG:
         switch (mode) {
         case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SENDMMSG_SUPPORT_X86_NATIVE;
@@ -4778,6 +4767,20 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SYSTEM_INFO_SNAPSHOT_V1_SUPPORT_X86_NATIVE;
         case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SYSTEM_INFO_SNAPSHOT_V1_SUPPORT_X86_64_NATIVE;
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SYSTEM_INFO_SNAPSHOT_V1_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PREADV2:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PREADV2_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PREADV2_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PREADV2_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PWRITEV2:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PWRITEV2_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PWRITEV2_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PWRITEV2_SUPPORT_X86_64_COMPAT32;
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
     default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;

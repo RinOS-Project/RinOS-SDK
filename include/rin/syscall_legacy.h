@@ -398,8 +398,6 @@
 #define SYS_THREAD_SCHED_GETPARAM       RIN_SYS_THREAD_SCHED_GETPARAM
 #define SYS_PREADV                      RIN_SYS_PREADV
 #define SYS_PWRITEV                     RIN_SYS_PWRITEV
-#define SYS_PREADV2                     RIN_SYS_PREADV2
-#define SYS_PWRITEV2                    RIN_SYS_PWRITEV2
 #define SYS_SENDMMSG                    RIN_SYS_SENDMMSG
 #define SYS_RECVMMSG                    RIN_SYS_RECVMMSG
 #define SYS_SPLICE_CALL_V1              RIN_SYS_SPLICE_CALL_V1
@@ -407,6 +405,8 @@
 #define SYS_PIDFD_SEND_SIGNAL           RIN_SYS_PIDFD_SEND_SIGNAL
 #define SYS_CLOSE_RANGE                 RIN_SYS_CLOSE_RANGE
 #define SYS_SYSTEM_INFO_SNAPSHOT_V1     RIN_SYS_SYSTEM_INFO_SNAPSHOT_V1
+#define SYS_PREADV2                     RIN_SYS_PREADV2
+#define SYS_PWRITEV2                    RIN_SYS_PWRITEV2
 
 #define SYS_CPU_TIME_ABI_VERSION        RIN_CPU_TIME_ABI_VERSION
 #define SYS_AUDIO_CTL_START             RIN_AUDIO_CTL_START
