@@ -1087,6 +1087,7 @@
 #define RIN_SYS_CPU_TIME_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CPU_TIME_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* library. */
+/* x86 native／x86_64 compat32はRLL、x86_64 nativeはRIN v3のloader personalityで240-byte recordを返す。 */
 #define RIN_SYS_DLADDR                      276u
 /* DLADDR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_DLADDR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -1197,11 +1198,13 @@
 #define RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* signal. */
+/* TIDは呼出側から見える名前空間で解決し、所有process/thread generationと同一UIDまたはroot・session許可を検証する。signal 0は配送せず存在と権限を検査する。 */
 #define RIN_SYS_TKILL                       500u
 /* TKILL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_TKILL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TKILL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TKILL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* TGID/TIDを呼出側から見える名前空間で解決し同一generationのprocess/threadを照合する。signal 0は配送せず存在と権限を検査する。 */
 #define RIN_SYS_TGKILL                      501u
 /* TGKILL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_TGKILL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED

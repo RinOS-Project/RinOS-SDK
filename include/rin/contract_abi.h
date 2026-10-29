@@ -520,6 +520,23 @@ typedef int32_t RinResultCode;
 #define RIN_CONTROL_STORAGE_GET_GEOMETRY     0x30002u /* out, RinStorageGeometryV1 */
 
 /* Versioned fixed-width structures generated from explicit offsets. */
+#ifndef RIN_SDK_DYNLINK_ADDR_ABI_DEFINED
+#define RIN_SDK_DYNLINK_ADDR_ABI_DEFINED
+/* RLLとnative RIN v3が共用する固定幅のaddress attribution record。 */
+typedef struct RinDlAddrRllRecordV1 {
+    uint32_t abi_version;
+    uint32_t flags;
+    uint64_t load_address;
+    uint64_t mapped_size;
+    uint64_t symbol_address;
+    uint32_t library_name_length;
+    uint32_t symbol_name_length;
+    char library_name[64];
+    char symbol_name[129];
+} RinDlAddrRllRecordV1;
+
+#endif /* RIN_SDK_DYNLINK_ADDR_ABI_DEFINED */
+
 typedef struct RinEventV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -1534,6 +1551,16 @@ typedef struct RinDynlinkOpenMemoryContractV1 {
 } RinDynlinkOpenMemoryContractV1;
 
 #if defined(__cplusplus)
+static_assert(sizeof(RinDlAddrRllRecordV1) == 240, "RinDlAddrRllRecordV1 ABI drift");
+static_assert(offsetof(RinDlAddrRllRecordV1, abi_version) == 0, "RinDlAddrRllRecordV1.abi_version ABI drift");
+static_assert(offsetof(RinDlAddrRllRecordV1, flags) == 4, "RinDlAddrRllRecordV1.flags ABI drift");
+static_assert(offsetof(RinDlAddrRllRecordV1, load_address) == 8, "RinDlAddrRllRecordV1.load_address ABI drift");
+static_assert(offsetof(RinDlAddrRllRecordV1, mapped_size) == 16, "RinDlAddrRllRecordV1.mapped_size ABI drift");
+static_assert(offsetof(RinDlAddrRllRecordV1, symbol_address) == 24, "RinDlAddrRllRecordV1.symbol_address ABI drift");
+static_assert(offsetof(RinDlAddrRllRecordV1, library_name_length) == 32, "RinDlAddrRllRecordV1.library_name_length ABI drift");
+static_assert(offsetof(RinDlAddrRllRecordV1, symbol_name_length) == 36, "RinDlAddrRllRecordV1.symbol_name_length ABI drift");
+static_assert(offsetof(RinDlAddrRllRecordV1, library_name) == 40, "RinDlAddrRllRecordV1.library_name ABI drift");
+static_assert(offsetof(RinDlAddrRllRecordV1, symbol_name) == 104, "RinDlAddrRllRecordV1.symbol_name ABI drift");
 static_assert(sizeof(RinEventV1) == 48, "RinEventV1 ABI drift");
 static_assert(offsetof(RinEventV1, struct_size) == 0, "RinEventV1.struct_size ABI drift");
 static_assert(offsetof(RinEventV1, version) == 4, "RinEventV1.version ABI drift");
@@ -2390,6 +2417,16 @@ static_assert(offsetof(RinDynlinkOpenMemoryContractV1, image_size) == 16, "RinDy
 static_assert(offsetof(RinDynlinkOpenMemoryContractV1, library_name) == 24, "RinDynlinkOpenMemoryContractV1.library_name ABI drift");
 static_assert(offsetof(RinDynlinkOpenMemoryContractV1, reserved) == 88, "RinDynlinkOpenMemoryContractV1.reserved ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinDlAddrRllRecordV1) == 240, "RinDlAddrRllRecordV1 ABI drift");
+_Static_assert(offsetof(RinDlAddrRllRecordV1, abi_version) == 0, "RinDlAddrRllRecordV1.abi_version ABI drift");
+_Static_assert(offsetof(RinDlAddrRllRecordV1, flags) == 4, "RinDlAddrRllRecordV1.flags ABI drift");
+_Static_assert(offsetof(RinDlAddrRllRecordV1, load_address) == 8, "RinDlAddrRllRecordV1.load_address ABI drift");
+_Static_assert(offsetof(RinDlAddrRllRecordV1, mapped_size) == 16, "RinDlAddrRllRecordV1.mapped_size ABI drift");
+_Static_assert(offsetof(RinDlAddrRllRecordV1, symbol_address) == 24, "RinDlAddrRllRecordV1.symbol_address ABI drift");
+_Static_assert(offsetof(RinDlAddrRllRecordV1, library_name_length) == 32, "RinDlAddrRllRecordV1.library_name_length ABI drift");
+_Static_assert(offsetof(RinDlAddrRllRecordV1, symbol_name_length) == 36, "RinDlAddrRllRecordV1.symbol_name_length ABI drift");
+_Static_assert(offsetof(RinDlAddrRllRecordV1, library_name) == 40, "RinDlAddrRllRecordV1.library_name ABI drift");
+_Static_assert(offsetof(RinDlAddrRllRecordV1, symbol_name) == 104, "RinDlAddrRllRecordV1.symbol_name ABI drift");
 _Static_assert(sizeof(RinEventV1) == 48, "RinEventV1 ABI drift");
 _Static_assert(offsetof(RinEventV1, struct_size) == 0, "RinEventV1.struct_size ABI drift");
 _Static_assert(offsetof(RinEventV1, version) == 4, "RinEventV1.version ABI drift");
