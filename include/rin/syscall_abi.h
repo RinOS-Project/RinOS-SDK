@@ -533,11 +533,13 @@
 #define RIN_SYS_BLOCK_FLUSH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_BLOCK_FLUSH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* debug. */
+/* RIN_CAP_DEBUGGING必須。NUL込み最大256 byteの1 recordに限定し、process generationごとに100 scheduler ticksあたり32 record／1024 byteを出力できる。予算超過はEAGAIN。 */
 #define RIN_SYS_SERIAL_PRINT                110u
 /* SERIAL_PRINT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_SERIAL_PRINT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SERIAL_PRINT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SERIAL_PRINT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* RIN_CAP_DEBUGGING必須。hex recordは最大18 byteとしてprocess generationごとのSERIAL_PRINT共有予算を消費する。予算超過はEAGAIN。 */
 #define RIN_SYS_SERIAL_HEX                  111u
 /* SERIAL_HEX availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_SERIAL_HEX_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -1159,12 +1161,12 @@
 #define RIN_SYS_ISO_FIND                    310u
 /* ISO_FIND availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_ISO_FIND_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_ISO_FIND_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_ISO_FIND_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ISO_FIND_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_ISO_READ                    311u
 /* ISO_READ availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_ISO_READ_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_ISO_READ_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_ISO_READ_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ISO_READ_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_GET_HDDBOOT                 312u
 /* GET_HDDBOOT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
