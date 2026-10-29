@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #define RIN_SPLICE_CALL_ABI_VERSION_V1 UINT16_C(1)
+#define RIN_SPLICE_CALL_ABI_VERSION_V2 UINT16_C(2)
 
 #define RIN_SPLICE_OP_SPLICE UINT16_C(1)
 #define RIN_SPLICE_OP_TEE UINT16_C(2)
@@ -46,6 +47,11 @@ typedef struct RinSpliceCallV1 {
     uint64_t length;
     uint64_t reserved[2];
 } RinSpliceCallV1;
+
+/* V2 retains the V1 request size. For SPLICE and COPY_FILE_RANGE,
+ * reserved[0] carries 32 or 64 (the signed offset pointee width in bits),
+ * and offset_*_pointer names the caller's original user pointer. V1 keeps
+ * both reserved words zero and treats offset pointers as signed 64-bit. */
 
 #ifdef __cplusplus
 }

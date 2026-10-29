@@ -147,9 +147,7 @@
 /* statusはsigned 32-bitのkernel終了値。成功時はthreadを終了し戻らない。pthreadのvoid*終了値はlibcのjoin registryが保持し、kernel statusには渡さない。cancel cleanupはsyscall前にuserspaceで完了する。 */
 #define RIN_SYS_THREAD_EXIT                 131u
 #define RIN_SYS_SCHED_YIELD                 132u
-/* signed 32-bit target TIDを受ける。成功は0、join待機後に終了slotを一度だけreapする。 */
 #define RIN_SYS_THREAD_JOIN                 133u
-/* signed 32-bit target TIDを受ける。成功0は稼働中threadをdetachし、成功1は終了済みthreadを同期reapしたことを示す。 */
 #define RIN_SYS_THREAD_DETACH               134u
 #define RIN_SYS_GETCPU                      135u
 /* system. */

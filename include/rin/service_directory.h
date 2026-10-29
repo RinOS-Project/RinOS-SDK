@@ -9,12 +9,8 @@ extern "C" {
 #endif
 
 /* Service-manager scopes are part of the public SDK contract. */
-#ifndef RIN_SERVICE_SCOPE_SYSTEM
-#define RIN_SERVICE_SCOPE_SYSTEM 1u
-#endif
-#ifndef RIN_SERVICE_SCOPE_USER
-#define RIN_SERVICE_SCOPE_USER 2u
-#endif
+#define RIN_SERVICE_SCOPE_SYSTEM 1
+#define RIN_SERVICE_SCOPE_USER 2
 
 /* Resolve a kernel-published system service slot before trusting the
  * service identity returned by a connected local socket.  A non-zero return
