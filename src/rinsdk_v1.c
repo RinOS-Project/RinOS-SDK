@@ -14,8 +14,23 @@
 #include <limits.h>
 #include <stddef.h>
 #include <sys/syscall.h>
-static RinSdkObjectCloseHookV1 g_object_close_hooks[8];
+#define RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1 8u
+#define RIN_SDK_OBJECT_CLOSE_HOOK_SLOT_BITS_V1 8u
+#define RIN_SDK_OBJECT_CLOSE_HOOK_SLOT_MASK_V1 UINT64_C(0xff)
+#define RIN_SDK_OBJECT_CLOSE_HOOK_GENERATION_MAX_V1 \
+    (UINT64_MAX >> RIN_SDK_OBJECT_CLOSE_HOOK_SLOT_BITS_V1)
+typedef struct RinSdkObjectCloseHookEntryV1 {
+    RinSdkObjectCloseHookV1 hook;
+    uint64_t generation;
+    uint64_t in_flight;
+    uint8_t active;
+    uint8_t process_lifetime;
+} RinSdkObjectCloseHookEntryV1;
+static RinSdkObjectCloseHookEntryV1
+    g_object_close_hooks[RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1];
 static volatile uint32_t g_object_close_hooks_lock;
+static uint64_t g_object_close_hook_next_generation = 1u;
+static uint8_t g_object_close_hook_generation_exhausted;
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_CORE) || \
@@ -467,23 +482,29 @@ int rin_service_find_system_slot(const char* service_id, uint32_t* slot_id) {
 
 RinResult rin_sdk_register_object_close_hook_v1(
     RinSdkObjectCloseHookV1 hook) {
-    const uint32_t hook_count = (uint32_t)(sizeof(g_object_close_hooks) /
-                                           sizeof(g_object_close_hooks[0]));
     if (hook == NULL) return RIN_ERROR_INVALID_ARGUMENT;
     while (__sync_lock_test_and_set(&g_object_close_hooks_lock, 1u) != 0u) {
     }
-    for (uint32_t index = 0u; index < hook_count; ++index) {
-        if (__atomic_load_n(&g_object_close_hooks[index], __ATOMIC_ACQUIRE) ==
-            hook) {
+    for (uint32_t index = 0u;
+         index < RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1; ++index) {
+        RinSdkObjectCloseHookEntryV1* entry = &g_object_close_hooks[index];
+        if (entry->hook == hook && entry->active != 0u) {
+            /* Preserve the legacy process-lifetime promise if a caller uses
+             * the old API for a hook that was also registered with a token. */
+            entry->process_lifetime = 1u;
             __sync_lock_release(&g_object_close_hooks_lock);
             return RIN_SUCCESS;
         }
     }
-    for (uint32_t index = 0u; index < hook_count; ++index) {
-        if (__atomic_load_n(&g_object_close_hooks[index], __ATOMIC_RELAXED) ==
-            NULL) {
-            __atomic_store_n(&g_object_close_hooks[index], hook,
-                             __ATOMIC_RELEASE);
+    for (uint32_t index = 0u;
+         index < RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1; ++index) {
+        RinSdkObjectCloseHookEntryV1* entry = &g_object_close_hooks[index];
+        if (entry->hook == NULL) {
+            entry->hook = hook;
+            entry->generation = 0u;
+            entry->in_flight = 0u;
+            entry->active = 1u;
+            entry->process_lifetime = 1u;
             __sync_lock_release(&g_object_close_hooks_lock);
             return RIN_SUCCESS;
         }
@@ -492,13 +513,113 @@ RinResult rin_sdk_register_object_close_hook_v1(
     return RIN_ERROR_LIMIT_EXCEEDED;
 }
 
+RinResult rin_sdk_register_object_close_hook_owned_v1(
+    RinSdkObjectCloseHookV1 hook,
+    RinSdkObjectCloseHookTokenV1* token_out) {
+    if (hook == NULL || token_out == NULL)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    while (__sync_lock_test_and_set(&g_object_close_hooks_lock, 1u) != 0u) {
+    }
+    if (g_object_close_hook_generation_exhausted != 0u) {
+        __sync_lock_release(&g_object_close_hooks_lock);
+        return RIN_ERROR_LIMIT_EXCEEDED;
+    }
+    for (uint32_t index = 0u;
+         index < RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1; ++index) {
+        RinSdkObjectCloseHookEntryV1* entry = &g_object_close_hooks[index];
+        if (entry->hook != NULL) continue;
+        const uint64_t generation = g_object_close_hook_next_generation;
+        const RinSdkObjectCloseHookTokenV1 token =
+            (generation << RIN_SDK_OBJECT_CLOSE_HOOK_SLOT_BITS_V1) |
+            ((uint64_t)index + 1u);
+        if (generation == RIN_SDK_OBJECT_CLOSE_HOOK_GENERATION_MAX_V1) {
+            g_object_close_hook_generation_exhausted = 1u;
+        } else {
+            g_object_close_hook_next_generation = generation + 1u;
+        }
+        entry->hook = hook;
+        entry->generation = generation;
+        entry->in_flight = 0u;
+        entry->process_lifetime = 0u;
+        entry->active = 1u;
+        *token_out = token;
+        __sync_lock_release(&g_object_close_hooks_lock);
+        return RIN_SUCCESS;
+    }
+    __sync_lock_release(&g_object_close_hooks_lock);
+    return RIN_ERROR_LIMIT_EXCEEDED;
+}
+
+RinResult rin_sdk_unregister_object_close_hook_v1(
+    RinSdkObjectCloseHookTokenV1 token) {
+    const uint64_t encoded_slot =
+        token & RIN_SDK_OBJECT_CLOSE_HOOK_SLOT_MASK_V1;
+    const uint64_t generation =
+        token >> RIN_SDK_OBJECT_CLOSE_HOOK_SLOT_BITS_V1;
+    if (generation == 0u || encoded_slot == 0u ||
+        encoded_slot > RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1) {
+        return RIN_ERROR_INVALID_ARGUMENT;
+    }
+    const uint32_t index = (uint32_t)(encoded_slot - 1u);
+    while (__sync_lock_test_and_set(&g_object_close_hooks_lock, 1u) != 0u) {
+    }
+    RinSdkObjectCloseHookEntryV1* entry = &g_object_close_hooks[index];
+    if (entry->hook == NULL || entry->generation != generation) {
+        __sync_lock_release(&g_object_close_hooks_lock);
+        return RIN_ERROR_STALE_HANDLE;
+    }
+    if (entry->process_lifetime != 0u) {
+        __sync_lock_release(&g_object_close_hooks_lock);
+        return RIN_ERROR_ACCESS_DENIED;
+    }
+    entry->active = 0u;
+    if (entry->in_flight != 0u) {
+        __sync_lock_release(&g_object_close_hooks_lock);
+        return RIN_ERROR_BUSY;
+    }
+    entry->hook = NULL;
+    entry->generation = 0u;
+    entry->process_lifetime = 0u;
+    __sync_lock_release(&g_object_close_hooks_lock);
+    return RIN_SUCCESS;
+}
+
 static void rin_sdk_notify_object_close_v1(RinObject object) {
-    const uint32_t hook_count = (uint32_t)(sizeof(g_object_close_hooks) /
-                                           sizeof(g_object_close_hooks[0]));
-    for (uint32_t index = 0u; index < hook_count; ++index) {
-        RinSdkObjectCloseHookV1 hook = __atomic_load_n(
-            &g_object_close_hooks[index], __ATOMIC_ACQUIRE);
-        if (hook != NULL) hook(object);
+    struct RinSdkObjectCloseHookCallV1 {
+        RinSdkObjectCloseHookV1 hook;
+        uint64_t generation;
+        uint32_t slot;
+    } calls[RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1];
+    uint32_t call_count = 0u;
+    while (__sync_lock_test_and_set(&g_object_close_hooks_lock, 1u) != 0u) {
+    }
+    for (uint32_t index = 0u;
+         index < RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1; ++index) {
+        RinSdkObjectCloseHookEntryV1* entry = &g_object_close_hooks[index];
+        if (entry->hook == NULL || entry->active == 0u ||
+            entry->in_flight == UINT64_MAX) {
+            continue;
+        }
+        ++entry->in_flight;
+        calls[call_count].hook = entry->hook;
+        calls[call_count].generation = entry->generation;
+        calls[call_count].slot = index;
+        ++call_count;
+    }
+    __sync_lock_release(&g_object_close_hooks_lock);
+
+    for (uint32_t index = 0u; index < call_count; ++index) {
+        calls[index].hook(object);
+        while (__sync_lock_test_and_set(&g_object_close_hooks_lock, 1u) != 0u) {
+        }
+        RinSdkObjectCloseHookEntryV1* entry =
+            &g_object_close_hooks[calls[index].slot];
+        if (entry->hook == calls[index].hook &&
+            entry->generation == calls[index].generation &&
+            entry->in_flight != 0u) {
+            --entry->in_flight;
+        }
+        __sync_lock_release(&g_object_close_hooks_lock);
     }
 }
 

@@ -6,13 +6,27 @@
 extern "C" {
 #endif
 
-/* SDK libraries may register one process-local cleanup callback. The base
- * object-close wrapper invokes registered callbacks immediately before the
- * kernel close, allowing libraries to serialize and release service-side
- * state keyed by the same opaque object without making rinbase depend on them. */
+/* Process-local cleanup callback invoked before the kernel object close.
+ * The legacy registration below is process-lifetime only. Dynamically
+ * unloadable libraries must use the owned registration and unregister token
+ * APIs so unregister can stop new callbacks and report in-flight callbacks. */
 typedef void (*RinSdkObjectCloseHookV1)(RinObject object);
 RIN_SDK_API RinResult rin_sdk_register_object_close_hook_v1(
     RinSdkObjectCloseHookV1 hook);
+/* Each owned registration has an independent process-local token. Unregister
+ * prevents callbacks not yet claimed by an object close. RIN_ERROR_BUSY means
+ * one or more already-claimed callbacks remain in flight; retry the same
+ * token, and unload the callback's module only after RIN_SUCCESS. A token is
+ * single-use; later calls return RIN_ERROR_STALE_HANDLE. */
+typedef uint64_t RinSdkObjectCloseHookTokenV1;
+RIN_SDK_API RinResult rin_sdk_register_object_close_hook_owned_v1(
+    RinSdkObjectCloseHookV1 hook,
+    RinSdkObjectCloseHookTokenV1* token_out);
+/* RIN_ERROR_BUSY means the hook is already inactive but one or more callbacks
+ * are still running. Retry with the same token; unload is safe only after
+ * RIN_SUCCESS. */
+RIN_SDK_API RinResult rin_sdk_unregister_object_close_hook_v1(
+    RinSdkObjectCloseHookTokenV1 token);
 
 #ifndef RIN_SDK_OBJECT_INFO_ABI_DEFINED
 #define RIN_SDK_OBJECT_INFO_ABI_DEFINED
