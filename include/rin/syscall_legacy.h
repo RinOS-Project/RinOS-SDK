@@ -397,6 +397,8 @@
 #define SYS_THREAD_SCHED_GETPARAM       RIN_SYS_THREAD_SCHED_GETPARAM
 #define SYS_PREADV                      RIN_SYS_PREADV
 #define SYS_PWRITEV                     RIN_SYS_PWRITEV
+#define SYS_PREADV2                     RIN_SYS_PREADV2
+#define SYS_PWRITEV2                    RIN_SYS_PWRITEV2
 #define SYS_SENDMMSG                    RIN_SYS_SENDMMSG
 #define SYS_RECVMMSG                    RIN_SYS_RECVMMSG
 #define SYS_SPLICE_CALL_V1              RIN_SYS_SPLICE_CALL_V1
