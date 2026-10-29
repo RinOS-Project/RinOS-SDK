@@ -144,6 +144,7 @@
 /* thread. */
 #define RIN_SYS_ARCH_PRCTL                  120u
 #define RIN_SYS_CLONE                       130u
+/* statusはsigned 32-bitのkernel終了値。成功時はthreadを終了し戻らない。pthreadのvoid*終了値はlibcのjoin registryが保持し、kernel statusには渡さない。cancel cleanupはsyscall前にuserspaceで完了する。 */
 #define RIN_SYS_THREAD_EXIT                 131u
 #define RIN_SYS_SCHED_YIELD                 132u
 #define RIN_SYS_THREAD_JOIN                 133u
