@@ -1186,7 +1186,7 @@
 /* clear_child_tid on thread exit */
 #define RIN_SYS_SET_TID_ADDRESS             351u
 /* SET_TID_ADDRESS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
-#define RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* system. */
