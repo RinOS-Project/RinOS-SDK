@@ -654,6 +654,10 @@ typedef RinDriverV3Result (*RinDriverV3NetReceiveFn)(
     uint32_t* received);
 typedef RinDriverV3Result (*RinDriverV3NetGetInfoFn)(
     uint64_t driver_context, RinDriverV3NetInfo* output);
+/* Set only the explicitly supported receive flags. A driver must return an
+ * error without changing its filter when the requested mode is unavailable. */
+typedef RinDriverV3Result (*RinDriverV3NetSetRxModeFn)(
+    uint64_t driver_context, uint32_t flags);
 typedef RinDriverV3Result (*RinDriverV3AudioGetFormatFn)(
     uint64_t driver_context, RinDriverV3AudioFormat* output);
 typedef RinDriverV3Result (*RinDriverV3AudioConfigureFn)(
@@ -935,7 +939,13 @@ typedef struct RinDriverV3NetOps {
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t get_info_padding;
 #endif
-    uint64_t reserved[2];
+    /* Optional device receive-mode control consumes one reserved callback
+     * slot. Older images leave it null and keep the second slot zero. */
+    RinDriverV3NetSetRxModeFn set_rx_mode;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t set_rx_mode_padding;
+#endif
+    uint64_t reserved[1];
 } RinDriverV3NetOps;
 
 typedef struct RinDriverV3AudioOps {
@@ -1099,12 +1109,12 @@ static inline int rin_driver_v3_net_ops_valid(const RinDriverV3NetOps* ops) {
     if (!ops || ops->struct_size != sizeof(*ops) ||
         ops->version != RIN_DRIVER_V3_OPS_VERSION || !ops->transmit ||
         !ops->poll_rx || !ops->remove || !ops->receive || !ops->get_info ||
-        ops->reserved[0] != 0u || ops->reserved[1] != 0u)
+        ops->reserved[0] != 0u)
         return 0;
 #if UINTPTR_MAX == UINT32_MAX
     if (ops->transmit_padding != 0u || ops->poll_rx_padding != 0u ||
         ops->remove_padding != 0u || ops->receive_padding != 0u ||
-        ops->get_info_padding != 0u)
+        ops->get_info_padding != 0u || ops->set_rx_mode_padding != 0u)
         return 0;
 #endif
     return 1;
@@ -1431,7 +1441,8 @@ static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                   offsetof(RinDriverV3NetOps, remove) == 24u &&
                   offsetof(RinDriverV3NetOps, receive) == 32u &&
                   offsetof(RinDriverV3NetOps, get_info) == 40u &&
-                  offsetof(RinDriverV3NetOps, reserved) == 48u,
+                  offsetof(RinDriverV3NetOps, set_rx_mode) == 48u &&
+                  offsetof(RinDriverV3NetOps, reserved) == 56u,
               "NDRV v3 network operation slot ABI drift");
 static_assert(sizeof(RinDriverV3BlockNamespaceIdentityV1) == 64u,
               "NDRV v3 block namespace identity ABI drift");
@@ -1511,7 +1522,8 @@ _Static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                    offsetof(RinDriverV3NetOps, remove) == 24u &&
                    offsetof(RinDriverV3NetOps, receive) == 32u &&
                    offsetof(RinDriverV3NetOps, get_info) == 40u &&
-                   offsetof(RinDriverV3NetOps, reserved) == 48u,
+                   offsetof(RinDriverV3NetOps, set_rx_mode) == 48u &&
+                   offsetof(RinDriverV3NetOps, reserved) == 56u,
                "NDRV v3 network operation slot ABI drift");
 _Static_assert(sizeof(RinDriverV3BlockNamespaceIdentityV1) == 64u,
                "NDRV v3 block namespace identity ABI drift");
