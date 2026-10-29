@@ -38,6 +38,11 @@
 #define RIN_POSIX_MQ_WAIT_TOKEN_INVALID UINT64_C(0)
 typedef uint64_t RinPosixMqWaitTokenV1;
 
+/* IPC_POSIX_MQ_RECEIVE の RinSdkArgsV1.value[4] は、任意の優先度出力先
+ * (uint32_t*)を表す。0 は出力先なし。優先度のcopyoutが成功するまで
+ * kernelはメッセージのdequeueを確定しない。 */
+#define RIN_POSIX_MQ_RECEIVE_PRIORITY_OUTPUT_SLOT UINT32_C(4)
+
 typedef struct RinPosixMqAttrV1 {
     uint32_t struct_size;
     uint32_t version;
