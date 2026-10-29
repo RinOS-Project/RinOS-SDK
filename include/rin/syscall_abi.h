@@ -1029,11 +1029,12 @@
 #define RIN_SYS_DLSYM_FROM_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DLSYM_FROM_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DLSYM_FROM_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_DLERROR                     266u
+/* 旧kernel pointer返却ABI。再利用せず、copy-out方式のDLERROR_COPY_V1を使用する。 */
+#define RIN_SYS_DLERROR                     266u /* reserved */
 /* DLERROR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
-#define RIN_SYS_DLERROR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_DLERROR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_DLERROR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLERROR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_DLERROR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_DLERROR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_DLINVENTORY                 267u
 /* DLINVENTORY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_DLINVENTORY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -2147,7 +2148,7 @@
 #define RIN_SYS_GETLOGIN_R_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETLOGIN_R_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 
-/* Returns UNKNOWN for syscall numbers outside this active ABI table. */
+/* Returns UNKNOWN for syscall numbers outside this declared availability table. */
 static inline uint32_t rin_syscall_arch_support(
     uint32_t syscall_number, uint32_t mode)
 {
