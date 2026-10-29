@@ -11,7 +11,13 @@
 #define RIN_SYSTEM_INFO_SNAPSHOT_UPTIME_VALID UINT32_C(0x00000001)
 #define RIN_SYSTEM_INFO_SNAPSHOT_MEMORY_VALID UINT32_C(0x00000002)
 #define RIN_SYSTEM_INFO_SNAPSHOT_PROCESS_COUNT_VALID UINT32_C(0x00000004)
+#define RIN_SYSTEM_INFO_SNAPSHOT_LOADS_VALID UINT32_C(0x00000008)
+#define RIN_SYSTEM_INFO_SNAPSHOT_SHAREDRAM_VALID UINT32_C(0x00000010)
+#define RIN_SYSTEM_INFO_SNAPSHOT_BUFFERRAM_VALID UINT32_C(0x00000020)
+#define RIN_SYSTEM_INFO_SNAPSHOT_SWAP_VALID UINT32_C(0x00000040)
+#define RIN_SYSTEM_INFO_SNAPSHOT_HIGHMEM_VALID UINT32_C(0x00000080)
 #define RIN_SYSTEM_INFO_SNAPSHOT_VALID_MASK UINT32_C(0x00000007)
+#define RIN_SYSTEM_INFO_SNAPSHOT_DEFINED_MASK UINT32_C(0x000000ff)
 #define RIN_SYSTEM_INFO_SNAPSHOT_PAGE_SIZE UINT32_C(4096)
 
 /* Fixed-width RinOS snapshot, identical in IA-32, x86_64 native and compat32. */
@@ -26,8 +32,9 @@ typedef struct RinSystemInfoSnapshotV1 {
     uint64_t reserved;
 } RinSystemInfoSnapshotV1;
 
-/* Linux sysinfo wire layouts used by the layout selector above.  Unsupported
- * Linux metrics (loads, shared/buffer/swap/high memory) are always zero. */
+/* Linux sysinfo wire layouts used by the layout selector above. Unsupported
+ * fields are zero. Query RinSystemInfoSnapshotV1.valid_metrics using the Rin
+ * layout to distinguish unavailable Linux metrics from measured zero values. */
 typedef struct RinLinuxSysinfo32V1 {
     int32_t uptime;
     uint32_t loads[3];
@@ -56,6 +63,7 @@ typedef struct RinLinuxSysinfo64V1 {
     uint64_t freeswap;
     uint16_t procs;
     uint16_t pad;
+    uint32_t reserved_align;
     uint64_t totalhigh;
     uint64_t freehigh;
     uint32_t mem_unit;
