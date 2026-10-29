@@ -750,6 +750,23 @@ typedef struct RinDriverV3BlockNamespaceIdentityV1 {
 typedef RinDriverV3Result (*RinDriverV3BlockGetNamespaceIdentityFn)(
     uint64_t driver_context,
     RinDriverV3BlockNamespaceIdentityV1* output);
+/* Returns an OS-visible identity for removable media. This value is only
+ * alias-correlation data; the kernel-owned live controller path supplies the
+ * physical ancestry evidence used by destructive-media separation policy. */
+#define RIN_DRIVER_V3_BLOCK_MEDIA_IDENTITY_VERSION UINT32_C(1)
+#define RIN_DRIVER_V3_BLOCK_MEDIA_IDENTITY_BYTES UINT32_C(16)
+enum {
+    RIN_DRIVER_V3_BLOCK_MEDIA_IDENTITY_SD_CID = 1
+};
+typedef struct RinDriverV3BlockMediaIdentityV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t kind;
+    uint32_t size;
+    uint8_t identifier[RIN_DRIVER_V3_BLOCK_MEDIA_IDENTITY_BYTES];
+} RinDriverV3BlockMediaIdentityV1;
+typedef RinDriverV3Result (*RinDriverV3BlockGetMediaIdentityFn)(
+    uint64_t driver_context, RinDriverV3BlockMediaIdentityV1* output);
 typedef RinDriverV3Result (*RinDriverV3DeviceRemoveFn)(uint64_t driver_context);
 
 typedef struct RinDriverV3BlockOps {
@@ -793,7 +810,11 @@ typedef struct RinDriverV3BlockOps {
 #if UINTPTR_MAX == UINT32_MAX
             uint32_t get_namespace_identity_padding;
 #endif
-            uint64_t reserved_tail[2];
+            RinDriverV3BlockGetMediaIdentityFn get_media_identity;
+#if UINTPTR_MAX == UINT32_MAX
+            uint32_t get_media_identity_padding;
+#endif
+            uint64_t reserved_tail[1];
         } extensions;
     };
 } RinDriverV3BlockOps;
@@ -1032,18 +1053,35 @@ static inline int rin_driver_v3_block_ops_valid(
     if (!ops || ops->struct_size != sizeof(*ops) ||
         ops->version != RIN_DRIVER_V3_OPS_VERSION || !ops->get_geometry ||
         !ops->submit || !ops->poll || !ops->cancel || !ops->reset ||
-        !ops->remove || ops->extensions.reserved_tail[0] != 0u ||
-        ops->extensions.reserved_tail[1] != 0u)
+        !ops->remove || ops->extensions.reserved_tail[0] != 0u)
         return 0;
 #if UINTPTR_MAX == UINT32_MAX
     if (ops->get_geometry_padding != 0u || ops->submit_padding != 0u ||
         ops->poll_padding != 0u || ops->cancel_padding != 0u ||
         ops->reset_padding != 0u || ops->remove_padding != 0u ||
         ops->extensions.get_storage_health_snapshot_padding != 0u ||
-        ops->extensions.get_namespace_identity_padding != 0u)
+        ops->extensions.get_namespace_identity_padding != 0u ||
+        ops->extensions.get_media_identity_padding != 0u)
         return 0;
 #endif
     return 1;
+}
+
+static inline int rin_driver_v3_block_media_identity_valid(
+    const RinDriverV3BlockMediaIdentityV1* identity) {
+    uint8_t any_nonzero = 0u;
+    uint8_t all_ones = 1u;
+    if (!identity || identity->struct_size != sizeof(*identity) ||
+        identity->version != RIN_DRIVER_V3_BLOCK_MEDIA_IDENTITY_VERSION ||
+        identity->kind != RIN_DRIVER_V3_BLOCK_MEDIA_IDENTITY_SD_CID ||
+        identity->size != RIN_DRIVER_V3_BLOCK_MEDIA_IDENTITY_BYTES)
+        return 0;
+    for (uint32_t index = 0u;
+         index < RIN_DRIVER_V3_BLOCK_MEDIA_IDENTITY_BYTES; ++index) {
+        any_nonzero |= identity->identifier[index];
+        if (identity->identifier[index] != UINT8_MAX) all_ones = 0u;
+    }
+    return any_nonzero != 0u && all_ones == 0u;
 }
 
 static inline int rin_driver_v3_block_namespace_identity_valid(
@@ -1446,6 +1484,8 @@ static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
               "NDRV v3 network operation slot ABI drift");
 static_assert(sizeof(RinDriverV3BlockNamespaceIdentityV1) == 64u,
               "NDRV v3 block namespace identity ABI drift");
+static_assert(sizeof(RinDriverV3BlockMediaIdentityV1) == 32u,
+              "NDRV v3 block media identity ABI drift");
 static_assert(sizeof(RinDriverV3BlockGeometry) == 40u,
               "NDRV v3 block geometry ABI drift");
 static_assert(sizeof(RinDriverV3BlockRequest) == 64u,
@@ -1527,6 +1567,8 @@ _Static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                "NDRV v3 network operation slot ABI drift");
 _Static_assert(sizeof(RinDriverV3BlockNamespaceIdentityV1) == 64u,
                "NDRV v3 block namespace identity ABI drift");
+_Static_assert(sizeof(RinDriverV3BlockMediaIdentityV1) == 32u,
+               "NDRV v3 block media identity ABI drift");
 _Static_assert(sizeof(RinDriverV3BlockGeometry) == 40u,
                "NDRV v3 block geometry ABI drift");
 _Static_assert(sizeof(RinDriverV3BlockRequest) == 64u,
