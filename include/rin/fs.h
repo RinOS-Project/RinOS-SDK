@@ -42,10 +42,42 @@ enum {
 #define RIN_FS_PORTAL_OPEN_FILE UINT32_C(1)
 #define RIN_FS_PORTAL_OPEN_DIRECTORY UINT32_C(2)
 
+/* Stable File v1 access, disposition, and option values. */
+#define RIN_FS_ACCESS_READ UINT32_C(1)
+#define RIN_FS_ACCESS_WRITE UINT32_C(2)
+#define RIN_FS_ACCESS_READ_WRITE \
+    (RIN_FS_ACCESS_READ | RIN_FS_ACCESS_WRITE)
+
+#define RIN_FS_DISPOSITION_OPEN_EXISTING UINT32_C(0)
+#define RIN_FS_DISPOSITION_OPEN_OR_CREATE UINT32_C(1)
+#define RIN_FS_DISPOSITION_CREATE_NEW UINT32_C(2)
+#define RIN_FS_DISPOSITION_TRUNCATE_EXISTING UINT32_C(3)
+#define RIN_FS_DISPOSITION_CREATE_ALWAYS UINT32_C(4)
+
+#define RIN_FS_FILE_FLAG_APPEND UINT32_C(0x0001)
+#define RIN_FS_FILE_FLAG_SYNC UINT32_C(0x0002)
+#define RIN_FS_FILE_FLAG_NONBLOCK UINT32_C(0x0004)
+#define RIN_FS_FILE_FLAG_NOFOLLOW UINT32_C(0x0008)
+#define RIN_FS_FILE_FLAG_DIRECT UINT32_C(0x0010)
+#define RIN_FS_FILE_FLAG_DIRECTORY UINT32_C(0x0020)
+#define RIN_FS_FILE_FLAG_CLOEXEC UINT32_C(0x0040)
+#define RIN_FS_FILE_FLAGS_ALL UINT32_C(0x007f)
+
+#define RIN_FS_DIRECTORY_OPEN_NOFOLLOW UINT32_C(1)
+#define RIN_FS_DIRECTORY_OPEN_FLAGS_ALL RIN_FS_DIRECTORY_OPEN_NOFOLLOW
+
+#define RIN_FS_DIRECTORY_ENTRY_EOF UINT32_C(1)
+#define RIN_FS_DIRECTORY_BATCH_MAX UINT32_C(32)
+#define RIN_FS_IO_MAX_BYTES UINT64_C(16777216)
+
+/* Fixed-width file-handle field used by the FS request records.  The kernel
+ * decodes these wire records without importing the userspace RinFile alias. */
+typedef uint64_t RinFsFileHandleV1;
+
 typedef struct RinFileSeekV1 {
     uint32_t struct_size;
     uint32_t version;
-    RinFile file;
+    RinFsFileHandleV1 file;
     int64_t offset;
     int32_t whence;
     uint32_t flags;
@@ -55,7 +87,7 @@ typedef struct RinFileSeekV1 {
 typedef struct RinFileTruncateV1 {
     uint32_t struct_size;
     uint32_t version;
-    RinFile file;
+    RinFsFileHandleV1 file;
     uint64_t size;
     uint64_t reserved[2];
 } RinFileTruncateV1;
@@ -117,7 +149,7 @@ typedef struct RinFileOpenV1 {
 typedef struct RinFileIoV1 {
     uint32_t struct_size;
     uint32_t version;
-    RinFile file;
+    RinFsFileHandleV1 file;
     uint64_t offset;
     RinSliceV1 buffer;
     RinEvent completion_event;
@@ -177,6 +209,7 @@ typedef struct RinFileWatchEventV1 {
     uint64_t reserved[3];
 } RinFileWatchEventV1;
 
+#if !defined(RIN_SDK_KERNEL_INTERNAL_ABI)
 RIN_SDK_API RinResult rin_file_open_v1(const RinFileOpenV1* request, RinFile* file);
 RIN_SDK_API RinResult rin_file_read_v1(RinFileIoV1* request, uint64_t* transferred);
 RIN_SDK_API RinResult rin_file_write_v1(RinFileIoV1* request, uint64_t* transferred);
@@ -205,6 +238,7 @@ RIN_SDK_API RinResult rin_path_unlink_v1(const RinFsPathRequestV1* request);
 RIN_SDK_API RinResult rin_path_rename_v1(const RinFsPathRequestV1* request);
 RIN_SDK_API RinResult rin_fs_portal_open_v1(const RinFsPortalOpenV1* request,
                                             uint64_t* handle);
+#endif /* !RIN_SDK_KERNEL_INTERNAL_ABI */
 
 #if defined(__cplusplus)
 static_assert(sizeof(RinFileSeekV1) == 48u, "RinFileSeekV1 ABI drift");
