@@ -155,6 +155,8 @@ RIN_SDK_API RinResult rin_image_get_info_v1(RinMediaObject object, RinImageInfoV
 RIN_SDK_API RinResult rin_image_decode_v1(RinMediaObject object, uint32_t format, RinSliceV1 output, uint64_t* required);
 RIN_SDK_API RinResult rin_audio_get_info_v1(RinMediaObject object, RinAudioInfoV1* info);
 RIN_SDK_API RinResult rin_audio_decode_v1(RinMediaObject object, RinSliceV1 output, uint64_t* frames);
+/* Maps the Runtime-owned target for one decoded frame. Returns NOT_FOUND at
+ * end of stream; timestamp_ns is zero when the decoder has no timestamp. */
 RIN_SDK_API RinResult rin_video_decode_v1(RinMediaObject object, RinSurface target, uint64_t* timestamp_ns);
 /* Decode the next supported frame into a caller-supplied writable render
  * target. The SDK snapshots the target and options records before resetting

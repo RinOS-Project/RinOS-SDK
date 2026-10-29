@@ -12,9 +12,10 @@ either SDK target. Pass one installed target prefix produced by
 the helper verifies its manifest, public headers, runtime-library hashes, and
 signatures before producing application packages. Supply the signed
 `RinRuntime.rll` built with GUI support using `--rinruntime-rll`; the `window`
-example imports window ownership APIs from RinRuntime, while the SDK `ringui`
-library retains clipboard and notification calls. The prefix contains the
-declared RinGPU and RinResource public-header dependencies.
+example imports window ownership APIs and the `media` example maps its video
+surface through RinRuntime. The SDK `ringui` library retains clipboard and
+notification calls. The prefix contains the declared RinGPU and RinResource
+public-header dependencies.
 
 Example PowerShell invocation:
 
@@ -54,8 +55,11 @@ its metadata, and decodes one ARGB8888 pixel into a four-byte output slice. It
 then opens a two-frame PCM WAV through `RIN_MEDIA_TYPE_AUDIO`, checks its
 S16LE/8-kHz/mono metadata, and decodes both frames into a bounded four-byte
 output slice. Finally it opens a self-contained one-frame AVI through
-`RIN_MEDIA_TYPE_VIDEO` and checks its 1x1/25-fps metadata. The public media
-type values are image=1, audio=2, and video=3. It handles
+`RIN_MEDIA_TYPE_VIDEO`, checks its 1x1/25-fps metadata, decodes its frame into
+a Runtime-owned surface through `rin_video_decode_v1`, and checks the next
+frame result is end-of-stream. The public media type values are image=1,
+audio=2, and video=3. The media example declares the Runtime dependency used
+to map and release its video surface. It handles
 `RIN_ERROR_NOT_SUPPORTED` explicitly and requests no filesystem, camera, or
 microphone capability. This is a portable consumer example; target decoder
 availability and product acceptance are separate.

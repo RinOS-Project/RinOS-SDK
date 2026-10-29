@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include <rin/base.h>
+#include <rin/gui.h>
 #include <rin/media.h>
 
 /* Complete in-memory fixtures keep the sample self-contained and exercise
@@ -74,6 +75,19 @@ static int close_media(RinMediaObject object, int result)
         return 1;
     }
     return result;
+}
+
+static int close_video_media(RinMediaObject object, RinSurface surface,
+                             int result)
+{
+    if (surface != RIN_HANDLE_INVALID) {
+        RinResult close_result = rin_surface_destroy_v1(surface);
+        if (close_result != RIN_SUCCESS) {
+            printf("video surface close failed: %d\n", (int)close_result);
+            result = 1;
+        }
+    }
+    return close_media(object, result);
 }
 
 static int open_media(uint32_t media_type, const char* mime_type,
@@ -216,9 +230,12 @@ static int query_video_metadata(void)
     static const char mime_type[] = "video/x-msvideo";
     RinVideoInfoV1 info = {0};
     RinMediaObject object = RIN_HANDLE_INVALID;
+    RinSurface surface = RIN_HANDLE_INVALID;
+    RinGuiSurfaceMapV1 mapping = {0};
     RinRenderTarget target = {0};
     RinVideoFrameInfoV1 frame_info = {0};
     uint32_t decoded_pixel = 0u;
+    uint64_t timestamp_ns = UINT64_MAX;
     RinResult result;
     int status = open_media(RIN_MEDIA_TYPE_VIDEO, mime_type,
                             sizeof(mime_type) - 1u, sample_avi,
@@ -249,8 +266,47 @@ static int query_video_metadata(void)
         return close_media(object, 1);
     }
 
-    /* Exercise the SDK's bounded local copy path. This is not a compositor
-     * lease and the sample does not present this buffer. */
+    result = rin_surface_create_v1(
+        info.width, info.height, RIN_GUI_PIXEL_FORMAT_BGRA32, &surface);
+    if (result != RIN_SUCCESS || surface == RIN_HANDLE_INVALID) {
+        printf("video surface creation failed: %d\n", (int)result);
+        return close_media(object, 1);
+    }
+    result = rin_video_decode_v1(object, surface, &timestamp_ns);
+    if (result == RIN_ERROR_NOT_SUPPORTED) {
+        puts("video frame decoder is not available on this target");
+        return close_video_media(object, surface, 3);
+    }
+    if (result != RIN_SUCCESS || timestamp_ns != 0u) {
+        printf("surface video decode failed: %d (timestamp=%llu)\n",
+               (int)result, (unsigned long long)timestamp_ns);
+        return close_video_media(object, surface, 1);
+    }
+    result = rin_surface_map_v1(surface, &mapping);
+    if (result != RIN_SUCCESS || mapping.address == 0u ||
+        mapping.width != info.width || mapping.height != info.height ||
+        mapping.stride_bytes != info.row_stride_bytes ||
+        mapping.format != RIN_GUI_PIXEL_FORMAT_BGRA32) {
+        printf("video surface map failed: %d\n", (int)result);
+        if (mapping.address != 0u)
+            (void)rin_surface_unmap_v1(surface, &mapping);
+        return close_video_media(object, surface, 1);
+    }
+    decoded_pixel = *(const uint32_t*)(uintptr_t)mapping.address;
+    result = rin_surface_unmap_v1(surface, &mapping);
+    if (result != RIN_SUCCESS || decoded_pixel != UINT32_C(0xff000000)) {
+        printf("surface video pixel check failed: %d (%08x)\n",
+               (int)result, decoded_pixel);
+        return close_video_media(object, surface, 1);
+    }
+    result = rin_surface_destroy_v1(surface);
+    surface = RIN_HANDLE_INVALID;
+    if (result != RIN_SUCCESS) {
+        printf("video surface close failed: %d\n", (int)result);
+        return close_media(object, 1);
+    }
+
+    /* Exercise the caller-owned bounded copy API for the next frame. */
     target.struct_size = (uint32_t)sizeof(target);
     target.version = RIN_RENDER_TARGET_VERSION;
     target.pixels = &decoded_pixel;
@@ -311,7 +367,7 @@ static int query_video_metadata(void)
         return close_media(object, 1);
     }
 
-    puts("typed AVI metadata, one BGRA frame, and end-of-stream queried");
+    puts("typed AVI metadata, Runtime surface decode, and end-of-stream queried");
     return close_media(object, 0);
 }
 

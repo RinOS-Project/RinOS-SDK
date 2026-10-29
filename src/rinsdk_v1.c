@@ -1405,7 +1405,59 @@ RinResult rin_audio_decode_v1(RinMediaObject object,RinSliceV1 output,uint64_t* 
     if (frames == NULL) return RIN_ERROR_INVALID_ARGUMENT;
     return rin_media_sdk_client_audio_decode_v1(object, output, frames);
 }
-RinResult rin_video_decode_v1(RinMediaObject object,RinSurface target,uint64_t* timestamp_ns) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_MEDIA,MEDIA_VIDEO_DECODE,timestamp_ns,object,target,0,0,0,0); }
+RinResult rin_video_decode_v1(RinMediaObject object, RinSurface target,
+                              uint64_t* timestamp_ns) {
+    RinGuiSurfaceMapV1 mapping = {0};
+    RinRenderTarget render_target = {0};
+    RinVideoFrameInfoV1 frame_info = {0};
+    RinResult result;
+    RinResult unmap_result;
+
+    if (timestamp_ns != NULL) *timestamp_ns = 0u;
+    if (timestamp_ns == NULL || target == RIN_HANDLE_INVALID)
+        return RIN_ERROR_INVALID_ARGUMENT;
+
+    result = rin_surface_map_v1(target, &mapping);
+    if (result != RIN_SUCCESS) return result;
+    if (mapping.struct_size != sizeof(mapping) ||
+        mapping.version != RIN_SDK_STRUCT_VERSION_1 ||
+        mapping.address == 0u || mapping.address > (uint64_t)UINTPTR_MAX ||
+        mapping.width == 0u || mapping.height == 0u ||
+        mapping.width > UINT32_MAX / 4u ||
+        mapping.stride_bytes < mapping.width * 4u ||
+        mapping.generation == 0u ||
+        (mapping.format != RIN_GUI_PIXEL_FORMAT_BGRA32 &&
+         mapping.format != RIN_GUI_PIXEL_FORMAT_RGBA32) ||
+        mapping.reserved[0] != 0u || mapping.reserved[1] != 0u) {
+        (void)rin_surface_unmap_v1(target, &mapping);
+        return RIN_ERROR_INTEGRITY;
+    }
+
+    render_target.struct_size = sizeof(render_target);
+    render_target.version = RIN_RENDER_TARGET_VERSION;
+    render_target.pixels = (void*)(uintptr_t)mapping.address;
+    render_target.width = mapping.width;
+    render_target.height = mapping.height;
+    render_target.pitch = mapping.stride_bytes;
+    render_target.format = mapping.format;
+    render_target.generation = mapping.generation;
+    render_target.buffer_slot = 0u;
+    render_target.flags = RIN_RENDER_TARGET_FLAG_WRITABLE |
+                          RIN_RENDER_TARGET_FLAG_EXTERNAL;
+
+    result = rin_media_sdk_client_video_decode_frame_v1(
+        object, &render_target, NULL, &frame_info);
+    unmap_result = rin_surface_unmap_v1(target, &mapping);
+    if (unmap_result != RIN_SUCCESS) return unmap_result;
+    if (result != RIN_SUCCESS) return result;
+    if ((frame_info.flags & RIN_VIDEO_FRAME_FLAG_END_OF_STREAM) != 0u)
+        return RIN_ERROR_NOT_FOUND;
+    *timestamp_ns =
+        (frame_info.flags & RIN_VIDEO_FRAME_FLAG_TIMESTAMP_KNOWN) != 0u
+            ? frame_info.timestamp_ns
+            : 0u;
+    return RIN_SUCCESS;
+}
 RinResult rin_video_get_info_v1(RinMediaObject object, RinVideoInfoV1* info) {
     RinResult result;
     if (!versioned(info, sizeof(*info))) return RIN_ERROR_ABI_MISMATCH;

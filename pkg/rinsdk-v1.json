@@ -14,7 +14,7 @@
     "rinfs": {"archive": "librinfs.ra", "shared": "rinfs.rll", "define": "RINSDK_BUILD_FS", "dependencies": ["rincrt", "rinbase", "rinipc"]},
     "rinnet": {"archive": "librinnet.ra", "shared": "rinnet.rll", "define": "RINSDK_BUILD_NET", "dependencies": ["rincrt", "rinbase", "rinipc"]},
     "ringui": {"archive": "libringui.ra", "shared": "ringui.rll", "define": "RINSDK_BUILD_GUI", "dependencies": ["rincrt", "rinbase", "rinipc"]},
-    "rinmedia": {"archive": "librinmedia.ra", "shared": "rinmedia.rll", "define": "RINSDK_BUILD_MEDIA", "dependencies": ["rincrt", "rinbase"], "extra_sources": ["rinmedia_sdk_client_v1.c"]},
+    "rinmedia": {"archive": "librinmedia.ra", "shared": "rinmedia.rll", "define": "RINSDK_BUILD_MEDIA", "dependencies": ["rincrt", "rinbase"], "external_dependencies": {"RinRuntime.rll": ["rin_surface_map_v1", "rin_surface_unmap_v1"]}, "extra_sources": ["rinmedia_sdk_client_v1.c"]},
     "rinconfig": {"archive": "librinconfig.ra", "shared": "rinconfig.rll", "define": "RINSDK_BUILD_CONFIG", "dependencies": ["rincrt", "rinbase"]},
     "rinpkg": {"archive": "librinpkg.ra", "shared": "rinpkg.rll", "define": "RINSDK_BUILD_PKG", "dependencies": ["rincrt", "rinbase", "rinipc"]},
     "rindevice": {"archive": "librindevice.ra", "shared": "rindevice.rll", "define": "RINSDK_BUILD_DEVICE", "dependencies": ["rincrt", "rinbase"]},
