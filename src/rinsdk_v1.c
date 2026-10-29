@@ -410,7 +410,7 @@ static int rin_sdk_service_info_get(int index, RinSdkServiceInfoV1* info) {
 RinResult rin_service_start(int scope, const char* id) {
     if ((scope != RIN_SERVICE_SCOPE_SYSTEM &&
          scope != RIN_SERVICE_SCOPE_USER) ||
-        rin_sdk_service_id_size(id) == 0u)
+        id == NULL)
         return RIN_ERROR_INVALID_ARGUMENT;
     return rin_sdk_service_status_result(_syscall2(
         (uintptr_t)RIN_SYS_SERVICE_START,
@@ -488,12 +488,20 @@ RinResult rin_sdk_register_object_close_hook_v1(
     for (uint32_t index = 0u;
          index < RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1; ++index) {
         RinSdkObjectCloseHookEntryV1* entry = &g_object_close_hooks[index];
-        if (entry->hook == hook && entry->active != 0u) {
-            /* Preserve the legacy process-lifetime promise if a caller uses
-             * the old API for a hook that was also registered with a token. */
-            entry->process_lifetime = 1u;
+        if (entry->hook == hook) {
+            RinResult result;
+            if (entry->active != 0u) {
+                /* Preserve the legacy process-lifetime promise if a caller
+                 * uses the old API for a hook also registered with a token. */
+                entry->process_lifetime = 1u;
+                result = RIN_SUCCESS;
+            } else {
+                /* Do not create a second live registration while an earlier
+                 * callback snapshot is still draining. */
+                result = RIN_ERROR_BUSY;
+            }
             __sync_lock_release(&g_object_close_hooks_lock);
-            return RIN_SUCCESS;
+            return result;
         }
     }
     for (uint32_t index = 0u;
@@ -518,7 +526,19 @@ RinResult rin_sdk_register_object_close_hook_owned_v1(
     RinSdkObjectCloseHookTokenV1* token_out) {
     if (hook == NULL || token_out == NULL)
         return RIN_ERROR_INVALID_ARGUMENT;
+    *token_out = 0u;
     while (__sync_lock_test_and_set(&g_object_close_hooks_lock, 1u) != 0u) {
+    }
+    for (uint32_t index = 0u;
+         index < RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1; ++index) {
+        RinSdkObjectCloseHookEntryV1* entry = &g_object_close_hooks[index];
+        if (entry->hook == hook) {
+            RinResult result = entry->active != 0u
+                                   ? RIN_ERROR_EXISTS
+                                   : RIN_ERROR_BUSY;
+            __sync_lock_release(&g_object_close_hooks_lock);
+            return result;
+        }
     }
     if (g_object_close_hook_generation_exhausted != 0u) {
         __sync_lock_release(&g_object_close_hooks_lock);
@@ -584,7 +604,7 @@ RinResult rin_sdk_unregister_object_close_hook_v1(
     return RIN_SUCCESS;
 }
 
-static void rin_sdk_notify_object_close_v1(RinObject object) {
+static RinResult rin_sdk_notify_object_close_v1(RinObject object) {
     struct RinSdkObjectCloseHookCallV1 {
         RinSdkObjectCloseHookV1 hook;
         uint64_t generation;
@@ -596,10 +616,16 @@ static void rin_sdk_notify_object_close_v1(RinObject object) {
     for (uint32_t index = 0u;
          index < RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1; ++index) {
         RinSdkObjectCloseHookEntryV1* entry = &g_object_close_hooks[index];
-        if (entry->hook == NULL || entry->active == 0u ||
+        if (entry->hook != NULL && entry->active != 0u &&
             entry->in_flight == UINT64_MAX) {
-            continue;
+            __sync_lock_release(&g_object_close_hooks_lock);
+            return RIN_ERROR_BUSY;
         }
+    }
+    for (uint32_t index = 0u;
+         index < RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1; ++index) {
+        RinSdkObjectCloseHookEntryV1* entry = &g_object_close_hooks[index];
+        if (entry->hook == NULL || entry->active == 0u) continue;
         ++entry->in_flight;
         calls[call_count].hook = entry->hook;
         calls[call_count].generation = entry->generation;
@@ -621,6 +647,7 @@ static void rin_sdk_notify_object_close_v1(RinObject object) {
         }
         __sync_lock_release(&g_object_close_hooks_lock);
     }
+    return RIN_SUCCESS;
 }
 
 RinResult rin_object_close_v1(RinObject object) {
@@ -630,7 +657,8 @@ RinResult rin_object_close_v1(RinObject object) {
     request.struct_size = sizeof(request);
     request.version = RIN_SDK_STRUCT_VERSION_1;
     request.value[0] = object;
-    rin_sdk_notify_object_close_v1(object);
+    result = rin_sdk_notify_object_close_v1(object);
+    if (result != RIN_SUCCESS) return result;
     result = rin_sdk_invoke_v1(
         RIN_SDK_LIBRARY_BASE, BASE_OBJECT_CLOSE, &request, sizeof(request),
         NULL, 0u);
