@@ -539,6 +539,9 @@
 #define RIN_SYS_FCNTL_LOCK64                0x8096u
 /* filesystem. */
 #define RIN_SYS_READDIR64                   0x8097u
+/* thread. */
+#define RIN_SYS_THREAD_SCHED_GETPARAM       0x8098u
+/* file. */
 #define RIN_SYS_PREADV                      0x8099u
 #define RIN_SYS_PWRITEV                     0x809Au
 

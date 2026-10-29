@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #define RIN_THREAD_SCHED_ABI_VERSION UINT16_C(1)
+#define RIN_THREAD_SCHED_ABI_VERSION_2 UINT16_C(2)
 
 #define RIN_THREAD_SCHED_OTHER    0
 #define RIN_THREAD_SCHED_FIFO     1
@@ -25,12 +26,28 @@ typedef struct RinThreadSchedParametersV1 {
     uint64_t reserved1;
 } RinThreadSchedParametersV1;
 
+/* V2 keeps the V1 record size while moving sched_param access into the
+ * kernel. For SET, user_priority_address is copied in before scheduler
+ * state changes. GETPARAM uses the dedicated scalar copyout syscall. */
+typedef struct RinThreadSchedParametersV2 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    int32_t policy;
+    int32_t priority;
+    uint64_t user_priority_address;
+} RinThreadSchedParametersV2;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinThreadSchedParametersV1) == 24u,
               "RinThreadSchedParametersV1 ABI drift");
+static_assert(sizeof(RinThreadSchedParametersV2) == 24u,
+              "RinThreadSchedParametersV2 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinThreadSchedParametersV1) == 24u,
                "RinThreadSchedParametersV1 ABI drift");
+_Static_assert(sizeof(RinThreadSchedParametersV2) == 24u,
+               "RinThreadSchedParametersV2 ABI drift");
 #endif
 
 #endif /* RIN_SDK_THREAD_SCHED_ABI_H */
