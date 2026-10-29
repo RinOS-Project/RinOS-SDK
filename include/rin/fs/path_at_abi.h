@@ -58,6 +58,9 @@
 /* Remove a relative file or symlink only when it still names the object pinned
  * by secondary_dirfd. dirfd is the parent directory descriptor. */
 #define RIN_PATH_AT_UNLINK_MATCH    27u
+/* Descriptor-relative stat that rejects ambient path lookup and `..` escape.
+ * buffer_size selects the caller's legacy, time64, or 64-bit stat record. */
+#define RIN_PATH_AT_STAT_BENEATH    28u
 
 /* FSETXATTR accepts these flags in addition to EMPTY_PATH. */
 #define RIN_PATH_AT_XATTR_CREATE    0x0001u
