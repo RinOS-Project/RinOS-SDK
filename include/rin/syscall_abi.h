@@ -550,6 +550,7 @@
 #define RIN_SYS_BLOCK_GET_INFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_BLOCK_GET_INFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
+/* x86_64 native only. operation is ARCH_SET_GS=0x1001, ARCH_SET_FS=0x1002, ARCH_GET_FS=0x1003, or ARCH_GET_GS=0x1004. address is consumed only by SET; GET ignores it and returns the base directly. Unknown operations return the legacy -1 sentinel. */
 #define RIN_SYS_ARCH_PRCTL                  120u
 /* ARCH_PRCTL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_ARCH_PRCTL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
@@ -589,6 +590,7 @@
 #define RIN_SYS_GETCPU_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETCPU_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* system. */
+/* 発見済みCPU数を返し、0台の場合は1を返す。 */
 #define RIN_SYS_GETCPU_COUNT                136u
 /* GETCPU_COUNT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_GETCPU_COUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -1187,7 +1189,7 @@
 #define RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* system. */
-/* returns CPUs whose state is online */
+/* オンライン状態のCPU数を返す。0も有効な値。 */
 #define RIN_SYS_GETCPU_ONLINE_COUNT         352u
 /* GETCPU_ONLINE_COUNT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -1259,6 +1261,7 @@
 #define RIN_SYS_POWER_SET_SETTINGS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_POWER_SET_SETTINGS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* thread. */
+/* 現在threadのnamespace可視TIDを返し、対応threadがなければESRCHを返す。 */
 #define RIN_SYS_GETTID                      0x800Bu
 /* GETTID availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_GETTID_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
