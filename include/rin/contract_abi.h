@@ -533,7 +533,7 @@ typedef struct RinDlAddrRllRecordV1 {
     uint32_t symbol_name_length;
     char library_name[64];
     char symbol_name[129];
-} RinDlAddrRllRecordV1;
+} __attribute__((aligned(8))) RinDlAddrRllRecordV1;
 
 #endif /* RIN_SDK_DYNLINK_ADDR_ABI_DEFINED */
 
