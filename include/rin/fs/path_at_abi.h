@@ -55,6 +55,9 @@
 #define RIN_PATH_AT_LISTXATTR       24u
 #define RIN_PATH_AT_SETXATTR        25u
 #define RIN_PATH_AT_REMOVEXATTR     26u
+/* Remove a relative file or symlink only when it still names the object pinned
+ * by secondary_dirfd. dirfd is the parent directory descriptor. */
+#define RIN_PATH_AT_UNLINK_MATCH    27u
 
 /* FSETXATTR accepts these flags in addition to EMPTY_PATH. */
 #define RIN_PATH_AT_XATTR_CREATE    0x0001u
@@ -89,21 +92,25 @@ _Static_assert(sizeof(RinPathAtFileIdentityV1) == 32u,
 #define RIN_PATH_AT_RENAME_NOREPLACE 0x0001u
 /* Require RENAME to match the device and inode inspected by the caller. */
 #define RIN_PATH_AT_RENAME_EXPECT_SOURCE_IDENTITY 0x0002u
-#define RIN_PATH_AT_EXPECTED_SOURCE_IDENTITY_VERSION 1u
+#define RIN_PATH_AT_EXPECTED_SOURCE_IDENTITY_VERSION 2u
 
-typedef struct RinPathAtExpectedSourceIdentityV1 {
+typedef struct RinPathAtExpectedSourceIdentityV2 {
     uint32_t struct_size;
     uint16_t version;
     uint16_t reserved0;
     uint64_t device;
     uint64_t inode;
-} RinPathAtExpectedSourceIdentityV1;
+    uint64_t generation;
+} RinPathAtExpectedSourceIdentityV2;
+/* Source-compatible name for clients that use inode-only expected rename.
+ * A zero generation keeps the older inode match; new callers should supply it. */
+typedef RinPathAtExpectedSourceIdentityV2 RinPathAtExpectedSourceIdentityV1;
 
 #if defined(__cplusplus) && !defined(MIDL_PASS)
-static_assert(sizeof(RinPathAtExpectedSourceIdentityV1) == 24u,
+static_assert(sizeof(RinPathAtExpectedSourceIdentityV2) == 32u,
               "expected source identity ABI size");
 #elif !defined(MIDL_PASS)
-_Static_assert(sizeof(RinPathAtExpectedSourceIdentityV1) == 24u,
+_Static_assert(sizeof(RinPathAtExpectedSourceIdentityV2) == 32u,
                "expected source identity ABI size");
 #endif
 
