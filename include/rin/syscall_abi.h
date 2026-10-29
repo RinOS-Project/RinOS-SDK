@@ -552,6 +552,9 @@
 /* filesystem. */
 /* Fixed 72-byte request carries splice-family operation, flags, FD pair, offsets and native-width vmsplice iovec array pointer. */
 #define RIN_SYS_SPLICE_CALL_V1              0x809Du
+/* process. */
+#define RIN_SYS_PIDFD_OPEN                  0x809Eu
+#define RIN_SYS_PIDFD_SEND_SIGNAL           0x809Fu
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
