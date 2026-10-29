@@ -5,6 +5,8 @@
 #ifndef RIN_SDK_SYSCALL_ABI_H
 #define RIN_SDK_SYSCALL_ABI_H
 
+#include <stdint.h>
+
 #define RIN_SYSCALL_SCHEMA_VERSION 2u
 #define RIN_SYSCALL_ABI_MAJOR 1u
 #define RIN_SYSCALL_ABI_MINOR 0u
@@ -13,163 +15,647 @@
 #define RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED 0u
 #define RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED 1u
 #define RIN_SYSCALL_ARCH_SUPPORT_CONDITIONAL 2u
+#define RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN 3u
+#define RIN_SYSCALL_ARCH_MODE_X86_NATIVE 0u
+#define RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE 1u
+#define RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32 2u
 
 /* process. */
 #define RIN_SYS_EXIT                        0u
+/* EXIT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_EXIT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_EXIT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_EXIT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FORK                        1u
 /* FORK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_FORK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_FORK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FORK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_CONDITIONAL
+#define RIN_SYS_FORK_CONDITION_X86_64_COMPAT32 "available when x86_64 compat32 execution is enabled"
 #define RIN_SYS_EXEC                        2u
 /* EXEC availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_EXEC_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_EXEC_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_EXEC_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_CONDITIONAL
+#define RIN_SYS_EXEC_CONDITION_X86_64_COMPAT32 "available when x86_64 compat32 execution is enabled"
 #define RIN_SYS_WAIT                        3u
+/* WAIT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_WAIT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WAIT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WAIT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETPID                      4u
+/* GETPID availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETPID_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETPID_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETPID_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETPPID                     5u
+/* GETPPID availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETPPID_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETPPID_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETPPID_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_KILL                        6u
+/* KILL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_KILL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_KILL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_KILL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SIGNAL                      7u
+/* SIGNAL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SIGNAL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SIGNAL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SIGNAL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* memory. */
 #define RIN_SYS_SBRK                        8u
+/* SBRK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SBRK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SBRK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SBRK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 #define RIN_SYS_WAIT4                       9u
+/* WAIT4 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_WAIT4_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WAIT4_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WAIT4_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETRUSAGE                   10u
+/* GETRUSAGE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETRUSAGE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETRUSAGE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETRUSAGE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETPRIORITY                 11u
+/* GETPRIORITY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETPRIORITY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETPRIORITY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETPRIORITY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SETPRIORITY                 12u
+/* SETPRIORITY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SETPRIORITY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SETPRIORITY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SETPRIORITY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_OPEN                        20u
+/* OPEN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_OPEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_OPEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_OPEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CLOSE                       21u
+/* CLOSE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CLOSE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLOSE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLOSE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_READ                        22u
+/* READ availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_READ_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_READ_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_READ_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_WRITE                       23u
+/* WRITE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_WRITE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WRITE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WRITE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SEEK                        24u
+/* SEEK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SEEK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SEEK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SEEK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_STAT                        25u
+/* STAT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_STAT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_STAT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_STAT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FSTAT                       26u
+/* FSTAT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FSTAT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FSTAT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FSTAT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ACCESS                      27u
+/* ACCESS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ACCESS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ACCESS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ACCESS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MKDIR                       28u
+/* MKDIR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MKDIR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MKDIR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MKDIR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RMDIR                       29u
+/* RMDIR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RMDIR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RMDIR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RMDIR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_UNLINK                      30u
+/* UNLINK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_UNLINK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UNLINK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UNLINK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RENAME                      31u
+/* RENAME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RENAME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RENAME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RENAME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CHDIR                       32u
+/* CHDIR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CHDIR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CHDIR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CHDIR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETCWD                      33u
+/* GETCWD availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETCWD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETCWD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETCWD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_READDIR                     34u
+/* READDIR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_READDIR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_READDIR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_READDIR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* object. */
 #define RIN_SYS_DUP                         35u
+/* DUP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DUP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DUP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DUP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DUP2                        36u
+/* DUP2 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DUP2_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DUP2_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DUP2_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PIPE                        37u
+/* PIPE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PIPE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PIPE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PIPE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_LINK                        38u
+/* LINK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_LINK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LINK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LINK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SYMLINK                     39u
+/* SYMLINK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SYMLINK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SYMLINK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SYMLINK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_READLINK                    40u
+/* READLINK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_READLINK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_READLINK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_READLINK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TRUNCATE                    41u
+/* TRUNCATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TRUNCATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TRUNCATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TRUNCATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FTRUNCATE                   42u
+/* FTRUNCATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FTRUNCATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FTRUNCATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FTRUNCATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CHMOD                       43u
+/* CHMOD availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CHMOD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CHMOD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CHMOD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CHOWN                       44u
+/* CHOWN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CHOWN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CHOWN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CHOWN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_LSTAT                       45u
+/* LSTAT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_LSTAT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LSTAT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LSTAT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* storage. */
 #define RIN_SYS_STORAGE_SYNC                46u
+/* STORAGE_SYNC availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_STORAGE_SYNC_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_STORAGE_SYNC_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_STORAGE_SYNC_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FILE_SYNC                   47u
+/* FILE_SYNC availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILE_SYNC_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILE_SYNC_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILE_SYNC_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* object. */
 #define RIN_SYS_FCNTL                       48u
+/* FCNTL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FCNTL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCNTL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCNTL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_IOCTL                       49u
+/* IOCTL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_IOCTL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_IOCTL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_IOCTL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* memory. */
 #define RIN_SYS_MMAP                        50u
+/* MMAP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MMAP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MMAP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MMAP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MUNMAP                      51u
+/* MUNMAP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MUNMAP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MUNMAP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MUNMAP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MPROTECT                    52u
+/* MPROTECT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MPROTECT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MPROTECT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MPROTECT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_BRK                         53u
+/* BRK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_BRK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BRK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BRK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MLOCK                       54u
+/* MLOCK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MLOCK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MLOCK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MLOCK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MUNLOCK                     55u
+/* MUNLOCK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MUNLOCK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MUNLOCK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MUNLOCK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MSYNC                       56u
+/* MSYNC availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MSYNC_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MSYNC_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MSYNC_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MMAP_FD                     57u
+/* MMAP_FD availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MMAP_FD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MMAP_FD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MMAP_FD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MADVISE                     58u
+/* MADVISE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MADVISE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MADVISE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MADVISE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_OPENAT_BENEATH              59u
+/* OPENAT_BENEATH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_OPENAT_BENEATH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_OPENAT_BENEATH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_OPENAT_BENEATH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
 #define RIN_SYS_TIME                        60u
+/* TIME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETTIMEOFDAY                61u
+/* GETTIMEOFDAY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETTIMEOFDAY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETTIMEOFDAY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETTIMEOFDAY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SLEEP                       62u
+/* SLEEP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SLEEP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SLEEP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SLEEP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NANOSLEEP                   63u
+/* NANOSLEEP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NANOSLEEP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NANOSLEEP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NANOSLEEP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* event. */
 #define RIN_SYS_POLL                        64u
+/* POLL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_POLL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POLL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POLL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
 #define RIN_SYS_YIELD                       65u
+/* YIELD availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_YIELD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_YIELD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_YIELD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_MKDIRAT_BENEATH             66u
+/* MKDIRAT_BENEATH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MKDIRAT_BENEATH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MKDIRAT_BENEATH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MKDIRAT_BENEATH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FSTATAT_BENEATH             67u
+/* FSTATAT_BENEATH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FSTATAT_BENEATH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FSTATAT_BENEATH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FSTATAT_BENEATH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PREAD                       68u
+/* PREAD availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PREAD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PREAD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PREAD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PWRITE                      69u
+/* PWRITE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PWRITE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PWRITE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PWRITE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_SOCKET                      70u
+/* SOCKET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SOCKET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SOCKET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SOCKET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_BIND                        71u
+/* BIND availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_BIND_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BIND_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BIND_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_LISTEN                      72u
+/* LISTEN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_LISTEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LISTEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LISTEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ACCEPT                      73u
+/* ACCEPT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ACCEPT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ACCEPT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ACCEPT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CONNECT                     74u
+/* CONNECT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CONNECT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONNECT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONNECT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SEND                        75u
+/* SEND availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SEND_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SEND_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SEND_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RECV                        76u
+/* RECV availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RECV_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RECV_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RECV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SENDTO                      77u
+/* SENDTO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SENDTO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SENDTO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SENDTO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RECVFROM                    78u
+/* RECVFROM availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RECVFROM_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RECVFROM_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RECVFROM_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETSOCKOPT                  79u
+/* GETSOCKOPT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETSOCKOPT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETSOCKOPT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETSOCKOPT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SETSOCKOPT                  80u
+/* SETSOCKOPT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SETSOCKOPT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SETSOCKOPT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SETSOCKOPT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETSOCKNAME                 81u
+/* GETSOCKNAME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETSOCKNAME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETSOCKNAME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETSOCKNAME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETPEERNAME                 82u
+/* GETPEERNAME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETPEERNAME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETPEERNAME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETPEERNAME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SOCKETPAIR                  83u
+/* SOCKETPAIR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SOCKETPAIR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SOCKETPAIR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SOCKETPAIR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SENDMSG                     84u
+/* SENDMSG availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SENDMSG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SENDMSG_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SENDMSG_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RECVMSG                     85u
+/* RECVMSG availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RECVMSG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RECVMSG_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RECVMSG_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SOCK_SHUTDOWN               86u
+/* SOCK_SHUTDOWN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SOCK_SHUTDOWN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SOCK_SHUTDOWN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SOCK_SHUTDOWN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ACCEPT4                     87u
+/* ACCEPT4 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ACCEPT4_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ACCEPT4_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ACCEPT4_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_OPENAT_MOUNT_IDENTITY       88u
+/* OPENAT_MOUNT_IDENTITY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_OPENAT_MOUNT_IDENTITY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_OPENAT_MOUNT_IDENTITY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_OPENAT_MOUNT_IDENTITY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* system. */
 #define RIN_SYS_REBOOT                      90u
+/* REBOOT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_REBOOT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_REBOOT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_REBOOT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHUTDOWN                    91u
+/* SHUTDOWN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SHUTDOWN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SHUTDOWN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SHUTDOWN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SYSINFO                     92u
+/* SYSINFO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SYSINFO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SYSINFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SYSINFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_UNAME                       93u
+/* UNAME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_UNAME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UNAME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UNAME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* storage. */
 #define RIN_SYS_ATA_INIT                    100u
+/* ATA_INIT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ATA_INIT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ATA_INIT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ATA_INIT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ATA_GET_COUNT               101u
+/* ATA_GET_COUNT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ATA_GET_COUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ATA_GET_COUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ATA_GET_COUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ATA_GET_INFO                102u
+/* ATA_GET_INFO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ATA_GET_INFO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ATA_GET_INFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ATA_GET_INFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ATA_READ                    103u
+/* ATA_READ availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ATA_READ_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ATA_READ_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ATA_READ_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ATA_WRITE                   104u
+/* ATA_WRITE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ATA_WRITE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ATA_WRITE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ATA_WRITE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_BLOCK_GET_COUNT             105u
+/* BLOCK_GET_COUNT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_BLOCK_GET_COUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_GET_COUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_GET_COUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_BLOCK_ENUMERATE             106u
+/* BLOCK_ENUMERATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_BLOCK_ENUMERATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_ENUMERATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_ENUMERATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_BLOCK_READ                  107u
+/* BLOCK_READ availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_BLOCK_READ_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_READ_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_READ_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_BLOCK_WRITE                 108u
+/* BLOCK_WRITE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_BLOCK_WRITE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_WRITE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_WRITE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_BLOCK_FLUSH                 109u
+/* BLOCK_FLUSH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_BLOCK_FLUSH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_FLUSH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_FLUSH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* debug. */
 #define RIN_SYS_SERIAL_PRINT                110u
+/* SERIAL_PRINT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERIAL_PRINT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERIAL_PRINT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERIAL_PRINT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SERIAL_HEX                  111u
+/* SERIAL_HEX availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERIAL_HEX_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERIAL_HEX_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_SERIAL_HEX_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* storage. */
 #define RIN_SYS_BLOCK_GET_INFO              112u
+/* BLOCK_GET_INFO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_BLOCK_GET_INFO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_GET_INFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLOCK_GET_INFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
 #define RIN_SYS_ARCH_PRCTL                  120u
+/* ARCH_PRCTL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ARCH_PRCTL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_ARCH_PRCTL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ARCH_PRCTL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_CLONE                       130u
+/* CLONE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CLONE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLONE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLONE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* statusはsigned 32-bitのkernel終了値。成功時はthreadを終了し戻らない。pthreadのvoid*終了値はlibcのjoin registryが保持し、kernel statusには渡さない。cancel cleanupはsyscall前にuserspaceで完了する。 */
 #define RIN_SYS_THREAD_EXIT                 131u
+/* THREAD_EXIT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THREAD_EXIT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_EXIT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_EXIT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SCHED_YIELD                 132u
+/* SCHED_YIELD availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SCHED_YIELD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SCHED_YIELD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SCHED_YIELD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* signed 32-bit target TIDを受ける。成功は0、join待機後に終了slotを一度だけreapする。 */
 #define RIN_SYS_THREAD_JOIN                 133u
+/* THREAD_JOIN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THREAD_JOIN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_JOIN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_JOIN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* signed 32-bit target TIDを受ける。成功0は稼働中threadをdetachし、成功1は終了済みthreadを同期reapしたことを示す。 */
 #define RIN_SYS_THREAD_DETACH               134u
+/* THREAD_DETACH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THREAD_DETACH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_DETACH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_DETACH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETCPU                      135u
+/* GETCPU availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETCPU_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETCPU_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETCPU_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* system. */
 #define RIN_SYS_GETCPU_COUNT                136u
+/* GETCPU_COUNT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETCPU_COUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETCPU_COUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETCPU_COUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* object. */
 #define RIN_SYS_SHMGET                      137u
+/* SHMGET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SHMGET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SHMGET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SHMGET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHMAT                       138u
+/* SHMAT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SHMAT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SHMAT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SHMAT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHMDT                       139u
+/* SHMDT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SHMDT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SHMDT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SHMDT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 #define RIN_SYS_SPAWN_PROCESS               140u
+/* SPAWN_PROCESS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SPAWN_PROCESS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SPAWN_PROCESS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SPAWN_PROCESS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_COMPAT_PROCESS_CREATE       141u
+/* COMPAT_PROCESS_CREATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_COMPAT_PROCESS_CREATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_COMPAT_PROCESS_CREATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_COMPAT_PROCESS_CREATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* thread. */
 #define RIN_SYS_SCHED_SETAFFINITY           142u
+/* SCHED_SETAFFINITY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SCHED_SETAFFINITY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SCHED_SETAFFINITY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SCHED_SETAFFINITY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SCHED_GETAFFINITY           143u
+/* SCHED_GETAFFINITY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SCHED_GETAFFINITY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SCHED_GETAFFINITY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SCHED_GETAFFINITY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_THREAD_SCHED_GET            144u
+/* THREAD_SCHED_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THREAD_SCHED_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_SCHED_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_SCHED_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_THREAD_SCHED_SET            145u
+/* THREAD_SCHED_SET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THREAD_SCHED_SET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_SCHED_SET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_SCHED_SET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_THREAD_SCHED_RR_INTERVAL    146u
+/* THREAD_SCHED_RR_INTERVAL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THREAD_SCHED_RR_INTERVAL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_SCHED_RR_INTERVAL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_SCHED_RR_INTERVAL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS       147u
+/* SPAWN_PROCESS_ACTIONS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PRCTL                       148u
+/* PRCTL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PRCTL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PRCTL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PRCTL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PTRACE                      149u
+/* PTRACE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PTRACE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PTRACE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PTRACE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SECCOMP                     150u
+/* SECCOMP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SECCOMP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SECCOMP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SECCOMP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* signal. */
 #define RIN_SYS_RT_SIGRETURN                173u /* reserved */
 #define RIN_SYS_RT_SIGACTION                174u /* reserved */
@@ -177,386 +663,4047 @@
 #define RIN_SYS_RT_SIGPENDING               176u /* reserved */
 /* file. */
 #define RIN_SYS_UMASK                       177u
+/* UMASK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_UMASK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UMASK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UMASK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FCHOWN                      178u
+/* FCHOWN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FCHOWN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCHOWN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCHOWN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_LCHOWN                      179u
+/* LCHOWN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_LCHOWN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LCHOWN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LCHOWN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FUTIMENS                    180u
+/* FUTIMENS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FUTIMENS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FUTIMENS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FUTIMENS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_UTIMENSAT                   181u
+/* UTIMENSAT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_UTIMENSAT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UTIMENSAT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UTIMENSAT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FCHMOD                      182u
+/* FCHMOD availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FCHMOD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCHMOD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCHMOD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* object. */
 #define RIN_SYS_POSIX_SEM_OPEN              183u
+/* POSIX_SEM_OPEN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_POSIX_SEM_OPEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POSIX_SEM_OPEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POSIX_SEM_OPEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_POSIX_SEM_CLOSE             184u
+/* POSIX_SEM_CLOSE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_POSIX_SEM_CLOSE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POSIX_SEM_CLOSE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POSIX_SEM_CLOSE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_POSIX_SEM_UNLINK            185u
+/* POSIX_SEM_UNLINK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_POSIX_SEM_UNLINK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POSIX_SEM_UNLINK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POSIX_SEM_UNLINK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_PATH_AT                     186u
+/* PATH_AT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PATH_AT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PATH_AT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PATH_AT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RENAME_NOREPLACE            187u
+/* RENAME_NOREPLACE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RENAME_NOREPLACE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RENAME_NOREPLACE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RENAME_NOREPLACE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FCOPY_XATTRS                188u
+/* FCOPY_XATTRS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FCOPY_XATTRS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCOPY_XATTRS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCOPY_XATTRS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FCOPY_FILE_FLAGS            189u
+/* FCOPY_FILE_FLAGS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FCOPY_FILE_FLAGS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCOPY_FILE_FLAGS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCOPY_FILE_FLAGS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* signal. */
 #define RIN_SYS_SIGALTSTACK                 190u
+/* SIGALTSTACK availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SIGALTSTACK_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SIGALTSTACK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SIGALTSTACK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RT_SIGSUSPEND               191u
+/* RT_SIGSUSPEND availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RT_SIGSUSPEND_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RT_SIGSUSPEND_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RT_SIGSUSPEND_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* event. */
 #define RIN_SYS_PPOLL                       192u
+/* PPOLL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PPOLL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PPOLL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PPOLL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* system. */
 #define RIN_SYS_SETHOSTNAME                 193u
+/* SETHOSTNAME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SETHOSTNAME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SETHOSTNAME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SETHOSTNAME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SETDOMAINNAME               194u
+/* SETDOMAINNAME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SETDOMAINNAME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SETDOMAINNAME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SETDOMAINNAME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* object. */
 #define RIN_SYS_DUP3                        195u
+/* DUP3 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DUP3_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DUP3_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DUP3_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* signal. */
 #define RIN_SYS_RT_SIGTIMEDWAIT             196u
+/* RT_SIGTIMEDWAIT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RT_SIGTIMEDWAIT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RT_SIGTIMEDWAIT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RT_SIGTIMEDWAIT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RT_SIGQUEUEINFO             197u
+/* RT_SIGQUEUEINFO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RT_SIGQUEUEINFO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RT_SIGQUEUEINFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RT_SIGQUEUEINFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RT_TGSIGQUEUEINFO           198u
+/* RT_TGSIGQUEUEINFO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RT_TGSIGQUEUEINFO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RT_TGSIGQUEUEINFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RT_TGSIGQUEUEINFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* gui. */
 #define RIN_SYS_GUI_CREATE_WINDOW           200u
+/* GUI_CREATE_WINDOW availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_CREATE_WINDOW_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_CREATE_WINDOW_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_CREATE_WINDOW_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_CLOSE_WINDOW            201u
+/* GUI_CLOSE_WINDOW availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_CLOSE_WINDOW_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_CLOSE_WINDOW_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_CLOSE_WINDOW_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_DRAW_TEXT               202u
+/* GUI_DRAW_TEXT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_DRAW_TEXT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_DRAW_TEXT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_DRAW_TEXT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_DRAW_BUTTON             203u
+/* GUI_DRAW_BUTTON availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_DRAW_BUTTON_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_DRAW_BUTTON_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_DRAW_BUTTON_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_DRAW_RECT               204u
+/* GUI_DRAW_RECT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_DRAW_RECT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_DRAW_RECT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_DRAW_RECT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_GET_EVENT               205u
+/* GUI_GET_EVENT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_GET_EVENT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_GET_EVENT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_GET_EVENT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_UPDATE                  206u
+/* GUI_UPDATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_UPDATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_UPDATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_UPDATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_DRAW_PROGRESS           207u
+/* GUI_DRAW_PROGRESS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_DRAW_PROGRESS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_DRAW_PROGRESS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_DRAW_PROGRESS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_MESSAGE_BOX             208u
+/* GUI_MESSAGE_BOX availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_MESSAGE_BOX_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_MESSAGE_BOX_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_MESSAGE_BOX_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_CLEAR                   209u
+/* GUI_CLEAR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_CLEAR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_CLEAR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_CLEAR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GFX_FILL                    210u
+/* GFX_FILL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GFX_FILL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_FILL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_FILL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GFX_TEXT                    211u
+/* GFX_TEXT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GFX_TEXT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_TEXT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_TEXT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GFX_ROUND                   212u
+/* GFX_ROUND availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GFX_ROUND_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_ROUND_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_ROUND_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GFX_LINE                    213u
+/* GFX_LINE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GFX_LINE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_LINE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_LINE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GFX_CIRCLE                  214u
+/* GFX_CIRCLE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GFX_CIRCLE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_CIRCLE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_CIRCLE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GFX_SHADOW                  215u
+/* GFX_SHADOW availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GFX_SHADOW_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_SHADOW_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_SHADOW_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_SET_CLIP                216u
+/* GUI_SET_CLIP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_SET_CLIP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_SET_CLIP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_SET_CLIP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_RESET_CLIP              217u
+/* GUI_RESET_CLIP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_RESET_CLIP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_RESET_CLIP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_RESET_CLIP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_GET_SIZE                218u
+/* GUI_GET_SIZE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_GET_SIZE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_GET_SIZE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_GET_SIZE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_IS_FOCUSED              219u
+/* GUI_IS_FOCUSED availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_IS_FOCUSED_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_IS_FOCUSED_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_IS_FOCUSED_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_HTTP_FETCH                  220u /* tombstone */
 #define RIN_SYS_HTTP_STATUS                 221u /* tombstone */
 /* gui. */
 #define RIN_SYS_GUI_SHOW_WINDOW             222u
+/* GUI_SHOW_WINDOW availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_SHOW_WINDOW_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_SHOW_WINDOW_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_SHOW_WINDOW_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_SET_TITLE               223u
+/* GUI_SET_TITLE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_SET_TITLE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_SET_TITLE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_SET_TITLE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_MOVE_WINDOW             224u
+/* GUI_MOVE_WINDOW availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_MOVE_WINDOW_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_MOVE_WINDOW_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_MOVE_WINDOW_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_RESIZE_WINDOW           225u
+/* GUI_RESIZE_WINDOW availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_RESIZE_WINDOW_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_RESIZE_WINDOW_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_RESIZE_WINDOW_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_NOTIFICATION_POST       226u
+/* GUI_NOTIFICATION_POST availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_NOTIFICATION_POST_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_NOTIFICATION_POST_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_NOTIFICATION_POST_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_CREATE_FRAMELESS        230u
+/* GUI_CREATE_FRAMELESS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_CREATE_FRAMELESS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_CREATE_FRAMELESS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_CREATE_FRAMELESS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
 #define RIN_SYS_FUTEX                       240u
+/* FUTEX availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FUTEX_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FUTEX_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FUTEX_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* gui. */
 #define RIN_SYS_GFX_BLIT                    241u
+/* GFX_BLIT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GFX_BLIT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_BLIT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GFX_BLIT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* service. */
 #define RIN_SYS_SERVICE_COUNT               242u
+/* SERVICE_COUNT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERVICE_COUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_COUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_COUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SERVICE_GET_INFO            243u
+/* SERVICE_GET_INFO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERVICE_GET_INFO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_GET_INFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_GET_INFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SERVICE_START               244u
+/* SERVICE_START availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERVICE_START_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_START_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_START_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SERVICE_STOP                245u
+/* SERVICE_STOP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERVICE_STOP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_STOP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_STOP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SERVICE_RESTART             246u
+/* SERVICE_RESTART availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERVICE_RESTART_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_RESTART_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_RESTART_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SERVICE_RESCAN              247u
+/* SERVICE_RESCAN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERVICE_RESCAN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_RESCAN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_RESCAN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SERVICE_SHOULD_STOP         248u
+/* SERVICE_SHOULD_STOP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERVICE_SHOULD_STOP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_SHOULD_STOP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_SHOULD_STOP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SERVICE_WAIT_STOP           249u
+/* SERVICE_WAIT_STOP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERVICE_WAIT_STOP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_WAIT_STOP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_WAIT_STOP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* memory. */
 #define RIN_SYS_MALLOC                      250u /* reserved */
 #define RIN_SYS_FREE                        251u /* reserved */
 #define RIN_SYS_REALLOC                     252u /* reserved */
 /* service. */
 #define RIN_SYS_SERVICE_HEALTH              253u
+/* SERVICE_HEALTH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SERVICE_HEALTH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_HEALTH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SERVICE_HEALTH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* system. */
 #define RIN_SYS_UNAME_V2                    254u
+/* UNAME_V2 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_UNAME_V2_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UNAME_V2_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UNAME_V2_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
 #define RIN_SYS_TIME_NS                     260u
+/* TIME_NS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIME_NS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIME_NS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIME_NS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* library. */
 #define RIN_SYS_DLSYM                       261u
+/* DLSYM availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLSYM_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLSYM_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLSYM_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DLOPEN                      262u
+/* DLOPEN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLOPEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLOPEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLOPEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DLCLOSE                     263u
+/* DLCLOSE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLCLOSE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLCLOSE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLCLOSE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DL_ADD_PATH                 264u
+/* DL_ADD_PATH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DL_ADD_PATH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DL_ADD_PATH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DL_ADD_PATH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DLSYM_FROM                  265u
+/* DLSYM_FROM availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLSYM_FROM_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLSYM_FROM_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLSYM_FROM_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DLERROR                     266u
+/* DLERROR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLERROR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLERROR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLERROR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DLINVENTORY                 267u
+/* DLINVENTORY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLINVENTORY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLINVENTORY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLINVENTORY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* time. */
 #define RIN_SYS_REALTIME_NS                 268u
+/* REALTIME_NS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_REALTIME_NS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_REALTIME_NS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_REALTIME_NS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* library. */
 /* IA-32のRLLはsymbol/version各255文字（終端NULを含め最大256バイト）、x86_64 compat32のRLLとx86_64 nativeのRIN v3はsymbol最大128文字（129バイト）、version最大64文字（65バイト）を受け付ける。copy faultはEFAULT、上限内に終端NULがない文字列はENAMETOOLONG、未登録のversion付きexportはNULLを返す。 */
 #define RIN_SYS_DLSYM_VERSIONED             269u
+/* DLSYM_VERSIONED availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLSYM_VERSIONED_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLSYM_VERSIONED_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLSYM_VERSIONED_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* audio. */
 #define RIN_SYS_AUDIO_OPEN                  270u
+/* AUDIO_OPEN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_AUDIO_OPEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_AUDIO_OPEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_AUDIO_OPEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_AUDIO_WRITE                 271u
+/* AUDIO_WRITE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_AUDIO_WRITE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_AUDIO_WRITE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_AUDIO_WRITE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_AUDIO_CONTROL               272u
+/* AUDIO_CONTROL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_AUDIO_CONTROL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_AUDIO_CONTROL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_AUDIO_CONTROL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_AUDIO_CLOSE                 273u
+/* AUDIO_CLOSE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_AUDIO_CLOSE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_AUDIO_CLOSE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_AUDIO_CLOSE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* diagnostic. */
 #define RIN_SYS_CRASH_CONSENT_CALL          274u
+/* CRASH_CONSENT_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CRASH_CONSENT_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_CRASH_CONSENT_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CRASH_CONSENT_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
 #define RIN_SYS_CPU_TIME_GET                275u
+/* CPU_TIME_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CPU_TIME_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CPU_TIME_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CPU_TIME_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* library. */
 #define RIN_SYS_DLADDR                      276u
+/* DLADDR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLADDR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLADDR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLADDR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DLOPEN_FLAGS                277u
+/* DLOPEN_FLAGS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLOPEN_FLAGS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLOPEN_FLAGS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLOPEN_FLAGS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DLINVENTORY_UNWIND          278u
+/* DLINVENTORY_UNWIND availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLINVENTORY_UNWIND_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_DLINVENTORY_UNWIND_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLINVENTORY_UNWIND_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_DLINVENTORY_UNWIND_LEASE_BEGIN 279u
+/* DLINVENTORY_UNWIND_LEASE_BEGIN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLINVENTORY_UNWIND_LEASE_BEGIN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_DLINVENTORY_UNWIND_LEASE_BEGIN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLINVENTORY_UNWIND_LEASE_BEGIN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_DLINVENTORY_UNWIND_LEASE_END 280u
+/* DLINVENTORY_UNWIND_LEASE_END availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLINVENTORY_UNWIND_LEASE_END_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_DLINVENTORY_UNWIND_LEASE_END_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLINVENTORY_UNWIND_LEASE_END_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* Copies the pending RLL error to a caller buffer and consumes on success. */
 #define RIN_SYS_DLERROR_COPY_V1             281u
+/* DLERROR_COPY_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLERROR_COPY_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLERROR_COPY_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLERROR_COPY_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* Loads caller memory only after exact comparison with the authenticated installed or system RLL snapshot. */
 #define RIN_SYS_DLOPEN_MEMORY_V1            282u
+/* DLOPEN_MEMORY_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DLOPEN_MEMORY_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DLOPEN_MEMORY_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_DLOPEN_MEMORY_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* storage. */
 #define RIN_SYS_RINFS_FORMAT                300u
+/* RINFS_FORMAT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINFS_FORMAT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_FORMAT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_FORMAT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RINFS_MOUNT                 301u
+/* RINFS_MOUNT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINFS_MOUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_MOUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_MOUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RINFS_UNMOUNT               302u
+/* RINFS_UNMOUNT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINFS_UNMOUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_UNMOUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_UNMOUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RINFS_CREATE                303u
+/* RINFS_CREATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINFS_CREATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_CREATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_RINFS_CREATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RINFS_MKDIR                 304u
+/* RINFS_MKDIR availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINFS_MKDIR_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_MKDIR_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_RINFS_MKDIR_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_RINFS_STAT                  305u
+/* RINFS_STAT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINFS_STAT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_STAT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_RINFS_STAT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ISO_FIND                    310u
+/* ISO_FIND availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ISO_FIND_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ISO_FIND_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_ISO_FIND_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ISO_READ                    311u
+/* ISO_READ availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ISO_READ_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ISO_READ_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_ISO_READ_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GET_HDDBOOT                 312u
+/* GET_HDDBOOT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GET_HDDBOOT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GET_HDDBOOT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_GET_HDDBOOT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SYSTEM_IMAGE_VERIFY         313u
+/* SYSTEM_IMAGE_VERIFY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SYSTEM_IMAGE_VERIFY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_SYSTEM_IMAGE_VERIFY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SYSTEM_IMAGE_VERIFY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* security. */
 /* bounded kernel CSPRNG */
 #define RIN_SYS_GETRANDOM                   350u
+/* GETRANDOM availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETRANDOM_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETRANDOM_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETRANDOM_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
 /* clear_child_tid on thread exit */
 #define RIN_SYS_SET_TID_ADDRESS             351u
+/* SET_TID_ADDRESS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* signal. */
 #define RIN_SYS_TKILL                       500u
+/* TKILL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TKILL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TKILL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TKILL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TGKILL                      501u
+/* TGKILL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TGKILL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TGKILL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TGKILL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
 #define RIN_SYS_THREAD_STACK_INFO           0x8001u
+/* THREAD_STACK_INFO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THREAD_STACK_INFO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_STACK_INFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_STACK_INFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_NET_PRIMARY_INFO            0x8002u
+/* NET_PRIMARY_INFO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_PRIMARY_INFO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_PRIMARY_INFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_PRIMARY_INFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NET_APPLY_IPV4              0x8003u
+/* NET_APPLY_IPV4 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_APPLY_IPV4_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_APPLY_IPV4_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_APPLY_IPV4_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DNS_RESOLVE_BEGIN           0x8004u
+/* DNS_RESOLVE_BEGIN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DNS_RESOLVE_BEGIN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DNS_RESOLVE_BEGIN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DNS_RESOLVE_BEGIN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DNS_RESOLVE_POLL            0x8005u
+/* DNS_RESOLVE_POLL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DNS_RESOLVE_POLL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DNS_RESOLVE_POLL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DNS_RESOLVE_POLL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DNS_RESOLVE_CANCEL          0x8006u
+/* DNS_RESOLVE_CANCEL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DNS_RESOLVE_CANCEL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DNS_RESOLVE_CANCEL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DNS_RESOLVE_CANCEL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* display. */
 #define RIN_SYS_DISPLAY_GET_CONFIG          0x8007u
+/* DISPLAY_GET_CONFIG availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DISPLAY_GET_CONFIG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DISPLAY_GET_CONFIG_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DISPLAY_GET_CONFIG_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_DISPLAY_APPLY_CONFIG        0x8008u
+/* DISPLAY_APPLY_CONFIG availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DISPLAY_APPLY_CONFIG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DISPLAY_APPLY_CONFIG_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DISPLAY_APPLY_CONFIG_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* power. */
 #define RIN_SYS_POWER_GET_SETTINGS          0x8009u
+/* POWER_GET_SETTINGS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_POWER_GET_SETTINGS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POWER_GET_SETTINGS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POWER_GET_SETTINGS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_POWER_SET_SETTINGS          0x800Au
+/* POWER_SET_SETTINGS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_POWER_SET_SETTINGS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POWER_SET_SETTINGS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POWER_SET_SETTINGS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* thread. */
 #define RIN_SYS_GETTID                      0x800Bu
+/* GETTID availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETTID_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETTID_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETTID_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* storage. */
 #define RIN_SYS_SYSTEM_UPDATE_STAGE         0x800Cu /* reserved */
 /* process. */
 #define RIN_SYS_PROCESS_TARGET_CONTROL      0x800Du
+/* PROCESS_TARGET_CONTROL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PROCESS_TARGET_CONTROL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_PROCESS_TARGET_CONTROL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_TARGET_CONTROL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* gui. */
 #define RIN_SYS_GUI_V2_CALL                 0x800Eu
+/* GUI_V2_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GUI_V2_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_V2_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GUI_V2_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* process. */
 #define RIN_SYS_RINNT_EXCEPTION_RETURN      0x800Fu
+/* RINNT_EXCEPTION_RETURN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINNT_EXCEPTION_RETURN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_RINNT_EXCEPTION_RETURN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINNT_EXCEPTION_RETURN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* storage. */
 #define RIN_SYS_INSTALL_SOURCE_QUERY        0x8010u
+/* INSTALL_SOURCE_QUERY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_SOURCE_QUERY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_QUERY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_QUERY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_SOURCE_OPEN         0x8011u
+/* INSTALL_SOURCE_OPEN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_SOURCE_OPEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_OPEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_OPEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_SOURCE_READ         0x8012u
+/* INSTALL_SOURCE_READ availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_SOURCE_READ_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_READ_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_READ_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_SOURCE_VALIDATE     0x8013u
+/* INSTALL_SOURCE_VALIDATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_SOURCE_VALIDATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_VALIDATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_VALIDATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_SOURCE_CLOSE        0x8014u
+/* INSTALL_SOURCE_CLOSE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_SOURCE_CLOSE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_CLOSE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_CLOSE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_TARGET_OPEN         0x8015u
+/* INSTALL_TARGET_OPEN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_TARGET_OPEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_OPEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_OPEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_TARGET_READ         0x8016u
+/* INSTALL_TARGET_READ availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_TARGET_READ_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_READ_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_READ_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_TARGET_VALIDATE     0x8017u
+/* INSTALL_TARGET_VALIDATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_TARGET_VALIDATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_VALIDATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_VALIDATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_TARGET_CLOSE        0x8018u
+/* INSTALL_TARGET_CLOSE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_TARGET_CLOSE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_CLOSE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_CLOSE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* locale. */
 #define RIN_SYS_LOCALE_GET                  0x8019u
+/* LOCALE_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_LOCALE_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LOCALE_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LOCALE_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_LOCALE_SET                  0x801Au
+/* LOCALE_SET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_LOCALE_SET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LOCALE_SET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LOCALE_SET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* input. */
 #define RIN_SYS_INPUT_METHOD_GET            0x801Bu
+/* INPUT_METHOD_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INPUT_METHOD_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INPUT_METHOD_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INPUT_METHOD_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INPUT_METHOD_SET            0x801Cu
+/* INPUT_METHOD_SET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INPUT_METHOD_SET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INPUT_METHOD_SET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INPUT_METHOD_SET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* diagnostic. */
 #define RIN_SYS_CRASH_SUMMARY_GET           0x801Du
+/* CRASH_SUMMARY_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* management. */
 #define RIN_SYS_MANAGEMENT_CALL             0x801Eu
+/* MANAGEMENT_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MANAGEMENT_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MANAGEMENT_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MANAGEMENT_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* identity. */
 #define RIN_SYS_RIN_PASS_CONTROL            0x801Fu
+/* RIN_PASS_CONTROL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RIN_PASS_CONTROL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RIN_PASS_CONTROL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RIN_PASS_CONTROL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_KEYRING_MASTER_ACQUIRE      0x8020u
+/* KEYRING_MASTER_ACQUIRE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_KEYRING_MASTER_ACQUIRE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_KEYRING_MASTER_ACQUIRE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_KEYRING_MASTER_ACQUIRE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* power. */
 #define RIN_SYS_POWER_GET_STATUS            0x8021u
+/* POWER_GET_STATUS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_POWER_GET_STATUS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POWER_GET_STATUS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POWER_GET_STATUS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_POWER_REQUEST_ACTION        0x8022u
+/* POWER_REQUEST_ACTION availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_POWER_REQUEST_ACTION_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POWER_REQUEST_ACTION_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POWER_REQUEST_ACTION_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* system. */
 #define RIN_SYS_SYSTEM_INFO_GET             0x8023u
+/* SYSTEM_INFO_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SYSTEM_INFO_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SYSTEM_INFO_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SYSTEM_INFO_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* filesystem. */
 #define RIN_SYS_FILESYSTEM_USAGE_GET        0x8024u
+/* FILESYSTEM_USAGE_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILESYSTEM_USAGE_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_USAGE_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_USAGE_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* identity. */
 #define RIN_SYS_CREDENTIALS_GET             0x8025u
+/* CREDENTIALS_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CREDENTIALS_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CREDENTIALS_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CREDENTIALS_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_CREDENTIALS_SET             0x8026u
+/* CREDENTIALS_SET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CREDENTIALS_SET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CREDENTIALS_SET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CREDENTIALS_SET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_ACCOUNT_QUERY               0x8027u
+/* ACCOUNT_QUERY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_CREDENTIAL_GROUPS_SET       0x8028u
+/* CREDENTIAL_GROUPS_SET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CREDENTIAL_GROUPS_SET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CREDENTIAL_GROUPS_SET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CREDENTIAL_GROUPS_SET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* device. */
 #define RIN_SYS_DEVICE_RESOURCE_CALL        0x8029u
+/* DEVICE_RESOURCE_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_DEVICE_RESOURCE_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DEVICE_RESOURCE_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_DEVICE_RESOURCE_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* security. */
 #define RIN_SYS_PRIVACY_SETTINGS_CALL       0x802Au
+/* PRIVACY_SETTINGS_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PRIVACY_SETTINGS_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PRIVACY_SETTINGS_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PRIVACY_SETTINGS_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FILE_PORTAL_CALL            0x802Bu
+/* FILE_PORTAL_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILE_PORTAL_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILE_PORTAL_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILE_PORTAL_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* memory. */
 #define RIN_SYS_MEMORY_PRESSURE_CALL        0x802Cu
+/* MEMORY_PRESSURE_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MEMORY_PRESSURE_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MEMORY_PRESSURE_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MEMORY_PRESSURE_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_NET_IPV6_INFO               0x802Du
+/* NET_IPV6_INFO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_IPV6_INFO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_IPV6_INFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_IPV6_INFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NET_APPLY_IPV6              0x802Eu
+/* NET_APPLY_IPV6 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_APPLY_IPV6_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_APPLY_IPV6_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_APPLY_IPV6_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* memory. */
 #define RIN_SYS_MINCORE                     0x802Fu
+/* MINCORE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MINCORE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MINCORE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MINCORE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MLOCKALL                    0x8030u
+/* MLOCKALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MLOCKALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MLOCKALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MLOCKALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MUNLOCKALL                  0x8031u
+/* MUNLOCKALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MUNLOCKALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MUNLOCKALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MUNLOCKALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_MREMAP                      0x8032u
+/* MREMAP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MREMAP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MREMAP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MREMAP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
 #define RIN_SYS_THREAD_NAME_CALL            0x8033u
+/* THREAD_NAME_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THREAD_NAME_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_NAME_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_NAME_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* storage. */
 #define RIN_SYS_INSTALL_ELEVATION_REQUEST   0x8034u
+/* INSTALL_ELEVATION_REQUEST availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_ELEVATION_REQUEST_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_ELEVATION_REQUEST_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_ELEVATION_REQUEST_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* container. */
 #define RIN_SYS_RGROUP_CALL                 0x8035u
+/* RGROUP_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RGROUP_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RGROUP_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RGROUP_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* identity. */
 #define RIN_SYS_THEME_SETTINGS_CALL         0x8036u
+/* THEME_SETTINGS_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THEME_SETTINGS_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THEME_SETTINGS_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THEME_SETTINGS_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* container. */
 #define RIN_SYS_CONTAINER_CALL              0x8037u
+/* CONTAINER_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CONTAINER_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONTAINER_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONTAINER_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* storage. */
 #define RIN_SYS_INSTALL_TARGET_AUTHORIZE    0x8038u
+/* INSTALL_TARGET_AUTHORIZE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_TARGET_AUTHORIZE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_AUTHORIZE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_AUTHORIZE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_TARGET_WRITE        0x8039u
+/* INSTALL_TARGET_WRITE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_TARGET_WRITE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_WRITE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_WRITE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_TARGET_FLUSH        0x803Au
+/* INSTALL_TARGET_FLUSH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_TARGET_FLUSH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_FLUSH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_FLUSH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_TARGET_END          0x803Bu
+/* INSTALL_TARGET_END availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_TARGET_END_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_END_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_END_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* display. */
 #define RIN_SYS_COMPOSITOR_DISPLAY_CALL     0x803Cu
+/* COMPOSITOR_DISPLAY_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_COMPOSITOR_DISPLAY_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_COMPOSITOR_DISPLAY_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_COMPOSITOR_DISPLAY_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* input. */
 #define RIN_SYS_COMPOSITOR_INPUT_POLL       0x803Du
+/* COMPOSITOR_INPUT_POLL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_COMPOSITOR_INPUT_POLL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_COMPOSITOR_INPUT_POLL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_COMPOSITOR_INPUT_POLL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* process. */
 #define RIN_SYS_PROCESS_NAMESPACE_INSPECT   0x803Eu
+/* PROCESS_NAMESPACE_INSPECT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PROCESS_NAMESPACE_INSPECT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_NAMESPACE_INSPECT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_NAMESPACE_INSPECT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* filesystem. */
 #define RIN_SYS_FILESYSTEM_NAMESPACE_CALL   0x803Fu
+/* FILESYSTEM_NAMESPACE_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILESYSTEM_NAMESPACE_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_NAMESPACE_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_NAMESPACE_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_NETWORK_NAMESPACE_CALL      0x8040u
+/* NETWORK_NAMESPACE_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NETWORK_NAMESPACE_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NETWORK_NAMESPACE_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NETWORK_NAMESPACE_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 #define RIN_SYS_PROCESS_GROUP_CALL          0x8041u
+/* PROCESS_GROUP_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PROCESS_GROUP_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_GROUP_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_GROUP_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* display. */
 #define RIN_SYS_WALLPAPER_LEASE_CALL        0x8042u
+/* WALLPAPER_LEASE_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_WALLPAPER_LEASE_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WALLPAPER_LEASE_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WALLPAPER_LEASE_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* container. */
 #define RIN_SYS_CONTAINER_RUNTIME_CALL      0x8043u
+/* CONTAINER_RUNTIME_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CONTAINER_RUNTIME_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONTAINER_RUNTIME_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONTAINER_RUNTIME_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* process. */
 #define RIN_SYS_WAITID                      0x8044u
+/* WAITID availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_WAITID_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WAITID_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WAITID_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_NETWORK_NAMESPACE_ROUTE_CALL 0x8045u
+/* NETWORK_NAMESPACE_ROUTE_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NETWORK_NAMESPACE_ROUTE_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NETWORK_NAMESPACE_ROUTE_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NETWORK_NAMESPACE_ROUTE_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* container. */
 #define RIN_SYS_CONTAINER_NETWORK_PORTAL_CALL 0x8046u
+/* CONTAINER_NETWORK_PORTAL_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CONTAINER_NETWORK_PORTAL_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONTAINER_NETWORK_PORTAL_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONTAINER_NETWORK_PORTAL_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_NETWORK_NAMESPACE_NEIGHBOR_CALL 0x8047u
+/* NETWORK_NAMESPACE_NEIGHBOR_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NETWORK_NAMESPACE_NEIGHBOR_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NETWORK_NAMESPACE_NEIGHBOR_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NETWORK_NAMESPACE_NEIGHBOR_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
 #define RIN_SYS_ALARM                       0x8048u
+/* ALARM availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ALARM_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ALARM_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ALARM_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_FADVISE                     0x8049u
+/* FADVISE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FADVISE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FADVISE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FADVISE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FALLOCATE                   0x804Au
+/* FALLOCATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FALLOCATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FALLOCATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FALLOCATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* signal. */
 #define RIN_SYS_PAUSE                       0x804Bu
+/* PAUSE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PAUSE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PAUSE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PAUSE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
 #define RIN_SYS_SETITIMER                   0x804Cu
+/* SETITIMER availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SETITIMER_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SETITIMER_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SETITIMER_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TIMER_CREATE                0x804Du
+/* TIMER_CREATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIMER_CREATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_CREATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_CREATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TIMER_SETTIME               0x804Eu
+/* TIMER_SETTIME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIMER_SETTIME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_SETTIME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_SETTIME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TIMER_GETTIME               0x804Fu
+/* TIMER_GETTIME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIMER_GETTIME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_GETTIME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_GETTIME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TIMER_DELETE                0x8050u
+/* TIMER_DELETE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIMER_DELETE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_DELETE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_DELETE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TIMER_GETOVERRUN            0x8051u
+/* TIMER_GETOVERRUN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIMER_GETOVERRUN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_GETOVERRUN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_GETOVERRUN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* gui. */
 #define RIN_SYS_CONSOLE_ATTACH              0x8052u
+/* CONSOLE_ATTACH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CONSOLE_ATTACH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONSOLE_ATTACH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONSOLE_ATTACH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CONSOLE_DETACH              0x8053u
+/* CONSOLE_DETACH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CONSOLE_DETACH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONSOLE_DETACH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CONSOLE_DETACH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
 #define RIN_SYS_CLOCK_SETTIME               0x8054u
+/* CLOCK_SETTIME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CLOCK_SETTIME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLOCK_SETTIME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLOCK_SETTIME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETITIMER                   0x8055u
+/* GETITIMER availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETITIMER_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETITIMER_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETITIMER_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_FIREWALL_CALL               0x8056u
+/* FIREWALL_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FIREWALL_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FIREWALL_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FIREWALL_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NETWORK_NAMESPACE_MULTICAST_CALL 0x8057u
+/* NETWORK_NAMESPACE_MULTICAST_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NETWORK_NAMESPACE_MULTICAST_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NETWORK_NAMESPACE_MULTICAST_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NETWORK_NAMESPACE_MULTICAST_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
 #define RIN_SYS_TIMEZONE_GET                0x8058u
+/* TIMEZONE_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIMEZONE_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMEZONE_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMEZONE_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_TIMEZONE_SET                0x8059u
+/* TIMEZONE_SET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIMEZONE_SET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMEZONE_SET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMEZONE_SET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_TIMER_POLL                  0x805Au
+/* TIMER_POLL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIMER_POLL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_POLL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMER_POLL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 #define RIN_SYS_RESOURCE_LIMIT_CALL         0x805Bu
+/* RESOURCE_LIMIT_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RESOURCE_LIMIT_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RESOURCE_LIMIT_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RESOURCE_LIMIT_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* network. */
 #define RIN_SYS_NETWORK_NAMESPACE_FORWARDING_CALL 0x805Cu
+/* NETWORK_NAMESPACE_FORWARDING_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NETWORK_NAMESPACE_FORWARDING_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NETWORK_NAMESPACE_FORWARDING_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NETWORK_NAMESPACE_FORWARDING_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* power. */
 #define RIN_SYS_POWER_EVENT_POLL            0x805Du
+/* POWER_EVENT_POLL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_POWER_EVENT_POLL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POWER_EVENT_POLL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_POWER_EVENT_POLL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* process. */
 #define RIN_SYS_PROCESS_IMAGE_PATH_GET      0x805Eu
+/* PROCESS_IMAGE_PATH_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PROCESS_IMAGE_PATH_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_IMAGE_PATH_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_IMAGE_PATH_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_FILESYSTEM_WATCH_INIT       0x805Fu
+/* FILESYSTEM_WATCH_INIT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILESYSTEM_WATCH_INIT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_WATCH_INIT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_WATCH_INIT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FILESYSTEM_WATCH_ADD        0x8060u
+/* FILESYSTEM_WATCH_ADD availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILESYSTEM_WATCH_ADD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_WATCH_ADD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_WATCH_ADD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FILESYSTEM_WATCH_REMOVE     0x8061u
+/* FILESYSTEM_WATCH_REMOVE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILESYSTEM_WATCH_REMOVE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_WATCH_REMOVE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_WATCH_REMOVE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FILESYSTEM_WATCH_CLOSE      0x8062u
+/* FILESYSTEM_WATCH_CLOSE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILESYSTEM_WATCH_CLOSE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_WATCH_CLOSE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_WATCH_CLOSE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_READV                       0x8063u
+/* READV availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_READV_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_READV_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_READV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_WRITEV                      0x8064u
+/* WRITEV availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_WRITEV_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WRITEV_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WRITEV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* process. */
 #define RIN_SYS_PROCESS_MEMORY_INFO_GET     0x8065u
+/* PROCESS_MEMORY_INFO_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PROCESS_MEMORY_INFO_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_MEMORY_INFO_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_MEMORY_INFO_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_NET_WIFI_INFO               0x8066u
+/* NET_WIFI_INFO availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_WIFI_INFO_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_WIFI_INFO_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_WIFI_INFO_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 #define RIN_SYS_PROCESS_NUMA_POLICY         0x8067u
+/* PROCESS_NUMA_POLICY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PROCESS_NUMA_POLICY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_NUMA_POLICY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_NUMA_POLICY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_FILE_TO_SOCKET              0x8068u
+/* FILE_TO_SOCKET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILE_TO_SOCKET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILE_TO_SOCKET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILE_TO_SOCKET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* system. */
 #define RIN_SYS_SYSCALL_BATCH               0x8069u
+/* SYSCALL_BATCH availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SYSCALL_BATCH_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SYSCALL_BATCH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SYSCALL_BATCH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_NET_STATISTICS              0x806Au
+/* NET_STATISTICS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_STATISTICS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_STATISTICS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_STATISTICS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* system. */
 #define RIN_SYS_SDK_CALL                    0x806Bu
+/* SDK_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SDK_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SDK_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SDK_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 #define RIN_SYS_NET_IP_GLOBAL_STATISTICS    0x806Cu
+/* NET_IP_GLOBAL_STATISTICS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_IP_GLOBAL_STATISTICS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_IP_GLOBAL_STATISTICS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_IP_GLOBAL_STATISTICS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NET_UDP_GLOBAL_STATISTICS   0x806Du
+/* NET_UDP_GLOBAL_STATISTICS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_UDP_GLOBAL_STATISTICS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_UDP_GLOBAL_STATISTICS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_UDP_GLOBAL_STATISTICS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NET_TCP_GLOBAL_STATISTICS   0x806Eu
+/* NET_TCP_GLOBAL_STATISTICS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_TCP_GLOBAL_STATISTICS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_TCP_GLOBAL_STATISTICS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_TCP_GLOBAL_STATISTICS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NET_ICMP_GLOBAL_STATISTICS  0x806Fu
+/* NET_ICMP_GLOBAL_STATISTICS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_V2 0x8070u
+/* NET_ICMP_GLOBAL_STATISTICS_V2 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_V2_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_V2_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_V2_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* storage. */
 #define RIN_SYS_INSTALL_SOURCE_PAYLOADS_QUERY 0x8071u
+/* INSTALL_SOURCE_PAYLOADS_QUERY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_SOURCE_PAYLOADS_QUERY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_PAYLOADS_QUERY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_PAYLOADS_QUERY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_SOURCE_PAYLOAD_READ 0x8072u
+/* INSTALL_SOURCE_PAYLOAD_READ availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_SOURCE_PAYLOAD_READ_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_PAYLOAD_READ_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_PAYLOAD_READ_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_SOURCE_PAYLOAD_VALIDATE 0x8073u
+/* INSTALL_SOURCE_PAYLOAD_VALIDATE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_SOURCE_PAYLOAD_VALIDATE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_PAYLOAD_VALIDATE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_SOURCE_PAYLOAD_VALIDATE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* file. */
 #define RIN_SYS_LSEEK64                     0x8074u
+/* LSEEK64 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_LSEEK64_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LSEEK64_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_LSEEK64_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TRUNCATE64                  0x8075u
+/* TRUNCATE64 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TRUNCATE64_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TRUNCATE64_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TRUNCATE64_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FTRUNCATE64                 0x8076u
+/* FTRUNCATE64 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FTRUNCATE64_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FTRUNCATE64_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FTRUNCATE64_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FSTAT64                     0x8077u
+/* FSTAT64 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FSTAT64_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FSTAT64_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FSTAT64_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* memory. */
 #define RIN_SYS_MMAP_FD64                   0x8078u
+/* MMAP_FD64 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MMAP_FD64_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_MMAP_FD64_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MMAP_FD64_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* diagnostic. */
 #define RIN_SYS_PERFORMANCE_TRACE_MARK_V1   0x8079u
+/* PERFORMANCE_TRACE_MARK_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PERFORMANCE_TRACE_MARK_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PERFORMANCE_TRACE_MARK_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PERFORMANCE_TRACE_MARK_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PERFORMANCE_TRACE_READ_V1   0x807Au
+/* PERFORMANCE_TRACE_READ_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PERFORMANCE_TRACE_READ_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PERFORMANCE_TRACE_READ_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PERFORMANCE_TRACE_READ_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PERFORMANCE_TRACE_SCHEDULER_READ_V1 0x807Bu
+/* PERFORMANCE_TRACE_SCHEDULER_READ_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PERFORMANCE_TRACE_SCHEDULER_READ_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PERFORMANCE_TRACE_SCHEDULER_READ_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PERFORMANCE_TRACE_SCHEDULER_READ_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
 #define RIN_SYS_TIMEZONE_GET_EFFECTIVE      0x807Cu
+/* TIMEZONE_GET_EFFECTIVE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_TIMEZONE_GET_EFFECTIVE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMEZONE_GET_EFFECTIVE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_TIMEZONE_GET_EFFECTIVE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* network. */
 #define RIN_SYS_NET_IPV6_ADDRESSES          0x807Du
+/* NET_IPV6_ADDRESSES availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_IPV6_ADDRESSES_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_IPV6_ADDRESSES_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_IPV6_ADDRESSES_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES 0x807Eu
+/* NET_IPV6_INTERFACE_ADDRESSES availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_WIFI_AWDL_TRANSPORT         0x807Fu
+/* WIFI_AWDL_TRANSPORT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_WIFI_AWDL_TRANSPORT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_WIFI_AWDL_TRANSPORT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_WIFI_AWDL_TRANSPORT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_BLUETOOTH_HCI_CONTROL       0x8080u
+/* BLUETOOTH_HCI_CONTROL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_BLUETOOTH_HCI_CONTROL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_BLUETOOTH_HCI_CONTROL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BLUETOOTH_HCI_CONTROL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* memory. */
 #define RIN_SYS_SHM_ATTACH_RANGE            0x8081u
+/* SHM_ATTACH_RANGE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SHM_ATTACH_RANGE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_SHM_ATTACH_RANGE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SHM_ATTACH_RANGE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHM_PROTECT                 0x8082u
+/* SHM_PROTECT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SHM_PROTECT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_SHM_PROTECT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SHM_PROTECT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* storage. */
 #define RIN_SYS_INSTALL_BACKUP_SOURCE_OPEN  0x8083u
+/* INSTALL_BACKUP_SOURCE_OPEN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_BACKUP_SOURCE_OPEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_BACKUP_SOURCE_OPEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_BACKUP_SOURCE_OPEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_BEGIN 0x8084u
+/* INSTALL_TARGET_RINFS_MOUNT_BEGIN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_BEGIN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_BEGIN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_BEGIN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_END 0x8085u
+/* INSTALL_TARGET_RINFS_MOUNT_END availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_END_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_END_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_END_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_RINFS_CACHE_LEASE_BEGIN     0x8086u
+/* RINFS_CACHE_LEASE_BEGIN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_RINFS_CACHE_LEASE_END       0x8087u
+/* RINFS_CACHE_LEASE_END availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINFS_CACHE_LEASE_END_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_CACHE_LEASE_END_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_CACHE_LEASE_END_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SHARED 0x8088u
+/* RINFS_CACHE_LEASE_BEGIN_SHARED availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SHARED_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SHARED_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SHARED_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_RINFS_CACHE_LEASE_SHARED_TRANSITION 0x8089u
+/* RINFS_CACHE_LEASE_SHARED_TRANSITION availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RINFS_CACHE_LEASE_SHARED_TRANSITION_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_CACHE_LEASE_SHARED_TRANSITION_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RINFS_CACHE_LEASE_SHARED_TRANSITION_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_INSTALL_BACKUP_DESTINATION_OPEN 0x808Au
+/* INSTALL_BACKUP_DESTINATION_OPEN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_INSTALL_BACKUP_DESTINATION_OPEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_BACKUP_DESTINATION_OPEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_INSTALL_BACKUP_DESTINATION_OPEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* input. */
 #define RIN_SYS_KEYBOARD_LAYOUT_GET         0x808Bu
+/* KEYBOARD_LAYOUT_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_KEYBOARD_LAYOUT_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_KEYBOARD_LAYOUT_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_KEYBOARD_LAYOUT_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_KEYBOARD_LAYOUT_SET         0x808Cu
+/* KEYBOARD_LAYOUT_SET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_KEYBOARD_LAYOUT_SET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_KEYBOARD_LAYOUT_SET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_KEYBOARD_LAYOUT_SET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* process. */
 #define RIN_SYS_PROCESS_IMAGE_RANGE_GET     0x808Du
+/* PROCESS_IMAGE_RANGE_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PROCESS_IMAGE_RANGE_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_IMAGE_RANGE_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PROCESS_IMAGE_RANGE_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_ISO_OPEN_FILE_V1            0x808Eu
+/* ISO_OPEN_FILE_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ISO_OPEN_FILE_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ISO_OPEN_FILE_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_ISO_OPEN_FILE_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ISO_READ_FILE_V1            0x808Fu
+/* ISO_READ_FILE_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_ISO_READ_FILE_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_ISO_READ_FILE_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_ISO_READ_FILE_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
 #define RIN_SYS_CLOCKSOURCE_RESOLUTION      0x8090u
+/* CLOCKSOURCE_RESOLUTION availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CLOCKSOURCE_RESOLUTION_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLOCKSOURCE_RESOLUTION_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLOCKSOURCE_RESOLUTION_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CLOCK_GETTIME64             0x8091u
+/* CLOCK_GETTIME64 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CLOCK_GETTIME64_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLOCK_GETTIME64_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLOCK_GETTIME64_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
 #define RIN_SYS_FUTEX_TIME64                0x8092u
+/* FUTEX_TIME64 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FUTEX_TIME64_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FUTEX_TIME64_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FUTEX_TIME64_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* filesystem. */
 #define RIN_SYS_FILESYSTEM_NAME_MAX_GET_FD  0x8093u
+/* FILESYSTEM_NAME_MAX_GET_FD availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILESYSTEM_NAME_MAX_GET_FD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_NAME_MAX_GET_FD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_NAME_MAX_GET_FD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_FILESYSTEM_MOUNT            0x8094u
+/* FILESYSTEM_MOUNT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILESYSTEM_MOUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_MOUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_MOUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_FILESYSTEM_UNMOUNT          0x8095u
+/* FILESYSTEM_UNMOUNT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FILESYSTEM_UNMOUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_UNMOUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FILESYSTEM_UNMOUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* object. */
 #define RIN_SYS_FCNTL_LOCK64                0x8096u
+/* FCNTL_LOCK64 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FCNTL_LOCK64_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCNTL_LOCK64_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FCNTL_LOCK64_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* filesystem. */
 #define RIN_SYS_READDIR64                   0x8097u
+/* READDIR64 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_READDIR64_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_READDIR64_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_READDIR64_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
 #define RIN_SYS_THREAD_SCHED_GETPARAM       0x8098u
+/* THREAD_SCHED_GETPARAM availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THREAD_SCHED_GETPARAM_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_SCHED_GETPARAM_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_SCHED_GETPARAM_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* file. */
 #define RIN_SYS_PREADV                      0x8099u
+/* PREADV availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PREADV_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PREADV_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PREADV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PWRITEV                     0x809Au
+/* PWRITEV availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PWRITEV_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PWRITEV_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PWRITEV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
 /* mmsghdr配列ABI。各messageのdata上限16 MiB、件数上限64、合計data上限1 GiB。 */
 #define RIN_SYS_SENDMMSG                    0x809Bu
+/* SENDMMSG availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SENDMMSG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SENDMMSG_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SENDMMSG_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* 受信はlibcがpollで待機・timeout残量を管理し、kernelがnonblocking message batchを処理する。 */
 #define RIN_SYS_RECVMMSG                    0x809Cu
+/* RECVMMSG availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_RECVMMSG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RECVMMSG_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_RECVMMSG_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* filesystem. */
 /* Fixed 72-byte request carries splice-family operation, flags, FD pair, offsets and native-width vmsplice iovec array pointer. */
 #define RIN_SYS_SPLICE_CALL_V1              0x809Du
+/* SPLICE_CALL_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_SPLICE_CALL_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SPLICE_CALL_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_SPLICE_CALL_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 #define RIN_SYS_PIDFD_OPEN                  0x809Eu
+/* PIDFD_OPEN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PIDFD_OPEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PIDFD_OPEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PIDFD_OPEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PIDFD_SEND_SIGNAL           0x809Fu
+/* PIDFD_SEND_SIGNAL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PIDFD_SEND_SIGNAL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PIDFD_SEND_SIGNAL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PIDFD_SEND_SIGNAL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+
+/* Returns UNKNOWN for syscall numbers outside this active ABI table. */
+static inline uint32_t rin_syscall_arch_support(
+    uint32_t syscall_number, uint32_t mode)
+{
+    switch (syscall_number) {
+    case RIN_SYS_EXIT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_EXIT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_EXIT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_EXIT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FORK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FORK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FORK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FORK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_EXEC:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_EXEC_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_EXEC_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_EXEC_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_WAIT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_WAIT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_WAIT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_WAIT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETPID:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETPID_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETPID_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETPID_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETPPID:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETPPID_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETPPID_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETPPID_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_KILL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_KILL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_KILL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_KILL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SIGNAL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SIGNAL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SIGNAL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SIGNAL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SBRK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SBRK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SBRK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SBRK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_WAIT4:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_WAIT4_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_WAIT4_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_WAIT4_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETRUSAGE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETRUSAGE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETRUSAGE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETRUSAGE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETPRIORITY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETPRIORITY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETPRIORITY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETPRIORITY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SETPRIORITY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SETPRIORITY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SETPRIORITY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SETPRIORITY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_OPEN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_OPEN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_OPEN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_OPEN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CLOSE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CLOSE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CLOSE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CLOSE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_READ:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_READ_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_READ_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_READ_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_WRITE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_WRITE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_WRITE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_WRITE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SEEK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SEEK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SEEK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SEEK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_STAT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_STAT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_STAT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_STAT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FSTAT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FSTAT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FSTAT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FSTAT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ACCESS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ACCESS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ACCESS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ACCESS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MKDIR:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MKDIR_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MKDIR_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MKDIR_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RMDIR:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RMDIR_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RMDIR_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RMDIR_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_UNLINK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_UNLINK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_UNLINK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_UNLINK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RENAME:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RENAME_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RENAME_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RENAME_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CHDIR:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CHDIR_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CHDIR_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CHDIR_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETCWD:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETCWD_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETCWD_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETCWD_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_READDIR:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_READDIR_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_READDIR_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_READDIR_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DUP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DUP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DUP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DUP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DUP2:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DUP2_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DUP2_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DUP2_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PIPE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PIPE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PIPE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PIPE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_LINK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_LINK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_LINK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_LINK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SYMLINK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SYMLINK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SYMLINK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SYMLINK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_READLINK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_READLINK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_READLINK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_READLINK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TRUNCATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TRUNCATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TRUNCATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TRUNCATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FTRUNCATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FTRUNCATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FTRUNCATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FTRUNCATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CHMOD:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CHMOD_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CHMOD_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CHMOD_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CHOWN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CHOWN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CHOWN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CHOWN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_LSTAT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_LSTAT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_LSTAT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_LSTAT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_STORAGE_SYNC:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_STORAGE_SYNC_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_STORAGE_SYNC_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_STORAGE_SYNC_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILE_SYNC:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILE_SYNC_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILE_SYNC_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILE_SYNC_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FCNTL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FCNTL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FCNTL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FCNTL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_IOCTL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_IOCTL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_IOCTL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_IOCTL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MMAP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MMAP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MMAP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MMAP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MUNMAP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MUNMAP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MUNMAP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MUNMAP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MPROTECT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MPROTECT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MPROTECT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MPROTECT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_BRK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_BRK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_BRK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_BRK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MLOCK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MLOCK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MLOCK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MLOCK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MUNLOCK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MUNLOCK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MUNLOCK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MUNLOCK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MSYNC:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MSYNC_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MSYNC_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MSYNC_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MMAP_FD:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MMAP_FD_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MMAP_FD_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MMAP_FD_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MADVISE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MADVISE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MADVISE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MADVISE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_OPENAT_BENEATH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_OPENAT_BENEATH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_OPENAT_BENEATH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_OPENAT_BENEATH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIME:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIME_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIME_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIME_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETTIMEOFDAY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETTIMEOFDAY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETTIMEOFDAY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETTIMEOFDAY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SLEEP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SLEEP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SLEEP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SLEEP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NANOSLEEP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NANOSLEEP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NANOSLEEP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NANOSLEEP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_POLL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_POLL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_POLL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_POLL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_YIELD:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_YIELD_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_YIELD_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_YIELD_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MKDIRAT_BENEATH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MKDIRAT_BENEATH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MKDIRAT_BENEATH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MKDIRAT_BENEATH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FSTATAT_BENEATH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FSTATAT_BENEATH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FSTATAT_BENEATH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FSTATAT_BENEATH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PREAD:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PREAD_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PREAD_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PREAD_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PWRITE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PWRITE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PWRITE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PWRITE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SOCKET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SOCKET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SOCKET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SOCKET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_BIND:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_BIND_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_BIND_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_BIND_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_LISTEN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_LISTEN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_LISTEN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_LISTEN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ACCEPT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ACCEPT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ACCEPT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ACCEPT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CONNECT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CONNECT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CONNECT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CONNECT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SEND:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SEND_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SEND_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SEND_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RECV:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RECV_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RECV_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RECV_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SENDTO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SENDTO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SENDTO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SENDTO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RECVFROM:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RECVFROM_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RECVFROM_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RECVFROM_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETSOCKOPT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETSOCKOPT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETSOCKOPT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETSOCKOPT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SETSOCKOPT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SETSOCKOPT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SETSOCKOPT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SETSOCKOPT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETSOCKNAME:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETSOCKNAME_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETSOCKNAME_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETSOCKNAME_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETPEERNAME:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETPEERNAME_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETPEERNAME_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETPEERNAME_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SOCKETPAIR:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SOCKETPAIR_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SOCKETPAIR_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SOCKETPAIR_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SENDMSG:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SENDMSG_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SENDMSG_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SENDMSG_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RECVMSG:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RECVMSG_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RECVMSG_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RECVMSG_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SOCK_SHUTDOWN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SOCK_SHUTDOWN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SOCK_SHUTDOWN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SOCK_SHUTDOWN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ACCEPT4:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ACCEPT4_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ACCEPT4_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ACCEPT4_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_OPENAT_MOUNT_IDENTITY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_OPENAT_MOUNT_IDENTITY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_OPENAT_MOUNT_IDENTITY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_OPENAT_MOUNT_IDENTITY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_REBOOT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_REBOOT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_REBOOT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_REBOOT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SHUTDOWN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SHUTDOWN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SHUTDOWN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SHUTDOWN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SYSINFO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SYSINFO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SYSINFO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SYSINFO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_UNAME:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_UNAME_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_UNAME_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_UNAME_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ATA_INIT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ATA_INIT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ATA_INIT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ATA_INIT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ATA_GET_COUNT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ATA_GET_COUNT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ATA_GET_COUNT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ATA_GET_COUNT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ATA_GET_INFO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ATA_GET_INFO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ATA_GET_INFO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ATA_GET_INFO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ATA_READ:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ATA_READ_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ATA_READ_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ATA_READ_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ATA_WRITE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ATA_WRITE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ATA_WRITE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ATA_WRITE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_BLOCK_GET_COUNT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_BLOCK_GET_COUNT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_BLOCK_GET_COUNT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_BLOCK_GET_COUNT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_BLOCK_ENUMERATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_BLOCK_ENUMERATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_BLOCK_ENUMERATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_BLOCK_ENUMERATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_BLOCK_READ:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_BLOCK_READ_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_BLOCK_READ_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_BLOCK_READ_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_BLOCK_WRITE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_BLOCK_WRITE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_BLOCK_WRITE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_BLOCK_WRITE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_BLOCK_FLUSH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_BLOCK_FLUSH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_BLOCK_FLUSH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_BLOCK_FLUSH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERIAL_PRINT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERIAL_PRINT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERIAL_PRINT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERIAL_PRINT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERIAL_HEX:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERIAL_HEX_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERIAL_HEX_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERIAL_HEX_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_BLOCK_GET_INFO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_BLOCK_GET_INFO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_BLOCK_GET_INFO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_BLOCK_GET_INFO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ARCH_PRCTL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ARCH_PRCTL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ARCH_PRCTL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ARCH_PRCTL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CLONE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CLONE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CLONE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CLONE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THREAD_EXIT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_THREAD_EXIT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_THREAD_EXIT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_THREAD_EXIT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SCHED_YIELD:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SCHED_YIELD_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SCHED_YIELD_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SCHED_YIELD_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THREAD_JOIN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_THREAD_JOIN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_THREAD_JOIN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_THREAD_JOIN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THREAD_DETACH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_THREAD_DETACH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_THREAD_DETACH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_THREAD_DETACH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETCPU:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETCPU_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETCPU_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETCPU_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETCPU_COUNT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETCPU_COUNT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETCPU_COUNT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETCPU_COUNT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SHMGET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SHMGET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SHMGET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SHMGET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SHMAT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SHMAT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SHMAT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SHMAT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SHMDT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SHMDT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SHMDT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SHMDT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SPAWN_PROCESS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SPAWN_PROCESS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SPAWN_PROCESS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SPAWN_PROCESS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_COMPAT_PROCESS_CREATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_COMPAT_PROCESS_CREATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_COMPAT_PROCESS_CREATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_COMPAT_PROCESS_CREATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SCHED_SETAFFINITY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SCHED_SETAFFINITY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SCHED_SETAFFINITY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SCHED_SETAFFINITY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SCHED_GETAFFINITY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SCHED_GETAFFINITY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SCHED_GETAFFINITY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SCHED_GETAFFINITY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THREAD_SCHED_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_THREAD_SCHED_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_THREAD_SCHED_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_THREAD_SCHED_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THREAD_SCHED_SET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_THREAD_SCHED_SET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_THREAD_SCHED_SET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_THREAD_SCHED_SET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THREAD_SCHED_RR_INTERVAL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_THREAD_SCHED_RR_INTERVAL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_THREAD_SCHED_RR_INTERVAL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_THREAD_SCHED_RR_INTERVAL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SPAWN_PROCESS_ACTIONS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PRCTL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PRCTL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PRCTL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PRCTL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PTRACE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PTRACE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PTRACE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PTRACE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SECCOMP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SECCOMP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SECCOMP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SECCOMP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_UMASK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_UMASK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_UMASK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_UMASK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FCHOWN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FCHOWN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FCHOWN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FCHOWN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_LCHOWN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_LCHOWN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_LCHOWN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_LCHOWN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FUTIMENS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FUTIMENS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FUTIMENS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FUTIMENS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_UTIMENSAT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_UTIMENSAT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_UTIMENSAT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_UTIMENSAT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FCHMOD:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FCHMOD_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FCHMOD_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FCHMOD_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_POSIX_SEM_OPEN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_POSIX_SEM_OPEN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_POSIX_SEM_OPEN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_POSIX_SEM_OPEN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_POSIX_SEM_CLOSE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_POSIX_SEM_CLOSE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_POSIX_SEM_CLOSE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_POSIX_SEM_CLOSE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_POSIX_SEM_UNLINK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_POSIX_SEM_UNLINK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_POSIX_SEM_UNLINK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_POSIX_SEM_UNLINK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PATH_AT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PATH_AT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PATH_AT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PATH_AT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RENAME_NOREPLACE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RENAME_NOREPLACE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RENAME_NOREPLACE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RENAME_NOREPLACE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FCOPY_XATTRS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FCOPY_XATTRS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FCOPY_XATTRS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FCOPY_XATTRS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FCOPY_FILE_FLAGS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FCOPY_FILE_FLAGS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FCOPY_FILE_FLAGS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FCOPY_FILE_FLAGS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SIGALTSTACK:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SIGALTSTACK_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SIGALTSTACK_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SIGALTSTACK_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RT_SIGSUSPEND:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RT_SIGSUSPEND_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RT_SIGSUSPEND_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RT_SIGSUSPEND_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PPOLL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PPOLL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PPOLL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PPOLL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SETHOSTNAME:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SETHOSTNAME_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SETHOSTNAME_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SETHOSTNAME_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SETDOMAINNAME:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SETDOMAINNAME_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SETDOMAINNAME_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SETDOMAINNAME_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DUP3:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DUP3_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DUP3_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DUP3_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RT_SIGTIMEDWAIT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RT_SIGTIMEDWAIT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RT_SIGTIMEDWAIT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RT_SIGTIMEDWAIT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RT_SIGQUEUEINFO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RT_SIGQUEUEINFO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RT_SIGQUEUEINFO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RT_SIGQUEUEINFO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RT_TGSIGQUEUEINFO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RT_TGSIGQUEUEINFO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RT_TGSIGQUEUEINFO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RT_TGSIGQUEUEINFO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_CREATE_WINDOW:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_CREATE_WINDOW_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_CREATE_WINDOW_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_CREATE_WINDOW_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_CLOSE_WINDOW:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_CLOSE_WINDOW_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_CLOSE_WINDOW_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_CLOSE_WINDOW_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_DRAW_TEXT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_DRAW_TEXT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_DRAW_TEXT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_DRAW_TEXT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_DRAW_BUTTON:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_DRAW_BUTTON_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_DRAW_BUTTON_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_DRAW_BUTTON_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_DRAW_RECT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_DRAW_RECT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_DRAW_RECT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_DRAW_RECT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_GET_EVENT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_GET_EVENT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_GET_EVENT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_GET_EVENT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_UPDATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_UPDATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_UPDATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_UPDATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_DRAW_PROGRESS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_DRAW_PROGRESS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_DRAW_PROGRESS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_DRAW_PROGRESS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_MESSAGE_BOX:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_MESSAGE_BOX_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_MESSAGE_BOX_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_MESSAGE_BOX_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_CLEAR:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_CLEAR_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_CLEAR_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_CLEAR_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GFX_FILL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GFX_FILL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GFX_FILL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GFX_FILL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GFX_TEXT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GFX_TEXT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GFX_TEXT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GFX_TEXT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GFX_ROUND:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GFX_ROUND_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GFX_ROUND_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GFX_ROUND_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GFX_LINE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GFX_LINE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GFX_LINE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GFX_LINE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GFX_CIRCLE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GFX_CIRCLE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GFX_CIRCLE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GFX_CIRCLE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GFX_SHADOW:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GFX_SHADOW_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GFX_SHADOW_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GFX_SHADOW_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_SET_CLIP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_SET_CLIP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_SET_CLIP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_SET_CLIP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_RESET_CLIP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_RESET_CLIP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_RESET_CLIP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_RESET_CLIP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_GET_SIZE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_GET_SIZE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_GET_SIZE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_GET_SIZE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_IS_FOCUSED:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_IS_FOCUSED_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_IS_FOCUSED_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_IS_FOCUSED_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_SHOW_WINDOW:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_SHOW_WINDOW_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_SHOW_WINDOW_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_SHOW_WINDOW_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_SET_TITLE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_SET_TITLE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_SET_TITLE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_SET_TITLE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_MOVE_WINDOW:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_MOVE_WINDOW_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_MOVE_WINDOW_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_MOVE_WINDOW_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_RESIZE_WINDOW:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_RESIZE_WINDOW_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_RESIZE_WINDOW_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_RESIZE_WINDOW_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_NOTIFICATION_POST:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_NOTIFICATION_POST_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_NOTIFICATION_POST_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_NOTIFICATION_POST_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_CREATE_FRAMELESS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_CREATE_FRAMELESS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_CREATE_FRAMELESS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_CREATE_FRAMELESS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FUTEX:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FUTEX_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FUTEX_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FUTEX_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GFX_BLIT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GFX_BLIT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GFX_BLIT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GFX_BLIT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERVICE_COUNT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERVICE_COUNT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERVICE_COUNT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERVICE_COUNT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERVICE_GET_INFO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERVICE_GET_INFO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERVICE_GET_INFO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERVICE_GET_INFO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERVICE_START:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERVICE_START_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERVICE_START_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERVICE_START_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERVICE_STOP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERVICE_STOP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERVICE_STOP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERVICE_STOP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERVICE_RESTART:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERVICE_RESTART_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERVICE_RESTART_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERVICE_RESTART_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERVICE_RESCAN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERVICE_RESCAN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERVICE_RESCAN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERVICE_RESCAN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERVICE_SHOULD_STOP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERVICE_SHOULD_STOP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERVICE_SHOULD_STOP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERVICE_SHOULD_STOP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERVICE_WAIT_STOP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERVICE_WAIT_STOP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERVICE_WAIT_STOP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERVICE_WAIT_STOP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SERVICE_HEALTH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SERVICE_HEALTH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SERVICE_HEALTH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SERVICE_HEALTH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_UNAME_V2:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_UNAME_V2_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_UNAME_V2_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_UNAME_V2_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIME_NS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIME_NS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIME_NS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIME_NS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLSYM:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLSYM_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLSYM_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLSYM_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLOPEN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLOPEN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLOPEN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLOPEN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLCLOSE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLCLOSE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLCLOSE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLCLOSE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DL_ADD_PATH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DL_ADD_PATH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DL_ADD_PATH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DL_ADD_PATH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLSYM_FROM:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLSYM_FROM_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLSYM_FROM_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLSYM_FROM_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLERROR:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLERROR_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLERROR_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLERROR_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLINVENTORY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLINVENTORY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLINVENTORY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLINVENTORY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_REALTIME_NS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_REALTIME_NS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_REALTIME_NS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_REALTIME_NS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLSYM_VERSIONED:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLSYM_VERSIONED_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLSYM_VERSIONED_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLSYM_VERSIONED_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_AUDIO_OPEN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_AUDIO_OPEN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_AUDIO_OPEN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_AUDIO_OPEN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_AUDIO_WRITE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_AUDIO_WRITE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_AUDIO_WRITE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_AUDIO_WRITE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_AUDIO_CONTROL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_AUDIO_CONTROL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_AUDIO_CONTROL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_AUDIO_CONTROL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_AUDIO_CLOSE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_AUDIO_CLOSE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_AUDIO_CLOSE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_AUDIO_CLOSE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CRASH_CONSENT_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CRASH_CONSENT_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CRASH_CONSENT_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CRASH_CONSENT_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CPU_TIME_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CPU_TIME_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CPU_TIME_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CPU_TIME_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLADDR:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLADDR_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLADDR_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLADDR_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLOPEN_FLAGS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLOPEN_FLAGS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLOPEN_FLAGS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLOPEN_FLAGS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLINVENTORY_UNWIND:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLINVENTORY_UNWIND_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLINVENTORY_UNWIND_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLINVENTORY_UNWIND_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLINVENTORY_UNWIND_LEASE_BEGIN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLINVENTORY_UNWIND_LEASE_BEGIN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLINVENTORY_UNWIND_LEASE_BEGIN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLINVENTORY_UNWIND_LEASE_BEGIN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLINVENTORY_UNWIND_LEASE_END:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLINVENTORY_UNWIND_LEASE_END_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLINVENTORY_UNWIND_LEASE_END_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLINVENTORY_UNWIND_LEASE_END_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLERROR_COPY_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLERROR_COPY_V1_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLERROR_COPY_V1_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLERROR_COPY_V1_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DLOPEN_MEMORY_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DLOPEN_MEMORY_V1_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DLOPEN_MEMORY_V1_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DLOPEN_MEMORY_V1_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINFS_FORMAT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINFS_FORMAT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINFS_FORMAT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINFS_FORMAT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINFS_MOUNT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINFS_MOUNT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINFS_MOUNT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINFS_MOUNT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINFS_UNMOUNT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINFS_UNMOUNT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINFS_UNMOUNT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINFS_UNMOUNT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINFS_CREATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINFS_CREATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINFS_CREATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINFS_CREATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINFS_MKDIR:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINFS_MKDIR_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINFS_MKDIR_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINFS_MKDIR_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINFS_STAT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINFS_STAT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINFS_STAT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINFS_STAT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ISO_FIND:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ISO_FIND_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ISO_FIND_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ISO_FIND_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ISO_READ:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ISO_READ_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ISO_READ_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ISO_READ_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GET_HDDBOOT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GET_HDDBOOT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GET_HDDBOOT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GET_HDDBOOT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SYSTEM_IMAGE_VERIFY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SYSTEM_IMAGE_VERIFY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SYSTEM_IMAGE_VERIFY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SYSTEM_IMAGE_VERIFY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETRANDOM:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETRANDOM_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETRANDOM_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETRANDOM_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SET_TID_ADDRESS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TKILL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TKILL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TKILL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TKILL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TGKILL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TGKILL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TGKILL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TGKILL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THREAD_STACK_INFO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_THREAD_STACK_INFO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_THREAD_STACK_INFO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_THREAD_STACK_INFO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_PRIMARY_INFO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_PRIMARY_INFO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_PRIMARY_INFO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_PRIMARY_INFO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_APPLY_IPV4:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_APPLY_IPV4_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_APPLY_IPV4_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_APPLY_IPV4_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DNS_RESOLVE_BEGIN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DNS_RESOLVE_BEGIN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DNS_RESOLVE_BEGIN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DNS_RESOLVE_BEGIN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DNS_RESOLVE_POLL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DNS_RESOLVE_POLL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DNS_RESOLVE_POLL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DNS_RESOLVE_POLL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DNS_RESOLVE_CANCEL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DNS_RESOLVE_CANCEL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DNS_RESOLVE_CANCEL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DNS_RESOLVE_CANCEL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DISPLAY_GET_CONFIG:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DISPLAY_GET_CONFIG_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DISPLAY_GET_CONFIG_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DISPLAY_GET_CONFIG_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DISPLAY_APPLY_CONFIG:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DISPLAY_APPLY_CONFIG_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DISPLAY_APPLY_CONFIG_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DISPLAY_APPLY_CONFIG_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_POWER_GET_SETTINGS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_POWER_GET_SETTINGS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_POWER_GET_SETTINGS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_POWER_GET_SETTINGS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_POWER_SET_SETTINGS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_POWER_SET_SETTINGS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_POWER_SET_SETTINGS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_POWER_SET_SETTINGS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETTID:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETTID_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETTID_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETTID_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PROCESS_TARGET_CONTROL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PROCESS_TARGET_CONTROL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PROCESS_TARGET_CONTROL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PROCESS_TARGET_CONTROL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GUI_V2_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GUI_V2_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GUI_V2_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GUI_V2_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINNT_EXCEPTION_RETURN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINNT_EXCEPTION_RETURN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINNT_EXCEPTION_RETURN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINNT_EXCEPTION_RETURN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_SOURCE_QUERY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_SOURCE_QUERY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_SOURCE_QUERY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_SOURCE_QUERY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_SOURCE_OPEN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_SOURCE_OPEN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_SOURCE_OPEN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_SOURCE_OPEN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_SOURCE_READ:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_SOURCE_READ_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_SOURCE_READ_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_SOURCE_READ_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_SOURCE_VALIDATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_SOURCE_VALIDATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_SOURCE_VALIDATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_SOURCE_VALIDATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_SOURCE_CLOSE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_SOURCE_CLOSE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_SOURCE_CLOSE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_SOURCE_CLOSE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_TARGET_OPEN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_TARGET_OPEN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_TARGET_OPEN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_TARGET_OPEN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_TARGET_READ:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_TARGET_READ_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_TARGET_READ_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_TARGET_READ_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_TARGET_VALIDATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_TARGET_VALIDATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_TARGET_VALIDATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_TARGET_VALIDATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_TARGET_CLOSE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_TARGET_CLOSE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_TARGET_CLOSE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_TARGET_CLOSE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_LOCALE_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_LOCALE_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_LOCALE_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_LOCALE_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_LOCALE_SET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_LOCALE_SET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_LOCALE_SET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_LOCALE_SET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INPUT_METHOD_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INPUT_METHOD_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INPUT_METHOD_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INPUT_METHOD_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INPUT_METHOD_SET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INPUT_METHOD_SET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INPUT_METHOD_SET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INPUT_METHOD_SET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CRASH_SUMMARY_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MANAGEMENT_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MANAGEMENT_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MANAGEMENT_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MANAGEMENT_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RIN_PASS_CONTROL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RIN_PASS_CONTROL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RIN_PASS_CONTROL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RIN_PASS_CONTROL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_KEYRING_MASTER_ACQUIRE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_KEYRING_MASTER_ACQUIRE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_KEYRING_MASTER_ACQUIRE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_KEYRING_MASTER_ACQUIRE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_POWER_GET_STATUS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_POWER_GET_STATUS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_POWER_GET_STATUS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_POWER_GET_STATUS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_POWER_REQUEST_ACTION:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_POWER_REQUEST_ACTION_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_POWER_REQUEST_ACTION_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_POWER_REQUEST_ACTION_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SYSTEM_INFO_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SYSTEM_INFO_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SYSTEM_INFO_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SYSTEM_INFO_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILESYSTEM_USAGE_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILESYSTEM_USAGE_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILESYSTEM_USAGE_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILESYSTEM_USAGE_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CREDENTIALS_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CREDENTIALS_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CREDENTIALS_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CREDENTIALS_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CREDENTIALS_SET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CREDENTIALS_SET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CREDENTIALS_SET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CREDENTIALS_SET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ACCOUNT_QUERY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CREDENTIAL_GROUPS_SET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CREDENTIAL_GROUPS_SET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CREDENTIAL_GROUPS_SET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CREDENTIAL_GROUPS_SET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_DEVICE_RESOURCE_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_DEVICE_RESOURCE_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_DEVICE_RESOURCE_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_DEVICE_RESOURCE_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PRIVACY_SETTINGS_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PRIVACY_SETTINGS_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PRIVACY_SETTINGS_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PRIVACY_SETTINGS_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILE_PORTAL_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILE_PORTAL_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILE_PORTAL_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILE_PORTAL_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MEMORY_PRESSURE_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MEMORY_PRESSURE_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MEMORY_PRESSURE_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MEMORY_PRESSURE_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_IPV6_INFO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_IPV6_INFO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_IPV6_INFO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_IPV6_INFO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_APPLY_IPV6:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_APPLY_IPV6_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_APPLY_IPV6_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_APPLY_IPV6_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MINCORE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MINCORE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MINCORE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MINCORE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MLOCKALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MLOCKALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MLOCKALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MLOCKALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MUNLOCKALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MUNLOCKALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MUNLOCKALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MUNLOCKALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MREMAP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MREMAP_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MREMAP_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MREMAP_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THREAD_NAME_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_THREAD_NAME_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_THREAD_NAME_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_THREAD_NAME_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_ELEVATION_REQUEST:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_ELEVATION_REQUEST_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_ELEVATION_REQUEST_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_ELEVATION_REQUEST_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RGROUP_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RGROUP_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RGROUP_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RGROUP_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THEME_SETTINGS_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_THEME_SETTINGS_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_THEME_SETTINGS_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_THEME_SETTINGS_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CONTAINER_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CONTAINER_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CONTAINER_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CONTAINER_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_TARGET_AUTHORIZE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_TARGET_AUTHORIZE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_TARGET_AUTHORIZE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_TARGET_AUTHORIZE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_TARGET_WRITE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_TARGET_WRITE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_TARGET_WRITE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_TARGET_WRITE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_TARGET_FLUSH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_TARGET_FLUSH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_TARGET_FLUSH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_TARGET_FLUSH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_TARGET_END:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_TARGET_END_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_TARGET_END_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_TARGET_END_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_COMPOSITOR_DISPLAY_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_COMPOSITOR_DISPLAY_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_COMPOSITOR_DISPLAY_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_COMPOSITOR_DISPLAY_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_COMPOSITOR_INPUT_POLL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_COMPOSITOR_INPUT_POLL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_COMPOSITOR_INPUT_POLL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_COMPOSITOR_INPUT_POLL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PROCESS_NAMESPACE_INSPECT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PROCESS_NAMESPACE_INSPECT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PROCESS_NAMESPACE_INSPECT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PROCESS_NAMESPACE_INSPECT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILESYSTEM_NAMESPACE_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILESYSTEM_NAMESPACE_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILESYSTEM_NAMESPACE_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILESYSTEM_NAMESPACE_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NETWORK_NAMESPACE_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NETWORK_NAMESPACE_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NETWORK_NAMESPACE_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NETWORK_NAMESPACE_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PROCESS_GROUP_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PROCESS_GROUP_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PROCESS_GROUP_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PROCESS_GROUP_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_WALLPAPER_LEASE_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_WALLPAPER_LEASE_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_WALLPAPER_LEASE_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_WALLPAPER_LEASE_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CONTAINER_RUNTIME_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CONTAINER_RUNTIME_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CONTAINER_RUNTIME_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CONTAINER_RUNTIME_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_WAITID:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_WAITID_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_WAITID_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_WAITID_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NETWORK_NAMESPACE_ROUTE_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NETWORK_NAMESPACE_ROUTE_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NETWORK_NAMESPACE_ROUTE_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NETWORK_NAMESPACE_ROUTE_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CONTAINER_NETWORK_PORTAL_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CONTAINER_NETWORK_PORTAL_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CONTAINER_NETWORK_PORTAL_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CONTAINER_NETWORK_PORTAL_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NETWORK_NAMESPACE_NEIGHBOR_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NETWORK_NAMESPACE_NEIGHBOR_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NETWORK_NAMESPACE_NEIGHBOR_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NETWORK_NAMESPACE_NEIGHBOR_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ALARM:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ALARM_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ALARM_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ALARM_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FADVISE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FADVISE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FADVISE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FADVISE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FALLOCATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FALLOCATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FALLOCATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FALLOCATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PAUSE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PAUSE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PAUSE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PAUSE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SETITIMER:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SETITIMER_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SETITIMER_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SETITIMER_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIMER_CREATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIMER_CREATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIMER_CREATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIMER_CREATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIMER_SETTIME:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIMER_SETTIME_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIMER_SETTIME_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIMER_SETTIME_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIMER_GETTIME:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIMER_GETTIME_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIMER_GETTIME_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIMER_GETTIME_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIMER_DELETE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIMER_DELETE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIMER_DELETE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIMER_DELETE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIMER_GETOVERRUN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIMER_GETOVERRUN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIMER_GETOVERRUN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIMER_GETOVERRUN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CONSOLE_ATTACH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CONSOLE_ATTACH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CONSOLE_ATTACH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CONSOLE_ATTACH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CONSOLE_DETACH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CONSOLE_DETACH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CONSOLE_DETACH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CONSOLE_DETACH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CLOCK_SETTIME:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CLOCK_SETTIME_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CLOCK_SETTIME_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CLOCK_SETTIME_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETITIMER:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_GETITIMER_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_GETITIMER_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_GETITIMER_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FIREWALL_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FIREWALL_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FIREWALL_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FIREWALL_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NETWORK_NAMESPACE_MULTICAST_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NETWORK_NAMESPACE_MULTICAST_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NETWORK_NAMESPACE_MULTICAST_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NETWORK_NAMESPACE_MULTICAST_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIMEZONE_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIMEZONE_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIMEZONE_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIMEZONE_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIMEZONE_SET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIMEZONE_SET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIMEZONE_SET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIMEZONE_SET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIMER_POLL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIMER_POLL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIMER_POLL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIMER_POLL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RESOURCE_LIMIT_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RESOURCE_LIMIT_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RESOURCE_LIMIT_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RESOURCE_LIMIT_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NETWORK_NAMESPACE_FORWARDING_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NETWORK_NAMESPACE_FORWARDING_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NETWORK_NAMESPACE_FORWARDING_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NETWORK_NAMESPACE_FORWARDING_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_POWER_EVENT_POLL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_POWER_EVENT_POLL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_POWER_EVENT_POLL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_POWER_EVENT_POLL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PROCESS_IMAGE_PATH_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PROCESS_IMAGE_PATH_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PROCESS_IMAGE_PATH_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PROCESS_IMAGE_PATH_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILESYSTEM_WATCH_INIT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILESYSTEM_WATCH_INIT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILESYSTEM_WATCH_INIT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILESYSTEM_WATCH_INIT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILESYSTEM_WATCH_ADD:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILESYSTEM_WATCH_ADD_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILESYSTEM_WATCH_ADD_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILESYSTEM_WATCH_ADD_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILESYSTEM_WATCH_REMOVE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILESYSTEM_WATCH_REMOVE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILESYSTEM_WATCH_REMOVE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILESYSTEM_WATCH_REMOVE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILESYSTEM_WATCH_CLOSE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILESYSTEM_WATCH_CLOSE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILESYSTEM_WATCH_CLOSE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILESYSTEM_WATCH_CLOSE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_READV:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_READV_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_READV_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_READV_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_WRITEV:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_WRITEV_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_WRITEV_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_WRITEV_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PROCESS_MEMORY_INFO_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PROCESS_MEMORY_INFO_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PROCESS_MEMORY_INFO_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PROCESS_MEMORY_INFO_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_WIFI_INFO:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_WIFI_INFO_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_WIFI_INFO_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_WIFI_INFO_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PROCESS_NUMA_POLICY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PROCESS_NUMA_POLICY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PROCESS_NUMA_POLICY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PROCESS_NUMA_POLICY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILE_TO_SOCKET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILE_TO_SOCKET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILE_TO_SOCKET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILE_TO_SOCKET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SYSCALL_BATCH:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SYSCALL_BATCH_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SYSCALL_BATCH_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SYSCALL_BATCH_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_STATISTICS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_STATISTICS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_STATISTICS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_STATISTICS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SDK_CALL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SDK_CALL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SDK_CALL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SDK_CALL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_IP_GLOBAL_STATISTICS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_IP_GLOBAL_STATISTICS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_IP_GLOBAL_STATISTICS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_IP_GLOBAL_STATISTICS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_UDP_GLOBAL_STATISTICS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_UDP_GLOBAL_STATISTICS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_UDP_GLOBAL_STATISTICS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_UDP_GLOBAL_STATISTICS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_TCP_GLOBAL_STATISTICS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_TCP_GLOBAL_STATISTICS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_TCP_GLOBAL_STATISTICS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_TCP_GLOBAL_STATISTICS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_ICMP_GLOBAL_STATISTICS:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_V2:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_V2_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_V2_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_ICMP_GLOBAL_STATISTICS_V2_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_SOURCE_PAYLOADS_QUERY:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_SOURCE_PAYLOADS_QUERY_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_SOURCE_PAYLOADS_QUERY_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_SOURCE_PAYLOADS_QUERY_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_SOURCE_PAYLOAD_READ:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_SOURCE_PAYLOAD_READ_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_SOURCE_PAYLOAD_READ_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_SOURCE_PAYLOAD_READ_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_SOURCE_PAYLOAD_VALIDATE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_SOURCE_PAYLOAD_VALIDATE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_SOURCE_PAYLOAD_VALIDATE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_SOURCE_PAYLOAD_VALIDATE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_LSEEK64:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_LSEEK64_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_LSEEK64_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_LSEEK64_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TRUNCATE64:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TRUNCATE64_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TRUNCATE64_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TRUNCATE64_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FTRUNCATE64:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FTRUNCATE64_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FTRUNCATE64_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FTRUNCATE64_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FSTAT64:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FSTAT64_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FSTAT64_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FSTAT64_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MMAP_FD64:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_MMAP_FD64_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_MMAP_FD64_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_MMAP_FD64_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PERFORMANCE_TRACE_MARK_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PERFORMANCE_TRACE_MARK_V1_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PERFORMANCE_TRACE_MARK_V1_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PERFORMANCE_TRACE_MARK_V1_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PERFORMANCE_TRACE_READ_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PERFORMANCE_TRACE_READ_V1_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PERFORMANCE_TRACE_READ_V1_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PERFORMANCE_TRACE_READ_V1_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PERFORMANCE_TRACE_SCHEDULER_READ_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PERFORMANCE_TRACE_SCHEDULER_READ_V1_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PERFORMANCE_TRACE_SCHEDULER_READ_V1_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PERFORMANCE_TRACE_SCHEDULER_READ_V1_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_TIMEZONE_GET_EFFECTIVE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_TIMEZONE_GET_EFFECTIVE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_TIMEZONE_GET_EFFECTIVE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_TIMEZONE_GET_EFFECTIVE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_IPV6_ADDRESSES:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_IPV6_ADDRESSES_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_IPV6_ADDRESSES_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_IPV6_ADDRESSES_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_NET_IPV6_INTERFACE_ADDRESSES_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_WIFI_AWDL_TRANSPORT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_WIFI_AWDL_TRANSPORT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_WIFI_AWDL_TRANSPORT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_WIFI_AWDL_TRANSPORT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_BLUETOOTH_HCI_CONTROL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_BLUETOOTH_HCI_CONTROL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_BLUETOOTH_HCI_CONTROL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_BLUETOOTH_HCI_CONTROL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SHM_ATTACH_RANGE:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SHM_ATTACH_RANGE_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SHM_ATTACH_RANGE_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SHM_ATTACH_RANGE_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SHM_PROTECT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SHM_PROTECT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SHM_PROTECT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SHM_PROTECT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_BACKUP_SOURCE_OPEN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_BACKUP_SOURCE_OPEN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_BACKUP_SOURCE_OPEN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_BACKUP_SOURCE_OPEN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_BEGIN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_BEGIN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_BEGIN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_BEGIN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_END:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_END_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_END_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_TARGET_RINFS_MOUNT_END_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINFS_CACHE_LEASE_BEGIN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINFS_CACHE_LEASE_END:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINFS_CACHE_LEASE_END_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINFS_CACHE_LEASE_END_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINFS_CACHE_LEASE_END_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SHARED:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SHARED_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SHARED_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINFS_CACHE_LEASE_BEGIN_SHARED_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RINFS_CACHE_LEASE_SHARED_TRANSITION:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RINFS_CACHE_LEASE_SHARED_TRANSITION_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RINFS_CACHE_LEASE_SHARED_TRANSITION_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RINFS_CACHE_LEASE_SHARED_TRANSITION_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_INSTALL_BACKUP_DESTINATION_OPEN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_INSTALL_BACKUP_DESTINATION_OPEN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_INSTALL_BACKUP_DESTINATION_OPEN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_INSTALL_BACKUP_DESTINATION_OPEN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_KEYBOARD_LAYOUT_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_KEYBOARD_LAYOUT_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_KEYBOARD_LAYOUT_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_KEYBOARD_LAYOUT_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_KEYBOARD_LAYOUT_SET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_KEYBOARD_LAYOUT_SET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_KEYBOARD_LAYOUT_SET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_KEYBOARD_LAYOUT_SET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PROCESS_IMAGE_RANGE_GET:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PROCESS_IMAGE_RANGE_GET_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PROCESS_IMAGE_RANGE_GET_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PROCESS_IMAGE_RANGE_GET_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ISO_OPEN_FILE_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ISO_OPEN_FILE_V1_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ISO_OPEN_FILE_V1_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ISO_OPEN_FILE_V1_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_ISO_READ_FILE_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_ISO_READ_FILE_V1_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_ISO_READ_FILE_V1_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_ISO_READ_FILE_V1_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CLOCKSOURCE_RESOLUTION:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CLOCKSOURCE_RESOLUTION_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CLOCKSOURCE_RESOLUTION_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CLOCKSOURCE_RESOLUTION_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CLOCK_GETTIME64:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_CLOCK_GETTIME64_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_CLOCK_GETTIME64_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_CLOCK_GETTIME64_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FUTEX_TIME64:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FUTEX_TIME64_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FUTEX_TIME64_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FUTEX_TIME64_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILESYSTEM_NAME_MAX_GET_FD:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILESYSTEM_NAME_MAX_GET_FD_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILESYSTEM_NAME_MAX_GET_FD_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILESYSTEM_NAME_MAX_GET_FD_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILESYSTEM_MOUNT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILESYSTEM_MOUNT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILESYSTEM_MOUNT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILESYSTEM_MOUNT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FILESYSTEM_UNMOUNT:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FILESYSTEM_UNMOUNT_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FILESYSTEM_UNMOUNT_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FILESYSTEM_UNMOUNT_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FCNTL_LOCK64:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_FCNTL_LOCK64_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_FCNTL_LOCK64_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_FCNTL_LOCK64_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_READDIR64:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_READDIR64_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_READDIR64_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_READDIR64_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THREAD_SCHED_GETPARAM:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_THREAD_SCHED_GETPARAM_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_THREAD_SCHED_GETPARAM_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_THREAD_SCHED_GETPARAM_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PREADV:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PREADV_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PREADV_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PREADV_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PWRITEV:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PWRITEV_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PWRITEV_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PWRITEV_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SENDMMSG:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SENDMMSG_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SENDMMSG_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SENDMMSG_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_RECVMMSG:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_RECVMMSG_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_RECVMMSG_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_RECVMMSG_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_SPLICE_CALL_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_SPLICE_CALL_V1_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_SPLICE_CALL_V1_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_SPLICE_CALL_V1_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PIDFD_OPEN:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PIDFD_OPEN_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PIDFD_OPEN_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PIDFD_OPEN_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PIDFD_SEND_SIGNAL:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return RIN_SYS_PIDFD_SEND_SIGNAL_SUPPORT_X86_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return RIN_SYS_PIDFD_SEND_SIGNAL_SUPPORT_X86_64_NATIVE;
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return RIN_SYS_PIDFD_SEND_SIGNAL_SUPPORT_X86_64_COMPAT32;
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+    }
+}
 
 #define RIN_CPU_TIME_ABI_VERSION            1u
 #define RIN_AUDIO_CTL_START                 1u
