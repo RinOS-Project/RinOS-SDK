@@ -270,6 +270,7 @@
 /* time. */
 #define RIN_SYS_REALTIME_NS                 268u
 /* library. */
+/* IA-32のRLLはsymbol/version各255文字（終端NULを含め最大256バイト）、x86_64 compat32のRLLとx86_64 nativeのRIN v3はsymbol最大128文字（129バイト）、version最大64文字（65バイト）を受け付ける。copy faultはEFAULT、上限内に終端NULがない文字列はENAMETOOLONG、未登録のversion付きexportはNULLを返す。 */
 #define RIN_SYS_DLSYM_VERSIONED             269u
 /* audio. */
 #define RIN_SYS_AUDIO_OPEN                  270u
