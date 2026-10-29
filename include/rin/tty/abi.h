@@ -74,16 +74,22 @@ typedef struct RinTtyWinsizeV1 {
 #define RIN_TTY_VSTART UINT32_C(8)
 #define RIN_TTY_VSTOP UINT32_C(9)
 
-/* Bounded software line-discipline flag subset shared with RinPort termios. */
+/* Software line-discipline flags shared with RinPort termios. */
+#define RIN_TTY_IUCLC UINT32_C(0x00200)
 #define RIN_TTY_IGNCR UINT32_C(0x00080)
 #define RIN_TTY_INLCR UINT32_C(0x00040)
 #define RIN_TTY_ICRNL UINT32_C(0x00100)
 #define RIN_TTY_ISTRIP UINT32_C(0x00020)
 #define RIN_TTY_IXANY UINT32_C(0x00800)
+#define RIN_TTY_IXOFF UINT32_C(0x01000)
+#define RIN_TTY_IMAXBEL UINT32_C(0x02000)
+#define RIN_TTY_IUTF8 UINT32_C(0x04000)
 #define RIN_TTY_OPOST UINT32_C(0x00001)
+#define RIN_TTY_OLCUC UINT32_C(0x00002)
 #define RIN_TTY_ONLCR UINT32_C(0x00004)
 #define RIN_TTY_OCRNL UINT32_C(0x00008)
 #define RIN_TTY_ONOCR UINT32_C(0x00010)
+#define RIN_TTY_ONLRET UINT32_C(0x00020)
 #define RIN_TTY_CREAD UINT32_C(0x00080)
 #define RIN_TTY_CLOCAL UINT32_C(0x00800)
 #define RIN_TTY_ISIG UINT32_C(0x00001)
@@ -95,6 +101,8 @@ typedef struct RinTtyWinsizeV1 {
 #define RIN_TTY_NOFLSH UINT32_C(0x00080)
 #define RIN_TTY_TOSTOP UINT32_C(0x00100)
 #define RIN_TTY_ECHOCTL UINT32_C(0x00200)
+#define RIN_TTY_FLUSHO UINT32_C(0x01000)
+#define RIN_TTY_IEXTEN UINT32_C(0x08000)
 
 #define RIN_TTY_VINTR UINT32_C(0)
 #define RIN_TTY_VQUIT UINT32_C(1)
@@ -105,6 +113,11 @@ typedef struct RinTtyWinsizeV1 {
 #define RIN_TTY_VMIN UINT32_C(6)
 #define RIN_TTY_VSUSP UINT32_C(10)
 #define RIN_TTY_VEOL UINT32_C(11)
+#define RIN_TTY_VREPRINT UINT32_C(12)
+#define RIN_TTY_VDISCARD UINT32_C(13)
+#define RIN_TTY_VWERASE UINT32_C(14)
+#define RIN_TTY_VLNEXT UINT32_C(15)
+#define RIN_TTY_VEOL2 UINT32_C(16)
 
 /* Kernel-internal operations return negative values of these POSIX errors. */
 #define RIN_TTY_EPERM UINT32_C(1)
