@@ -103,7 +103,8 @@ typedef enum RinObjectType {
     RIN_OBJECT_INSTALL_TARGET = 13,
     RIN_OBJECT_CHANNEL = 14,
     RIN_OBJECT_MEDIA = 15,
-    RIN_OBJECT_MESSAGE_QUEUE = 16
+    RIN_OBJECT_MESSAGE_QUEUE = 16,
+    RIN_OBJECT_TLS_SESSION = 17
 } RinObjectType;
 
 typedef enum RinProcessPersonality {
@@ -309,7 +310,9 @@ typedef struct RinSdkTargetBackendV1 {
     uint64_t invoke;
     uint64_t reserved[4];
 } RinSdkTargetBackendV1;
+#endif /* !RIN_SDK_KERNEL_INTERNAL_ABI */
 
+/* Operation library IDs are wire protocol values shared with OS-Core. */
 enum {
     RIN_SDK_LIBRARY_BASE = 1,
     RIN_SDK_LIBRARY_IPC = 2,
@@ -323,6 +326,7 @@ enum {
     RIN_SDK_LIBRARY_GPU = 10
 };
 
+#if !defined(RIN_SDK_KERNEL_INTERNAL_ABI)
 RIN_SDK_API RinResult rin_sdk_bind_backend_v1(const RinSdkBackendV1* backend);
 RIN_SDK_API RinResult rin_sdk_bind_target_backend_v1(
     const RinSdkTargetBackendV1* backend);

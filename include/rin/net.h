@@ -18,6 +18,15 @@ typedef struct RinSocketAddressV1 {
     uint64_t reserved[2];
 } RinSocketAddressV1;
 
+enum {
+    RIN_NET_SOCKET_IO_PEEK = UINT32_C(0x00000001),
+    RIN_NET_SOCKET_IO_WAIT_ALL = UINT32_C(0x00000002),
+    RIN_NET_SOCKET_IO_DONT_WAIT = UINT32_C(0x00000004),
+    RIN_NET_SOCKET_IO_FLAGS_ALL = RIN_NET_SOCKET_IO_PEEK |
+                                  RIN_NET_SOCKET_IO_WAIT_ALL |
+                                  RIN_NET_SOCKET_IO_DONT_WAIT
+};
+
 typedef struct RinHttpRequestV1 {
     uint32_t struct_size;
     uint32_t version;
