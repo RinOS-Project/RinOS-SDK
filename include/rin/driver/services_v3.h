@@ -759,14 +759,16 @@ static inline RinDriverV3Result rin_driver_v3_firmware_read(
     if (output && capacity <= RIN_DRIVER_V3_FIRMWARE_MAX_READ)
         rin_driver_services_v3_zero(output, capacity);
     if (!services || !rin_driver_v3_firmware_info_valid(firmware) ||
-        !output || !bytes_read || capacity == 0u || session == 0u ||
-        capacity > RIN_DRIVER_V3_FIRMWARE_MAX_READ ||
-        offset > firmware->length ||
-        (offset < firmware->length &&
-         capacity > firmware->length - offset) ||
-        !rin_driver_services_v3_has(
+        !output || !bytes_read || session == 0u)
+        return RIN_DRIVER_V3_INVALID;
+    if (!rin_driver_services_v3_has(
             api, services, RIN_DRIVER_V3_CAP_FIRMWARE) ||
         !services->firmware_read)
+        return RIN_DRIVER_V3_DENIED;
+    if (capacity == 0u || capacity > RIN_DRIVER_V3_FIRMWARE_MAX_READ ||
+        offset > firmware->length ||
+        (offset < firmware->length &&
+         capacity > firmware->length - offset))
         return RIN_DRIVER_V3_RANGE;
     {
         RinDriverV3Result result = services->firmware_read(
