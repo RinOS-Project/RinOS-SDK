@@ -7,6 +7,8 @@
 
 #define RIN_PTRACE_TRACEME          0u
 #define RIN_PTRACE_CONT             7u
+#define RIN_PTRACE_SINGLESTEP       9u
+#define RIN_PTRACE_SYSCALL          24u
 #define RIN_PTRACE_PEEKDATA         2u
 #define RIN_PTRACE_POKEDATA         5u
 #define RIN_PTRACE_ATTACH           16u
@@ -100,6 +102,20 @@ typedef struct RinPtraceSigInfoV1 {
 } RinPtraceSigInfoV1;
 
 #define RIN_PTRACE_O_TRACESECCOMP   0x00000080u
+#define RIN_PTRACE_O_TRACEFORK      0x00000002u
+#define RIN_PTRACE_O_TRACEVFORK     0x00000004u
+#define RIN_PTRACE_O_TRACECLONE     0x00000008u
+#define RIN_PTRACE_O_TRACEEXEC      0x00000010u
+#define RIN_PTRACE_O_TRACEEXIT      0x00000040u
 #define RIN_PTRACE_EVENT_SECCOMP    7u
+#define RIN_PTRACE_EVENT_FORK       1u
+#define RIN_PTRACE_EVENT_VFORK      2u
+#define RIN_PTRACE_EVENT_CLONE      3u
+#define RIN_PTRACE_EVENT_EXEC       4u
+#define RIN_PTRACE_EVENT_VFORK_DONE 5u
+#define RIN_PTRACE_EVENT_EXIT       6u
+#define RIN_PTRACE_EVENT_SYSCALL_ENTRY 8u
+#define RIN_PTRACE_EVENT_SYSCALL_EXIT  9u
+#define RIN_PTRACE_EVENT_SINGLESTEP    10u
 
 #endif /* RIN_SDK_PTRACE_ABI_H */
