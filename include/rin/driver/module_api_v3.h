@@ -494,9 +494,9 @@ typedef struct RinDriverV3UsbEndpointConfiguration {
      * Mult bursts per service interval. Zero is the legacy encoding for one. */
     uint32_t transactions_per_interval;
     /* For USB 3.x isochronous endpoints, reserved[0] carries the exact
-     * Max ESIT Payload. Standard companions use wBytesPerInterval; SSP uses
-     * dwBytesPerInterval. reserved[1] is the SSP isochronous flag and is zero
-     * for all other endpoint configurations. */
+     * Max ESIT Payload. For bulk endpoints it carries xHCI MaxPStreams
+     * (currently 1), or zero when Streams are disabled. reserved[1] is the SSP
+     * isochronous flag and is zero for all other endpoint configurations. */
     uint64_t reserved[2];
 } RinDriverV3UsbEndpointConfiguration;
 
@@ -520,12 +520,16 @@ typedef struct RinDriverV3UsbDeviceResponse {
 #define RIN_DRIVER_V3_USB_TRANSFER_SHORT_OK UINT32_C(0x00000001)
 #define RIN_DRIVER_V3_USB_TRANSFER_FLAG_MASK \
     RIN_DRIVER_V3_USB_TRANSFER_SHORT_OK
+#define RIN_DRIVER_V3_USB_STREAM_ID_NONE UINT32_C(0)
+#define RIN_DRIVER_V3_USB_STREAM_ID_MAX UINT32_C(0xfffd)
+#define RIN_DRIVER_V3_USB_MAX_PSTREAMS UINT32_C(1)
 
 /* A USB transfer refers only to a kernel-owned memory lease. The driver must
  * copy this descriptor before returning from submit_transfer and must map the
  * selected range through dma_map_sg. setup_packet contains the eight USB
  * setup bytes in little-endian order and is zero for bulk and interrupt
- * transfers. */
+ * transfers. stream_id is zero for ordinary endpoints and nonzero only for
+ * a bulk endpoint configured with Streams. */
 typedef struct RinDriverV3UsbTransfer {
     uint32_t struct_size;
     uint32_t version;
@@ -541,7 +545,7 @@ typedef struct RinDriverV3UsbTransfer {
     uint32_t transfer_type;
     uint32_t flags;
     uint32_t length;
-    uint32_t reserved0;
+    uint32_t stream_id;
     uint64_t reserved[2];
 } RinDriverV3UsbTransfer;
 

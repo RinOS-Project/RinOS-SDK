@@ -266,7 +266,8 @@ static inline int rin_ndrv_v3_usb_transfer_valid(
         transfer->endpoint_address > 255u ||
         (transfer->flags & ~RIN_DRIVER_V3_USB_TRANSFER_FLAG_MASK) != 0u ||
         transfer->length > UINT32_C(1048576) ||
-        transfer->reserved0 != 0u || transfer->reserved[0] != 0u ||
+        transfer->stream_id > RIN_DRIVER_V3_USB_STREAM_ID_MAX ||
+        transfer->reserved[0] != 0u ||
         transfer->reserved[1] != 0u) {
         return 0;
     }
@@ -281,7 +282,8 @@ static inline int rin_ndrv_v3_usb_transfer_valid(
     if (transfer->transfer_type == RIN_DRIVER_V3_USB_TRANSFER_CONTROL) {
         setup_length = (uint32_t)(transfer->setup_packet >> 48u);
         direction_in = (uint32_t)(transfer->setup_packet >> 7u) & 1u;
-        if (endpoint != 0u || setup_length != transfer->length)
+        if (endpoint != 0u || setup_length != transfer->length ||
+            transfer->stream_id != RIN_DRIVER_V3_USB_STREAM_ID_NONE)
             return 0;
     } else if (transfer->transfer_type ==
                    RIN_DRIVER_V3_USB_TRANSFER_INTERRUPT ||
@@ -294,6 +296,9 @@ static inline int rin_ndrv_v3_usb_transfer_valid(
             (endpoint & UINT32_C(0x70)) != 0u ||
             (endpoint & UINT32_C(0x0f)) == 0u ||
             transfer->setup_packet != 0u || transfer->length == 0u)
+            return 0;
+        if (transfer->stream_id != RIN_DRIVER_V3_USB_STREAM_ID_NONE &&
+            transfer->transfer_type != RIN_DRIVER_V3_USB_TRANSFER_BULK)
             return 0;
     } else {
         return 0;
@@ -408,8 +413,10 @@ static inline int rin_ndrv_v3_usb_endpoint_configuration_valid(
     transactions = endpoint->transactions_per_interval == 0u
         ? 1u : endpoint->transactions_per_interval;
     if (endpoint->transfer_type != RIN_DRIVER_V3_USB_TRANSFER_ISOCHRONOUS &&
-        (transactions != 1u || endpoint->reserved[0] != 0u ||
-         ssp_isochronous))
+        (transactions != 1u || ssp_isochronous ||
+         (endpoint->transfer_type == RIN_DRIVER_V3_USB_TRANSFER_BULK
+              ? endpoint->reserved[0] > RIN_DRIVER_V3_USB_MAX_PSTREAMS
+              : endpoint->reserved[0] != 0u)))
         return 0;
     if (endpoint->transfer_type == RIN_DRIVER_V3_USB_TRANSFER_ISOCHRONOUS) {
         interval_capacity = (uint64_t)endpoint->max_packet_size *
