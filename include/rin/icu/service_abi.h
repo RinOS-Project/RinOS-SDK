@@ -34,7 +34,10 @@ enum {
     RIN_ICU_STATUS_TOO_LARGE = -5,
     RIN_ICU_STATUS_BAD_HANDLE = -6,
     RIN_ICU_STATUS_NO_SPACE = -7,
-    RIN_ICU_STATUS_DATA_ERROR = -8
+    RIN_ICU_STATUS_DATA_ERROR = -8,
+    /* A caller-side client lock reached its explicit deadline.  This is
+     * distinct from an uninitialized client or a transport failure. */
+    RIN_ICU_STATUS_BUSY = -9
 };
 
 enum {
@@ -465,6 +468,7 @@ static inline int rin_icu_status_known_v2(int32_t status)
     case RIN_ICU_STATUS_BAD_HANDLE:
     case RIN_ICU_STATUS_NO_SPACE:
     case RIN_ICU_STATUS_DATA_ERROR:
+    case RIN_ICU_STATUS_BUSY:
         return 1;
     default:
         return 0;
