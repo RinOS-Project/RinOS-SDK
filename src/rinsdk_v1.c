@@ -1369,8 +1369,6 @@ RinResult rin_socket_shutdown_v1(RinSocket socket, uint32_t flags) { SIMPLE_CALL
 static void rin_sdk_gui_copy(uint8_t* destination, const uint8_t* source,
                              uint64_t size);
 static int rin_sdk_gui_utf8_valid(const uint8_t* bytes, uint64_t size);
-static int rin_sdk_gui_text_snapshot(RinStringV1 input, uint64_t max_bytes,
-                                     char* output);
 
 RinResult rin_clipboard_set_v1(uint32_t format,RinSliceV1 data) { SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_CLIPBOARD_SET,(RinResult*)0,format,data.address,data.size,0,0,0); }
 RinResult rin_clipboard_get_v1(uint32_t format,RinSliceV1 data,uint64_t* required) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_GUI,GUI_CLIPBOARD_GET,required,format,data.address,data.size,0,0,0); }
@@ -1417,25 +1415,6 @@ static int rin_sdk_gui_utf8_valid(const uint8_t* bytes, uint64_t size) {
             (codepoint >= 0xd800u && codepoint <= 0xdfffu))
             return 0;
     }
-    return 1;
-}
-
-static int rin_sdk_gui_text_snapshot(RinStringV1 input, uint64_t max_bytes,
-                                     char* output) {
-    if (!output || input.size > max_bytes ||
-        (input.size != 0u &&
-         (input.address == 0u ||
-          input.address > (uint64_t)UINTPTR_MAX ||
-          input.size > (uint64_t)UINTPTR_MAX - input.address)))
-        return 0;
-    if (input.size != 0u) {
-        rin_sdk_gui_copy((uint8_t*)output,
-                         (const uint8_t*)(uintptr_t)input.address,
-                         input.size);
-        if (!rin_sdk_gui_utf8_valid((const uint8_t*)output, input.size))
-            return 0;
-    }
-    output[input.size] = '\0';
     return 1;
 }
 
