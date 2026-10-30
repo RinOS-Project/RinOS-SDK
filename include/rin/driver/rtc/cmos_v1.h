@@ -16,6 +16,8 @@ extern "C" {
 
 typedef int (*RinRtcCmosReadRegisterV1)(
     void* context, uint8_t reg, uint8_t* value);
+/* A nonzero result does not prove the device left the register unchanged.
+ * Callers must assume the write may have committed and restore or reread. */
 typedef int (*RinRtcCmosWriteRegisterV1)(
     void* context, uint8_t reg, uint8_t value);
 typedef void (*RinRtcCmosLockV1)(void* context);
@@ -54,20 +56,20 @@ static_assert(sizeof(RinRtcBackendV1) ==
                   (sizeof(void*) == 8u ? 48u : 36u),
               "RTC backend callback ABI drift");
 static_assert(sizeof(RinRtcCmosConfigV1) ==
-                  (sizeof(void*) == 8u ? 80u : 52u),
+                  (sizeof(void*) == 8u ? 80u : 60u),
               "CMOS config ABI drift");
 static_assert(sizeof(RinRtcCmosBackendV1) ==
-                  (sizeof(void*) == 8u ? 152u : 112u),
+                  (sizeof(void*) == 8u ? 152u : 120u),
               "CMOS backend ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinRtcBackendV1) ==
                    (sizeof(void*) == 8u ? 48u : 36u),
                "RTC backend callback ABI drift");
 _Static_assert(sizeof(RinRtcCmosConfigV1) ==
-                   (sizeof(void*) == 8u ? 80u : 52u),
+                   (sizeof(void*) == 8u ? 80u : 60u),
                "CMOS config ABI drift");
 _Static_assert(sizeof(RinRtcCmosBackendV1) ==
-                   (sizeof(void*) == 8u ? 152u : 112u),
+                   (sizeof(void*) == 8u ? 152u : 120u),
                "CMOS backend ABI drift");
 #endif
 
