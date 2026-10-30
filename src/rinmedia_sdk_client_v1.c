@@ -205,10 +205,16 @@ static int rin_media_wait_fd_timeout(int fd, short events, int timeout_ms)
             if (errno == EINTR) continue;
             return 0;
         }
-        if (result == 0) continue;
-        if ((item.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0)
+        if (result == 0) return 0;
+        if ((item.revents & POLLNVAL) != 0)
             return 0;
         if ((item.revents & events) != 0) return 1;
+        /* A stream socket may report POLLIN and POLLHUP together while
+         * response bytes are still buffered. Let recv() drain them before
+         * treating the peer close as EOF. */
+        if ((events & POLLIN) != 0 && (item.revents & POLLHUP) != 0)
+            return 1;
+        if ((item.revents & (POLLERR | POLLHUP)) != 0) return 0;
         item.revents = 0;
     }
     return 0;
