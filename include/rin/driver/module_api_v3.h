@@ -1309,6 +1309,8 @@ static inline int rin_driver_v3_audio_completion_valid(
            completion->reserved[0] == 0u && completion->reserved[1] == 0u;
 }
 
+/* On success, output owns the DMA allocation. On any failure, the
+ * implementation must zero the entire output and transfer no lease. */
 typedef RinDriverV3Result (*RinDriverV3DmaAllocateFn)(
     uint64_t api_context, uint64_t session, uint64_t length,
     uint32_t alignment, uint32_t flags, RinDriverV3DmaLeaseInfo* output);
