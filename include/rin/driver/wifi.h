@@ -310,27 +310,13 @@ static inline int rin_driver_v3_wifi_ops_valid(
     const RinDriverV3WifiOps* ops) {
     if (!ops || ops->struct_size != sizeof(*ops) ||
         ops->version != RIN_DRIVER_V3_OPS_VERSION ||
-        ops->network.struct_size != sizeof(ops->network) ||
-        ops->network.version != RIN_DRIVER_V3_OPS_VERSION ||
-        !ops->network.transmit || !ops->network.poll_rx ||
-        !ops->network.receive || !ops->network.get_info ||
-        !ops->network.remove || !ops->get_info ||
+        !rin_driver_v3_net_ops_valid(&ops->network) || !ops->get_info ||
         !ops->get_channel || !ops->scan || !ops->connect ||
         !ops->disconnect || !ops->poll_events || !ops->get_scan_result ||
         ops->reserved[0] != 0u)
         return 0;
-    for (uint32_t index = 0u;
-         index < sizeof(ops->network.reserved) /
-                     sizeof(ops->network.reserved[0]); ++index) {
-        if (ops->network.reserved[index] != 0u) return 0;
-    }
 #if UINTPTR_MAX == UINT32_MAX
-    if (ops->network.transmit_padding != 0u ||
-        ops->network.poll_rx_padding != 0u ||
-        ops->network.remove_padding != 0u ||
-        ops->network.receive_padding != 0u ||
-        ops->network.get_info_padding != 0u ||
-        ops->get_info_padding != 0u ||
+    if (ops->get_info_padding != 0u ||
         ops->get_channel_padding != 0u || ops->scan_padding != 0u ||
         ops->connect_padding != 0u || ops->disconnect_padding != 0u ||
         ops->poll_events_padding != 0u ||
