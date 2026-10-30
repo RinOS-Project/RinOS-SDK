@@ -59,6 +59,7 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define SO_RIN_UNIX_PEER_ACCOUNT_IDENTITY 0x500B
 #define SO_RIN_UNIX_PEER_SERVICE_IDENTITY 0x500C
 #define SO_RIN_UNIX_PEER_SECURITY_CONTEXT 0x500E
+#define SO_RIN_UNIX_PEER_WINCOMPAT_TOKEN  0x500F
 
 #define RIN_UNIX_SCOPE_SYSTEM UINT16_C(1)
 #define RIN_UNIX_SCOPE_USER UINT16_C(2)
@@ -77,6 +78,16 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define RIN_UNIX_PEER_ACCOUNT_IDENTITY_VERSION 1u
 #define RIN_UNIX_PEER_SERVICE_IDENTITY_VERSION 1u
 #define RIN_UNIX_PEER_SECURITY_CONTEXT_VERSION 1u
+#define RIN_UNIX_PEER_WINCOMPAT_TOKEN_VERSION 1u
+#define RIN_UNIX_PEER_WINCOMPAT_TOKEN_FLAG_ACTIVE UINT16_C(0x0001)
+#define RIN_UNIX_PEER_WINCOMPAT_TOKEN_FLAG_RESTRICTED UINT16_C(0x0002)
+#define RIN_UNIX_PEER_WINCOMPAT_TOKEN_FLAG_MASK \
+    (RIN_UNIX_PEER_WINCOMPAT_TOKEN_FLAG_ACTIVE | \
+     RIN_UNIX_PEER_WINCOMPAT_TOKEN_FLAG_RESTRICTED)
+#define RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_GROUPS 12u
+#define RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_RESTRICTED_SIDS 16u
+#define RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_SID_SIZE 68u
+#define RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_PRIVILEGES 13u
 #define RIN_UNIX_ACCOUNT_IDENTITY_SIZE 15u
 #define RIN_UNIX_SESSION_STATE_NONE UINT32_C(0)
 #define RIN_UNIX_SESSION_STATE_CREATING UINT32_C(1)
@@ -150,6 +161,58 @@ typedef struct rin_unix_peer_security_context_v1 {
     uint32_t groups[8];
     uint32_t reserved2[2];
 } rin_unix_peer_security_context_v1;
+
+typedef struct rin_unix_wincompat_sid_entry_v1 {
+    uint32_t sid_size;
+    uint32_t attributes;
+    uint8_t sid[RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_SID_SIZE];
+} rin_unix_wincompat_sid_entry_v1;
+
+#if defined(_MSC_VER)
+#define RIN_UNIX_PEER_ABI_ALIGN8 __declspec(align(8))
+#elif defined(__GNUC__)
+#define RIN_UNIX_PEER_ABI_ALIGN8 __attribute__((aligned(8)))
+#else
+#define RIN_UNIX_PEER_ABI_ALIGN8
+#endif
+
+/* Kernel-snapshotted effective WinCompat thread token, attached to the
+ * connected Unix peer. Applications cannot submit this value as credentials. */
+typedef struct RIN_UNIX_PEER_ABI_ALIGN8 rin_unix_peer_wincompat_token_v1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t token_id;
+    uint64_t token_process_id;
+    uint64_t token_process_cookie;
+    uint32_t impersonation_level;
+    uint32_t user_sid_size;
+    uint32_t group_count;
+    uint32_t restricted_sid_count;
+    uint32_t privilege_mask;
+    uint32_t reserved;
+    uint8_t user_sid[RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_SID_SIZE];
+    rin_unix_wincompat_sid_entry_v1
+        groups[RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_GROUPS];
+    rin_unix_wincompat_sid_entry_v1
+        restricted_sids[RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_RESTRICTED_SIDS];
+} rin_unix_peer_wincompat_token_v1;
+#define RIN_UNIX_PEER_WINCOMPAT_TOKEN_V1_SIZE 2256u
+#if defined(__cplusplus)
+static_assert(sizeof(rin_unix_wincompat_sid_entry_v1) == 76u,
+              "WinCompat SID entry ABI drift");
+static_assert(sizeof(rin_unix_peer_wincompat_token_v1) ==
+                  RIN_UNIX_PEER_WINCOMPAT_TOKEN_V1_SIZE,
+              "WinCompat token context ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(rin_unix_wincompat_sid_entry_v1) == 76u,
+               "WinCompat SID entry ABI drift");
+_Static_assert(sizeof(rin_unix_peer_wincompat_token_v1) ==
+                   RIN_UNIX_PEER_WINCOMPAT_TOKEN_V1_SIZE,
+               "WinCompat token context ABI drift");
+#endif
+#undef RIN_UNIX_PEER_ABI_ALIGN8
+#undef RIN_UNIX_PEER_WINCOMPAT_TOKEN_V1_SIZE
 
 /* Extended peer identity for security services. The kernel returns this only
  * when the peer was admitted from a verified signed RIN v3 image. */
@@ -263,6 +326,85 @@ static inline int rin_unix_peer_security_context_valid(
            ((context->session_id == 0u && context->session_cookie == 0u) ||
             (context->session_id != 0u && context->session_cookie != 0u)) &&
            context->reserved2[0] == 0u && context->reserved2[1] == 0u;
+}
+
+static inline int rin_unix_wincompat_sid_valid(
+    const uint8_t* sid, uint32_t sid_size) {
+    return sid != NULL && sid_size >= 8u && sid_size <= 68u &&
+           sid[0] == 1u && sid[1] <= 15u &&
+           sid_size == 8u + (uint32_t)sid[1] * 4u;
+}
+
+static inline int rin_unix_peer_wincompat_token_valid(
+    const rin_unix_peer_wincompat_token_v1* context) {
+    uint32_t index;
+    uint32_t byte_index;
+    if (!context || context->struct_size != sizeof(*context) ||
+        context->version != RIN_UNIX_PEER_WINCOMPAT_TOKEN_VERSION ||
+        (context->flags & ~RIN_UNIX_PEER_WINCOMPAT_TOKEN_FLAG_MASK) != 0u ||
+        context->reserved != 0u ||
+        context->group_count > RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_GROUPS ||
+        context->restricted_sid_count >
+            RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_RESTRICTED_SIDS ||
+        (context->privilege_mask &
+         ~((UINT32_C(1) << RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_PRIVILEGES) -
+           UINT32_C(1))) != 0u)
+        return 0;
+    if ((context->flags & RIN_UNIX_PEER_WINCOMPAT_TOKEN_FLAG_ACTIVE) == 0u) {
+        const uint8_t* bytes = (const uint8_t*)context;
+        for (byte_index = 8u; byte_index < sizeof(*context); ++byte_index)
+            if (bytes[byte_index] != 0u) return 0;
+        return 1;
+    }
+    if (context->token_id == 0u || context->token_process_id == 0u ||
+        context->token_process_cookie == 0u ||
+        context->impersonation_level < 2u ||
+        context->impersonation_level > 3u ||
+        !rin_unix_wincompat_sid_valid(context->user_sid,
+                                       context->user_sid_size) ||
+        (((context->flags & RIN_UNIX_PEER_WINCOMPAT_TOKEN_FLAG_RESTRICTED) !=
+          0u) != (context->restricted_sid_count != 0u)))
+        return 0;
+    for (index = context->user_sid_size;
+         index < RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_SID_SIZE; ++index)
+        if (context->user_sid[index] != 0u) return 0;
+    for (index = 0u; index < RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_GROUPS;
+         ++index) {
+        const rin_unix_wincompat_sid_entry_v1* entry =
+            &context->groups[index];
+        if (index >= context->group_count) {
+            const uint8_t* bytes = (const uint8_t*)entry;
+            for (byte_index = 0u; byte_index < sizeof(*entry); ++byte_index)
+                if (bytes[byte_index] != 0u) return 0;
+            continue;
+        }
+        if (!rin_unix_wincompat_sid_valid(entry->sid, entry->sid_size) ||
+            (entry->attributes & ~UINT32_C(0xe000007f)) != 0u)
+            return 0;
+        for (byte_index = entry->sid_size;
+             byte_index < RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_SID_SIZE;
+             ++byte_index)
+            if (entry->sid[byte_index] != 0u) return 0;
+    }
+    for (index = 0u;
+         index < RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_RESTRICTED_SIDS; ++index) {
+        const rin_unix_wincompat_sid_entry_v1* entry =
+            &context->restricted_sids[index];
+        if (index >= context->restricted_sid_count) {
+            const uint8_t* bytes = (const uint8_t*)entry;
+            for (byte_index = 0u; byte_index < sizeof(*entry); ++byte_index)
+                if (bytes[byte_index] != 0u) return 0;
+            continue;
+        }
+        if (!rin_unix_wincompat_sid_valid(entry->sid, entry->sid_size) ||
+            (entry->attributes & ~UINT32_C(0xe000007f)) != 0u)
+            return 0;
+        for (byte_index = entry->sid_size;
+             byte_index < RIN_UNIX_PEER_WINCOMPAT_TOKEN_MAX_SID_SIZE;
+             ++byte_index)
+            if (entry->sid[byte_index] != 0u) return 0;
+    }
+    return 1;
 }
 
 static inline int rin_unix_application_id_valid(
