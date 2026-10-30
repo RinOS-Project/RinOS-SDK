@@ -9,10 +9,11 @@
 extern "C" {
 #endif
 
-/* Start is a real service-manager operation.  The SDK implementation may
- * reject callers without the required capability; it must never be replaced
- * by a success-returning compatibility stub. */
+/* Lifecycle operations are real service-manager requests. The kernel checks
+ * the caller's service-control capability; callers must propagate failures. */
 RIN_SDK_API RinResult rin_service_start(int scope, const char* id);
+RIN_SDK_API RinResult rin_service_stop(int scope, const char* id);
+RIN_SDK_API RinResult rin_service_restart(int scope, const char* id);
 
 #ifdef __cplusplus
 }
