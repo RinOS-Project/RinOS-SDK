@@ -758,9 +758,9 @@ static int rin_media_snapshot_source(const RinMediaOpenV1* request,
                                request->source.size,
                                RIN_MEDIA_MAX_SOURCE_BYTES_V1, 0))
         return 0;
-    fd = mkstemp(path);
+    fd = mkostemp(path, O_CLOEXEC);
     if (fd < 0) return 0;
-    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0 || unlink(path) != 0) {
+    if (unlink(path) != 0) {
         (void)close(fd);
         (void)unlink(path);
         return 0;
