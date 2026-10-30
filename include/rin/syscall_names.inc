@@ -125,6 +125,7 @@
 [RIN_SYS_PRCTL] = "prctl",
 [RIN_SYS_PTRACE] = "ptrace",
 [RIN_SYS_SECCOMP] = "seccomp",
+[RIN_SYS_VFORK] = "vfork",
 [RIN_SYS_RT_SIGRETURN] = "rt_sigreturn",
 [RIN_SYS_RT_SIGACTION] = "rt_sigaction",
 [RIN_SYS_RT_SIGPROCMASK] = "rt_sigprocmask",

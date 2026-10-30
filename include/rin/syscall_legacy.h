@@ -133,6 +133,7 @@
 #define SYS_PRCTL                       RIN_SYS_PRCTL
 #define SYS_PTRACE                      RIN_SYS_PTRACE
 #define SYS_SECCOMP                     RIN_SYS_SECCOMP
+#define SYS_VFORK                       RIN_SYS_VFORK
 #define SYS_RT_SIGRETURN                RIN_SYS_RT_SIGRETURN
 #define SYS_RT_SIGACTION                RIN_SYS_RT_SIGACTION
 #define SYS_RT_SIGPROCMASK              RIN_SYS_RT_SIGPROCMASK
