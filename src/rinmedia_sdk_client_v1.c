@@ -295,9 +295,13 @@ static int rin_media_transfer_exact_timeout_cancellable(
                 waited_ms += (uint32_t)wait_ms;
                 continue;
             }
-            if ((item.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0)
+            if ((item.revents & POLLNVAL) != 0)
                 return 0;
             if ((item.revents & readiness) != 0) break;
+            /* POLLHUP can accompany readable buffered response bytes. Drain
+             * those bytes before a later recv() observes EOF. */
+            if (receiving && (item.revents & POLLHUP) != 0) break;
+            if ((item.revents & (POLLERR | POLLHUP)) != 0) return 0;
             item.revents = 0;
             waited_ms += (uint32_t)wait_ms;
         }
