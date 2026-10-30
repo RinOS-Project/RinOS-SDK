@@ -1281,7 +1281,7 @@
 /* PROCESS_TARGET_CONTROL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_PROCESS_TARGET_CONTROL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_PROCESS_TARGET_CONTROL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_PROCESS_TARGET_CONTROL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_PROCESS_TARGET_CONTROL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* gui. */
 #define RIN_SYS_GUI_V2_CALL                 0x800Eu
 /* GUI_V2_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
