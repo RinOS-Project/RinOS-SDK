@@ -1352,6 +1352,9 @@ typedef RinDriverV3Result (*RinDriverV3RegisterDeviceFn)(
 typedef RinDriverV3Result (*RinDriverV3PciConfigReadFn)(
     uint64_t api_context, uint64_t session, uint16_t offset,
     uint8_t width, uint32_t* value);
+/* A non-OK result does not guarantee that the device register was unchanged.
+ * Callers that may need rollback must retain the old value and attempt its
+ * restoration after every write attempt, including failed writes. */
 typedef RinDriverV3Result (*RinDriverV3PciConfigWriteFn)(
     uint64_t api_context, uint64_t session, uint16_t offset,
     uint8_t width, uint32_t value);
