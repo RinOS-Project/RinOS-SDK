@@ -641,16 +641,19 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_GETCPU_COUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETCPU_COUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* object. */
+/* nameは最大63 byte。sizeは1..256 MiB。flagsはCREATE/EXCL/UNLINK_ON_CLOSEのみで、EXCLにはCREATEが必要。 */
 #define RIN_SYS_SHMGET                      137u
 /* SHMGET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_SHMGET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHMGET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHMGET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* address_hintが0ならkernelがmapping addressを選択する。protectionはREAD必須。WRITEとEXECの同時指定は不可で、EXECはx86_64のみ。 */
 #define RIN_SYS_SHMAT                       138u
 /* SHMAT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_SHMAT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHMAT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHMAT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* addressはmapping base address。0はhandleに現在紐付くmapping addressを指定する。 */
 #define RIN_SYS_SHMDT                       139u
 /* SHMDT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_SHMDT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
