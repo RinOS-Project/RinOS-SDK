@@ -14,6 +14,7 @@
 #define RIN_CONTRACT_ABI_MAJOR 1u
 #define RIN_CONTRACT_ABI_MINOR 0u
 #define RIN_CONTRACT_STRUCT_VERSION_1 1u
+#define RIN_SHM_RANGE_REQUEST_VERSION 1u
 
 typedef int32_t RinResultCode;
 
@@ -1629,6 +1630,29 @@ typedef struct RinCredentialGetResV1 {
     uint64_t reserved;
 } RinCredentialGetResV1;
 
+/* IA-32のSHM範囲attach要求。アドレスと範囲値を64-bit幅で保持する。 */
+typedef struct RinShmAttachRangeV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    int32_t handle;
+    uint32_t protection;
+    uint64_t address_hint;
+    uint64_t offset;
+    uint64_t size;
+} RinShmAttachRangeV1;
+
+/* IA-32のSHM保護要求。アドレスとサイズを64-bit幅で保持する。 */
+typedef struct RinShmProtectV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    uint64_t address;
+    uint64_t size;
+    uint32_t protection;
+    uint32_t reserved1;
+} RinShmProtectV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinDlAddrRllRecordV1) == 240, "RinDlAddrRllRecordV1 ABI drift");
 static_assert(offsetof(RinDlAddrRllRecordV1, abi_version) == 0, "RinDlAddrRllRecordV1.abi_version ABI drift");
@@ -2555,6 +2579,23 @@ static_assert(offsetof(RinCredentialGetResV1, real_id_output) == 16, "RinCredent
 static_assert(offsetof(RinCredentialGetResV1, effective_id_output) == 24, "RinCredentialGetResV1.effective_id_output ABI drift");
 static_assert(offsetof(RinCredentialGetResV1, saved_id_output) == 32, "RinCredentialGetResV1.saved_id_output ABI drift");
 static_assert(offsetof(RinCredentialGetResV1, reserved) == 40, "RinCredentialGetResV1.reserved ABI drift");
+static_assert(sizeof(RinShmAttachRangeV1) == 40, "RinShmAttachRangeV1 ABI drift");
+static_assert(offsetof(RinShmAttachRangeV1, struct_size) == 0, "RinShmAttachRangeV1.struct_size ABI drift");
+static_assert(offsetof(RinShmAttachRangeV1, version) == 4, "RinShmAttachRangeV1.version ABI drift");
+static_assert(offsetof(RinShmAttachRangeV1, reserved0) == 6, "RinShmAttachRangeV1.reserved0 ABI drift");
+static_assert(offsetof(RinShmAttachRangeV1, handle) == 8, "RinShmAttachRangeV1.handle ABI drift");
+static_assert(offsetof(RinShmAttachRangeV1, protection) == 12, "RinShmAttachRangeV1.protection ABI drift");
+static_assert(offsetof(RinShmAttachRangeV1, address_hint) == 16, "RinShmAttachRangeV1.address_hint ABI drift");
+static_assert(offsetof(RinShmAttachRangeV1, offset) == 24, "RinShmAttachRangeV1.offset ABI drift");
+static_assert(offsetof(RinShmAttachRangeV1, size) == 32, "RinShmAttachRangeV1.size ABI drift");
+static_assert(sizeof(RinShmProtectV1) == 32, "RinShmProtectV1 ABI drift");
+static_assert(offsetof(RinShmProtectV1, struct_size) == 0, "RinShmProtectV1.struct_size ABI drift");
+static_assert(offsetof(RinShmProtectV1, version) == 4, "RinShmProtectV1.version ABI drift");
+static_assert(offsetof(RinShmProtectV1, reserved0) == 6, "RinShmProtectV1.reserved0 ABI drift");
+static_assert(offsetof(RinShmProtectV1, address) == 8, "RinShmProtectV1.address ABI drift");
+static_assert(offsetof(RinShmProtectV1, size) == 16, "RinShmProtectV1.size ABI drift");
+static_assert(offsetof(RinShmProtectV1, protection) == 24, "RinShmProtectV1.protection ABI drift");
+static_assert(offsetof(RinShmProtectV1, reserved1) == 28, "RinShmProtectV1.reserved1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinDlAddrRllRecordV1) == 240, "RinDlAddrRllRecordV1 ABI drift");
 _Static_assert(offsetof(RinDlAddrRllRecordV1, abi_version) == 0, "RinDlAddrRllRecordV1.abi_version ABI drift");
@@ -3481,6 +3522,23 @@ _Static_assert(offsetof(RinCredentialGetResV1, real_id_output) == 16, "RinCreden
 _Static_assert(offsetof(RinCredentialGetResV1, effective_id_output) == 24, "RinCredentialGetResV1.effective_id_output ABI drift");
 _Static_assert(offsetof(RinCredentialGetResV1, saved_id_output) == 32, "RinCredentialGetResV1.saved_id_output ABI drift");
 _Static_assert(offsetof(RinCredentialGetResV1, reserved) == 40, "RinCredentialGetResV1.reserved ABI drift");
+_Static_assert(sizeof(RinShmAttachRangeV1) == 40, "RinShmAttachRangeV1 ABI drift");
+_Static_assert(offsetof(RinShmAttachRangeV1, struct_size) == 0, "RinShmAttachRangeV1.struct_size ABI drift");
+_Static_assert(offsetof(RinShmAttachRangeV1, version) == 4, "RinShmAttachRangeV1.version ABI drift");
+_Static_assert(offsetof(RinShmAttachRangeV1, reserved0) == 6, "RinShmAttachRangeV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinShmAttachRangeV1, handle) == 8, "RinShmAttachRangeV1.handle ABI drift");
+_Static_assert(offsetof(RinShmAttachRangeV1, protection) == 12, "RinShmAttachRangeV1.protection ABI drift");
+_Static_assert(offsetof(RinShmAttachRangeV1, address_hint) == 16, "RinShmAttachRangeV1.address_hint ABI drift");
+_Static_assert(offsetof(RinShmAttachRangeV1, offset) == 24, "RinShmAttachRangeV1.offset ABI drift");
+_Static_assert(offsetof(RinShmAttachRangeV1, size) == 32, "RinShmAttachRangeV1.size ABI drift");
+_Static_assert(sizeof(RinShmProtectV1) == 32, "RinShmProtectV1 ABI drift");
+_Static_assert(offsetof(RinShmProtectV1, struct_size) == 0, "RinShmProtectV1.struct_size ABI drift");
+_Static_assert(offsetof(RinShmProtectV1, version) == 4, "RinShmProtectV1.version ABI drift");
+_Static_assert(offsetof(RinShmProtectV1, reserved0) == 6, "RinShmProtectV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinShmProtectV1, address) == 8, "RinShmProtectV1.address ABI drift");
+_Static_assert(offsetof(RinShmProtectV1, size) == 16, "RinShmProtectV1.size ABI drift");
+_Static_assert(offsetof(RinShmProtectV1, protection) == 24, "RinShmProtectV1.protection ABI drift");
+_Static_assert(offsetof(RinShmProtectV1, reserved1) == 28, "RinShmProtectV1.reserved1 ABI drift");
 #endif
 
 #endif /* RIN_SDK_CONTRACT_ABI_H */
