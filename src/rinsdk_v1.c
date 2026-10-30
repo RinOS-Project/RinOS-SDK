@@ -1665,6 +1665,18 @@ RinResult rin_package_query_v1(RinPackage package,RinPackageInfoV1* info) { VERS
 RinResult rin_package_install_v1(RinStringV1 source,uint32_t flags,RinEvent completion) { SIMPLE_CALL(RIN_SDK_LIBRARY_PKG,PKG_INSTALL,(RinResult*)0,source.address,source.size,flags,completion,0,0); }
 RinResult rin_package_remove_v1(RinStringV1 name,uint32_t flags,RinEvent completion) { SIMPLE_CALL(RIN_SDK_LIBRARY_PKG,PKG_REMOVE,(RinResult*)0,name.address,name.size,flags,completion,0,0); }
 RinResult rin_package_enumerate_v1(uint64_t index,RinPackageInfoV1* info) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_PKG,PKG_ENUMERATE,info,index,0,0,0,0,0); }
+RinResult rin_package_verify_installed_file_content_v1(
+    RinStringV1 canonical_path, const void* content, uint64_t content_size) {
+    uint64_t request[4];
+    if ((!canonical_path.address && canonical_path.size != 0u) ||
+        !content || content_size == 0u) return RIN_ERROR_INVALID_ARGUMENT;
+    request[0] = canonical_path.address;
+    request[1] = canonical_path.size;
+    request[2] = (uint64_t)(uintptr_t)content;
+    request[3] = content_size;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_PKG, 6u, request,
+                             sizeof(request), NULL, 0u);
+}
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_DEVICE)

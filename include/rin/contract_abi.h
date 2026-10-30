@@ -14,11 +14,11 @@
 #define RIN_CONTRACT_ABI_MAJOR 1u
 #define RIN_CONTRACT_ABI_MINOR 0u
 #define RIN_CONTRACT_STRUCT_VERSION_1 1u
-#define RIN_SHM_RANGE_REQUEST_VERSION 1u
 
 typedef int32_t RinResultCode;
 
 /* Public fixed-value constants shared by all RinNative clients. */
+#define RIN_SHM_RANGE_REQUEST_VERSION       1u
 #define RIN_TIMER_CREATE_FLAG_VALUE_TIMER_ID 1u
 #define RIN_SYSCALL_IA32_REGISTER_WIDTH_BITS 32u
 #define RIN_SYSCALL_IA32_WIDE_ARGUMENT_ORDER_LOW_WORD_FIRST 1u
@@ -139,6 +139,8 @@ typedef int32_t RinResultCode;
 #define RIN_PROCESS_TARGET_OPERATION_COMMIT_DYNAMIC_IMAGE 27u
 #define RIN_PROCESS_TARGET_OPERATION_RELEASE_DYNAMIC_IMAGE 28u
 #define RIN_PROCESS_TARGET_OPERATION_QUERY_BOOTSTRAP 29u
+#define RIN_PROCESS_TARGET_OPERATION_WRITE_THREAD_STACK 30u
+#define RIN_PROCESS_TARGET_OPERATION_QUERY_THREAD_CONTEXT 31u
 #define RIN_PROCESS_TARGET_EXCEPTION_RESUME_HANDLER 1u
 #define RIN_PROCESS_TARGET_EXCEPTION_RESUME_CONTINUATION 2u
 #define RIN_PROCESS_TARGET_PROTECTION_READ  1u
@@ -675,7 +677,6 @@ typedef struct RinSupplementaryGroupsV1 {
     uint64_t reserved;
 } RinSupplementaryGroupsV1;
 
-/* 補助グループを利用者ポインター経由で安全に取得・設定する要求。 */
 typedef struct RinSupplementaryGroupsUserV2 {
     uint32_t struct_size;
     uint16_t version;

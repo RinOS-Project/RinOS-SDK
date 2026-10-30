@@ -30,6 +30,11 @@ RIN_SDK_API RinResult rin_package_query_v1(RinPackage package, RinPackageInfoV1*
 RIN_SDK_API RinResult rin_package_install_v1(RinStringV1 source, uint32_t flags, RinEvent completion);
 RIN_SDK_API RinResult rin_package_remove_v1(RinStringV1 name, uint32_t flags, RinEvent completion);
 RIN_SDK_API RinResult rin_package_enumerate_v1(uint64_t index, RinPackageInfoV1* info);
+/* Authenticates the exact immutable bytes retained by the caller against an
+ * installed package file identity. Only the wincompatregd system service may
+ * invoke this broker operation. */
+RIN_SDK_API RinResult rin_package_verify_installed_file_content_v1(
+    RinStringV1 canonical_path, const void* content, uint64_t content_size);
 #ifdef __cplusplus
 }
 #endif
