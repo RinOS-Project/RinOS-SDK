@@ -145,13 +145,18 @@ typedef int32_t RinResultCode;
 #define RIN_PROCESS_TARGET_MAX_PATCHES      0x1002u
 #define RIN_PROCESS_TARGET_EXCEPTION_FRAME_SIZE 1472u
 #define RIN_THREAD_CONTEXT_ARCH_AMD64       1u
+#define RIN_THREAD_CONTEXT_ARCH_I386        2u
 #define RIN_THREAD_CONTEXT_FLAG_INTEGER     1u
 #define RIN_THREAD_CONTEXT_FLAG_CONTROL     2u
 #define RIN_THREAD_CONTEXT_FLAG_LEGACY_XSTATE 4u
 #define RIN_THREAD_CONTEXT_AMD64_REQUIRED_FLAGS 7u
 #define RIN_THREAD_CONTEXT_AMD64_XSTATE_SIZE 512u
 #define RIN_THREAD_CONTEXT_AMD64_GPR_RSP    4u
+#define RIN_THREAD_CONTEXT_I386_GPR_ESP     4u
+#define RIN_THREAD_CONTEXT_I386_REQUIRED_FLAGS 7u
+#define RIN_THREAD_CONTEXT_I386_XSTATE_SIZE 512u
 #define RIN_EXCEPTION_STOP_ARCH_AMD64       1u
+#define RIN_EXCEPTION_STOP_ARCH_I386        2u
 #define RIN_EXCEPTION_STOP_STATE_CAPTURED   1u
 #define RIN_EXCEPTION_STOP_STATE_HANDLER_RETURNED 2u
 #define RIN_EXCEPTION_STOP_NO_RETURN_CODE   0xFFFFFFFFu
@@ -1030,6 +1035,28 @@ typedef struct RinAmd64ThreadContextV1 {
     uint8_t xstate[512];
     uint64_t reserved;
 } RinAmd64ThreadContextV1;
+
+typedef struct RinI386ThreadContextV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t architecture;
+    uint32_t flags;
+    uint32_t xstate_size;
+    uint32_t gpr[8];
+    uint32_t eip;
+    uint32_t eflags;
+    uint16_t cs;
+    uint16_t ss;
+    uint16_t ds;
+    uint16_t es;
+    uint16_t fs;
+    uint16_t gs;
+    uint32_t reserved0;
+    uint32_t fs_base;
+    uint32_t gs_base;
+    uint8_t xstate[512];
+    uint32_t reserved[2];
+} RinI386ThreadContextV1;
 
 typedef struct RinExceptionStopV1 {
     uint32_t struct_size;
@@ -1972,6 +1999,26 @@ static_assert(offsetof(RinAmd64ThreadContextV1, ss) == 162, "RinAmd64ThreadConte
 static_assert(offsetof(RinAmd64ThreadContextV1, reserved0) == 164, "RinAmd64ThreadContextV1.reserved0 ABI drift");
 static_assert(offsetof(RinAmd64ThreadContextV1, xstate) == 168, "RinAmd64ThreadContextV1.xstate ABI drift");
 static_assert(offsetof(RinAmd64ThreadContextV1, reserved) == 680, "RinAmd64ThreadContextV1.reserved ABI drift");
+static_assert(sizeof(RinI386ThreadContextV1) == 600, "RinI386ThreadContextV1 ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, struct_size) == 0, "RinI386ThreadContextV1.struct_size ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, version) == 4, "RinI386ThreadContextV1.version ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, architecture) == 6, "RinI386ThreadContextV1.architecture ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, flags) == 8, "RinI386ThreadContextV1.flags ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, xstate_size) == 12, "RinI386ThreadContextV1.xstate_size ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, gpr) == 16, "RinI386ThreadContextV1.gpr ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, eip) == 48, "RinI386ThreadContextV1.eip ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, eflags) == 52, "RinI386ThreadContextV1.eflags ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, cs) == 56, "RinI386ThreadContextV1.cs ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, ss) == 58, "RinI386ThreadContextV1.ss ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, ds) == 60, "RinI386ThreadContextV1.ds ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, es) == 62, "RinI386ThreadContextV1.es ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, fs) == 64, "RinI386ThreadContextV1.fs ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, gs) == 66, "RinI386ThreadContextV1.gs ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, reserved0) == 68, "RinI386ThreadContextV1.reserved0 ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, fs_base) == 72, "RinI386ThreadContextV1.fs_base ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, gs_base) == 76, "RinI386ThreadContextV1.gs_base ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, xstate) == 80, "RinI386ThreadContextV1.xstate ABI drift");
+static_assert(offsetof(RinI386ThreadContextV1, reserved) == 592, "RinI386ThreadContextV1.reserved ABI drift");
 static_assert(sizeof(RinExceptionStopV1) == 64, "RinExceptionStopV1 ABI drift");
 static_assert(offsetof(RinExceptionStopV1, struct_size) == 0, "RinExceptionStopV1.struct_size ABI drift");
 static_assert(offsetof(RinExceptionStopV1, version) == 4, "RinExceptionStopV1.version ABI drift");
@@ -2838,6 +2885,26 @@ _Static_assert(offsetof(RinAmd64ThreadContextV1, ss) == 162, "RinAmd64ThreadCont
 _Static_assert(offsetof(RinAmd64ThreadContextV1, reserved0) == 164, "RinAmd64ThreadContextV1.reserved0 ABI drift");
 _Static_assert(offsetof(RinAmd64ThreadContextV1, xstate) == 168, "RinAmd64ThreadContextV1.xstate ABI drift");
 _Static_assert(offsetof(RinAmd64ThreadContextV1, reserved) == 680, "RinAmd64ThreadContextV1.reserved ABI drift");
+_Static_assert(sizeof(RinI386ThreadContextV1) == 600, "RinI386ThreadContextV1 ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, struct_size) == 0, "RinI386ThreadContextV1.struct_size ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, version) == 4, "RinI386ThreadContextV1.version ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, architecture) == 6, "RinI386ThreadContextV1.architecture ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, flags) == 8, "RinI386ThreadContextV1.flags ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, xstate_size) == 12, "RinI386ThreadContextV1.xstate_size ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, gpr) == 16, "RinI386ThreadContextV1.gpr ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, eip) == 48, "RinI386ThreadContextV1.eip ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, eflags) == 52, "RinI386ThreadContextV1.eflags ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, cs) == 56, "RinI386ThreadContextV1.cs ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, ss) == 58, "RinI386ThreadContextV1.ss ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, ds) == 60, "RinI386ThreadContextV1.ds ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, es) == 62, "RinI386ThreadContextV1.es ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, fs) == 64, "RinI386ThreadContextV1.fs ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, gs) == 66, "RinI386ThreadContextV1.gs ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, reserved0) == 68, "RinI386ThreadContextV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, fs_base) == 72, "RinI386ThreadContextV1.fs_base ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, gs_base) == 76, "RinI386ThreadContextV1.gs_base ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, xstate) == 80, "RinI386ThreadContextV1.xstate ABI drift");
+_Static_assert(offsetof(RinI386ThreadContextV1, reserved) == 592, "RinI386ThreadContextV1.reserved ABI drift");
 _Static_assert(sizeof(RinExceptionStopV1) == 64, "RinExceptionStopV1 ABI drift");
 _Static_assert(offsetof(RinExceptionStopV1, struct_size) == 0, "RinExceptionStopV1.struct_size ABI drift");
 _Static_assert(offsetof(RinExceptionStopV1, version) == 4, "RinExceptionStopV1.version ABI drift");

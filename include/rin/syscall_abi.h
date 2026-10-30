@@ -1186,7 +1186,7 @@
 #define RIN_SYS_GETRANDOM_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETRANDOM_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
-/* clear_child_tid on thread exit */
+/* clear_child_tidへexit時に0を書き込み、futex waiterをwakeする。成功時はnamespace-visible current TIDを返す。 */
 #define RIN_SYS_SET_TID_ADDRESS             351u
 /* SET_TID_ADDRESS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_SET_TID_ADDRESS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -1289,11 +1289,12 @@
 #define RIN_SYS_GUI_V2_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_V2_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* process. */
+/* RinNT Win32 targets use a bounded 32-bit stop token for compat32 INT 0x80 return; Win64 native targets retain the 64-bit stop token. */
 #define RIN_SYS_RINNT_EXCEPTION_RETURN      0x800Fu
 /* RINNT_EXCEPTION_RETURN availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_RINNT_EXCEPTION_RETURN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_RINNT_EXCEPTION_RETURN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_RINNT_EXCEPTION_RETURN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_RINNT_EXCEPTION_RETURN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* storage. */
 #define RIN_SYS_INSTALL_SOURCE_QUERY        0x8010u
 /* INSTALL_SOURCE_QUERY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
