@@ -124,14 +124,9 @@ int rin_virtqueue_v3_submit_chain(
     }
     scan = queue->free_head;
     for (uint16_t index = 0u; index < buffer_count; ++index) {
-        uint16_t prior_scan = queue->free_head;
         if (scan >= queue->size ||
             queue->descriptor_state[scan] != VIRTQ_DESCRIPTOR_FREE) {
             return -1;
-        }
-        for (uint16_t prior = 0u; prior < index; ++prior) {
-            if (prior_scan == scan || prior_scan >= queue->size) return -1;
-            prior_scan = queue->descriptors[prior_scan].next;
         }
         scan = queue->descriptors[scan].next;
     }
