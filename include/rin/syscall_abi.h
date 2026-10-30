@@ -2069,7 +2069,7 @@
 #define RIN_SYS_SENDMMSG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SENDMMSG_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SENDMMSG_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-/* kernelがinterruptibleなrecvmmsg待機を所有し、optional timespecはchecked copyinとgeneration保持付きread/write leaseで扱う。 */
+/* 4引数の互換ABI。待機とタイムアウト処理は呼び出し側が行う。 */
 #define RIN_SYS_RECVMMSG                    0x809Cu
 /* RECVMMSG availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_RECVMMSG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -2161,7 +2161,7 @@
 #define RIN_SYS_CREDENTIALS_GETRES_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CREDENTIALS_GETRES_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* network. */
-/* timeout付き待機をkernelが所有し、signal restartとtimeout残量を一体で処理する。 */
+/* タイムアウト付き待機をカーネルが管理し、シグナル再開判定と残り時間更新を一体で処理する。 */
 #define RIN_SYS_RECVMMSG_WAIT_V1            0x80ABu
 /* RECVMMSG_WAIT_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_RECVMMSG_WAIT_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
