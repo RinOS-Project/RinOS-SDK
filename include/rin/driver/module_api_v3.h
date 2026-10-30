@@ -1327,17 +1327,23 @@ typedef RinDriverV3Result (*RinDriverV3DmaMapSgFn)(
 typedef RinDriverV3Result (*RinDriverV3DmaSyncFn)(
     uint64_t api_context, uint64_t session, RinDriverV3Lease lease,
     uint32_t action, uint64_t offset, uint64_t length);
+/* On success, output owns the BAR mapping. On any failure, the
+ * implementation must zero the entire output and transfer no lease. */
 typedef RinDriverV3Result (*RinDriverV3BarMapFn)(
     uint64_t api_context, uint64_t session, uint32_t bar_index,
     uint32_t flags, RinDriverV3BarLeaseInfo* output);
+/* On success, output owns the IRQ allocation. On any failure, the
+ * implementation must zero the entire output and transfer no lease. */
 typedef RinDriverV3Result (*RinDriverV3IrqAcquireFn)(
     uint64_t api_context, uint64_t session, uint32_t mode,
     uint32_t vector_index, RinDriverV3IrqLeaseInfo* output);
 typedef RinDriverV3Result (*RinDriverV3LeaseReleaseFn)(
     uint64_t api_context, uint64_t session, RinDriverV3Lease lease);
+/* On success, output owns the timer. On any failure, it must be zero. */
 typedef RinDriverV3Result (*RinDriverV3TimerArmFn)(
     uint64_t api_context, uint64_t session, uint64_t deadline_ns,
     uint64_t period_ns, RinDriverV3Lease* output);
+/* event_count is zero on failure. Event contents are unspecified on failure. */
 typedef RinDriverV3Result (*RinDriverV3TimerPollFn)(
     uint64_t api_context, uint64_t session, uint64_t now_ns,
     RinDriverV3TimerEvent* events, uint32_t capacity, uint32_t* event_count);
@@ -1352,10 +1358,12 @@ typedef RinDriverV3Result (*RinDriverV3TimerHandlerFn)(
 typedef RinDriverV3Result (*RinDriverV3TimerSetHandlerFn)(
     uint64_t api_context, uint64_t session, RinDriverV3TimerHandlerFn handler,
     uint64_t driver_context);
+/* On success, output owns the registration. On any failure, it must be zero. */
 typedef RinDriverV3Result (*RinDriverV3RegisterDeviceFn)(
     uint64_t api_context, uint64_t session,
     const RinDriverV3DeviceRegistration* registration,
     RinDriverV3Lease* output);
+/* value is zero on failure. */
 typedef RinDriverV3Result (*RinDriverV3PciConfigReadFn)(
     uint64_t api_context, uint64_t session, uint16_t offset,
     uint8_t width, uint32_t* value);
