@@ -686,6 +686,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_THREAD_SCHED_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_THREAD_SCHED_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_THREAD_SCHED_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* The parameter record's policy may be RIN_THREAD_SCHED_POLICY_KEEP_CURRENT (-1) for an atomic priority-only update; the kernel validates against the policy held when it commits the change. */
 #define RIN_SYS_THREAD_SCHED_SET            145u
 /* THREAD_SCHED_SET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_THREAD_SCHED_SET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -1436,7 +1437,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_RIN_PASS_CONTROL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_KEYRING_MASTER_ACQUIRE      0x8020u
 /* KEYRING_MASTER_ACQUIRE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
-#define RIN_SYS_KEYRING_MASTER_ACQUIRE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_KEYRING_MASTER_ACQUIRE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_KEYRING_MASTER_ACQUIRE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_KEYRING_MASTER_ACQUIRE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* power. */
@@ -2258,7 +2259,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS_PIDFD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS_PIDFD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS_PIDFD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-
+/* file. */
 /* FID通知とpermission eventを持つfanotify groupを作成する。 */
 #define RIN_SYS_FANOTIFY_INIT               0x80B0u
 /* FANOTIFY_INIT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
