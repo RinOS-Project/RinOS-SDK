@@ -2069,7 +2069,7 @@
 #define RIN_SYS_SENDMMSG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SENDMMSG_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SENDMMSG_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-/* 受信はlibcがpollで待機・timeout残量を管理し、kernelがnonblocking message batchを処理する。 */
+/* kernelがinterruptibleなrecvmmsg待機を所有し、optional timespecはchecked copyinとgeneration保持付きread/write leaseで扱う。 */
 #define RIN_SYS_RECVMMSG                    0x809Cu
 /* RECVMMSG availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_RECVMMSG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
