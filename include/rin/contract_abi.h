@@ -1595,6 +1595,7 @@ typedef struct RinCredentialGetResV1 {
     uint16_t version;
     uint16_t kind;
     uint32_t reserved0;
+    uint32_t reserved1;
     uint64_t real_id_output;
     uint64_t effective_id_output;
     uint64_t saved_id_output;
@@ -2502,6 +2503,7 @@ static_assert(offsetof(RinCredentialGetResV1, struct_size) == 0, "RinCredentialG
 static_assert(offsetof(RinCredentialGetResV1, version) == 4, "RinCredentialGetResV1.version ABI drift");
 static_assert(offsetof(RinCredentialGetResV1, kind) == 6, "RinCredentialGetResV1.kind ABI drift");
 static_assert(offsetof(RinCredentialGetResV1, reserved0) == 8, "RinCredentialGetResV1.reserved0 ABI drift");
+static_assert(offsetof(RinCredentialGetResV1, reserved1) == 12, "RinCredentialGetResV1.reserved1 ABI drift");
 static_assert(offsetof(RinCredentialGetResV1, real_id_output) == 16, "RinCredentialGetResV1.real_id_output ABI drift");
 static_assert(offsetof(RinCredentialGetResV1, effective_id_output) == 24, "RinCredentialGetResV1.effective_id_output ABI drift");
 static_assert(offsetof(RinCredentialGetResV1, saved_id_output) == 32, "RinCredentialGetResV1.saved_id_output ABI drift");
@@ -3407,6 +3409,7 @@ _Static_assert(offsetof(RinCredentialGetResV1, struct_size) == 0, "RinCredential
 _Static_assert(offsetof(RinCredentialGetResV1, version) == 4, "RinCredentialGetResV1.version ABI drift");
 _Static_assert(offsetof(RinCredentialGetResV1, kind) == 6, "RinCredentialGetResV1.kind ABI drift");
 _Static_assert(offsetof(RinCredentialGetResV1, reserved0) == 8, "RinCredentialGetResV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinCredentialGetResV1, reserved1) == 12, "RinCredentialGetResV1.reserved1 ABI drift");
 _Static_assert(offsetof(RinCredentialGetResV1, real_id_output) == 16, "RinCredentialGetResV1.real_id_output ABI drift");
 _Static_assert(offsetof(RinCredentialGetResV1, effective_id_output) == 24, "RinCredentialGetResV1.effective_id_output ABI drift");
 _Static_assert(offsetof(RinCredentialGetResV1, saved_id_output) == 32, "RinCredentialGetResV1.saved_id_output ABI drift");
