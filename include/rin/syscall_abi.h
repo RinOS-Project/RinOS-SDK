@@ -76,7 +76,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_FORK_CONDITION_X86_64_COMPAT32 "available when x86_64 compat32 execution is enabled"
 #define RIN_SYS_EXEC                        2u
 /* EXEC availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
-#define RIN_SYS_EXEC_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_EXEC_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_EXEC_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_EXEC_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_CONDITIONAL
 #define RIN_SYS_EXEC_CONDITION_X86_64_COMPAT32 "available when x86_64 compat32 execution is enabled"
@@ -1048,6 +1048,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_UNAME_V2_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_UNAME_V2_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
+/* monotonic clock. NULL output returns nanoseconds in a register (low 32 bits on IA-32/compat32); non-NULL writes 8 bytes and returns 0 on IA-32/compat32, EFAULT on fault. x86_64 native ignores slot 1 and returns 64 bits. */
 #define RIN_SYS_TIME_NS                     260u
 /* TIME_NS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_TIME_NS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -1091,6 +1092,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_DLINVENTORY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DLINVENTORY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* time. */
+/* realtime clock. NULL output returns nanoseconds in a register (low 32 bits on IA-32/compat32); non-NULL writes 8 bytes and returns 0 on IA-32/compat32, EFAULT on fault. x86_64 native ignores slot 1 and returns 64 bits. */
 #define RIN_SYS_REALTIME_NS                 268u
 /* REALTIME_NS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_REALTIME_NS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
