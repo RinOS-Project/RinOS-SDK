@@ -19,6 +19,12 @@
     (RIN_TLS_DTV_FIRST_MODULE_SLOT + RIN_TLS_DTV_MAX_MODULES - UINT32_C(1))
 #define RIN_TLS_DTV_SLOT_COUNT (RIN_TLS_DTV_LAST_MODULE_SLOT + UINT32_C(1))
 #define RIN_TLS_DTV_FIRST_DYNAMIC_SLOT UINT32_C(2)
+/* RinTlsIndexV2 contains a slot number but no slot generation. Dynamic DTV
+ * indices are therefore never recycled within a process lifetime: unloading
+ * a module does not return its index to this budget. */
+#define RIN_TLS_DTV_MAX_DYNAMIC_MODULES_LIFETIME \
+    (RIN_TLS_DTV_LAST_MODULE_SLOT - RIN_TLS_DTV_FIRST_DYNAMIC_SLOT + \
+     UINT32_C(1))
 #define RIN_TLS_DTV_PUBLISHED_MODULES UINT32_C(1) /* V1 compatibility */
 #define RIN_TLS_TCB_DTV_OFFSET UINT32_C(8)
 #define RIN_TLS_TCB_ABI_VERSION_OFFSET UINT32_C(0x30)
