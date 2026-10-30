@@ -30,6 +30,8 @@
 #include "input_method.h"
 #include "keyboard_layout.h"
 #include "input/keyboard_layout_preference_v1.h"
+#include "locale.h"
+#include "timezone.h"
 #include "syscall_abi.h"
 #include "syscall_contract.h"
 #include "syscall_legacy.h"
