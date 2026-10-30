@@ -242,28 +242,6 @@ _Static_assert(sizeof(RinCredentialsV1) == 112u,
                "RinCredentialsV1 ABI drift");
 #endif
 
-/* The credential-ID snapshot is intentionally separate from the richer
- * credential object.  It is the stable setresuid/setresgid view used by
- * process identity and platform publication paths. */
-typedef struct RinCredentialIdsV1 {
-    uint32_t struct_size;
-    uint32_t version;
-    uint32_t real_uid;
-    uint32_t real_gid;
-    uint32_t effective_uid;
-    uint32_t effective_gid;
-    uint32_t saved_uid;
-    uint32_t saved_gid;
-} RinCredentialIdsV1;
-
-#if defined(__cplusplus)
-static_assert(sizeof(RinCredentialIdsV1) == 32u,
-              "RinCredentialIdsV1 ABI drift");
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinCredentialIdsV1) == 32u,
-               "RinCredentialIdsV1 ABI drift");
-#endif
-
 #define RIN_SESSION_IDENTITY_VERSION_1 1u
 #ifndef RIN_SESSION_IDENTITY_V1_DEFINED
 #define RIN_SESSION_IDENTITY_V1_DEFINED 1
