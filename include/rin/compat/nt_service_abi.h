@@ -19,6 +19,11 @@
 #define RINNT_SERVICE_MAX_REGISTRY_VALUE_NAME_SIZE 255u
 #define RINNT_SERVICE_MAX_REGISTRY_VALUE_DATA_SIZE 4096u
 #define RINNT_SERVICE_REGISTRY_KEY_MARKER_NAME "\x01RinOSKeyV1"
+#define RINNT_SERVICE_REGISTRY_AUDIT_PAGE_MAX_EVENTS 32u
+#define RINNT_SERVICE_REGISTRY_AUDIT_EVENT_VERSION 1u
+#define RINNT_SERVICE_REGISTRY_AUDIT_MAX_EVENTS_PER_FILE 8192u
+#define RINNT_SERVICE_REGISTRY_AUDIT_MAX_RETAINED_EVENTS \
+    (RINNT_SERVICE_REGISTRY_AUDIT_MAX_EVENTS_PER_FILE * 2u)
 
 typedef uint64_t RinNTServiceSessionHandle;
 
@@ -46,7 +51,8 @@ typedef enum RinNTServiceCommandV1 {
     RINNT_SERVICE_COMMAND_ENUM_REGISTRY_VALUE = 16,
     RINNT_SERVICE_COMMAND_DELETE_REGISTRY_TREE = 17,
     RINNT_SERVICE_COMMAND_FLUSH_REGISTRY_HIVE = 18,
-    RINNT_SERVICE_COMMAND_QUERY_REGISTRY_HIVE = 19
+    RINNT_SERVICE_COMMAND_QUERY_REGISTRY_HIVE = 19,
+    RINNT_SERVICE_COMMAND_QUERY_REGISTRY_AUDIT = 20
 } RinNTServiceCommandV1;
 
 typedef enum RinNTServiceResult {
@@ -83,6 +89,7 @@ typedef enum RinNTServiceProcessStateV1 {
 #define RINNT_SERVICE_FEATURE_REGISTRY_HIVE UINT64_C(16)
 #define RINNT_SERVICE_FEATURE_INPUT_TRANSLATION UINT64_C(32)
 #define RINNT_SERVICE_FEATURE_REGISTRY_TREE UINT64_C(64)
+#define RINNT_SERVICE_FEATURE_REGISTRY_AUDIT UINT64_C(128)
 
 #define RINNT_SERVICE_XINPUT_MAX_USERS 4u
 #define RINNT_SERVICE_XINPUT_BUTTON_MASK UINT16_C(0xf3ff)
@@ -311,6 +318,59 @@ typedef struct RinNTServiceRegistryHiveResponseV1 {
     uint64_t reserved;
 } RinNTServiceRegistryHiveResponseV1;
 
+/* Administrator audit reads are paged oldest-first.  The first request uses
+ * zero file identities and event count; each response returns a snapshot
+ * cursor.  Later pages must return those values unchanged or receive STALE
+ * after log rotation.  Appends to the active file do not invalidate a cursor
+ * and are excluded from its fixed event count. */
+typedef struct RinNTServiceRegistryAuditQueryRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t archive_identity;
+    uint64_t active_identity;
+    uint32_t first_event;
+    uint32_t snapshot_event_count;
+    uint32_t maximum_events;
+    uint32_t reserved;
+} RinNTServiceRegistryAuditQueryRequestV1;
+
+typedef struct RinNTServiceRegistryAuditQueryResponseV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t archive_identity;
+    uint64_t active_identity;
+    uint32_t snapshot_event_count;
+    uint32_t first_event;
+    uint32_t event_count;
+    uint32_t flags;
+} RinNTServiceRegistryAuditQueryResponseV1;
+
+#define RINNT_SERVICE_REGISTRY_AUDIT_RESPONSE_MORE UINT32_C(1)
+
+typedef struct RinNTServiceRegistryAuditEventV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t hive;
+    uint32_t result;
+    uint32_t uid;
+    uint32_t desired_access;
+    uint32_t key_length;
+    uint32_t reserved;
+    uint64_t process_id;
+    uint64_t process_cookie;
+    uint64_t connection_id;
+    char key[RINNT_SERVICE_MAX_REGISTRY_KEY_SIZE + 1u];
+    uint8_t reserved_tail[7u];
+} RinNTServiceRegistryAuditEventV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinNTServiceRegistryAuditEventV1) == 576u,
+              "RinNT service registry audit event ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinNTServiceRegistryAuditEventV1) == 576u,
+               "RinNT service registry audit event ABI drift");
+#endif
+
 /* Input translation is process-session bound. No native pointer, provider
  * cookie or device object crosses this ABI. XInput user slots keep the public
  * 0..3 contract; Raw Input filters and devices are opaque service handles. */
@@ -421,6 +481,10 @@ static_assert(sizeof(RinNTServiceRegistryHiveRequestV1) == 16u,
               "RinNT service registry hive request ABI drift");
 static_assert(sizeof(RinNTServiceRegistryHiveResponseV1) == 32u,
               "RinNT service registry hive response ABI drift");
+static_assert(sizeof(RinNTServiceRegistryAuditQueryRequestV1) == 40u,
+              "RinNT service registry audit query ABI drift");
+static_assert(sizeof(RinNTServiceRegistryAuditQueryResponseV1) == 40u,
+              "RinNT service registry audit response ABI drift");
 static_assert(sizeof(RinNTServiceXInputGetStateRequestV1) == 16u,
               "RinNT service XInput query ABI drift");
 static_assert(sizeof(RinNTServiceXInputStateResponseV1) == 40u,
@@ -462,6 +526,10 @@ _Static_assert(sizeof(RinNTServiceRegistryHiveRequestV1) == 16u,
                "RinNT service registry hive request ABI drift");
 _Static_assert(sizeof(RinNTServiceRegistryHiveResponseV1) == 32u,
                "RinNT service registry hive response ABI drift");
+_Static_assert(sizeof(RinNTServiceRegistryAuditQueryRequestV1) == 40u,
+               "RinNT service registry audit query ABI drift");
+_Static_assert(sizeof(RinNTServiceRegistryAuditQueryResponseV1) == 40u,
+               "RinNT service registry audit response ABI drift");
 _Static_assert(sizeof(RinNTServiceXInputGetStateRequestV1) == 16u,
                "RinNT service XInput query ABI drift");
 _Static_assert(sizeof(RinNTServiceXInputStateResponseV1) == 40u,
