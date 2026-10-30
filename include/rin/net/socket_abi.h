@@ -58,6 +58,7 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define SO_RIN_UNIX_PEER_APPLICATION_IMAGE_PATH 0x500A
 #define SO_RIN_UNIX_PEER_ACCOUNT_IDENTITY 0x500B
 #define SO_RIN_UNIX_PEER_SERVICE_IDENTITY 0x500C
+#define SO_RIN_UNIX_PEER_SECURITY_CONTEXT 0x500E
 
 #define RIN_UNIX_SCOPE_SYSTEM UINT16_C(1)
 #define RIN_UNIX_SCOPE_USER UINT16_C(2)
@@ -75,6 +76,7 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #define RIN_UNIX_PEER_APPLICATION_IMAGE_PATH_VERSION 1u
 #define RIN_UNIX_PEER_ACCOUNT_IDENTITY_VERSION 1u
 #define RIN_UNIX_PEER_SERVICE_IDENTITY_VERSION 1u
+#define RIN_UNIX_PEER_SECURITY_CONTEXT_VERSION 1u
 #define RIN_UNIX_ACCOUNT_IDENTITY_SIZE 15u
 #define RIN_UNIX_SESSION_STATE_NONE UINT32_C(0)
 #define RIN_UNIX_SESSION_STATE_CREATING UINT32_C(1)
@@ -132,6 +134,22 @@ typedef struct rin_unix_peer_identity_v1 {
     uint32_t owner_uid;
     uint32_t flags;
 } rin_unix_peer_identity_v1;
+
+/* Kernel-captured credentials for the connected peer. Kept separate from
+ * SO_RIN_UNIX_PEER_IDENTITY so existing peer identity consumers retain their
+ * fixed ABI while ACL consumers can query groups and login-session identity. */
+typedef struct rin_unix_peer_security_context_v1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved;
+    uint32_t effective_uid;
+    uint32_t effective_gid;
+    uint32_t group_count;
+    uint32_t session_id;
+    uint64_t session_cookie;
+    uint32_t groups[8];
+    uint32_t reserved2[2];
+} rin_unix_peer_security_context_v1;
 
 /* Extended peer identity for security services. The kernel returns this only
  * when the peer was admitted from a verified signed RIN v3 image. */
@@ -233,6 +251,18 @@ static inline int rin_unix_peer_identity_valid(
            rin_sdk_live_identity(identity->process_instance_cookie) &&
            rin_sdk_live_identity(identity->connection_id) &&
            identity->flags == RIN_UNIX_PEER_IDENTITY_FLAG_CONNECTED;
+}
+
+static inline int rin_unix_peer_security_context_valid(
+    const rin_unix_peer_security_context_v1* context)
+{
+    return context != NULL &&
+           context->struct_size == sizeof(*context) &&
+           context->version == RIN_UNIX_PEER_SECURITY_CONTEXT_VERSION &&
+           context->reserved == 0u && context->group_count <= 8u &&
+           ((context->session_id == 0u && context->session_cookie == 0u) ||
+            (context->session_id != 0u && context->session_cookie != 0u)) &&
+           context->reserved2[0] == 0u && context->reserved2[1] == 0u;
 }
 
 static inline int rin_unix_application_id_valid(
@@ -414,6 +444,8 @@ static_assert(sizeof(rin_unix_peer_service_identity_v1) == 104u,
               "Rin Unix peer service identity ABI drift");
 static_assert(sizeof(rin_unix_peer_identity_v1) == 48u,
               "Rin Unix peer identity ABI drift");
+static_assert(sizeof(rin_unix_peer_security_context_v1) == 72u,
+              "Rin Unix peer security context ABI drift");
 static_assert(sizeof(rin_unix_peer_app_identity_v1) == 80u,
               "Rin Unix peer application identity ABI drift");
 static_assert(sizeof(rin_unix_peer_session_identity_v1) == 40u,
@@ -435,6 +467,8 @@ _Static_assert(sizeof(rin_unix_peer_service_identity_v1) == 104u,
                "Rin Unix peer service identity ABI drift");
 _Static_assert(sizeof(rin_unix_peer_identity_v1) == 48u,
                "Rin Unix peer identity ABI drift");
+_Static_assert(sizeof(rin_unix_peer_security_context_v1) == 72u,
+               "Rin Unix peer security context ABI drift");
 _Static_assert(sizeof(rin_unix_peer_app_identity_v1) == 80u,
                "Rin Unix peer application identity ABI drift");
 _Static_assert(sizeof(rin_unix_peer_session_identity_v1) == 40u,
