@@ -2,6 +2,8 @@
 #ifndef RIN_SDK_IPC_SHM_ABI_H
 #define RIN_SDK_IPC_SHM_ABI_H
 
+#include <rin/contract_abi.h>
+
 #define RIN_SHM_NAME_MAX 64
 
 #define RIN_SHM_FLAG_CREAT            0x00000001u
@@ -14,6 +16,10 @@
  * The kernel enforces W^X for every SHM mapping; this bit is not a request
  * for a writable+executable page. */
 #define RIN_SHM_PROT_EXEC   0x00000004u
+
+/* The x86 syscall register ABI cannot carry these 64-bit ranges in a single
+ * call. RinShmAttachRangeV1 and RinShmProtectV1 in contract_abi.h carry the
+ * full-width values and have generated field-offset assertions. */
 
 /* The current page-backed SHM implementation is eagerly allocated.  Keep
  * the bound explicit so NativeAOT/CoreCLR cannot silently request a sparse
