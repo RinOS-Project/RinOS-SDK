@@ -432,18 +432,30 @@ static int rin_media_connect_once(void)
     return fd;
 }
 
-static int rin_media_connect_service(void)
+static RinResult rin_media_connect_service(int* socket_fd_out)
 {
-    int fd = rin_media_connect_once();
-    if (fd >= 0) return fd;
+    int fd;
+    RinResult start_result;
 
-    (void)rin_service_start(RIN_SERVICE_SCOPE_SYSTEM, "mediad");
+    if (socket_fd_out == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    *socket_fd_out = -1;
+    fd = rin_media_connect_once();
+    if (fd >= 0) {
+        *socket_fd_out = fd;
+        return RIN_SUCCESS;
+    }
+
+    start_result = rin_service_start(RIN_SERVICE_SCOPE_SYSTEM, "mediad");
+    if (start_result != RIN_SUCCESS) return start_result;
     for (uint32_t elapsed = 0u; elapsed < 500u; elapsed += 25u) {
         (void)poll(NULL, 0u, 25);
         fd = rin_media_connect_once();
-        if (fd >= 0) return fd;
+        if (fd >= 0) {
+            *socket_fd_out = fd;
+            return RIN_SUCCESS;
+        }
     }
-    return -1;
+    return RIN_ERROR_TIMEOUT;
 }
 
 static RinResult rin_media_image_status_result(int32_t status)
@@ -557,23 +569,34 @@ static int rin_media_image_connect_once(uint64_t* connection_id_out)
     return fd;
 }
 
-static int rin_media_connect_image_service(uint64_t* connection_id_out)
+static RinResult rin_media_connect_image_service(
+    uint64_t* connection_id_out, int* socket_fd_out)
 {
     int fd;
     uint32_t elapsed;
+    RinResult start_result;
 
     if (connection_id_out != NULL) *connection_id_out = 0u;
-    if (connection_id_out == NULL) return -1;
+    if (socket_fd_out != NULL) *socket_fd_out = -1;
+    if (connection_id_out == NULL || socket_fd_out == NULL)
+        return RIN_ERROR_INVALID_ARGUMENT;
     fd = rin_media_image_connect_once(connection_id_out);
-    if (fd >= 0) return fd;
-    (void)rin_service_start(RIN_SERVICE_SCOPE_SYSTEM,
-                            RIN_IMAGE_DECODER_SERVICE_ID);
+    if (fd >= 0) {
+        *socket_fd_out = fd;
+        return RIN_SUCCESS;
+    }
+    start_result = rin_service_start(RIN_SERVICE_SCOPE_SYSTEM,
+                                     RIN_IMAGE_DECODER_SERVICE_ID);
+    if (start_result != RIN_SUCCESS) return start_result;
     for (elapsed = 0u; elapsed < 500u; elapsed += 25u) {
         (void)poll(NULL, 0u, 25);
         fd = rin_media_image_connect_once(connection_id_out);
-        if (fd >= 0) return fd;
+        if (fd >= 0) {
+            *socket_fd_out = fd;
+            return RIN_SUCCESS;
+        }
     }
-    return -1;
+    return RIN_ERROR_TIMEOUT;
 }
 
 static int rin_media_image_response_header(
@@ -960,10 +983,15 @@ static RinResult rin_media_image_register_source(
         return RIN_ERROR_LIMIT_EXCEEDED;
     if (!rin_media_snapshot_source(request, &source_fd))
         return RIN_ERROR_IO;
-    fd = rin_media_connect_image_service(&connection_id);
+    result = rin_media_connect_image_service(&connection_id, &fd);
+    if (result != RIN_SUCCESS) {
+        (void)close(source_fd);
+        return result;
+    }
     if (fd < 0 || connection_id == 0u) {
         (void)close(source_fd);
-        return RIN_ERROR_NOT_SUPPORTED;
+        if (fd >= 0) (void)close(fd);
+        return RIN_ERROR_INTEGRITY;
     }
 
     session->socket_fd = fd;
@@ -1222,6 +1250,7 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     uint64_t owner_pid;
     int source_fd = -1;
     int socket_fd = -1;
+    RinResult connect_result;
     uint32_t index;
 
     if (object == RIN_OBJECT_HANDLE_INVALID || request == NULL)
@@ -1268,11 +1297,16 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
         rin_media_session_discard_reserved(session);
         return RIN_ERROR_IO;
     }
-    socket_fd = rin_media_connect_service();
+    connect_result = rin_media_connect_service(&socket_fd);
+    if (connect_result != RIN_SUCCESS) {
+        (void)close(source_fd);
+        rin_media_session_discard_reserved(session);
+        return connect_result;
+    }
     if (socket_fd < 0) {
         (void)close(source_fd);
         rin_media_session_discard_reserved(session);
-        return RIN_ERROR_NOT_SUPPORTED;
+        return RIN_ERROR_INTEGRITY;
     }
 
     memset(&request_header, 0, sizeof(request_header));
