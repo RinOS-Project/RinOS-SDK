@@ -204,8 +204,6 @@ typedef struct RinSerialBreakRequestV1 {
      ((uint32_t)0x53u << 8u) | ((uint32_t)(number) & 0xFFu))
 #define RIN_SERIAL_IOCTL_SET_CONFIG \
     RIN_SERIAL_IOCTL_ENCODE(RIN_SERIAL_IOCTL_WRITE, sizeof(RinSerialConfigV1), 6u)
-#define RIN_SERIAL_IOCTL_GET_CONFIG \
-    RIN_SERIAL_IOCTL_ENCODE(RIN_SERIAL_IOCTL_READ, sizeof(RinSerialConfigV1), 12u)
 #define RIN_SERIAL_IOCTL_SET_SIGNALS \
     RIN_SERIAL_IOCTL_ENCODE(RIN_SERIAL_IOCTL_WRITE, sizeof(RinSerialSignalsV1), 7u)
 #define RIN_SERIAL_IOCTL_GET_SIGNALS \
@@ -221,8 +219,6 @@ typedef struct RinSerialBreakRequestV1 {
                             sizeof(RinSerialDeviceIdentityV1), 11u)
 
 #if defined(__cplusplus)
-static_assert(sizeof(RinSerialConfigV1) == 16u,
-              "serial configuration ABI drift");
 static_assert(sizeof(RinSerialStatusV1) == 56u, "serial status ABI drift");
 static_assert(sizeof(RinSerialDeviceInfoV1) == 328u,
               "serial device info ABI drift");
@@ -233,8 +229,6 @@ static_assert(sizeof(RinSerialWaitRequestV1) == 32u, "serial wait ABI drift");
 static_assert(sizeof(RinSerialBreakRequestV1) == 8u,
               "serial break request ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinSerialConfigV1) == 16u,
-               "serial configuration ABI drift");
 _Static_assert(sizeof(RinSerialStatusV1) == 56u, "serial status ABI drift");
 _Static_assert(sizeof(RinSerialDeviceInfoV1) == 328u,
                "serial device info ABI drift");
