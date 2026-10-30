@@ -1312,6 +1312,11 @@ static inline int rin_driver_v3_audio_completion_valid(
 typedef RinDriverV3Result (*RinDriverV3DmaAllocateFn)(
     uint64_t api_context, uint64_t session, uint64_t length,
     uint32_t alignment, uint32_t flags, RinDriverV3DmaLeaseInfo* output);
+/* `*segment_count` is the input capacity. On success, the implementation
+ * transfers the mapping through `*lease` and replaces the capacity with the
+ * number of returned segments. On failure, it must set `*lease` to zero,
+ * leave `*segment_count` unchanged, and transfer no mapping lease. Segment
+ * contents are unspecified on failure. */
 typedef RinDriverV3Result (*RinDriverV3DmaMapSgFn)(
     uint64_t api_context, uint64_t session,
     const RinDriverV3MemorySlice* slices, uint32_t slice_count,
