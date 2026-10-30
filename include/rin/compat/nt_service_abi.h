@@ -55,7 +55,9 @@ typedef enum RinNTServiceCommandV1 {
     RINNT_SERVICE_COMMAND_QUERY_REGISTRY_AUDIT = 20,
     RINNT_SERVICE_COMMAND_REGISTER_REGISTRY_NOTIFY = 21,
     RINNT_SERVICE_COMMAND_POLL_REGISTRY_NOTIFY = 22,
-    RINNT_SERVICE_COMMAND_CANCEL_REGISTRY_NOTIFY = 23
+    RINNT_SERVICE_COMMAND_CANCEL_REGISTRY_NOTIFY = 23,
+    RINNT_SERVICE_COMMAND_RENAME_REGISTRY_KEY = 24,
+    RINNT_SERVICE_COMMAND_COPY_REGISTRY_TREE = 25
 } RinNTServiceCommandV1;
 
 typedef enum RinNTServiceResult {
@@ -77,7 +79,8 @@ typedef enum RinNTServiceResult {
     RINNT_SERVICE_ERROR_STALE = -1214,
     RINNT_SERVICE_ERROR_CORRUPT = -1215,
     RINNT_SERVICE_ERROR_NOT_SUPPORTED = -1216,
-    RINNT_SERVICE_ERROR_COMMIT_UNKNOWN = -1217
+    RINNT_SERVICE_ERROR_COMMIT_UNKNOWN = -1217,
+    RINNT_SERVICE_ERROR_EXISTS = -1218
 } RinNTServiceResult;
 
 typedef enum RinNTServiceProcessStateV1 {
@@ -299,6 +302,35 @@ typedef struct RinNTServiceRegistryTreeMutationRequestV1 {
     uint32_t reserved2;
 } RinNTServiceRegistryTreeMutationRequestV1;
 
+typedef struct RinNTServiceRegistryRenameKeyRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t hive;
+    uint32_t reserved;
+    uint64_t expected_generation;
+    uint32_t old_key_offset;
+    uint32_t old_key_length;
+    uint32_t new_name_offset;
+    uint32_t new_name_length;
+    uint32_t reserved2;
+    uint32_t reserved3;
+} RinNTServiceRegistryRenameKeyRequestV1;
+
+typedef struct RinNTServiceRegistryCopyTreeRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t source_hive;
+    uint32_t destination_hive;
+    uint64_t expected_source_generation;
+    uint64_t expected_destination_generation;
+    uint32_t source_key_offset;
+    uint32_t source_key_length;
+    uint32_t destination_key_offset;
+    uint32_t destination_key_length;
+    uint32_t reserved;
+    uint32_t reserved2;
+} RinNTServiceRegistryCopyTreeRequestV1;
+
 typedef struct RinNTServiceRegistryFlushRequestV1 {
     uint32_t struct_size;
     uint32_t version;
@@ -514,6 +546,10 @@ static_assert(sizeof(RinNTServiceRegistryEnumerateResponseV1) == 64u,
               "RinNT service registry enumeration response ABI drift");
 static_assert(sizeof(RinNTServiceRegistryTreeMutationRequestV1) == 40u,
               "RinNT service registry tree mutation ABI drift");
+static_assert(sizeof(RinNTServiceRegistryRenameKeyRequestV1) == 48u,
+              "RinNT service registry rename ABI drift");
+static_assert(sizeof(RinNTServiceRegistryCopyTreeRequestV1) == 56u,
+              "RinNT service registry copy ABI drift");
 static_assert(sizeof(RinNTServiceRegistryFlushRequestV1) == 16u,
               "RinNT service registry flush ABI drift");
 static_assert(sizeof(RinNTServiceRegistryHiveRequestV1) == 16u,
@@ -563,6 +599,10 @@ _Static_assert(sizeof(RinNTServiceRegistryEnumerateResponseV1) == 64u,
                "RinNT service registry enumeration response ABI drift");
 _Static_assert(sizeof(RinNTServiceRegistryTreeMutationRequestV1) == 40u,
                "RinNT service registry tree mutation ABI drift");
+_Static_assert(sizeof(RinNTServiceRegistryRenameKeyRequestV1) == 48u,
+               "RinNT service registry rename ABI drift");
+_Static_assert(sizeof(RinNTServiceRegistryCopyTreeRequestV1) == 56u,
+               "RinNT service registry copy ABI drift");
 _Static_assert(sizeof(RinNTServiceRegistryFlushRequestV1) == 16u,
                "RinNT service registry flush ABI drift");
 _Static_assert(sizeof(RinNTServiceRegistryHiveRequestV1) == 16u,
