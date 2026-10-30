@@ -18,6 +18,10 @@
  * record at index zero. */
 #define RIN_DLINVENTORY_V1_FLAG_LEGACY_RLL 0x00000002u
 
+#define RIN_DLINVENTORY_RANGE_ABI_VERSION 1u
+#define RIN_DLINVENTORY_RANGE_FLAG_AUTHENTICATED 0x0001u
+#define RIN_DLINVENTORY_RANGE_FLAG_MAIN_IMAGE 0x0002u
+
 /* A single immutable member of the process launch graph.  RIN v3 images are
  * not ELF objects, so program_headers/program_header_count and TLS metadata
  * are zero.  The ABI makes that absence explicit instead of manufacturing
@@ -41,12 +45,30 @@ typedef struct RinDlInventoryRecordV1 {
     char name[RIN_DLINVENTORY_V1_NAME_CAPACITY];
 } RinDlInventoryRecordV1;
 
+/* 認証済みプロセスローダー一覧から得る世代付きマップ範囲。複数の
+ * recordを比較する呼び出し側は、同じgenerationであることを確認する。 */
+typedef struct RinDlImageRangeV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t generation;
+    uint64_t image_base;
+    uint64_t image_size;
+    uint32_t record_index;
+    uint32_t record_count;
+    uint64_t reserved;
+} RinDlImageRangeV1;
+
 #ifdef __cplusplus
 static_assert(sizeof(RinDlInventoryRecordV1) == 152u,
               "RinDlInventoryRecordV1 ABI size");
+static_assert(sizeof(RinDlImageRangeV1) == 48u,
+              "RinDlImageRangeV1 ABI size");
 #else
 _Static_assert(sizeof(RinDlInventoryRecordV1) == 152u,
                "RinDlInventoryRecordV1 ABI size");
+_Static_assert(sizeof(RinDlImageRangeV1) == 48u,
+               "RinDlImageRangeV1 ABI size");
 #endif
 
 #endif /* RIN_SDK_RIN_DYNLINK_INVENTORY_ABI_H */
