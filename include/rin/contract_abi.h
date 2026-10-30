@@ -1478,6 +1478,20 @@ typedef struct RinFileToSocketRequestV1 {
     uint64_t length;
 } RinFileToSocketRequestV1;
 
+typedef struct RinFileToSocketRequestV2 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved_header;
+    int32_t source_fd;
+    int32_t socket_fd;
+    uint32_t flags;
+    uint32_t offset_width_bits;
+    uint64_t offset_address;
+    uint64_t offset;
+    uint64_t length;
+    uint64_t reserved0;
+} RinFileToSocketRequestV2;
+
 typedef struct RinSyscallBatchV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -2410,6 +2424,18 @@ static_assert(offsetof(RinFileToSocketRequestV1, flags) == 16, "RinFileToSocketR
 static_assert(offsetof(RinFileToSocketRequestV1, reserved0) == 20, "RinFileToSocketRequestV1.reserved0 ABI drift");
 static_assert(offsetof(RinFileToSocketRequestV1, offset) == 24, "RinFileToSocketRequestV1.offset ABI drift");
 static_assert(offsetof(RinFileToSocketRequestV1, length) == 32, "RinFileToSocketRequestV1.length ABI drift");
+static_assert(sizeof(RinFileToSocketRequestV2) == 56, "RinFileToSocketRequestV2 ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, struct_size) == 0, "RinFileToSocketRequestV2.struct_size ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, version) == 4, "RinFileToSocketRequestV2.version ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, reserved_header) == 6, "RinFileToSocketRequestV2.reserved_header ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, source_fd) == 8, "RinFileToSocketRequestV2.source_fd ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, socket_fd) == 12, "RinFileToSocketRequestV2.socket_fd ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, flags) == 16, "RinFileToSocketRequestV2.flags ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, offset_width_bits) == 20, "RinFileToSocketRequestV2.offset_width_bits ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, offset_address) == 24, "RinFileToSocketRequestV2.offset_address ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, offset) == 32, "RinFileToSocketRequestV2.offset ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, length) == 40, "RinFileToSocketRequestV2.length ABI drift");
+static_assert(offsetof(RinFileToSocketRequestV2, reserved0) == 48, "RinFileToSocketRequestV2.reserved0 ABI drift");
 static_assert(sizeof(RinSyscallBatchV1) == 32, "RinSyscallBatchV1 ABI drift");
 static_assert(offsetof(RinSyscallBatchV1, struct_size) == 0, "RinSyscallBatchV1.struct_size ABI drift");
 static_assert(offsetof(RinSyscallBatchV1, version) == 4, "RinSyscallBatchV1.version ABI drift");
@@ -3316,6 +3342,18 @@ _Static_assert(offsetof(RinFileToSocketRequestV1, flags) == 16, "RinFileToSocket
 _Static_assert(offsetof(RinFileToSocketRequestV1, reserved0) == 20, "RinFileToSocketRequestV1.reserved0 ABI drift");
 _Static_assert(offsetof(RinFileToSocketRequestV1, offset) == 24, "RinFileToSocketRequestV1.offset ABI drift");
 _Static_assert(offsetof(RinFileToSocketRequestV1, length) == 32, "RinFileToSocketRequestV1.length ABI drift");
+_Static_assert(sizeof(RinFileToSocketRequestV2) == 56, "RinFileToSocketRequestV2 ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, struct_size) == 0, "RinFileToSocketRequestV2.struct_size ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, version) == 4, "RinFileToSocketRequestV2.version ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, reserved_header) == 6, "RinFileToSocketRequestV2.reserved_header ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, source_fd) == 8, "RinFileToSocketRequestV2.source_fd ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, socket_fd) == 12, "RinFileToSocketRequestV2.socket_fd ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, flags) == 16, "RinFileToSocketRequestV2.flags ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, offset_width_bits) == 20, "RinFileToSocketRequestV2.offset_width_bits ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, offset_address) == 24, "RinFileToSocketRequestV2.offset_address ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, offset) == 32, "RinFileToSocketRequestV2.offset ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, length) == 40, "RinFileToSocketRequestV2.length ABI drift");
+_Static_assert(offsetof(RinFileToSocketRequestV2, reserved0) == 48, "RinFileToSocketRequestV2.reserved0 ABI drift");
 _Static_assert(sizeof(RinSyscallBatchV1) == 32, "RinSyscallBatchV1 ABI drift");
 _Static_assert(offsetof(RinSyscallBatchV1, struct_size) == 0, "RinSyscallBatchV1.struct_size ABI drift");
 _Static_assert(offsetof(RinSyscallBatchV1, version) == 4, "RinSyscallBatchV1.version ABI drift");
