@@ -75,6 +75,8 @@ typedef int32_t RinResultCode;
 #define RIN_CREDENTIAL_SET_EGID             4u
 #define RIN_SUPPLEMENTARY_GROUPS_VERSION    1u
 #define RIN_SUPPLEMENTARY_GROUPS_OPERATION_SET 1u
+#define RIN_SUPPLEMENTARY_GROUPS_USER_VERSION 2u
+#define RIN_SUPPLEMENTARY_GROUPS_OPERATION_GET 2u
 #define RIN_ACCOUNT_QUERY_VERSION           1u
 #define RIN_ACCOUNT_INFO_VERSION            1u
 #define RIN_ACCOUNT_QUERY_BY_UID            1u
@@ -671,6 +673,17 @@ typedef struct RinSupplementaryGroupsV1 {
     uint32_t reserved0;
     uint64_t reserved;
 } RinSupplementaryGroupsV1;
+
+/* 補助グループを利用者ポインター経由で安全に取得・設定する要求。 */
+typedef struct RinSupplementaryGroupsUserV2 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t operation;
+    uint32_t target_uid;
+    uint32_t group_count;
+    uint64_t groups_address;
+    uint64_t reserved;
+} RinSupplementaryGroupsUserV2;
 
 typedef struct RinAccountQueryV1 {
     uint32_t struct_size;
@@ -1738,6 +1751,14 @@ static_assert(offsetof(RinSupplementaryGroupsV1, groups) == 16, "RinSupplementar
 static_assert(offsetof(RinSupplementaryGroupsV1, flags) == 48, "RinSupplementaryGroupsV1.flags ABI drift");
 static_assert(offsetof(RinSupplementaryGroupsV1, reserved0) == 52, "RinSupplementaryGroupsV1.reserved0 ABI drift");
 static_assert(offsetof(RinSupplementaryGroupsV1, reserved) == 56, "RinSupplementaryGroupsV1.reserved ABI drift");
+static_assert(sizeof(RinSupplementaryGroupsUserV2) == 32, "RinSupplementaryGroupsUserV2 ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV2, struct_size) == 0, "RinSupplementaryGroupsUserV2.struct_size ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV2, version) == 4, "RinSupplementaryGroupsUserV2.version ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV2, operation) == 6, "RinSupplementaryGroupsUserV2.operation ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV2, target_uid) == 8, "RinSupplementaryGroupsUserV2.target_uid ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV2, group_count) == 12, "RinSupplementaryGroupsUserV2.group_count ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV2, groups_address) == 16, "RinSupplementaryGroupsUserV2.groups_address ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV2, reserved) == 24, "RinSupplementaryGroupsUserV2.reserved ABI drift");
 static_assert(sizeof(RinAccountQueryV1) == 56, "RinAccountQueryV1 ABI drift");
 static_assert(offsetof(RinAccountQueryV1, struct_size) == 0, "RinAccountQueryV1.struct_size ABI drift");
 static_assert(offsetof(RinAccountQueryV1, version) == 4, "RinAccountQueryV1.version ABI drift");
@@ -2656,6 +2677,14 @@ _Static_assert(offsetof(RinSupplementaryGroupsV1, groups) == 16, "RinSupplementa
 _Static_assert(offsetof(RinSupplementaryGroupsV1, flags) == 48, "RinSupplementaryGroupsV1.flags ABI drift");
 _Static_assert(offsetof(RinSupplementaryGroupsV1, reserved0) == 52, "RinSupplementaryGroupsV1.reserved0 ABI drift");
 _Static_assert(offsetof(RinSupplementaryGroupsV1, reserved) == 56, "RinSupplementaryGroupsV1.reserved ABI drift");
+_Static_assert(sizeof(RinSupplementaryGroupsUserV2) == 32, "RinSupplementaryGroupsUserV2 ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV2, struct_size) == 0, "RinSupplementaryGroupsUserV2.struct_size ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV2, version) == 4, "RinSupplementaryGroupsUserV2.version ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV2, operation) == 6, "RinSupplementaryGroupsUserV2.operation ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV2, target_uid) == 8, "RinSupplementaryGroupsUserV2.target_uid ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV2, group_count) == 12, "RinSupplementaryGroupsUserV2.group_count ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV2, groups_address) == 16, "RinSupplementaryGroupsUserV2.groups_address ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV2, reserved) == 24, "RinSupplementaryGroupsUserV2.reserved ABI drift");
 _Static_assert(sizeof(RinAccountQueryV1) == 56, "RinAccountQueryV1 ABI drift");
 _Static_assert(offsetof(RinAccountQueryV1, struct_size) == 0, "RinAccountQueryV1.struct_size ABI drift");
 _Static_assert(offsetof(RinAccountQueryV1, version) == 4, "RinAccountQueryV1.version ABI drift");
