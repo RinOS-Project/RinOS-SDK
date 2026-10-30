@@ -1578,6 +1578,29 @@ typedef struct RinDynlinkOpenMemoryContractV1 {
     uint64_t reserved[2];
 } RinDynlinkOpenMemoryContractV1;
 
+typedef struct RinCredentialIdsV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    uint32_t real_uid;
+    uint32_t real_gid;
+    uint32_t effective_uid;
+    uint32_t effective_gid;
+    uint32_t saved_uid;
+    uint32_t saved_gid;
+} RinCredentialIdsV1;
+
+typedef struct RinCredentialGetResV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t kind;
+    uint32_t reserved0;
+    uint64_t real_id_output;
+    uint64_t effective_id_output;
+    uint64_t saved_id_output;
+    uint64_t reserved;
+} RinCredentialGetResV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinDlAddrRllRecordV1) == 240, "RinDlAddrRllRecordV1 ABI drift");
 static_assert(offsetof(RinDlAddrRllRecordV1, abi_version) == 0, "RinDlAddrRllRecordV1.abi_version ABI drift");
@@ -2464,6 +2487,25 @@ static_assert(offsetof(RinDynlinkOpenMemoryContractV1, image_address) == 8, "Rin
 static_assert(offsetof(RinDynlinkOpenMemoryContractV1, image_size) == 16, "RinDynlinkOpenMemoryContractV1.image_size ABI drift");
 static_assert(offsetof(RinDynlinkOpenMemoryContractV1, library_name) == 24, "RinDynlinkOpenMemoryContractV1.library_name ABI drift");
 static_assert(offsetof(RinDynlinkOpenMemoryContractV1, reserved) == 88, "RinDynlinkOpenMemoryContractV1.reserved ABI drift");
+static_assert(sizeof(RinCredentialIdsV1) == 32, "RinCredentialIdsV1 ABI drift");
+static_assert(offsetof(RinCredentialIdsV1, struct_size) == 0, "RinCredentialIdsV1.struct_size ABI drift");
+static_assert(offsetof(RinCredentialIdsV1, version) == 4, "RinCredentialIdsV1.version ABI drift");
+static_assert(offsetof(RinCredentialIdsV1, reserved0) == 6, "RinCredentialIdsV1.reserved0 ABI drift");
+static_assert(offsetof(RinCredentialIdsV1, real_uid) == 8, "RinCredentialIdsV1.real_uid ABI drift");
+static_assert(offsetof(RinCredentialIdsV1, real_gid) == 12, "RinCredentialIdsV1.real_gid ABI drift");
+static_assert(offsetof(RinCredentialIdsV1, effective_uid) == 16, "RinCredentialIdsV1.effective_uid ABI drift");
+static_assert(offsetof(RinCredentialIdsV1, effective_gid) == 20, "RinCredentialIdsV1.effective_gid ABI drift");
+static_assert(offsetof(RinCredentialIdsV1, saved_uid) == 24, "RinCredentialIdsV1.saved_uid ABI drift");
+static_assert(offsetof(RinCredentialIdsV1, saved_gid) == 28, "RinCredentialIdsV1.saved_gid ABI drift");
+static_assert(sizeof(RinCredentialGetResV1) == 48, "RinCredentialGetResV1 ABI drift");
+static_assert(offsetof(RinCredentialGetResV1, struct_size) == 0, "RinCredentialGetResV1.struct_size ABI drift");
+static_assert(offsetof(RinCredentialGetResV1, version) == 4, "RinCredentialGetResV1.version ABI drift");
+static_assert(offsetof(RinCredentialGetResV1, kind) == 6, "RinCredentialGetResV1.kind ABI drift");
+static_assert(offsetof(RinCredentialGetResV1, reserved0) == 8, "RinCredentialGetResV1.reserved0 ABI drift");
+static_assert(offsetof(RinCredentialGetResV1, real_id_output) == 16, "RinCredentialGetResV1.real_id_output ABI drift");
+static_assert(offsetof(RinCredentialGetResV1, effective_id_output) == 24, "RinCredentialGetResV1.effective_id_output ABI drift");
+static_assert(offsetof(RinCredentialGetResV1, saved_id_output) == 32, "RinCredentialGetResV1.saved_id_output ABI drift");
+static_assert(offsetof(RinCredentialGetResV1, reserved) == 40, "RinCredentialGetResV1.reserved ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinDlAddrRllRecordV1) == 240, "RinDlAddrRllRecordV1 ABI drift");
 _Static_assert(offsetof(RinDlAddrRllRecordV1, abi_version) == 0, "RinDlAddrRllRecordV1.abi_version ABI drift");
@@ -3350,6 +3392,25 @@ _Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, image_address) == 8, "Ri
 _Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, image_size) == 16, "RinDynlinkOpenMemoryContractV1.image_size ABI drift");
 _Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, library_name) == 24, "RinDynlinkOpenMemoryContractV1.library_name ABI drift");
 _Static_assert(offsetof(RinDynlinkOpenMemoryContractV1, reserved) == 88, "RinDynlinkOpenMemoryContractV1.reserved ABI drift");
+_Static_assert(sizeof(RinCredentialIdsV1) == 32, "RinCredentialIdsV1 ABI drift");
+_Static_assert(offsetof(RinCredentialIdsV1, struct_size) == 0, "RinCredentialIdsV1.struct_size ABI drift");
+_Static_assert(offsetof(RinCredentialIdsV1, version) == 4, "RinCredentialIdsV1.version ABI drift");
+_Static_assert(offsetof(RinCredentialIdsV1, reserved0) == 6, "RinCredentialIdsV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinCredentialIdsV1, real_uid) == 8, "RinCredentialIdsV1.real_uid ABI drift");
+_Static_assert(offsetof(RinCredentialIdsV1, real_gid) == 12, "RinCredentialIdsV1.real_gid ABI drift");
+_Static_assert(offsetof(RinCredentialIdsV1, effective_uid) == 16, "RinCredentialIdsV1.effective_uid ABI drift");
+_Static_assert(offsetof(RinCredentialIdsV1, effective_gid) == 20, "RinCredentialIdsV1.effective_gid ABI drift");
+_Static_assert(offsetof(RinCredentialIdsV1, saved_uid) == 24, "RinCredentialIdsV1.saved_uid ABI drift");
+_Static_assert(offsetof(RinCredentialIdsV1, saved_gid) == 28, "RinCredentialIdsV1.saved_gid ABI drift");
+_Static_assert(sizeof(RinCredentialGetResV1) == 48, "RinCredentialGetResV1 ABI drift");
+_Static_assert(offsetof(RinCredentialGetResV1, struct_size) == 0, "RinCredentialGetResV1.struct_size ABI drift");
+_Static_assert(offsetof(RinCredentialGetResV1, version) == 4, "RinCredentialGetResV1.version ABI drift");
+_Static_assert(offsetof(RinCredentialGetResV1, kind) == 6, "RinCredentialGetResV1.kind ABI drift");
+_Static_assert(offsetof(RinCredentialGetResV1, reserved0) == 8, "RinCredentialGetResV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinCredentialGetResV1, real_id_output) == 16, "RinCredentialGetResV1.real_id_output ABI drift");
+_Static_assert(offsetof(RinCredentialGetResV1, effective_id_output) == 24, "RinCredentialGetResV1.effective_id_output ABI drift");
+_Static_assert(offsetof(RinCredentialGetResV1, saved_id_output) == 32, "RinCredentialGetResV1.saved_id_output ABI drift");
+_Static_assert(offsetof(RinCredentialGetResV1, reserved) == 40, "RinCredentialGetResV1.reserved ABI drift");
 #endif
 
 #endif /* RIN_SDK_CONTRACT_ABI_H */
