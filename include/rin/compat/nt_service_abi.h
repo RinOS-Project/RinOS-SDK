@@ -52,7 +52,10 @@ typedef enum RinNTServiceCommandV1 {
     RINNT_SERVICE_COMMAND_DELETE_REGISTRY_TREE = 17,
     RINNT_SERVICE_COMMAND_FLUSH_REGISTRY_HIVE = 18,
     RINNT_SERVICE_COMMAND_QUERY_REGISTRY_HIVE = 19,
-    RINNT_SERVICE_COMMAND_QUERY_REGISTRY_AUDIT = 20
+    RINNT_SERVICE_COMMAND_QUERY_REGISTRY_AUDIT = 20,
+    RINNT_SERVICE_COMMAND_REGISTER_REGISTRY_NOTIFY = 21,
+    RINNT_SERVICE_COMMAND_POLL_REGISTRY_NOTIFY = 22,
+    RINNT_SERVICE_COMMAND_CANCEL_REGISTRY_NOTIFY = 23
 } RinNTServiceCommandV1;
 
 typedef enum RinNTServiceResult {
@@ -90,6 +93,7 @@ typedef enum RinNTServiceProcessStateV1 {
 #define RINNT_SERVICE_FEATURE_INPUT_TRANSLATION UINT64_C(32)
 #define RINNT_SERVICE_FEATURE_REGISTRY_TREE UINT64_C(64)
 #define RINNT_SERVICE_FEATURE_REGISTRY_AUDIT UINT64_C(128)
+#define RINNT_SERVICE_FEATURE_REGISTRY_NOTIFY UINT64_C(256)
 
 #define RINNT_SERVICE_XINPUT_MAX_USERS 4u
 #define RINNT_SERVICE_XINPUT_BUTTON_MASK UINT16_C(0xf3ff)
@@ -318,6 +322,41 @@ typedef struct RinNTServiceRegistryHiveResponseV1 {
     uint64_t reserved;
 } RinNTServiceRegistryHiveResponseV1;
 
+typedef enum RinNTServiceRegistryNotifyOperationV1 {
+    RINNT_SERVICE_REGISTRY_NOTIFY_REGISTER = 1,
+    RINNT_SERVICE_REGISTRY_NOTIFY_POLL = 2,
+    RINNT_SERVICE_REGISTRY_NOTIFY_CANCEL = 3
+} RinNTServiceRegistryNotifyOperationV1;
+
+typedef struct RinNTServiceRegistryNotifyRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t operation;
+    uint32_t hive;
+    uint32_t flags;
+    uint32_t filter;
+    uint32_t key_offset;
+    uint32_t key_length;
+    uint64_t subscription;
+    uint64_t reserved;
+} RinNTServiceRegistryNotifyRequestV1;
+
+typedef struct RinNTServiceRegistryNotifyResponseV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t signaled;
+    uint32_t reserved;
+    uint64_t subscription;
+    uint64_t reserved2;
+} RinNTServiceRegistryNotifyResponseV1;
+
+#define RINNT_SERVICE_REGISTRY_NOTIFY_FLAG_SUBTREE UINT32_C(1)
+#define RINNT_SERVICE_REGISTRY_NOTIFY_FILTER_NAME UINT32_C(1)
+#define RINNT_SERVICE_REGISTRY_NOTIFY_FILTER_LAST_SET UINT32_C(4)
+#define RINNT_SERVICE_REGISTRY_NOTIFY_FILTER_MASK \
+    (RINNT_SERVICE_REGISTRY_NOTIFY_FILTER_NAME | \
+     RINNT_SERVICE_REGISTRY_NOTIFY_FILTER_LAST_SET)
+
 /* Administrator audit reads are paged oldest-first.  The first request uses
  * zero file identities and event count; each response returns a snapshot
  * cursor.  Later pages must return those values unchanged or receive STALE
@@ -481,6 +520,10 @@ static_assert(sizeof(RinNTServiceRegistryHiveRequestV1) == 16u,
               "RinNT service registry hive request ABI drift");
 static_assert(sizeof(RinNTServiceRegistryHiveResponseV1) == 32u,
               "RinNT service registry hive response ABI drift");
+static_assert(sizeof(RinNTServiceRegistryNotifyRequestV1) == 48u,
+              "RinNT service registry notify request ABI drift");
+static_assert(sizeof(RinNTServiceRegistryNotifyResponseV1) == 32u,
+              "RinNT service registry notify response ABI drift");
 static_assert(sizeof(RinNTServiceRegistryAuditQueryRequestV1) == 40u,
               "RinNT service registry audit query ABI drift");
 static_assert(sizeof(RinNTServiceRegistryAuditQueryResponseV1) == 40u,
@@ -526,6 +569,10 @@ _Static_assert(sizeof(RinNTServiceRegistryHiveRequestV1) == 16u,
                "RinNT service registry hive request ABI drift");
 _Static_assert(sizeof(RinNTServiceRegistryHiveResponseV1) == 32u,
                "RinNT service registry hive response ABI drift");
+_Static_assert(sizeof(RinNTServiceRegistryNotifyRequestV1) == 48u,
+               "RinNT service registry notify request ABI drift");
+_Static_assert(sizeof(RinNTServiceRegistryNotifyResponseV1) == 32u,
+               "RinNT service registry notify response ABI drift");
 _Static_assert(sizeof(RinNTServiceRegistryAuditQueryRequestV1) == 40u,
                "RinNT service registry audit query ABI drift");
 _Static_assert(sizeof(RinNTServiceRegistryAuditQueryResponseV1) == 40u,
