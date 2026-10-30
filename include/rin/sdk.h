@@ -27,6 +27,8 @@
 #endif
 #include "service.h"
 #include "keyring.h"
+#include "input_method.h"
+#include "keyboard_layout.h"
 #include "input/keyboard_layout_preference_v1.h"
 #include "syscall_abi.h"
 #include "syscall_contract.h"
