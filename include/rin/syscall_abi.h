@@ -340,21 +340,25 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_OPENAT_BENEATH_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_OPENAT_BENEATH_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
+/* Returns architecture-width PIT ticks since boot; this is not wall-clock seconds. */
 #define RIN_SYS_TIME                        60u
 /* TIME availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_TIME_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TIME_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_TIME_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* Copies timeval seconds and microseconds to slot 1; compat32 uses the 32-bit layout, x86_64 native uses the 64-bit layout. Slot 2 is ignored. */
 #define RIN_SYS_GETTIMEOFDAY                61u
 /* GETTIMEOFDAY availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_GETTIMEOFDAY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETTIMEOFDAY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETTIMEOFDAY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* Accepts an unsigned millisecond duration; signal interruption returns EINTR. x86_64 waits through the scheduler. */
 #define RIN_SYS_SLEEP                       62u
 /* SLEEP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_SLEEP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SLEEP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SLEEP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* Copies a signed seconds/nanoseconds timespec from slot 1, rounds up to milliseconds, ignores slot 2 (remainder), and returns EINTR on signal interruption. x86_64 native may also return EOVERFLOW. */
 #define RIN_SYS_NANOSLEEP                   63u
 /* NANOSLEEP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_NANOSLEEP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -2278,6 +2282,22 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_KERNEL_LOG_CONTROL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_KERNEL_LOG_CONTROL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_KERNEL_LOG_CONTROL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* aio. */
+#define RIN_SYS_IO_URING_SETUP              0x80B3u
+/* IO_URING_SETUP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_IO_URING_SETUP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_IO_URING_SETUP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_IO_URING_SETUP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_IO_URING_ENTER              0x80B4u
+/* IO_URING_ENTER availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_IO_URING_ENTER_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_IO_URING_ENTER_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_IO_URING_ENTER_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_IO_URING_REGISTER           0x80B5u
+/* IO_URING_REGISTER availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_IO_URING_REGISTER_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_IO_URING_REGISTER_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_IO_URING_REGISTER_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 
 /* Returns UNKNOWN for syscall numbers outside this declared availability table. */
 static inline uint32_t rin_syscall_arch_support(
@@ -5075,6 +5095,27 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_KERNEL_LOG_CONTROL_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_KERNEL_LOG_CONTROL_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_KERNEL_LOG_CONTROL_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_IO_URING_SETUP:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_IO_URING_SETUP_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_IO_URING_SETUP_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_IO_URING_SETUP_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_IO_URING_ENTER:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_IO_URING_ENTER_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_IO_URING_ENTER_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_IO_URING_ENTER_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_IO_URING_REGISTER:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_IO_URING_REGISTER_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_IO_URING_REGISTER_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_IO_URING_REGISTER_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
     default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
