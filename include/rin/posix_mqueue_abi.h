@@ -10,9 +10,29 @@
 #define RIN_POSIX_MQ_NAME_MAX UINT32_C(255)
 #define RIN_POSIX_MQ_MAX_MESSAGES UINT32_C(10)
 #define RIN_POSIX_MQ_MAX_MESSAGE_SIZE UINT32_C(8192)
+/* Kernel-global table capacities are build-configurable. Pass the same
+ * overrides to the kernel and SDK builds; libc reports the effective values
+ * through _SC_RIN_MQUEUE_MAX_*. */
+#ifndef RIN_POSIX_MQ_MAX_QUEUES
 #define RIN_POSIX_MQ_MAX_QUEUES UINT32_C(64)
+#endif
+#ifndef RIN_POSIX_MQ_MAX_DESCRIPTORS
 #define RIN_POSIX_MQ_MAX_DESCRIPTORS UINT32_C(512)
+#endif
+#ifndef RIN_POSIX_MQ_MAX_WAITERS
 #define RIN_POSIX_MQ_MAX_WAITERS UINT32_C(1024)
+#endif
+#if RIN_POSIX_MQ_MAX_QUEUES == 0 || RIN_POSIX_MQ_MAX_QUEUES > 0xFFFFFFFFu
+#error "RIN_POSIX_MQ_MAX_QUEUES must fit a nonzero uint32_t"
+#endif
+#if RIN_POSIX_MQ_MAX_DESCRIPTORS == 0 || \
+    RIN_POSIX_MQ_MAX_DESCRIPTORS > 0xFFFFFFFFu
+#error "RIN_POSIX_MQ_MAX_DESCRIPTORS must fit a nonzero uint32_t"
+#endif
+#if RIN_POSIX_MQ_MAX_WAITERS == 0 || \
+    RIN_POSIX_MQ_MAX_WAITERS > 0xFFFFFFFFu
+#error "RIN_POSIX_MQ_MAX_WAITERS must fit a nonzero uint32_t"
+#endif
 #define RIN_POSIX_MQ_PRIORITY_MAX UINT32_C(32)
 #define RIN_POSIX_MQ_DEFAULT_MAX_MESSAGES UINT32_C(10)
 #define RIN_POSIX_MQ_DEFAULT_MESSAGE_SIZE UINT32_C(8192)
