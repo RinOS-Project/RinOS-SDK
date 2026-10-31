@@ -279,6 +279,7 @@ typedef struct RinDriverV3DisplayEvent {
 #define RIN_DRIVER_V3_DISPLAY_PIXEL_BGRX8888 UINT32_C(2)
 #define RIN_DRIVER_V3_DISPLAY_PIXEL_RGB565 UINT32_C(3)
 #define RIN_DRIVER_V3_DISPLAY_PIXEL_XRGB2101010 UINT32_C(4)
+#define RIN_DRIVER_V3_DISPLAY_PIXEL_BGRA8888 UINT32_C(5)
 
 typedef struct RinDriverV3InputEvent {
     uint64_t timestamp_ns;
@@ -642,6 +643,14 @@ typedef RinDriverV3Result (*RinDriverV3DisplayPollEventsFn)(
 typedef RinDriverV3Result (*RinDriverV3DisplayGetEdidBlockFn)(
     uint64_t driver_context, uint32_t block_index,
     uint8_t output[RIN_DRIVER_V3_DISPLAY_EDID_BLOCK_SIZE]);
+/* Synchronously copies a kernel-owned compositor frame into device backing
+ * and presents the supplied damage. The driver must not retain pixels or
+ * rectangles after returning. */
+typedef RinDriverV3Result (*RinDriverV3DisplayPresentPixelsFn)(
+    uint64_t driver_context, const uint8_t* pixels,
+    uint32_t width, uint32_t height, uint32_t stride_bytes,
+    uint32_t pixel_format, const RinDriverV3Rect* rectangles,
+    uint32_t rectangle_count);
 typedef RinDriverV3Result (*RinDriverV3InputReadFn)(
     uint64_t driver_context, RinDriverV3InputEvent* events,
     uint32_t capacity, uint32_t* event_count);
@@ -858,7 +867,10 @@ typedef struct RinDriverV3DisplayOps {
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t get_edid_block_padding;
 #endif
-    uint64_t reserved[1];
+    union {
+        RinDriverV3DisplayPresentPixelsFn present_pixels;
+        uint64_t reserved[1];
+    } extensions;
 } RinDriverV3DisplayOps;
 
 static inline int rin_driver_v3_display_mode_valid(
@@ -913,7 +925,7 @@ static inline int rin_driver_v3_display_ops_valid(
     const RinDriverV3DisplayOps* ops) {
     if (!ops || ops->struct_size != sizeof(*ops) ||
         ops->version != RIN_DRIVER_V3_OPS_VERSION || !ops->get_mode ||
-        !ops->damage || !ops->remove || ops->reserved[0] != 0u)
+        !ops->damage || !ops->remove)
         return 0;
 #if UINTPTR_MAX == UINT32_MAX
     if (ops->get_mode_padding != 0u || ops->damage_padding != 0u ||
