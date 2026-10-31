@@ -27,9 +27,16 @@
 #define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_MASK UINT32_C(0x000007ff)
 #define RIN_ACCESSIBILITY_SERVICE_NODE_ACTION_MASK UINT32_C(0x000007ff)
 #define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_VISIBLE UINT32_C(0x00000001)
+#define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_ENABLED UINT32_C(0x00000002)
+#define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_FOCUSABLE UINT32_C(0x00000004)
 #define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_FOCUSED UINT32_C(0x00000008)
 #define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_EDITABLE UINT32_C(0x00000010)
+#define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_CHECKED UINT32_C(0x00000020)
+#define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_EXPANDED UINT32_C(0x00000040)
+#define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_SELECTED UINT32_C(0x00000080)
+#define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_MODAL UINT32_C(0x00000100)
 #define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_SENSITIVE UINT32_C(0x00000200)
+#define RIN_ACCESSIBILITY_SERVICE_NODE_STATE_FOCUS_VISIBLE UINT32_C(0x00000400)
 #define RIN_ACCESSIBILITY_SERVICE_ACTION_SET_VALUE UINT32_C(0x00000004)
 #define RIN_ACCESSIBILITY_SERVICE_MAX_ROLE UINT16_C(18)
 
@@ -84,6 +91,16 @@ typedef struct RinAccessibilityWireSnapshotV1 {
     RinAccessibilityWireNodeV1 nodes[RIN_ACCESSIBILITY_SERVICE_MAX_NODES];
 } RinAccessibilityWireSnapshotV1;
 
+/* Focus discovery returns the broker-owned publisher identity alongside the
+ * sanitized snapshot so consumers can bind follow-up actions to the exact
+ * process instance and window generation. This wrapper is only a query reply;
+ * applications must never publish these identity fields. */
+typedef struct RinAccessibilityServiceFocusedSnapshotV1 {
+    RinAccessibilityWireSnapshotV1 snapshot;
+    uint64_t process_id;
+    uint64_t process_instance_cookie;
+} RinAccessibilityServiceFocusedSnapshotV1;
+
 typedef struct RinAccessibilityServiceQueryV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -123,6 +140,9 @@ static_assert(sizeof(RinAccessibilityServiceQueryV1) == 48u,
               "RinAccessibilityServiceQueryV1 ABI drift");
 static_assert(sizeof(RinAccessibilityServiceActionV2) == 256u,
               "RinAccessibilityServiceActionV2 ABI drift");
+static_assert(sizeof(RinAccessibilityServiceFocusedSnapshotV1) ==
+                  sizeof(RinAccessibilityWireSnapshotV1) + 16u,
+              "RinAccessibilityServiceFocusedSnapshotV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinAccessibilityServiceMessageHeaderV1) == 32u,
                "RinAccessibilityServiceMessageHeaderV1 ABI drift");
@@ -132,6 +152,9 @@ _Static_assert(sizeof(RinAccessibilityServiceQueryV1) == 48u,
                "RinAccessibilityServiceQueryV1 ABI drift");
 _Static_assert(sizeof(RinAccessibilityServiceActionV2) == 256u,
                "RinAccessibilityServiceActionV2 ABI drift");
+_Static_assert(sizeof(RinAccessibilityServiceFocusedSnapshotV1) ==
+                   sizeof(RinAccessibilityWireSnapshotV1) + 16u,
+               "RinAccessibilityServiceFocusedSnapshotV1 ABI drift");
 #endif
 
 #endif /* RIN_SDK_ACCESSIBILITY_SERVICE_H */
