@@ -429,6 +429,8 @@
 #define SYS_IO_URING_ENTER              RIN_SYS_IO_URING_ENTER
 #define SYS_IO_URING_REGISTER           RIN_SYS_IO_URING_REGISTER
 #define SYS_FACCESSAT2                  RIN_SYS_FACCESSAT2
+#define SYS_CAPGET                      RIN_SYS_CAPGET
+#define SYS_CAPSET                      RIN_SYS_CAPSET
 
 #define SYS_CPU_TIME_ABI_VERSION        RIN_CPU_TIME_ABI_VERSION
 #define SYS_AUDIO_CTL_START             RIN_AUDIO_CTL_START
