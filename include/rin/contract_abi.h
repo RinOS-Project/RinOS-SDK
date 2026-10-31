@@ -684,6 +684,13 @@ typedef struct RinCredentialSetResV1 {
     uint32_t reserved;
 } RinCredentialSetResV1;
 
+typedef struct RinSignalWaitRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved;
+    uint64_t signal_number_address;
+} RinSignalWaitRequestV1;
+
 typedef struct RinSupplementaryGroupsV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -1793,6 +1800,11 @@ static_assert(offsetof(RinCredentialSetResV1, real_id) == 8, "RinCredentialSetRe
 static_assert(offsetof(RinCredentialSetResV1, effective_id) == 12, "RinCredentialSetResV1.effective_id ABI drift");
 static_assert(offsetof(RinCredentialSetResV1, saved_id) == 16, "RinCredentialSetResV1.saved_id ABI drift");
 static_assert(offsetof(RinCredentialSetResV1, reserved) == 20, "RinCredentialSetResV1.reserved ABI drift");
+static_assert(sizeof(RinSignalWaitRequestV1) == 16, "RinSignalWaitRequestV1 ABI drift");
+static_assert(offsetof(RinSignalWaitRequestV1, struct_size) == 0, "RinSignalWaitRequestV1.struct_size ABI drift");
+static_assert(offsetof(RinSignalWaitRequestV1, version) == 4, "RinSignalWaitRequestV1.version ABI drift");
+static_assert(offsetof(RinSignalWaitRequestV1, reserved) == 6, "RinSignalWaitRequestV1.reserved ABI drift");
+static_assert(offsetof(RinSignalWaitRequestV1, signal_number_address) == 8, "RinSignalWaitRequestV1.signal_number_address ABI drift");
 static_assert(sizeof(RinSupplementaryGroupsV1) == 64, "RinSupplementaryGroupsV1 ABI drift");
 static_assert(offsetof(RinSupplementaryGroupsV1, struct_size) == 0, "RinSupplementaryGroupsV1.struct_size ABI drift");
 static_assert(offsetof(RinSupplementaryGroupsV1, version) == 4, "RinSupplementaryGroupsV1.version ABI drift");
@@ -2744,6 +2756,11 @@ _Static_assert(offsetof(RinCredentialSetResV1, real_id) == 8, "RinCredentialSetR
 _Static_assert(offsetof(RinCredentialSetResV1, effective_id) == 12, "RinCredentialSetResV1.effective_id ABI drift");
 _Static_assert(offsetof(RinCredentialSetResV1, saved_id) == 16, "RinCredentialSetResV1.saved_id ABI drift");
 _Static_assert(offsetof(RinCredentialSetResV1, reserved) == 20, "RinCredentialSetResV1.reserved ABI drift");
+_Static_assert(sizeof(RinSignalWaitRequestV1) == 16, "RinSignalWaitRequestV1 ABI drift");
+_Static_assert(offsetof(RinSignalWaitRequestV1, struct_size) == 0, "RinSignalWaitRequestV1.struct_size ABI drift");
+_Static_assert(offsetof(RinSignalWaitRequestV1, version) == 4, "RinSignalWaitRequestV1.version ABI drift");
+_Static_assert(offsetof(RinSignalWaitRequestV1, reserved) == 6, "RinSignalWaitRequestV1.reserved ABI drift");
+_Static_assert(offsetof(RinSignalWaitRequestV1, signal_number_address) == 8, "RinSignalWaitRequestV1.signal_number_address ABI drift");
 _Static_assert(sizeof(RinSupplementaryGroupsV1) == 64, "RinSupplementaryGroupsV1 ABI drift");
 _Static_assert(offsetof(RinSupplementaryGroupsV1, struct_size) == 0, "RinSupplementaryGroupsV1.struct_size ABI drift");
 _Static_assert(offsetof(RinSupplementaryGroupsV1, version) == 4, "RinSupplementaryGroupsV1.version ABI drift");
