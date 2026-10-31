@@ -13,9 +13,9 @@ static uint64_t align_up(uint64_t value, uint64_t alignment) {
     return (value + alignment - 1u) & ~(alignment - 1u);
 }
 
-/* The descriptor free list is driver-owned metadata.  Validate it before
- * every operation that follows it so a torn or device-corrupted queue cannot
- * turn into an out-of-bounds walk or a partial publication. */
+/* The descriptor free list is driver-owned metadata.  Validate it at the
+ * beginning of each public operation so damaged state cannot turn into an
+ * out-of-bounds walk or a partial publication. */
 static int virtqueue_shape_valid(const RinVirtqueueV3* queue) {
     uint8_t seen[RIN_VIRTQUEUE_V3_MAX_SIZE];
     uint16_t current;
@@ -157,9 +157,9 @@ int rin_virtqueue_v3_submit_chain(
     return 0;
 }
 
-int rin_virtqueue_v3_pop_used(RinVirtqueueV3* queue, uint16_t* descriptor_id,
-                              uint32_t* length) {
-    if (!virtqueue_shape_valid(queue) || !descriptor_id || !length) return -1;
+static int virtqueue_pop_used_validated(
+    RinVirtqueueV3* queue, uint16_t* descriptor_id, uint32_t* length) {
+    if (!descriptor_id || !length) return -1;
     uint16_t used = __atomic_load_n(queue->used_index, __ATOMIC_ACQUIRE);
     uint16_t pending = (uint16_t)(used - queue->last_used);
     if (pending == 0u) return 0;
@@ -210,6 +210,12 @@ int rin_virtqueue_v3_pop_used(RinVirtqueueV3* queue, uint16_t* descriptor_id,
     return 1;
 }
 
+int rin_virtqueue_v3_pop_used(RinVirtqueueV3* queue, uint16_t* descriptor_id,
+                              uint32_t* length) {
+    if (!virtqueue_shape_valid(queue) || !descriptor_id || !length) return -1;
+    return virtqueue_pop_used_validated(queue, descriptor_id, length);
+}
+
 int rin_virtqueue_v3_pop_used_batch(
     RinVirtqueueV3* queue, RinVirtqueueCompletionV3* completions,
     uint32_t capacity, uint32_t* completion_count) {
@@ -219,10 +225,13 @@ int rin_virtqueue_v3_pop_used_batch(
     *completion_count = 0u;
     if (!completions || capacity == 0u ||
         capacity > RIN_VIRTQUEUE_V3_MAX_BATCH) return -1;
+    /* The batch owns queue metadata between entries, so check the complete
+     * free-list shape once and validate each device completion separately. */
+    if (!virtqueue_shape_valid(queue)) return -1;
     while (count < capacity) {
         uint16_t descriptor_id = UINT16_MAX;
         uint32_t length = 0u;
-        int popped = rin_virtqueue_v3_pop_used(
+        int popped = virtqueue_pop_used_validated(
             queue, &descriptor_id, &length);
         if (popped < 0) {
             *completion_count = count;
