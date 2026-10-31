@@ -85,6 +85,10 @@ enum {
     RIN_ICU_CMD_TIME_ZONE_AVAILABLE_REGION_V1 = 133,
     RIN_ICU_CMD_TIME_ZONE_TRANSITION_V1 = 134,
     RIN_ICU_CMD_TIME_ZONE_LOCAL_OFFSETS_V1 = 135,
+    /* V2 returns the seconds retained by TZDB v2. V1 remains the stable
+     * minute-based compatibility ABI. */
+    RIN_ICU_CMD_TIME_ZONE_OFFSET_SECONDS_V2 = 136,
+    RIN_ICU_CMD_TIME_ZONE_LOCAL_OFFSETS_SECONDS_V2 = 137,
 
     RIN_ICU_CMD_DESTROY_HANDLE_V1 = 96
 };
@@ -428,6 +432,17 @@ typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneOffsetResponse {
     uint32_t in_dst;
 } RinIcuTimeZoneOffsetResponse;
 
+typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneOffsetSecondsRequestV2 {
+    uint32_t time_zone_len;
+    uint32_t reserved0;
+    int64_t epoch_ms;
+} RinIcuTimeZoneOffsetSecondsRequestV2;
+
+typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneOffsetSecondsResponseV2 {
+    int32_t offset_seconds;
+    uint32_t in_dst;
+} RinIcuTimeZoneOffsetSecondsResponseV2;
+
 #define RIN_ICU_TIME_ZONE_LOCAL_OFFSET_MAX 2u
 
 /* The input is a local wall-clock epoch value, not a UTC instant.  A valid
@@ -442,6 +457,23 @@ typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneLocalOffsetsResponse {
     uint32_t count;
     RinIcuTimeZoneOffsetResponse offsets[RIN_ICU_TIME_ZONE_LOCAL_OFFSET_MAX];
 } RinIcuTimeZoneLocalOffsetsResponse;
+
+typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneLocalOffsetsSecondsRequestV2 {
+    uint32_t time_zone_len;
+    uint32_t reserved0;
+    int64_t local_epoch_ms;
+} RinIcuTimeZoneLocalOffsetsSecondsRequestV2;
+
+typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneLocalOffsetSecondsV2 {
+    int32_t offset_seconds;
+    uint32_t in_dst;
+} RinIcuTimeZoneLocalOffsetSecondsV2;
+
+typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneLocalOffsetsSecondsResponseV2 {
+    uint32_t count;
+    RinIcuTimeZoneLocalOffsetSecondsV2 offsets[
+        RIN_ICU_TIME_ZONE_LOCAL_OFFSET_MAX];
+} RinIcuTimeZoneLocalOffsetsSecondsResponseV2;
 
 typedef struct RIN_ICU_ABI_PACKED RinIcuTimeZoneTransitionRequest {
     uint32_t time_zone_len;
@@ -513,6 +545,8 @@ static inline int rin_icu_command_known_v2(uint32_t command)
     case RIN_ICU_CMD_TIME_ZONE_AVAILABLE_REGION_V1:
     case RIN_ICU_CMD_TIME_ZONE_TRANSITION_V1:
     case RIN_ICU_CMD_TIME_ZONE_LOCAL_OFFSETS_V1:
+    case RIN_ICU_CMD_TIME_ZONE_OFFSET_SECONDS_V2:
+    case RIN_ICU_CMD_TIME_ZONE_LOCAL_OFFSETS_SECONDS_V2:
     case RIN_ICU_CMD_DESTROY_HANDLE_V1:
         return 1;
     default:
@@ -608,6 +642,16 @@ RIN_ICU_STATIC_ASSERT(rin_icu_timezone_local_offsets_request_size_is_stable,
                       sizeof(RinIcuTimeZoneLocalOffsetsRequest) == 16u);
 RIN_ICU_STATIC_ASSERT(rin_icu_timezone_local_offsets_response_size_is_stable,
                       sizeof(RinIcuTimeZoneLocalOffsetsResponse) == 20u);
+RIN_ICU_STATIC_ASSERT(rin_icu_timezone_offset_seconds_v2_request_size_is_stable,
+                      sizeof(RinIcuTimeZoneOffsetSecondsRequestV2) == 16u);
+RIN_ICU_STATIC_ASSERT(rin_icu_timezone_offset_seconds_v2_response_size_is_stable,
+                      sizeof(RinIcuTimeZoneOffsetSecondsResponseV2) == 8u);
+RIN_ICU_STATIC_ASSERT(rin_icu_timezone_local_offsets_seconds_v2_request_size_is_stable,
+                      sizeof(RinIcuTimeZoneLocalOffsetsSecondsRequestV2) == 16u);
+RIN_ICU_STATIC_ASSERT(rin_icu_timezone_local_offset_seconds_v2_size_is_stable,
+                      sizeof(RinIcuTimeZoneLocalOffsetSecondsV2) == 8u);
+RIN_ICU_STATIC_ASSERT(rin_icu_timezone_local_offsets_seconds_v2_response_size_is_stable,
+                      sizeof(RinIcuTimeZoneLocalOffsetsSecondsResponseV2) == 20u);
 RIN_ICU_STATIC_ASSERT(rin_icu_timezone_transition_request_size_is_stable,
                       sizeof(RinIcuTimeZoneTransitionRequest) == 28u);
 RIN_ICU_STATIC_ASSERT(rin_icu_timezone_transition_response_size_is_stable,
