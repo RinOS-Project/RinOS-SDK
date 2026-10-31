@@ -61,6 +61,12 @@
 /* Descriptor-relative stat that rejects ambient path lookup and `..` escape.
  * buffer_size selects the caller's legacy, time64, or 64-bit stat record. */
 #define RIN_PATH_AT_STAT_BENEATH    28u
+/* Creation owner tokens are supplied in buffer before publication. Only
+ * OPEN|O_CREAT|O_EXCL, MKDIR, and SYMLINK accept this flag. */
+#define RIN_PATH_AT_CREATE_OPERATION_TOKEN 0x10000u
+/* Read the immutable 16-byte creation owner token from a pinned RinFS fd. */
+#define RIN_PATH_AT_FGETOPERATIONTOKEN 29u
+#define RIN_PATH_AT_OPERATION_TOKEN_SIZE 16u
 
 /* FSETXATTR accepts these flags in addition to EMPTY_PATH. */
 #define RIN_PATH_AT_XATTR_CREATE    0x0001u
