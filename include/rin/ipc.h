@@ -8,6 +8,9 @@
 
 #define RIN_EVENT_CREATE_FLAG_CLOSE_ON_EXEC UINT32_C(1)
 #define RIN_EVENT_CREATE_FLAGS_ALL RIN_EVENT_CREATE_FLAG_CLOSE_ON_EXEC
+/* Maximum per-process event object limit exposed by rin_event_capacity_*_v1().
+ * Lowering the limit below the number of live events returns RIN_ERROR_BUSY. */
+#define RIN_EVENT_CAPACITY_MAX_V1 UINT32_C(32)
 
 /* Kernel code imports IPC wire contracts while intentionally suppressing the
  * public convenience aliases in abi.h. Keep this header independently
@@ -82,6 +85,10 @@ RIN_SDK_API RIN_IPC_RESULT_TYPE rin_channel_receive_with_peer_v1(
     RinChannel channel, RinIpcMessageV1* message,
     RinIpcPeerIdentityV1* peer_identity_out);
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_event_create_v1(uint32_t flags, RinEvent* event);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_event_capacity_get_v1(
+    uint32_t* capacity_out);
+RIN_SDK_API RIN_IPC_RESULT_TYPE rin_event_capacity_set_v1(
+    uint32_t capacity);
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_event_signal_v1(RinEvent event, uint64_t value);
 /* 最後に通知された値を返す。未通知の場合はRIN_ERROR_WOULD_BLOCK。 */
 RIN_SDK_API RIN_IPC_RESULT_TYPE rin_event_query_v1(RinEvent event, uint64_t* value_out);

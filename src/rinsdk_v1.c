@@ -74,6 +74,7 @@ enum {
     IPC_POSIX_MQ_RECEIVE, IPC_POSIX_MQ_GETATTR, IPC_POSIX_MQ_SETATTR,
     IPC_POSIX_MQ_NOTIFY, IPC_POSIX_MQ_WAIT_RECEIVE_BEGIN,
     IPC_POSIX_MQ_WAIT_RECEIVE_END, IPC_EVENT_QUERY = 24,
+    IPC_EVENT_CAPACITY_GET = 26, IPC_EVENT_CAPACITY_SET = 27,
     FS_FILE_OPEN = 1, FS_FILE_READ, FS_FILE_WRITE, FS_FILE_FLUSH,
     FS_DIRECTORY_NEXT, FS_PATH_NORMALIZE, FS_FILE_WATCH,
     FS_FILE_READ_ASYNC, FS_FILE_WRITE_ASYNC, FS_FILE_IO_RESULT,
@@ -863,6 +864,21 @@ RinResult rin_channel_receive_with_peer_v1(
 RinResult rin_event_create_v1(uint32_t flags, RinEvent* event) {
     HANDLE_OUTPUT_SIMPLE_CALL(
         RIN_SDK_LIBRARY_IPC, IPC_EVENT_CREATE, event, flags,0,0,0,0,0);
+}
+RinResult rin_event_capacity_get_v1(uint32_t* capacity_out) {
+    RinSdkArgsV1 request;
+    if (capacity_out == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    *capacity_out = 0u;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_IPC, IPC_EVENT_CAPACITY_GET,
+                             &request, sizeof(request), capacity_out,
+                             sizeof(*capacity_out));
+}
+RinResult rin_event_capacity_set_v1(uint32_t capacity) {
+    SIMPLE_CALL(RIN_SDK_LIBRARY_IPC, IPC_EVENT_CAPACITY_SET,
+                (RinResult*)0, capacity,0,0,0,0,0);
 }
 RinResult rin_event_signal_v1(RinEvent event, uint64_t value) {
     SIMPLE_CALL(RIN_SDK_LIBRARY_IPC, IPC_EVENT_SIGNAL, (RinResult*)0, event,value,0,0,0,0);
