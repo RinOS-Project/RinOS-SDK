@@ -1179,6 +1179,22 @@ void rin_exit(int status)
     exit(status);
 }
 
+void rin_log(const char* message)
+{
+    size_t length = 0u;
+    size_t written = 0u;
+    if (!message) return;
+    while (length < 4096u && message[length] != '\0') ++length;
+    while (written < length) {
+        intptr_t result = rincrt_raw_syscall3(
+            RIN_SYS_WRITE, 2u, (uintptr_t)(message + written),
+            (uintptr_t)(length - written));
+        if (result <= 0 || (uintptr_t)result > (uintptr_t)(length - written))
+            break;
+        written += (size_t)result;
+    }
+}
+
 int close(int descriptor)
 {
     return rincrt_status_result(rincrt_raw_syscall1(
