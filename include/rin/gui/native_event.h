@@ -17,12 +17,21 @@ extern "C" {
 #define RIN_GUI_NATIVE_EVENT_KEY_DOWN 15u
 #define RIN_GUI_NATIVE_EVENT_KEY_UP 16u
 #define RIN_GUI_NATIVE_EVENT_INPUT_DEVICE_RESET 19u
+#define RIN_GUI_NATIVE_EVENT_POINTER_CONTACT 20u
+#define RIN_GUI_NATIVE_EVENT_KEY_CODE 21u
 
 #define RIN_GUI_NATIVE_EVENT_FLAG_KEY_REPEAT 0x0001u
 /* Set on physical key events when the active physical keyboard map is JIS.
  * This describes the keyboard, independently of the selected input method. */
 #define RIN_GUI_NATIVE_EVENT_FLAG_KEYBOARD_LAYOUT_JIS 0x0002u
-#define RIN_GUI_NATIVE_EVENT_FLAG_KNOWN_MASK 0x0003u
+#define RIN_GUI_NATIVE_EVENT_FLAG_POINTER_CONTACT_DOWN 0x0004u
+#define RIN_GUI_NATIVE_EVENT_FLAG_POINTER_CONTACT_MOVE 0x0008u
+#define RIN_GUI_NATIVE_EVENT_FLAG_POINTER_CONTACT_UP 0x0010u
+/* KEY_CODE preserves Linux EV_KEY codes that have no Set-1 encoding. */
+#define RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_DOWN 0x0020u
+#define RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_UP 0x0040u
+#define RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_REPEAT 0x0080u
+#define RIN_GUI_NATIVE_EVENT_FLAG_KNOWN_MASK 0x00ffu
 #define RIN_GUI_NATIVE_LEGACY_KEY_REPEAT 0x20u
 
 #define RIN_GUI_NATIVE_KEY_SCANCODE_MASK 0x7fu
@@ -140,6 +149,9 @@ typedef struct RinGuiNativeEventV1 {
     int16_t wheel_delta;
     uint8_t pointer_buttons;
     uint8_t key_modifiers;
+    /* POINTER_CONTACT and KEY_CODE use reserved[0..1] as a 64-bit device id.
+     * Contact data is a generation-bound token; KEY_CODE data is a Linux
+     * input-event key code. */
     uint32_t reserved[2];
 } RinGuiNativeEventV1;
 

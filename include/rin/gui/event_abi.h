@@ -25,6 +25,8 @@ enum RinWindowEventType {
     RIN_WINDOW_EVENT_TEXT_COMPOSITION = 13,
     RIN_WINDOW_EVENT_SCALE_CHANGED = 14,
     RIN_WINDOW_EVENT_DISPLAY_CHANGED = 15,
+    RIN_WINDOW_EVENT_POINTER_CONTACT = 16,
+    RIN_WINDOW_EVENT_KEY_CODE = 17,
 };
 
 #define RIN_WINDOW_EVENT_FLAG_NONE UINT32_C(0)
@@ -58,15 +60,53 @@ static inline int rin_window_event_valid(const RinWindowEventV1* value) {
 
 /* Translate the existing native queue ABI without losing the original event.
  * Resize/move/focus/display events are produced by the compositor as
- * normalized events; input events retain their native payload for clients
- * that need scancodes or pointer-button masks. */
+ * normalized events; input events retain native payloads for scancodes, raw
+ * key codes, contact tokens, and pointer-button masks. */
 static inline int rin_window_event_from_native(
     const RinGuiNativeEventV1* native, RinWindowEventV1* event_out) {
     uint32_t type;
     if (!native || !event_out || native->struct_size != sizeof(*native) ||
-        native->version != RIN_GUI_NATIVE_EVENT_VERSION ||
-        native->reserved[0] != 0u || native->reserved[1] != 0u)
+        native->version != RIN_GUI_NATIVE_EVENT_VERSION)
         return 0;
+    if (native->type == RIN_GUI_NATIVE_EVENT_POINTER_CONTACT) {
+        const uint32_t phase = native->flags &
+            (RIN_GUI_NATIVE_EVENT_FLAG_POINTER_CONTACT_DOWN |
+             RIN_GUI_NATIVE_EVENT_FLAG_POINTER_CONTACT_MOVE |
+             RIN_GUI_NATIVE_EVENT_FLAG_POINTER_CONTACT_UP);
+        const uint64_t device_id = (uint64_t)native->reserved[0] |
+            ((uint64_t)native->reserved[1] << 32);
+        if (device_id == 0u || native->data == 0u ||
+            native->screen_x < 0 || native->screen_y < 0 ||
+            native->pointer_buttons != 0u || native->wheel_delta != 0 ||
+            native->key_modifiers != 0u ||
+            (native->flags & ~RIN_GUI_NATIVE_EVENT_FLAG_KNOWN_MASK) != 0u ||
+            (phase != RIN_GUI_NATIVE_EVENT_FLAG_POINTER_CONTACT_DOWN &&
+             phase != RIN_GUI_NATIVE_EVENT_FLAG_POINTER_CONTACT_MOVE &&
+             phase != RIN_GUI_NATIVE_EVENT_FLAG_POINTER_CONTACT_UP) ||
+            native->flags != phase)
+            return 0;
+    } else if (native->type == RIN_GUI_NATIVE_EVENT_KEY_CODE) {
+        const uint32_t phase = native->flags &
+            (RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_DOWN |
+             RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_UP |
+             RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_REPEAT);
+        const uint64_t device_id = (uint64_t)native->reserved[0] |
+            ((uint64_t)native->reserved[1] << 32);
+        if (device_id == 0u || native->data == 0u || native->data >= 768u ||
+            native->screen_x != 0 || native->screen_y != 0 ||
+            native->pointer_buttons != 0u || native->wheel_delta != 0 ||
+            (native->key_modifiers &
+             ~RIN_GUI_NATIVE_KEYMOD_KNOWN_MASK) != 0u ||
+            (native->flags & ~RIN_GUI_NATIVE_EVENT_FLAG_KNOWN_MASK) != 0u ||
+            (phase != RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_DOWN &&
+             phase != (RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_DOWN |
+                       RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_REPEAT) &&
+             phase != RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_UP) ||
+            native->flags != phase)
+            return 0;
+    } else if (native->reserved[0] != 0u || native->reserved[1] != 0u) {
+        return 0;
+    }
 #ifdef __cplusplus
     *event_out = RinWindowEventV1{};
 #else
@@ -89,6 +129,12 @@ static inline int rin_window_event_from_native(
         case RIN_GUI_NATIVE_EVENT_KEY_UP:
             event_out->type = RIN_WINDOW_EVENT_KEY_UP;
             return 1;
+        case RIN_GUI_NATIVE_EVENT_KEY_CODE:
+            event_out->type = RIN_WINDOW_EVENT_KEY_CODE;
+            if ((native->flags &
+                 RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_REPEAT) != 0u)
+                event_out->flags |= RIN_WINDOW_EVENT_FLAG_KEY_REPEAT;
+            return 1;
         case RIN_GUI_NATIVE_EVENT_POINTER_MOVE:
             event_out->type = RIN_WINDOW_EVENT_POINTER_MOVE;
             event_out->x = native->screen_x;
@@ -96,6 +142,11 @@ static inline int rin_window_event_from_native(
             return 1;
         case RIN_GUI_NATIVE_EVENT_POINTER_BUTTON:
             event_out->type = RIN_WINDOW_EVENT_POINTER_BUTTON;
+            event_out->x = native->screen_x;
+            event_out->y = native->screen_y;
+            return 1;
+        case RIN_GUI_NATIVE_EVENT_POINTER_CONTACT:
+            event_out->type = RIN_WINDOW_EVENT_POINTER_CONTACT;
             event_out->x = native->screen_x;
             event_out->y = native->screen_y;
             return 1;
