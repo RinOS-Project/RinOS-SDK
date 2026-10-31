@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/syscall.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <rin/base.h>
@@ -33,6 +34,9 @@
 #define RIN_MEDIA_MDC1_IO_RETRY_LIMIT UINT32_C(16)
 #define RIN_MEDIA_MDC1_CANCEL_POLL_MS 100
 #define RIN_MEDIA_MDC1_MAX_SESSIONS UINT32_C(64)
+/* Permit 8 MiB/s plus five seconds of service/startup grace per operation. */
+#define RIN_MEDIA_TRANSFER_MIN_BYTES_PER_SECOND UINT64_C(8388608)
+#define RIN_MEDIA_TRANSFER_DEADLINE_GRACE_MS UINT64_C(5000)
 #define RIN_MEDIA_IMAGE_DECODE_DEADLINE_MS UINT64_C(5000)
 #define RIN_MEDIA_IMAGE_IO_TIMEOUT_MS 5000
 #define RIN_MEDIA_IMAGE_MAX_FRAMES UINT32_C(1024)
@@ -140,6 +144,10 @@ typedef struct RinMediaSdkSessionV1 {
 
 static RinMediaSdkSessionV1 g_media_sessions[RIN_MEDIA_MDC1_MAX_SESSIONS];
 
+typedef struct RinMediaDeadlineV1 {
+    uint64_t expires_at_ms;
+} RinMediaDeadlineV1;
+
 static void rin_media_session_reset_image(RinMediaSdkSessionV1* session)
 {
     if (session == NULL) return;
@@ -191,6 +199,60 @@ static int rin_media_range_valid(uint64_t address, uint64_t size,
     return size <= (uint64_t)UINTPTR_MAX - address;
 }
 
+static int rin_media_monotonic_ms(uint64_t* milliseconds_out)
+{
+    struct timespec now;
+    uint64_t seconds;
+
+    if (milliseconds_out == NULL || clock_gettime(CLOCK_MONOTONIC, &now) != 0 ||
+        now.tv_sec < 0 || now.tv_nsec < 0 || now.tv_nsec >= 1000000000L)
+        return 0;
+    seconds = (uint64_t)now.tv_sec;
+    if (seconds > (UINT64_MAX - (uint64_t)now.tv_nsec / UINT64_C(1000000)) /
+                      UINT64_C(1000))
+        return 0;
+    *milliseconds_out = seconds * UINT64_C(1000) +
+                        (uint64_t)now.tv_nsec / UINT64_C(1000000);
+    return 1;
+}
+
+static int rin_media_deadline_init(RinMediaDeadlineV1* deadline,
+                                   int idle_timeout_ms,
+                                   uint64_t transfer_bytes)
+{
+    uint64_t now_ms;
+    uint64_t transfer_seconds;
+    uint64_t budget_ms = RIN_MEDIA_TRANSFER_DEADLINE_GRACE_MS;
+
+    if (deadline == NULL || idle_timeout_ms <= 0 ||
+        !rin_media_monotonic_ms(&now_ms))
+        return 0;
+    if ((uint64_t)idle_timeout_ms > budget_ms)
+        budget_ms = (uint64_t)idle_timeout_ms;
+    transfer_seconds = transfer_bytes /
+                       RIN_MEDIA_TRANSFER_MIN_BYTES_PER_SECOND;
+    if ((transfer_bytes % RIN_MEDIA_TRANSFER_MIN_BYTES_PER_SECOND) != 0u)
+        ++transfer_seconds;
+    if (transfer_seconds > (UINT64_MAX - budget_ms) / UINT64_C(1000))
+        return 0;
+    budget_ms += transfer_seconds * UINT64_C(1000);
+    if (now_ms > UINT64_MAX - budget_ms) return 0;
+    deadline->expires_at_ms = now_ms + budget_ms;
+    return 1;
+}
+
+static int rin_media_deadline_remaining_ms(const RinMediaDeadlineV1* deadline)
+{
+    uint64_t now_ms;
+    uint64_t remaining;
+
+    if (deadline == NULL || !rin_media_monotonic_ms(&now_ms) ||
+        now_ms >= deadline->expires_at_ms)
+        return 0;
+    remaining = deadline->expires_at_ms - now_ms;
+    return remaining > (uint64_t)INT32_MAX ? INT32_MAX : (int)remaining;
+}
+
 static int rin_media_wait_fd_timeout(int fd, short events, int timeout_ms)
 {
     struct pollfd item;
@@ -220,116 +282,138 @@ static int rin_media_wait_fd_timeout(int fd, short events, int timeout_ms)
     return 0;
 }
 
-static int rin_media_transfer_exact_timeout(int fd, void* buffer,
-                                            uint32_t size, int receiving,
-                                            int timeout_ms)
-{
-    uint8_t* cursor = (uint8_t*)buffer;
-    uint32_t offset = 0u;
-
-    if (fd < 0 || (size != 0u && buffer == NULL)) return 0;
-    while (offset < size) {
-        ssize_t count;
-        uint32_t attempt = 0u;
-        const short readiness = receiving ? POLLIN : POLLOUT;
-        if (!rin_media_wait_fd_timeout(fd, readiness, timeout_ms)) return 0;
-        do {
-            count = receiving
-                ? recv(fd, cursor + offset, (size_t)(size - offset), 0)
-                : send(fd, cursor + offset, (size_t)(size - offset),
-                       MSG_NOSIGNAL);
-            if (count < 0 && (errno == EINTR || errno == EAGAIN ||
-                              errno == EWOULDBLOCK)) {
-                if (++attempt >= RIN_MEDIA_MDC1_IO_RETRY_LIMIT) return 0;
-                continue;
-            }
-            break;
-        } while (1);
-        if (count <= 0 || (uint64_t)count > (uint64_t)(size - offset))
-            return 0;
-        offset += (uint32_t)count;
-    }
-    return 1;
-}
-
-static int rin_media_transfer_exact_timeout_cancellable(
-    int fd, void* buffer, uint32_t size, int receiving, int timeout_ms,
+static int rin_media_transfer_exact_deadline(
+    int fd, void* buffer, uint32_t size, int receiving, int idle_timeout_ms,
+    const RinMediaDeadlineV1* deadline,
     RinMediaCancellationFunctionV1 cancellation, void* cancellation_context,
     int* cancelled_out)
 {
     uint8_t* cursor = (uint8_t*)buffer;
     uint32_t offset = 0u;
+    uint64_t last_progress_ms;
 
     if (cancelled_out != NULL) *cancelled_out = 0;
-    if (fd < 0 || (size != 0u && buffer == NULL) || timeout_ms <= 0)
+    if (fd < 0 || (size != 0u && buffer == NULL) || deadline == NULL ||
+        idle_timeout_ms <= 0 || !rin_media_monotonic_ms(&last_progress_ms))
         return 0;
     while (offset < size) {
         struct pollfd item;
-        uint32_t waited_ms = 0u;
-        uint32_t interrupted = 0u;
-        uint32_t readiness_races = 0u;
         const short readiness = receiving ? POLLIN : POLLOUT;
+        int poll_result;
+        int remaining_ms;
+        int idle_remaining_ms;
+        uint64_t now_ms;
         ssize_t count;
-        memset(&item, 0, sizeof(item));
-        item.fd = fd;
-        item.events = readiness;
-        while (waited_ms < (uint32_t)timeout_ms) {
-            const uint32_t remaining = (uint32_t)timeout_ms - waited_ms;
-            const int wait_ms = cancellation != NULL &&
-                    remaining > RIN_MEDIA_MDC1_CANCEL_POLL_MS
-                ? RIN_MEDIA_MDC1_CANCEL_POLL_MS
-                : (int)remaining;
-            int poll_result;
-            if (cancellation != NULL && cancellation(cancellation_context)) {
-                if (cancelled_out != NULL) *cancelled_out = 1;
-                return 0;
-            }
-            poll_result = poll(&item, 1u, wait_ms);
-            if (poll_result < 0) {
-                if (errno == EINTR &&
-                    ++interrupted < RIN_MEDIA_MDC1_IO_RETRY_LIMIT)
-                    continue;
-                return 0;
-            }
-            if (poll_result == 0) {
-                waited_ms += (uint32_t)wait_ms;
-                continue;
-            }
-            if ((item.revents & POLLNVAL) != 0)
-                return 0;
-            if ((item.revents & readiness) != 0) break;
-            /* POLLHUP can accompany readable buffered response bytes. Drain
-             * those bytes before a later recv() observes EOF. */
-            if (receiving && (item.revents & POLLHUP) != 0) break;
-            if ((item.revents & (POLLERR | POLLHUP)) != 0) return 0;
-            item.revents = 0;
-            waited_ms += (uint32_t)wait_ms;
-        }
-        if (waited_ms >= (uint32_t)timeout_ms) return 0;
+
         if (cancellation != NULL && cancellation(cancellation_context)) {
             if (cancelled_out != NULL) *cancelled_out = 1;
             return 0;
         }
+        remaining_ms = rin_media_deadline_remaining_ms(deadline);
+        if (remaining_ms <= 0) return 0;
+        if (!rin_media_monotonic_ms(&now_ms) ||
+            now_ms < last_progress_ms ||
+            now_ms - last_progress_ms >= (uint64_t)idle_timeout_ms)
+            return 0;
+        idle_remaining_ms = idle_timeout_ms -
+                            (int)(now_ms - last_progress_ms);
+        if (remaining_ms > idle_remaining_ms)
+            remaining_ms = idle_remaining_ms;
+        memset(&item, 0, sizeof(item));
+        item.fd = fd;
+        item.events = readiness;
+        if (cancellation != NULL &&
+            remaining_ms > RIN_MEDIA_MDC1_CANCEL_POLL_MS)
+            remaining_ms = RIN_MEDIA_MDC1_CANCEL_POLL_MS;
+        poll_result = poll(&item, 1u, remaining_ms);
+        if (poll_result < 0) {
+            if (errno == EINTR) continue;
+            return 0;
+        }
+        if (poll_result == 0) continue;
+        if ((item.revents & POLLNVAL) != 0) return 0;
+        if ((item.revents & readiness) == 0 &&
+            !(receiving && (item.revents & POLLHUP) != 0)) {
+            if ((item.revents & (POLLERR | POLLHUP)) != 0) return 0;
+            continue;
+        }
+        if (!rin_media_monotonic_ms(&now_ms) ||
+            now_ms >= deadline->expires_at_ms ||
+            now_ms < last_progress_ms ||
+            now_ms - last_progress_ms >= (uint64_t)idle_timeout_ms)
+            return 0;
+        if (cancellation != NULL && cancellation(cancellation_context)) {
+            if (cancelled_out != NULL) *cancelled_out = 1;
+            return 0;
+        }
+        if (!rin_media_monotonic_ms(&now_ms) ||
+            now_ms >= deadline->expires_at_ms ||
+            now_ms < last_progress_ms ||
+            now_ms - last_progress_ms >= (uint64_t)idle_timeout_ms)
+            return 0;
         count = receiving
-            ? recv(fd, cursor + offset, (size_t)(size - offset), 0)
-            : send(fd, cursor + offset, (size_t)(size - offset), MSG_NOSIGNAL);
-        if (count < 0 && errno == EINTR) {
-            if (++interrupted < RIN_MEDIA_MDC1_IO_RETRY_LIMIT) continue;
-            return 0;
-        }
-        if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-            if (++readiness_races < RIN_MEDIA_MDC1_IO_RETRY_LIMIT) continue;
-            return 0;
-        }
+            ? recv(fd, cursor + offset, (size_t)(size - offset), MSG_DONTWAIT)
+            : send(fd, cursor + offset, (size_t)(size - offset),
+                   MSG_NOSIGNAL | MSG_DONTWAIT);
+        if (count < 0 && (errno == EINTR || errno == EAGAIN ||
+                          errno == EWOULDBLOCK))
+            continue;
         if (count <= 0 || (uint64_t)count > (uint64_t)(size - offset))
+            return 0;
+        if (!rin_media_monotonic_ms(&last_progress_ms) ||
+            last_progress_ms >= deadline->expires_at_ms)
             return 0;
         offset += (uint32_t)count;
     }
+    if (rin_media_deadline_remaining_ms(deadline) <= 0) return 0;
     if (cancellation != NULL && cancellation(cancellation_context)) {
         if (cancelled_out != NULL) *cancelled_out = 1;
         return 0;
     }
     return 1;
+}
+
+static int rin_media_transfer_exact_timeout_with_deadline(
+    int fd, void* buffer, uint32_t size, int receiving, int timeout_ms,
+    const RinMediaDeadlineV1* deadline)
+{
+    RinMediaDeadlineV1 local_deadline;
+
+    if (deadline == NULL) {
+        if (!rin_media_deadline_init(&local_deadline, timeout_ms, size))
+            return 0;
+        deadline = &local_deadline;
+    }
+    return rin_media_transfer_exact_deadline(
+        fd, buffer, size, receiving, timeout_ms, deadline, NULL, NULL, NULL);
+}
+
+static int rin_media_transfer_exact_timeout(int fd, void* buffer,
+                                            uint32_t size, int receiving,
+                                            int timeout_ms)
+{
+    return rin_media_transfer_exact_timeout_with_deadline(
+        fd, buffer, size, receiving, timeout_ms, NULL);
+}
+
+static int rin_media_transfer_exact_timeout_cancellable_with_deadline(
+    int fd, void* buffer, uint32_t size, int receiving, int timeout_ms,
+    const RinMediaDeadlineV1* deadline,
+    RinMediaCancellationFunctionV1 cancellation, void* cancellation_context,
+    int* cancelled_out)
+{
+    RinMediaDeadlineV1 local_deadline;
+
+    if (deadline == NULL) {
+        if (!rin_media_deadline_init(&local_deadline, timeout_ms, size)) {
+            if (cancelled_out != NULL) *cancelled_out = 0;
+            return 0;
+        }
+        deadline = &local_deadline;
+    }
+    return rin_media_transfer_exact_deadline(
+        fd, buffer, size, receiving, timeout_ms, deadline, cancellation,
+        cancellation_context, cancelled_out);
 }
 
 static int rin_media_wait_fd(int fd, short events)
@@ -611,13 +695,14 @@ static RinResult rin_media_connect_image_service(
 
 static int rin_media_image_response_header(
     RinMediaSdkSessionV1* session, uint16_t operation, uint64_t request_id,
-    RinImageDecoderServiceListenerHeaderV1* response)
+    RinImageDecoderServiceListenerHeaderV1* response,
+    const RinMediaDeadlineV1* deadline)
 {
     if (session == NULL || response == NULL || session->socket_fd < 0 ||
         session->image_connection_id == 0u || request_id == 0u ||
-        !rin_media_transfer_exact_timeout(
+        !rin_media_transfer_exact_timeout_with_deadline(
             session->socket_fd, response, (uint32_t)sizeof(*response), 1,
-            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, deadline))
         return 0;
     return response->magic == RIN_IMAGE_DECODER_SERVICE_PROTOCOL_MAGIC &&
            response->version == RIN_IMAGE_DECODER_SERVICE_PROTOCOL_VERSION &&
@@ -634,24 +719,36 @@ static int rin_media_image_response_header(
 static RinResult rin_media_image_begin_request(
     RinMediaSdkSessionV1* session, uint16_t operation, uint64_t request_id,
     const void* payload, uint32_t payload_size,
-    RinImageDecoderServiceListenerHeaderV1* response)
+    RinImageDecoderServiceListenerHeaderV1* response,
+    const RinMediaDeadlineV1* operation_deadline)
 {
     RinImageDecoderServiceListenerHeaderV1 header;
+    RinMediaDeadlineV1 local_deadline;
+    uint64_t transfer_bytes;
 
     if (session == NULL || session->socket_fd < 0 ||
         session->image_connection_id == 0u || request_id == 0u ||
         (payload_size != 0u && payload == NULL) || response == NULL)
         return RIN_ERROR_INVALID_ARGUMENT;
+    if (operation_deadline == NULL) {
+        transfer_bytes = (uint64_t)payload_size +
+                         sizeof(header) * UINT64_C(2);
+        if (!rin_media_deadline_init(&local_deadline,
+                                     RIN_MEDIA_IMAGE_IO_TIMEOUT_MS,
+                                     transfer_bytes))
+            return RIN_ERROR_IO;
+        operation_deadline = &local_deadline;
+    }
     rin_media_image_header_init(&header, operation, request_id,
                                 session->image_connection_id, payload_size);
-    if (!rin_media_transfer_exact_timeout(
+    if (!rin_media_transfer_exact_timeout_with_deadline(
             session->socket_fd, &header, (uint32_t)sizeof(header), 0,
-            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
-        (payload_size != 0u && !rin_media_transfer_exact_timeout(
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, operation_deadline) ||
+        (payload_size != 0u && !rin_media_transfer_exact_timeout_with_deadline(
              session->socket_fd, (void*)payload, payload_size, 0,
-             RIN_MEDIA_IMAGE_IO_TIMEOUT_MS)) ||
+             RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, operation_deadline)) ||
         !rin_media_image_response_header(session, operation, request_id,
-                                         response))
+                                         response, operation_deadline))
         return RIN_ERROR_IO;
     return rin_media_image_status_result(response->status);
 }
@@ -675,6 +772,9 @@ static int rin_media_rpc_timeout(RinMediaSdkSessionV1* session,
 {
     RinMediaMdc1HeaderV1 request;
     RinMediaMdc1HeaderV1 response;
+    RinMediaDeadlineV1 deadline;
+    const uint64_t transfer_bytes = (uint64_t)payload_bytes +
+                                    sizeof(request) + sizeof(response);
 
     if (session == NULL || reply == NULL || session->socket_fd < 0 ||
         session->session_id == 0u ||
@@ -688,16 +788,17 @@ static int rin_media_rpc_timeout(RinMediaSdkSessionV1* session,
     request.request_id = session->next_request_id++;
     request.payload_bytes = payload_bytes;
     request.session_id = session->session_id;
-    if (!rin_media_transfer_exact_timeout(
+    if (!rin_media_deadline_init(&deadline, timeout_ms, transfer_bytes) ||
+        !rin_media_transfer_exact_timeout_with_deadline(
             session->socket_fd, &request, (uint32_t)sizeof(request), 0,
-            timeout_ms) ||
+            timeout_ms, &deadline) ||
         (payload_bytes != 0u &&
-         !rin_media_transfer_exact_timeout(
+         !rin_media_transfer_exact_timeout_with_deadline(
              session->socket_fd, (void*)payload, payload_bytes, 0,
-             timeout_ms)) ||
-        !rin_media_transfer_exact_timeout(
+             timeout_ms, &deadline)) ||
+        !rin_media_transfer_exact_timeout_with_deadline(
             session->socket_fd, &response, (uint32_t)sizeof(response), 1,
-            timeout_ms) ||
+            timeout_ms, &deadline) ||
         !rin_media_header_valid(&response, operation, request.request_id,
                                 session->session_id))
         return 0;
@@ -709,16 +810,26 @@ static int rin_media_rpc_timeout_cancellable(
     RinMediaSdkSessionV1* session, uint16_t operation, const void* payload,
     uint32_t payload_bytes, RinMediaMdc1HeaderV1* reply, int timeout_ms,
     RinMediaCancellationFunctionV1 cancellation, void* cancellation_context,
-    int* cancelled_out)
+    int* cancelled_out, const RinMediaDeadlineV1* operation_deadline)
 {
     RinMediaMdc1HeaderV1 request;
     RinMediaMdc1HeaderV1 response;
+    RinMediaDeadlineV1 local_deadline;
+    uint64_t transfer_bytes;
 
     if (cancelled_out != NULL) *cancelled_out = 0;
     if (session == NULL || reply == NULL || session->socket_fd < 0 ||
         session->session_id == 0u ||
         (payload_bytes != 0u && payload == NULL))
         return 0;
+    transfer_bytes = (uint64_t)payload_bytes + sizeof(request) +
+                     sizeof(response);
+    if (operation_deadline == NULL) {
+        if (!rin_media_deadline_init(&local_deadline, timeout_ms,
+                                     transfer_bytes))
+            return 0;
+        operation_deadline = &local_deadline;
+    }
     if (session->next_request_id == 0u) session->next_request_id = 1u;
     memset(&request, 0, sizeof(request));
     request.magic = RIN_MEDIA_MDC1_MAGIC;
@@ -727,16 +838,19 @@ static int rin_media_rpc_timeout_cancellable(
     request.request_id = session->next_request_id++;
     request.payload_bytes = payload_bytes;
     request.session_id = session->session_id;
-    if (!rin_media_transfer_exact_timeout_cancellable(
+    if (!rin_media_transfer_exact_timeout_cancellable_with_deadline(
             session->socket_fd, &request, (uint32_t)sizeof(request), 0,
-            timeout_ms, cancellation, cancellation_context, cancelled_out) ||
+            timeout_ms, operation_deadline, cancellation,
+            cancellation_context, cancelled_out) ||
         (payload_bytes != 0u &&
-         !rin_media_transfer_exact_timeout_cancellable(
+         !rin_media_transfer_exact_timeout_cancellable_with_deadline(
              session->socket_fd, (void*)payload, payload_bytes, 0,
-             timeout_ms, cancellation, cancellation_context, cancelled_out)) ||
-        !rin_media_transfer_exact_timeout_cancellable(
+             timeout_ms, operation_deadline, cancellation,
+             cancellation_context, cancelled_out)) ||
+        !rin_media_transfer_exact_timeout_cancellable_with_deadline(
             session->socket_fd, &response, (uint32_t)sizeof(response), 1,
-            timeout_ms, cancellation, cancellation_context, cancelled_out) ||
+            timeout_ms, operation_deadline, cancellation,
+            cancellation_context, cancelled_out) ||
         !rin_media_header_valid(&response, operation, request.request_id,
                                 session->session_id))
         return 0;
@@ -806,13 +920,21 @@ static int rin_media_snapshot_source(const RinMediaOpenV1* request,
  * descriptor. Send from our unlinked snapshot so a caller modifying its
  * original slice concurrently cannot change bytes midway through OPEN. */
 static int rin_media_transfer_snapshot_timeout(int source_fd, int socket_fd,
-                                               uint64_t size)
+                                               uint64_t size,
+                                               const RinMediaDeadlineV1* deadline)
 {
     uint8_t buffer[RIN_MEDIA_IMAGE_SOURCE_CHUNK];
+    RinMediaDeadlineV1 local_deadline;
     uint64_t remaining = size;
     int success = 0;
 
     if (source_fd < 0 || socket_fd < 0 || size == 0u) return 0;
+    if (deadline == NULL) {
+        if (!rin_media_deadline_init(&local_deadline,
+                                     RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, size))
+            return 0;
+        deadline = &local_deadline;
+    }
     while (remaining != 0u) {
         const uint32_t chunk = remaining < sizeof(buffer)
             ? (uint32_t)remaining : (uint32_t)sizeof(buffer);
@@ -830,8 +952,9 @@ static int rin_media_transfer_snapshot_timeout(int source_fd, int socket_fd,
             received += (uint32_t)count;
             interrupted = 0u;
         }
-        if (!rin_media_transfer_exact_timeout(
-                socket_fd, buffer, chunk, 0, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
+        if (!rin_media_transfer_exact_timeout_with_deadline(
+                socket_fd, buffer, chunk, 0, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS,
+                deadline))
             goto done;
         remaining -= chunk;
     }
@@ -980,6 +1103,7 @@ static RinResult rin_media_image_register_source(
     RinImageDecoderServiceListenerHeaderV1 response_header;
     uint64_t connection_id = 0u;
     uint64_t payload_size;
+    RinMediaDeadlineV1 transfer_deadline;
     int source_fd = -1;
     int fd;
     RinResult result;
@@ -1027,18 +1151,25 @@ static RinResult rin_media_image_register_source(
         (void)close(source_fd);
         return RIN_ERROR_LIMIT_EXCEEDED;
     }
+    if (!rin_media_deadline_init(
+            &transfer_deadline, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS,
+            payload_size + sizeof(header) + sizeof(response_header) +
+                sizeof(register_response))) {
+        (void)close(source_fd);
+        return RIN_ERROR_IO;
+    }
 
     rin_media_image_header_init(
         &header, RIN_IMAGE_DECODER_SERVICE_LISTENER_REGISTER_SOURCE,
         register_request.request_id, connection_id, (uint32_t)payload_size);
-    if (!rin_media_transfer_exact_timeout(
+    if (!rin_media_transfer_exact_timeout_with_deadline(
             fd, &header, (uint32_t)sizeof(header), 0,
-            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
-        !rin_media_transfer_exact_timeout(
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, &transfer_deadline) ||
+        !rin_media_transfer_exact_timeout_with_deadline(
             fd, &register_request, (uint32_t)sizeof(register_request), 0,
-            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, &transfer_deadline) ||
         !rin_media_transfer_snapshot_timeout(
-            source_fd, fd, request->source.size)) {
+            source_fd, fd, request->source.size, &transfer_deadline)) {
         (void)close(source_fd);
         return RIN_ERROR_IO;
     }
@@ -1046,14 +1177,15 @@ static RinResult rin_media_image_register_source(
     source_fd = -1;
     if (!rin_media_image_response_header(
             session, RIN_IMAGE_DECODER_SERVICE_LISTENER_REGISTER_SOURCE,
-            register_request.request_id, &response_header))
+            register_request.request_id, &response_header,
+            &transfer_deadline))
         return RIN_ERROR_IO;
     result = rin_media_image_status_result(response_header.status);
     if (result != RIN_SUCCESS) return result;
     if (response_header.payload_size != sizeof(register_response) ||
-        !rin_media_transfer_exact_timeout(
+        !rin_media_transfer_exact_timeout_with_deadline(
             fd, &register_response, (uint32_t)sizeof(register_response), 1,
-            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS) ||
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, &transfer_deadline) ||
         register_response.struct_size != sizeof(register_response) ||
         register_response.version != RIN_IMAGE_DECODER_TRANSPORT_VERSION ||
         register_response.status != RIN_IMAGE_DECODER_TRANSPORT_OK ||
@@ -1080,6 +1212,7 @@ static RinResult rin_media_image_decode_locked(
     uint64_t request_id;
     uint64_t pixel_count;
     uint64_t pixel_bytes;
+    RinMediaDeadlineV1 decode_deadline;
     RinResult result;
 
     if (session == NULL || session->media_type != RIN_MEDIA_TYPE_IMAGE ||
@@ -1107,16 +1240,24 @@ static RinResult rin_media_image_decode_locked(
     request.max_frames = RIN_MEDIA_IMAGE_MAX_FRAMES;
     request.max_output_bytes =
         RIN_IMAGE_DECODER_TRANSPORT_MAX_OUTPUT_BYTES;
+    if (!rin_media_deadline_init(
+            &decode_deadline,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS +
+                (int)RIN_MEDIA_IMAGE_DECODE_DEADLINE_MS,
+            sizeof(request) + sizeof(response) +
+                sizeof(response_header) * UINT64_C(2)))
+        return RIN_ERROR_IO;
     result = rin_media_image_begin_request(
         session, RIN_IMAGE_DECODER_SERVICE_LISTENER_DECODE, request_id,
-        &request, (uint32_t)sizeof(request), &response_header);
+        &request, (uint32_t)sizeof(request), &response_header,
+        &decode_deadline);
     if (result != RIN_SUCCESS) return result;
     if (response_header.payload_size != sizeof(response))
         return RIN_ERROR_INTEGRITY;
     memset(&response, 0, sizeof(response));
-    if (!rin_media_transfer_exact_timeout(
+    if (!rin_media_transfer_exact_timeout_with_deadline(
             session->socket_fd, &response, (uint32_t)sizeof(response), 1,
-            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, &decode_deadline))
         return RIN_ERROR_IO;
     if (response.struct_size != sizeof(response) ||
         response.version != RIN_IMAGE_DECODER_TRANSPORT_VERSION ||
@@ -1162,10 +1303,14 @@ static RinResult rin_media_image_read_pixels_locked(
 {
     uint64_t offset = 0u;
     const uint64_t total = session->image_info.pixel_bytes;
+    RinMediaDeadlineV1 read_deadline;
 
     if (output == NULL || total == 0u ||
         session->image_decode_request_id == 0u)
         return RIN_ERROR_INVALID_ARGUMENT;
+    if (!rin_media_deadline_init(&read_deadline,
+                                 RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, total))
+        return RIN_ERROR_IO;
     while (offset < total) {
         RinImageDecoderPixelReadRequestV1 request;
         RinImageDecoderPixelReadResponseV1 response;
@@ -1188,15 +1333,15 @@ static RinResult rin_media_image_read_pixels_locked(
         result = rin_media_image_begin_request(
             session, RIN_IMAGE_DECODER_SERVICE_LISTENER_READ_PIXELS,
             request.request_id, &request, (uint32_t)sizeof(request),
-            &response_header);
+            &response_header, &read_deadline);
         if (result != RIN_SUCCESS) return result;
         if (response_header.payload_size < sizeof(response) ||
             response_header.payload_size > sizeof(response) + capacity)
             return RIN_ERROR_INTEGRITY;
         memset(&response, 0, sizeof(response));
-        if (!rin_media_transfer_exact_timeout(
+        if (!rin_media_transfer_exact_timeout_with_deadline(
                 session->socket_fd, &response, (uint32_t)sizeof(response), 1,
-                RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
+                RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, &read_deadline))
             return RIN_ERROR_IO;
         if (response.struct_size != sizeof(response) ||
             response.version != RIN_IMAGE_DECODER_TRANSPORT_VERSION ||
@@ -1210,9 +1355,10 @@ static RinResult rin_media_image_read_pixels_locked(
                 response.bytes_read || response.reserved0 != 0u ||
             response.reserved1[0] != 0u || response.reserved1[1] != 0u)
             return RIN_ERROR_INTEGRITY;
-        if (!rin_media_transfer_exact_timeout(
+        if (!rin_media_transfer_exact_timeout_with_deadline(
                 session->socket_fd, output + (size_t)offset,
-                response.bytes_read, 1, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS))
+                response.bytes_read, 1, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS,
+                &read_deadline))
             return RIN_ERROR_IO;
         offset += response.bytes_read;
     }
@@ -1740,6 +1886,7 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
     RinMediaMdc1VideoFrameRequestV1 request;
     RinMediaMdc1HeaderV1 reply;
     RinVideoFrameInfoV1 received_info;
+    RinMediaDeadlineV1 frame_deadline;
     uint8_t* pixels = NULL;
     uint64_t expected_bytes;
     uint64_t target_extent;
@@ -1795,6 +1942,21 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
         rin_media_session_unlock(session);
         return RIN_ERROR_BUFFER_TOO_SMALL;
     }
+    source_row_stride_bytes = session->video_info.row_stride_bytes;
+    expected_bytes = (uint64_t)source_row_stride_bytes *
+                     (uint64_t)session->video_info.height;
+    if (expected_bytes > RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES) {
+        rin_media_session_drop_locked(session, 0);
+        rin_media_session_unlock_free(session);
+        return RIN_ERROR_INTEGRITY;
+    }
+    if (!rin_media_deadline_init(
+            &frame_deadline, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS,
+            expected_bytes + sizeof(request) + sizeof(reply) +
+                sizeof(received_info))) {
+        rin_media_session_unlock(session);
+        return RIN_ERROR_IO;
+    }
 
     memset(&request, 0, sizeof(request));
     request.max_width = target->width;
@@ -1803,15 +1965,15 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
     if (!rin_media_rpc_timeout_cancellable(
             session, RIN_MEDIA_MDC1_VIDEO_FRAME, &request, sizeof(request),
             &reply, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, cancellation,
-            cancellation_context, &cancelled) ||
+            cancellation_context, &cancelled, &frame_deadline) ||
         reply.status != 0 ||
         reply.payload_bytes < sizeof(received_info) ||
         reply.payload_bytes > sizeof(received_info) +
                                   RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES ||
-        !rin_media_transfer_exact_timeout_cancellable(
+        !rin_media_transfer_exact_timeout_cancellable_with_deadline(
             session->socket_fd, &received_info,
             (uint32_t)sizeof(received_info), 1,
-            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, cancellation,
+            RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, &frame_deadline, cancellation,
             cancellation_context, &cancelled)) {
         const RinResult failure = cancelled ? RIN_ERROR_CANCELLED
                                             : RIN_ERROR_IO;
@@ -1820,9 +1982,6 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
         return failure;
     }
 
-    source_row_stride_bytes = session->video_info.row_stride_bytes;
-    expected_bytes = (uint64_t)source_row_stride_bytes *
-                     (uint64_t)session->video_info.height;
     if (received_info.struct_size != sizeof(received_info) ||
         received_info.version != RIN_SDK_STRUCT_VERSION_1 ||
         received_info.width != session->video_info.width ||
@@ -1873,10 +2032,10 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
             rin_media_session_unlock_free(session);
             return RIN_ERROR_NO_MEMORY;
         }
-        if (!rin_media_transfer_exact_timeout_cancellable(
+        if (!rin_media_transfer_exact_timeout_cancellable_with_deadline(
                 session->socket_fd, pixels,
                 (uint32_t)received_info.payload_size_bytes, 1,
-                RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, cancellation,
+                RIN_MEDIA_IMAGE_IO_TIMEOUT_MS, &frame_deadline, cancellation,
                 cancellation_context, &cancelled)) {
             free(pixels);
             const RinResult failure = cancelled ? RIN_ERROR_CANCELLED
