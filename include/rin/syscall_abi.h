@@ -738,6 +738,11 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_VFORK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_VFORK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_CONDITIONAL
 #define RIN_SYS_VFORK_CONDITION_X86_64_COMPAT32 "available when x86_64 compat32 execution is enabled"
+#define RIN_SYS_UNSHARE                     152u
+/* UNSHARE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_UNSHARE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UNSHARE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_UNSHARE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* signal. */
 #define RIN_SYS_RT_SIGRETURN                173u /* reserved */
 #define RIN_SYS_RT_SIGACTION                174u /* reserved */
