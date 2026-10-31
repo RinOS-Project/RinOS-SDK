@@ -159,8 +159,57 @@ enum {
     RIN_WEBCONTENT_CMD_CAMERA_CAPTURE_OWNER_V1 = 35,
     RIN_WEBCONTENT_CMD_REVOKE_CAMERA_V1 = 36,
     RIN_WEBCONTENT_CMD_REVOKE_LOCATION_V1 = 39,
-    RIN_WEBCONTENT_CMD_DISPATCH_COMPOSITION_V1 = 40
+    RIN_WEBCONTENT_CMD_DISPATCH_COMPOSITION_V1 = 40,
+    RIN_WEBCONTENT_CMD_CLIPBOARD_OWNER_V1 = 41
 };
+
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_VERSION UINT32_C(1)
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_FORMATS UINT32_C(16)
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_DATA_BYTES UINT32_C(16777216)
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_CHUNK_BYTES UINT32_C(32768)
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_MIME_BYTES UINT32_C(127)
+
+enum {
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_QUERY = 1u,
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_READ_CHUNK = 2u,
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_WRITE = 3u
+};
+
+/* Requests travel only over the authenticated Browser owner channel. A write
+ * appends a fixed array of format records, then the concatenated raw payloads
+ * in format order. Read replies append at most one bounded data chunk. */
+typedef struct RinWebContentClipboardOwnerRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t operation;
+    uint32_t format_count;
+    uint32_t format_index;
+    uint32_t chunk_size;
+    uint32_t reserved0;
+    uint32_t reserved1;
+    uint64_t generation;
+    uint64_t offset;
+    uint64_t frame_identity;
+    char origin[RIN_WEBCONTENT_URL_MAX];
+} RinWebContentClipboardOwnerRequestV1;
+
+typedef struct RinWebContentClipboardOwnerFormatV1 {
+    uint32_t format_index;
+    uint32_t mime_size;
+    uint64_t data_size;
+    char mime[RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_MIME_BYTES + 1u];
+} RinWebContentClipboardOwnerFormatV1;
+
+typedef struct RinWebContentClipboardOwnerResponseV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t format_count;
+    uint32_t data_size;
+    uint64_t generation;
+    uint64_t total_data_size;
+    uint32_t reserved0;
+    uint32_t reserved1;
+} RinWebContentClipboardOwnerResponseV1;
 
 enum {
     RIN_WEBCONTENT_CAMERA_CAPTURE_OPEN = 1u,
