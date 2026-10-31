@@ -12,6 +12,10 @@
 
 #include <rin/syscall_abi.h>
 
+#if defined(RINCRT_PRODUCT_STDIO_OWNER)
+#include <stdio.h>
+#endif
+
 extern void* rin_user_allocator_malloc(size_t size);
 extern void rin_user_allocator_free(void* pointer);
 extern void* rin_user_allocator_realloc(void* pointer, size_t size);
@@ -148,12 +152,14 @@ enum {
     RINCRT_GETRANDOM = 350
 };
 
+#if !defined(RINCRT_PRODUCT_STDIO_OWNER)
 typedef struct RCCBootstrapFile {
     int descriptor;
     int eof;
     int error;
     unsigned int flags;
 } FILE;
+#endif
 
 typedef void (*RinCrtExitHandler)(void);
 
@@ -506,10 +512,12 @@ void rin_cpp_exception_rethrow(void)
 /* The stable symbol ABI goes through __errno_location(); the signed-library
  * graph loader assigns this module's local-exec slot to every thread. */
 static _Thread_local int g_rincrt_errno;
+#if !defined(RINCRT_PRODUCT_STDIO_OWNER)
 static FILE g_rincrt_stdout = {1, 0, 0, RINCRT_O_WRONLY};
 static FILE g_rincrt_stderr = {2, 0, 0, RINCRT_O_WRONLY};
 static FILE g_rincrt_files[RINCRT_FILE_CAPACITY];
 static unsigned char g_rincrt_file_used[RINCRT_FILE_CAPACITY];
+#endif
 static RinCrtExitHandler g_rincrt_exit_handlers[RINCRT_ATEXIT_CAPACITY];
 static unsigned int g_rincrt_exit_handler_count;
 
@@ -520,7 +528,11 @@ int* __errno_location(void)
 
 FILE* __rin_stderr(void)
 {
+#if defined(RINCRT_PRODUCT_STDIO_OWNER)
+    return rin_stdio_get_stderr();
+#else
     return &g_rincrt_stderr;
+#endif
 }
 
 /* Syscall carriers are target-width words, not C `long`.  The latter is
@@ -1209,6 +1221,7 @@ int waitpid(int pid, int* status, int options)
         (uintptr_t)(intptr_t)options));
 }
 
+#if !defined(RINCRT_PRODUCT_STDIO_OWNER)
 static FILE* rincrt_allocate_file(int descriptor, unsigned int flags)
 {
     unsigned int index;
@@ -1725,6 +1738,7 @@ int rename(const char* old_path, const char* new_path)
     return rincrt_status_result(rincrt_raw_syscall2(
         RIN_SYS_RENAME, (uintptr_t)old_path, (uintptr_t)new_path));
 }
+#endif /* !RINCRT_PRODUCT_STDIO_OWNER */
 
 static int rincrt_random_bytes(unsigned char* output, size_t size)
 {
