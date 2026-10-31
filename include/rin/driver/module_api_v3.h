@@ -300,7 +300,9 @@ typedef struct RinDriverV3NetPacket {
  * never leaks into the network stack as an unvalidated pointer. */
 #define RIN_DRIVER_V3_NET_MIN_FRAME_SIZE UINT32_C(14)
 #define RIN_DRIVER_V3_NET_MAX_FRAME_SIZE UINT32_C(1518)
-#define RIN_DRIVER_V3_NET_INFO_VERSION UINT32_C(0x00010000)
+#define RIN_DRIVER_V3_NET_INFO_VERSION_V1 UINT32_C(0x00010000)
+#define RIN_DRIVER_V3_NET_INFO_VERSION_V2 UINT32_C(0x00020000)
+#define RIN_DRIVER_V3_NET_INFO_VERSION RIN_DRIVER_V3_NET_INFO_VERSION_V2
 #define RIN_DRIVER_V3_NET_LINK_UP UINT32_C(0x00000001)
 /* LINK_UP is meaningful only when LINK_KNOWN is set.  This prevents a
  * transport without a negotiated carrier-status feature from fabricating an
@@ -308,6 +310,22 @@ typedef struct RinDriverV3NetPacket {
 #define RIN_DRIVER_V3_NET_LINK_KNOWN UINT32_C(0x00000002)
 #define RIN_DRIVER_V3_NET_INFO_FLAG_MASK \
     (RIN_DRIVER_V3_NET_LINK_UP | RIN_DRIVER_V3_NET_LINK_KNOWN)
+#define RIN_DRIVER_V3_NET_INTERFACE_ADMIN_KNOWN UINT32_C(0x00000001)
+#define RIN_DRIVER_V3_NET_INTERFACE_ADMIN_UP UINT32_C(0x00000002)
+#define RIN_DRIVER_V3_NET_INTERFACE_TYPE_KNOWN UINT32_C(0x00000004)
+#define RIN_DRIVER_V3_NET_INTERFACE_CAPABILITIES_KNOWN UINT32_C(0x00000008)
+#define RIN_DRIVER_V3_NET_INTERFACE_KNOWN_FLAGS UINT32_C(0x0000000f)
+#define RIN_DRIVER_V3_NET_INTERFACE_CAP_BROADCAST UINT32_C(0x00000001)
+#define RIN_DRIVER_V3_NET_INTERFACE_CAP_MULTICAST UINT32_C(0x00000002)
+#define RIN_DRIVER_V3_NET_INTERFACE_CAP_POINT_TO_POINT UINT32_C(0x00000004)
+#define RIN_DRIVER_V3_NET_INTERFACE_KNOWN_CAPABILITIES UINT32_C(0x00000007)
+#define RIN_DRIVER_V3_NET_INTERFACE_UNKNOWN UINT32_C(0)
+#define RIN_DRIVER_V3_NET_INTERFACE_OTHER UINT32_C(1)
+#define RIN_DRIVER_V3_NET_INTERFACE_LOOPBACK UINT32_C(2)
+#define RIN_DRIVER_V3_NET_INTERFACE_BROADCAST UINT32_C(3)
+#define RIN_DRIVER_V3_NET_INTERFACE_POINT_TO_POINT UINT32_C(4)
+#define RIN_DRIVER_V3_NET_INTERFACE_TYPE_MAX \
+    RIN_DRIVER_V3_NET_INTERFACE_POINT_TO_POINT
 
 typedef struct RinDriverV3NetInfo {
     uint32_t struct_size;
@@ -316,7 +334,12 @@ typedef struct RinDriverV3NetInfo {
     uint16_t mtu;
     uint8_t mac[6];
     uint16_t reserved0;
-    uint64_t reserved[2];
+    /* Introduced by INFO_VERSION_V2. Version 1 drivers leave this extension
+     * zero; they remain valid but publish no L3/admin properties. */
+    uint32_t interface_flags;
+    uint32_t interface_type;
+    uint32_t interface_capabilities;
+    uint8_t ipv4_peer[4];
 } RinDriverV3NetInfo;
 
 #define RIN_DRIVER_V3_AUDIO_PLAYBACK UINT32_C(0x00000001)
@@ -1240,13 +1263,65 @@ static inline int rin_driver_v3_net_packet_valid(
 static inline int rin_driver_v3_net_info_valid(
     const RinDriverV3NetInfo* info) {
     uint8_t mac_nonzero = 0u;
+    uint8_t peer_nonzero = 0u;
     if (!info || info->struct_size < sizeof(*info) ||
-        info->version != RIN_DRIVER_V3_NET_INFO_VERSION ||
+        (info->version != RIN_DRIVER_V3_NET_INFO_VERSION_V1 &&
+         info->version != RIN_DRIVER_V3_NET_INFO_VERSION_V2) ||
         (info->flags & ~RIN_DRIVER_V3_NET_INFO_FLAG_MASK) != 0u ||
         ((info->flags & RIN_DRIVER_V3_NET_LINK_UP) != 0u &&
          (info->flags & RIN_DRIVER_V3_NET_LINK_KNOWN) == 0u) ||
-        info->mtu < 68u || info->mtu > 1500u || info->reserved0 != 0u ||
-        info->reserved[0] != 0u || info->reserved[1] != 0u)
+        info->mtu < 68u || info->mtu > 1500u || info->reserved0 != 0u)
+        return 0;
+    if (info->version == RIN_DRIVER_V3_NET_INFO_VERSION_V1) {
+        if (info->interface_flags != 0u || info->interface_type != 0u ||
+            info->interface_capabilities != 0u ||
+            info->ipv4_peer[0] != 0u || info->ipv4_peer[1] != 0u ||
+            info->ipv4_peer[2] != 0u || info->ipv4_peer[3] != 0u)
+            return 0;
+    } else if ((info->interface_flags &
+                ~RIN_DRIVER_V3_NET_INTERFACE_KNOWN_FLAGS) != 0u ||
+               info->interface_type >
+                   RIN_DRIVER_V3_NET_INTERFACE_TYPE_MAX ||
+               (info->interface_capabilities &
+                ~RIN_DRIVER_V3_NET_INTERFACE_KNOWN_CAPABILITIES) != 0u ||
+               ((info->interface_flags &
+                 RIN_DRIVER_V3_NET_INTERFACE_ADMIN_UP) != 0u &&
+                (info->interface_flags &
+                 RIN_DRIVER_V3_NET_INTERFACE_ADMIN_KNOWN) == 0u) ||
+               (((info->interface_flags &
+                  RIN_DRIVER_V3_NET_INTERFACE_TYPE_KNOWN) != 0u) !=
+                (info->interface_type !=
+                 RIN_DRIVER_V3_NET_INTERFACE_UNKNOWN)) ||
+               ((info->interface_flags &
+                 RIN_DRIVER_V3_NET_INTERFACE_CAPABILITIES_KNOWN) == 0u &&
+                info->interface_capabilities != 0u) ||
+               ((info->interface_flags &
+                 RIN_DRIVER_V3_NET_INTERFACE_CAPABILITIES_KNOWN) != 0u &&
+                info->interface_type ==
+                    RIN_DRIVER_V3_NET_INTERFACE_BROADCAST &&
+                (info->interface_capabilities &
+                 RIN_DRIVER_V3_NET_INTERFACE_CAP_BROADCAST) == 0u) ||
+               ((info->interface_flags &
+                 RIN_DRIVER_V3_NET_INTERFACE_CAPABILITIES_KNOWN) != 0u &&
+                info->interface_type ==
+                    RIN_DRIVER_V3_NET_INTERFACE_POINT_TO_POINT &&
+                ((info->interface_capabilities &
+                  RIN_DRIVER_V3_NET_INTERFACE_CAP_POINT_TO_POINT) == 0u ||
+                 (info->interface_capabilities &
+                  RIN_DRIVER_V3_NET_INTERFACE_CAP_BROADCAST) != 0u)) ||
+               ((info->interface_capabilities &
+                 RIN_DRIVER_V3_NET_INTERFACE_CAP_POINT_TO_POINT) != 0u &&
+                (info->interface_type !=
+                     RIN_DRIVER_V3_NET_INTERFACE_POINT_TO_POINT ||
+                 (info->interface_capabilities &
+                  RIN_DRIVER_V3_NET_INTERFACE_CAP_BROADCAST) != 0u)))
+        return 0;
+    if (info->version == RIN_DRIVER_V3_NET_INFO_VERSION_V2)
+        for (uint32_t index = 0u; index < sizeof(info->ipv4_peer); ++index)
+            peer_nonzero |= info->ipv4_peer[index];
+    if ((info->interface_capabilities &
+         RIN_DRIVER_V3_NET_INTERFACE_CAP_POINT_TO_POINT) == 0u &&
+        peer_nonzero != 0u)
         return 0;
     for (uint32_t index = 0u; index < sizeof(info->mac); ++index)
         mac_nonzero |= info->mac[index];
