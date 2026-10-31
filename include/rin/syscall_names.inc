@@ -15,6 +15,7 @@
 [RIN_SYS_GETRUSAGE] = "getrusage",
 [RIN_SYS_GETPRIORITY] = "getpriority",
 [RIN_SYS_SETPRIORITY] = "setpriority",
+[RIN_SYS_NICE] = "nice",
 [RIN_SYS_OPEN] = "open",
 [RIN_SYS_CLOSE] = "close",
 [RIN_SYS_READ] = "read",

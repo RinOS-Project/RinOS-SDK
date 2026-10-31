@@ -23,6 +23,7 @@
 #define SYS_GETRUSAGE                   RIN_SYS_GETRUSAGE
 #define SYS_GETPRIORITY                 RIN_SYS_GETPRIORITY
 #define SYS_SETPRIORITY                 RIN_SYS_SETPRIORITY
+#define SYS_NICE                        RIN_SYS_NICE
 #define SYS_OPEN                        RIN_SYS_OPEN
 #define SYS_CLOSE                       RIN_SYS_CLOSE
 #define SYS_READ                        RIN_SYS_READ
