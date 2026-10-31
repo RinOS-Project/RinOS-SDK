@@ -65,6 +65,7 @@ enum {
     BASE_OBJECT_CLOSE = 1, BASE_OBJECT_QUERY, BASE_PROCESS_SPAWN,
     BASE_PROCESS_WAIT, BASE_MEMORY_MAP, BASE_MEMORY_UNMAP, BASE_TIME_GET,
     BASE_RANDOM_FILL, BASE_LOG_WRITE, BASE_THREAD_CREATE, BASE_THREAD_JOIN,
+    BASE_PROCESS_CAPACITIES_GET = 12,
     IPC_CHANNEL_CREATE = 1, IPC_CHANNEL_SEND, IPC_CHANNEL_RECEIVE,
     IPC_EVENT_CREATE, IPC_EVENT_SIGNAL, IPC_WAIT_MANY,
     IPC_SHARED_MEMORY_CREATE, IPC_SERVICE_CONNECT, IPC_WAIT_SET_CREATE,
@@ -710,6 +711,48 @@ RinResult rin_object_query_v1(RinObject object, RinObjectInfoV1* info) {
         info->version = (uint16_t)RIN_SDK_STRUCT_VERSION_1;
     }
     return query_result;
+}
+RinResult rin_process_capacities_get_v1(
+    RinProcessCapacitiesV1* capacities) {
+    RinSdkArgsV1 request;
+    RinResult result;
+    if (!capacities ||
+        capacities->struct_size < sizeof(*capacities) ||
+        capacities->version != RIN_PROCESS_CAPACITY_ABI_VERSION_1)
+        return RIN_ERROR_ABI_MISMATCH;
+    rin_sdk_zero_bytes(capacities, sizeof(*capacities));
+    capacities->struct_size = sizeof(*capacities);
+    capacities->version = RIN_PROCESS_CAPACITY_ABI_VERSION_1;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_BASE, BASE_PROCESS_CAPACITIES_GET,
+        &request, sizeof(request), capacities, sizeof(*capacities));
+    if (result == RIN_SUCCESS &&
+        (capacities->struct_size != sizeof(*capacities) ||
+         capacities->version != RIN_PROCESS_CAPACITY_ABI_VERSION_1 ||
+         capacities->max_objects_per_process == 0u ||
+         capacities->max_readiness_events_per_process == 0u ||
+         capacities->max_socket_readiness_producers_per_process == 0u ||
+         capacities->max_gpu_queues_per_process == 0u ||
+         capacities->max_service_publishers_per_process == 0u ||
+         capacities->max_readiness_events_per_process >
+             capacities->max_objects_per_process ||
+         capacities->max_socket_readiness_producers_per_process >
+             capacities->max_objects_per_process ||
+         capacities->max_gpu_queues_per_process >
+             capacities->max_objects_per_process ||
+         capacities->max_service_publishers_per_process >
+             capacities->max_objects_per_process ||
+         capacities->reserved != 0u))
+        result = RIN_ERROR_ABI_MISMATCH;
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(capacities, sizeof(*capacities));
+        capacities->struct_size = sizeof(*capacities);
+        capacities->version = RIN_PROCESS_CAPACITY_ABI_VERSION_1;
+    }
+    return result;
 }
 RinResult rin_process_spawn_v1(const RinProcessSpawnV1* request, RinProcess* process) {
     if (!versioned(request, sizeof(*request)) || !process) return RIN_ERROR_INVALID_ARGUMENT;
