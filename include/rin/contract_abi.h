@@ -91,6 +91,7 @@ typedef int32_t RinResultCode;
 #define RIN_ACCOUNT_QUERY_BY_UID            1u
 #define RIN_ACCOUNT_QUERY_BY_NAME           2u
 #define RIN_ACCOUNT_QUERY_BY_INDEX          3u
+#define RIN_ACCOUNT_QUERY_BY_UID_AFTER      4u
 #define RIN_ACCOUNT_INFO_FLAG_ACTIVE        1u
 #define RIN_ACCOUNT_INFO_FLAG_ADMIN         2u
 #define RIN_STORAGE_FLAG_READ_ONLY          1u
