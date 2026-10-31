@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: MIT */
-/* Shared dynamic-loader policy bits. These values are the wire contract used
- * by libc and the native RIN64 loader without making kernel code include a
- * libc header. DEEPBIND remains assigned for ABI compatibility, but current
- * loaders reject it with EOPNOTSUPP because RIN v3 has no such precedence. */
+/* Shared dynamic-loader policy bits.  These values are the wire contract
+ * used by libc and the native RIN64 loader; they intentionally match POSIX
+ * dlfcn.h without making kernel code include a libc header. */
 #ifndef RIN_SDK_DYNLINK_FLAGS_H
 #define RIN_SDK_DYNLINK_FLAGS_H
 
