@@ -682,6 +682,15 @@ typedef struct RinStatVfsRequestV1 {
     uint64_t reserved;
 } RinStatVfsRequestV1;
 
+typedef struct RinStatVfsFdRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t word_size;
+    int32_t fd;
+    uint32_t reserved0;
+    uint64_t buffer;
+} RinStatVfsFdRequestV1;
+
 typedef struct RinFilesystemUsageV3 {
     uint32_t struct_size;
     uint16_t version;
@@ -1842,6 +1851,13 @@ static_assert(offsetof(RinStatVfsRequestV1, word_size) == 6, "RinStatVfsRequestV
 static_assert(offsetof(RinStatVfsRequestV1, path) == 8, "RinStatVfsRequestV1.path ABI drift");
 static_assert(offsetof(RinStatVfsRequestV1, buffer) == 16, "RinStatVfsRequestV1.buffer ABI drift");
 static_assert(offsetof(RinStatVfsRequestV1, reserved) == 24, "RinStatVfsRequestV1.reserved ABI drift");
+static_assert(sizeof(RinStatVfsFdRequestV1) == 24, "RinStatVfsFdRequestV1 ABI drift");
+static_assert(offsetof(RinStatVfsFdRequestV1, struct_size) == 0, "RinStatVfsFdRequestV1.struct_size ABI drift");
+static_assert(offsetof(RinStatVfsFdRequestV1, version) == 4, "RinStatVfsFdRequestV1.version ABI drift");
+static_assert(offsetof(RinStatVfsFdRequestV1, word_size) == 6, "RinStatVfsFdRequestV1.word_size ABI drift");
+static_assert(offsetof(RinStatVfsFdRequestV1, fd) == 8, "RinStatVfsFdRequestV1.fd ABI drift");
+static_assert(offsetof(RinStatVfsFdRequestV1, reserved0) == 12, "RinStatVfsFdRequestV1.reserved0 ABI drift");
+static_assert(offsetof(RinStatVfsFdRequestV1, buffer) == 16, "RinStatVfsFdRequestV1.buffer ABI drift");
 static_assert(sizeof(RinFilesystemUsageV3) == 104, "RinFilesystemUsageV3 ABI drift");
 static_assert(offsetof(RinFilesystemUsageV3, struct_size) == 0, "RinFilesystemUsageV3.struct_size ABI drift");
 static_assert(offsetof(RinFilesystemUsageV3, version) == 4, "RinFilesystemUsageV3.version ABI drift");
@@ -2834,6 +2850,13 @@ _Static_assert(offsetof(RinStatVfsRequestV1, word_size) == 6, "RinStatVfsRequest
 _Static_assert(offsetof(RinStatVfsRequestV1, path) == 8, "RinStatVfsRequestV1.path ABI drift");
 _Static_assert(offsetof(RinStatVfsRequestV1, buffer) == 16, "RinStatVfsRequestV1.buffer ABI drift");
 _Static_assert(offsetof(RinStatVfsRequestV1, reserved) == 24, "RinStatVfsRequestV1.reserved ABI drift");
+_Static_assert(sizeof(RinStatVfsFdRequestV1) == 24, "RinStatVfsFdRequestV1 ABI drift");
+_Static_assert(offsetof(RinStatVfsFdRequestV1, struct_size) == 0, "RinStatVfsFdRequestV1.struct_size ABI drift");
+_Static_assert(offsetof(RinStatVfsFdRequestV1, version) == 4, "RinStatVfsFdRequestV1.version ABI drift");
+_Static_assert(offsetof(RinStatVfsFdRequestV1, word_size) == 6, "RinStatVfsFdRequestV1.word_size ABI drift");
+_Static_assert(offsetof(RinStatVfsFdRequestV1, fd) == 8, "RinStatVfsFdRequestV1.fd ABI drift");
+_Static_assert(offsetof(RinStatVfsFdRequestV1, reserved0) == 12, "RinStatVfsFdRequestV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinStatVfsFdRequestV1, buffer) == 16, "RinStatVfsFdRequestV1.buffer ABI drift");
 _Static_assert(sizeof(RinFilesystemUsageV3) == 104, "RinFilesystemUsageV3 ABI drift");
 _Static_assert(offsetof(RinFilesystemUsageV3, struct_size) == 0, "RinFilesystemUsageV3.struct_size ABI drift");
 _Static_assert(offsetof(RinFilesystemUsageV3, version) == 4, "RinFilesystemUsageV3.version ABI drift");
