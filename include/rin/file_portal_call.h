@@ -109,10 +109,8 @@ _Static_assert(sizeof(RinFilePortalPayloadV1) == RIN_FILE_PORTAL_TOKEN_SIZE,
 #endif
 
 /* ISSUE input:
- *   descriptorはchooser所有のVFS記述子。requested_rightsと
- *   target_process_idで要求を指定する。process_fdには、子の実行開始前に
- *   作成したpidfdを指定する。target_process_cookieが0の場合、そのpidfdが
- *   chooserの直接の子を示す必要がある。
+ *   descriptor = chooser-owned VFS descriptor
+ *   requested_rights, target_process_id, target_process_cookie
  * OPEN input:
  *   descriptor = minimum result descriptor
  *   requested_rights, descriptor_flags, token

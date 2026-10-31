@@ -52,18 +52,6 @@ typedef struct RIN_NDRV_V1_ALIGN8 RinNdrvV1CharExtensionV1 {
     uint64_t reserved;
 } RinNdrvV1CharExtensionV1;
 
-/* Appended to the NDRV v2 runtime bundle. Drivers call readiness_changed
- * after publishing a new level and advancing their CHAR readiness sequence. */
-#define RIN_NDRV_V1_CHAR_READINESS_EXTENSION_MAGIC UINT32_C(0x31575243) /* CRW1 */
-#define RIN_NDRV_V1_CHAR_READINESS_EXTENSION_VERSION UINT16_C(1)
-
-typedef struct RIN_NDRV_V1_ALIGN8 RinNdrvV1CharReadinessExtensionV1 {
-    uint32_t magic;
-    uint16_t version;
-    uint16_t size;
-    uint64_t readiness_changed;
-} RinNdrvV1CharReadinessExtensionV1;
-
 #if defined(__cplusplus)
 static_assert(sizeof(RinNdrvV1RuntimeApiV2) == 64u,
               "NDRV v1 runtime API ABI drift");
@@ -73,10 +61,6 @@ static_assert(sizeof(RinNdrvV1CharExtensionV1) == 24u,
               "NDRV v1 CAR1 ABI drift");
 static_assert(alignof(RinNdrvV1CharExtensionV1) == 8u,
               "NDRV v1 CAR1 alignment drift");
-static_assert(sizeof(RinNdrvV1CharReadinessExtensionV1) == 16u,
-              "NDRV v1 CRW1 ABI drift");
-static_assert(alignof(RinNdrvV1CharReadinessExtensionV1) == 8u,
-              "NDRV v1 CRW1 alignment drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinNdrvV1RuntimeApiV2) == 64u,
                "NDRV v1 runtime API ABI drift");
@@ -86,10 +70,6 @@ _Static_assert(sizeof(RinNdrvV1CharExtensionV1) == 24u,
                "NDRV v1 CAR1 ABI drift");
 _Static_assert(_Alignof(RinNdrvV1CharExtensionV1) == 8u,
                "NDRV v1 CAR1 alignment drift");
-_Static_assert(sizeof(RinNdrvV1CharReadinessExtensionV1) == 16u,
-               "NDRV v1 CRW1 ABI drift");
-_Static_assert(_Alignof(RinNdrvV1CharReadinessExtensionV1) == 8u,
-               "NDRV v1 CRW1 alignment drift");
 #endif
 
 #undef RIN_NDRV_V1_ALIGN8

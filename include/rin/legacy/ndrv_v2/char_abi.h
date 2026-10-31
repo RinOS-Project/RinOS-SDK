@@ -47,41 +47,6 @@ typedef struct RinLegacyDriverV2CharOps {
                  uint32_t buffer_size);
 } RinLegacyDriverV2CharOps;
 
-/* Versioned, level-triggered readiness query carried by the existing ioctl
- * callback. Providers that implement this request must return a monotonically
- * increasing event_sequence and publish a kernel poll wake whenever readiness
- * changes. Providers without an event source return their normal unsupported
- * ioctl result; VFS reports POLLERR for that descriptor instead of inventing
- * readiness. */
-#define RIN_LEGACY_DRIVER_V2_CHAR_IOCTL_READINESS_V1 UINT32_C(0x52494e50)
-#define RIN_LEGACY_DRIVER_V2_CHAR_READINESS_ABI_VERSION UINT32_C(1)
-
-enum RinLegacyDriverV2CharReadinessEventsV1 {
-    RIN_LEGACY_DRIVER_V2_CHAR_READY_READABLE = UINT32_C(1) << 0,
-    RIN_LEGACY_DRIVER_V2_CHAR_READY_WRITABLE = UINT32_C(1) << 1,
-    RIN_LEGACY_DRIVER_V2_CHAR_READY_HANGUP = UINT32_C(1) << 2,
-    RIN_LEGACY_DRIVER_V2_CHAR_READY_ERROR = UINT32_C(1) << 3
-};
-
-typedef struct RinLegacyDriverV2CharReadinessV1 {
-    uint32_t abi_version;
-    uint32_t struct_size;
-    uint32_t requested_events;
-    uint32_t ready_events;
-    uint64_t event_sequence;
-    uint32_t readable_bytes;
-    uint32_t writable_bytes;
-    uint32_t reserved[2];
-} RinLegacyDriverV2CharReadinessV1;
-
-#if defined(__cplusplus)
-static_assert(sizeof(RinLegacyDriverV2CharReadinessV1) == 40u,
-              "legacy v2 CHAR readiness ABI drift");
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinLegacyDriverV2CharReadinessV1) == 40u,
-               "legacy v2 CHAR readiness ABI drift");
-#endif
-
 /* Optional CHAR2 extension for drivers that need one Core owner per VFS
  * public open.  Every operation receives the kernel-generated public-open
  * cookie; it is never supplied by the driver image or userspace.  This table
