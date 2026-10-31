@@ -8,6 +8,15 @@
 
 #define RIN_FILESYSTEM_NAMESPACE_SYSCALL_ABI_VERSION UINT16_C(1)
 
+/* Per-mount policy carried by the version 1 namespace mount record. Flags
+ * are immutable for that mount generation; changing policy requires a new
+ * mount record. */
+#define RIN_FILESYSTEM_MOUNT_READ_ONLY UINT32_C(0x00000001)
+#define RIN_FILESYSTEM_MOUNT_NOEXEC    UINT32_C(0x00000002)
+#define RIN_FILESYSTEM_MOUNT_NOSUID    UINT32_C(0x00000004)
+#define RIN_FILESYSTEM_MOUNT_NODEV     UINT32_C(0x00000008)
+#define RIN_FILESYSTEM_MOUNT_POLICY_MASK UINT32_C(0x0000000f)
+
 typedef uint64_t RinFilesystemNamespaceAbiHandleV1;
 
 typedef struct RinFilesystemNamespaceAbiObjectIdentityV1 {
