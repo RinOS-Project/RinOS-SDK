@@ -8,12 +8,14 @@
 extern "C" {
 #endif
 
-/* Outlined fallback for generic __atomic_* operations wider than the target's
- * lock-free scalar width. Object addresses may be under-aligned. The value
- * buffers must each designate at least `size` readable or writable bytes;
- * they may overlap one another and the object. The implementation serializes
- * all calls and provides sequentially consistent ordering, which is stronger
- * than every valid order argument. */
+/* Outlined fallback for generic __atomic_* operations whose object
+ * representation cannot use a lock-free scalar operation for the selected
+ * target, including aggregate widths that do not map to a scalar operation.
+ * Object addresses may be under-aligned. The value buffers must each
+ * designate at least `size` readable or writable bytes; they may overlap one
+ * another and the object. The implementation serializes all calls and
+ * provides sequentially consistent ordering, stronger than every valid order
+ * argument. */
 void __rin_atomic_load_v1(const volatile void *object, void *result,
                           size_t size, int memory_order);
 void __rin_atomic_store_v1(volatile void *object, const void *value,
