@@ -5,6 +5,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <linux/futex.h>
 #include <poll.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -122,7 +123,9 @@ typedef struct RinMediaMdc1VideoFrameRequestV1 {
 
 typedef struct RinMediaSdkSessionV1 {
     volatile uint32_t state; /* 0 free, 1 published, 2 reserved/closing */
-    volatile uint32_t lock;
+    volatile uint32_t state_lock;
+    volatile uint32_t lock; /* RPC serialization; never protects lifecycle. */
+    volatile uint32_t active_operations;
     RinObject object;
     int32_t socket_fd;
     uint32_t next_request_id;
@@ -131,7 +134,7 @@ typedef struct RinMediaSdkSessionV1 {
     uint32_t media_type;
     uint32_t image_decoded;
     uint64_t session_id;
-    uint64_t owner_pid;
+    uintptr_t owner_pid;
     uint64_t image_connection_id;
     uint64_t image_source_size;
     uint64_t image_source_capability;
@@ -182,10 +185,10 @@ _Static_assert(sizeof(RinMediaMdc1VideoFrameRequestV1) == 16u,
                "MDC1 video frame request ABI drift");
 #endif
 
-static uint64_t rin_media_current_pid(void)
+static uintptr_t rin_media_current_pid(void)
 {
     const intptr_t result = _syscall0(RIN_SYS_GETPID);
-    return result > 0 ? (uint64_t)result : 0u;
+    return result > 0 ? (uintptr_t)result : 0u;
 }
 
 static int rin_media_range_valid(uint64_t address, uint64_t size,
@@ -965,16 +968,155 @@ done:
     return success;
 }
 
-static int rin_media_session_lock(RinMediaSdkSessionV1* session)
+static RinResult rin_media_word_lock(
+    volatile uint32_t* lock, RinMediaCancellationFunctionV1 cancellation,
+    void* cancellation_context, const RinMediaDeadlineV1* deadline)
 {
-    while (__sync_lock_test_and_set(&session->lock, 1u) != 0u)
-        (void)poll(NULL, 0u, 1);
-    return 1;
+    if (lock == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    for (;;) {
+        uint32_t expected = 0u;
+        uint32_t observed;
+        struct timespec timeout;
+        const struct timespec* timeout_pointer = NULL;
+        intptr_t wait_result;
+
+        if (cancellation != NULL && cancellation(cancellation_context))
+            return RIN_ERROR_CANCELLED;
+        if (deadline != NULL &&
+            rin_media_deadline_remaining_ms(deadline) <= 0)
+            return RIN_ERROR_TIMEOUT;
+        if (__atomic_compare_exchange_n(lock, &expected, 1u, 0,
+                                        __ATOMIC_ACQUIRE, __ATOMIC_RELAXED))
+            return RIN_SUCCESS;
+        observed = __atomic_load_n(lock, __ATOMIC_RELAXED);
+        if (observed == 0u) continue;
+        if (observed == 1u) {
+            expected = 1u;
+            if (!__atomic_compare_exchange_n(lock, &expected, 2u, 0,
+                                             __ATOMIC_ACQUIRE,
+                                             __ATOMIC_RELAXED))
+                continue;
+        } else if (observed != 2u) {
+            return RIN_ERROR_INTEGRITY;
+        }
+
+        if (deadline != NULL || cancellation != NULL) {
+            int wait_ms = deadline != NULL
+                ? rin_media_deadline_remaining_ms(deadline)
+                : RIN_MEDIA_MDC1_CANCEL_POLL_MS;
+            if (wait_ms <= 0) return RIN_ERROR_TIMEOUT;
+            if (cancellation != NULL &&
+                wait_ms > RIN_MEDIA_MDC1_CANCEL_POLL_MS)
+                wait_ms = RIN_MEDIA_MDC1_CANCEL_POLL_MS;
+            timeout.tv_sec = (time_t)(wait_ms / 1000);
+            timeout.tv_nsec = (long)(wait_ms % 1000) * 1000000L;
+            timeout_pointer = &timeout;
+        }
+        wait_result = syscall(SYS_futex, lock, FUTEX_WAIT_PRIVATE, 2u,
+                              timeout_pointer, NULL, 0);
+        if (wait_result == 0 ||
+            (wait_result == -1 &&
+             (errno == EAGAIN || errno == EINTR || errno == ETIMEDOUT)))
+            continue;
+        if (deadline != NULL || cancellation != NULL)
+            return RIN_ERROR_IO;
+        /* Keep short lifecycle locks live if a hosted libc has no futex
+         * provider. Normal RinOS operation parks in the futex above. */
+        (void)poll(NULL, 0u, 10);
+    }
+}
+
+static void rin_media_word_unlock(volatile uint32_t* lock)
+{
+    const uint32_t previous = __atomic_exchange_n(lock, 0u, __ATOMIC_RELEASE);
+    if (previous == 2u)
+        (void)syscall(SYS_futex, lock, FUTEX_WAKE_PRIVATE, 1, NULL, NULL, 0);
+}
+
+static void rin_media_session_discard_inherited(
+    RinMediaSdkSessionV1* session);
+
+static RinResult rin_media_session_pin(RinObject object,
+                                       RinMediaSdkSessionV1** session_out)
+{
+    const uintptr_t caller_pid = rin_media_current_pid();
+    uint32_t index;
+
+    if (session_out != NULL) *session_out = NULL;
+    if (session_out == NULL || caller_pid == 0u)
+        return RIN_ERROR_STALE_HANDLE;
+    for (index = 0u; index < RIN_MEDIA_MDC1_MAX_SESSIONS; ++index) {
+        RinMediaSdkSessionV1* session = &g_media_sessions[index];
+        RinResult lock_result;
+
+        if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u)
+            continue;
+        /* After fork, a copied futex may be owned by a thread that no longer
+         * exists. The child has a private session-table copy, so retire it
+         * before attempting either lock. */
+        if (__atomic_load_n(&session->owner_pid, __ATOMIC_ACQUIRE) !=
+            caller_pid) {
+            rin_media_session_discard_inherited(session);
+            continue;
+        }
+        lock_result = rin_media_word_lock(&session->state_lock, NULL, NULL,
+                                          NULL);
+        if (lock_result != RIN_SUCCESS) return lock_result;
+        if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 1u &&
+            session->object == object &&
+            __atomic_load_n(&session->owner_pid, __ATOMIC_RELAXED) ==
+                caller_pid) {
+            uint32_t active = __atomic_load_n(&session->active_operations,
+                                              __ATOMIC_RELAXED);
+            if (active == UINT32_MAX) {
+                rin_media_word_unlock(&session->state_lock);
+                return RIN_ERROR_LIMIT_EXCEEDED;
+            }
+            __atomic_store_n(&session->active_operations, active + 1u,
+                             __ATOMIC_RELEASE);
+            rin_media_word_unlock(&session->state_lock);
+            *session_out = session;
+            return RIN_SUCCESS;
+        }
+        rin_media_word_unlock(&session->state_lock);
+    }
+    return RIN_ERROR_STALE_HANDLE;
+}
+
+static RinResult rin_media_session_rpc_lock(
+    RinMediaSdkSessionV1* session,
+    RinMediaCancellationFunctionV1 cancellation, void* cancellation_context,
+    const RinMediaDeadlineV1* deadline)
+{
+    if (session == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_media_word_lock(&session->lock, cancellation,
+                               cancellation_context, deadline);
+}
+
+static void rin_media_session_unref(RinMediaSdkSessionV1* session)
+{
+    uint32_t active;
+
+    if (session == NULL) return;
+    active = __atomic_load_n(&session->active_operations, __ATOMIC_RELAXED);
+    for (;;) {
+        if (active == 0u) return;
+        if (__atomic_compare_exchange_n(&session->active_operations, &active,
+                                        active - 1u, 0, __ATOMIC_RELEASE,
+                                        __ATOMIC_RELAXED))
+            break;
+    }
+    if (active > 1u &&
+        __atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 2u)
+        (void)syscall(SYS_futex, &session->active_operations,
+                      FUTEX_WAKE_PRIVATE, 1, NULL, NULL, 0);
 }
 
 static void rin_media_session_unlock(RinMediaSdkSessionV1* session)
 {
-    __sync_lock_release(&session->lock);
+    if (session == NULL) return;
+    rin_media_word_unlock(&session->lock);
+    rin_media_session_unref(session);
 }
 
 static RinMediaSdkSessionV1* rin_media_session_reserve(void)
@@ -984,6 +1126,7 @@ static RinMediaSdkSessionV1* rin_media_session_reserve(void)
         RinMediaSdkSessionV1* session = &g_media_sessions[index];
         if (__sync_bool_compare_and_swap(&session->state, 0u, 2u)) {
             session->lock = 0u;
+            session->active_operations = 0u;
             session->object = RIN_OBJECT_HANDLE_INVALID;
             session->socket_fd = -1;
             session->next_request_id = 1u;
@@ -991,17 +1134,36 @@ static RinMediaSdkSessionV1* rin_media_session_reserve(void)
             session->channels = 0u;
             rin_media_session_reset_image(session);
             session->session_id = 0u;
-            session->owner_pid = 0u;
+            __atomic_store_n(&session->owner_pid, 0u, __ATOMIC_RELAXED);
             return session;
         }
     }
     return NULL;
 }
 
+static RinResult rin_media_session_publish(RinMediaSdkSessionV1* session)
+{
+    RinResult result;
+
+    if (session == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    result = rin_media_word_lock(&session->state_lock, NULL, NULL, NULL);
+    if (result != RIN_SUCCESS) return result;
+    if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 2u) {
+        rin_media_word_unlock(&session->state_lock);
+        return RIN_ERROR_INTEGRITY;
+    }
+    __atomic_store_n(&session->state, 1u, __ATOMIC_RELEASE);
+    rin_media_word_unlock(&session->state_lock);
+    return RIN_SUCCESS;
+}
+
 static void rin_media_session_discard_reserved(
     RinMediaSdkSessionV1* session)
 {
-    if (session == NULL) return;
+    if (session == NULL ||
+        rin_media_word_lock(&session->state_lock, NULL, NULL, NULL) !=
+            RIN_SUCCESS)
+        return;
     if (session->socket_fd >= 0) (void)close(session->socket_fd);
     session->socket_fd = -1;
     session->session_id = 0u;
@@ -1010,16 +1172,58 @@ static void rin_media_session_discard_reserved(
     session->sample_rate = 0u;
     session->channels = 0u;
     rin_media_session_reset_image(session);
-    session->owner_pid = 0u;
+    __atomic_store_n(&session->owner_pid, 0u, __ATOMIC_RELAXED);
+    session->lock = 0u;
+    session->active_operations = 0u;
     __atomic_store_n(&session->state, 0u, __ATOMIC_RELEASE);
+    rin_media_word_unlock(&session->state_lock);
 }
 
-/* Called with the session lock held. State remains non-free until the caller
- * unlocks, so another open cannot reuse this slot while the old lock is held. */
+static void rin_media_session_wait_for_operations(
+    RinMediaSdkSessionV1* session, uint32_t remaining_operations)
+{
+    for (;;) {
+        const uint32_t active = __atomic_load_n(&session->active_operations,
+                                                __ATOMIC_ACQUIRE);
+        intptr_t wait_result;
+        if (active <= remaining_operations) return;
+        wait_result = syscall(SYS_futex, &session->active_operations,
+                              FUTEX_WAIT_PRIVATE, active, NULL, NULL, 0);
+        if (wait_result == 0 ||
+            (wait_result == -1 &&
+             (errno == EAGAIN || errno == EINTR || errno == ETIMEDOUT)))
+            continue;
+        (void)poll(NULL, 0u, 10);
+    }
+}
+
+/* Called with the RPC lock and one operation pin held; consumes both. Closing
+ * first blocks new pins, then releases RPC serialization so admitted waiters
+ * can observe the closing state and retire before the session is freed. */
 static void rin_media_session_drop_locked(RinMediaSdkSessionV1* session,
                                           int send_close)
 {
+    RinResult result = rin_media_word_lock(&session->state_lock, NULL, NULL,
+                                           NULL);
+
+    /* If the lifecycle gate is corrupt, make the session unavailable but
+     * retain its resources. Reusing the row would race pins already queued on
+     * the gate. */
+    if (result != RIN_SUCCESS) {
+        __atomic_store_n(&session->state, 2u, __ATOMIC_RELEASE);
+        rin_media_word_unlock(&session->lock);
+        rin_media_session_unref(session);
+        return;
+    }
     __atomic_store_n(&session->state, 2u, __ATOMIC_RELEASE);
+    rin_media_word_unlock(&session->state_lock);
+    rin_media_word_unlock(&session->lock);
+    rin_media_session_wait_for_operations(session, 1u);
+    result = rin_media_session_rpc_lock(session, NULL, NULL, NULL);
+    if (result != RIN_SUCCESS) {
+        rin_media_session_unref(session);
+        return;
+    }
     if (send_close &&
         (session->media_type == RIN_MEDIA_TYPE_AUDIO ||
          session->media_type == RIN_MEDIA_TYPE_VIDEO) &&
@@ -1028,6 +1232,16 @@ static void rin_media_session_drop_locked(RinMediaSdkSessionV1* session,
         (void)rin_media_rpc(session, RIN_MEDIA_MDC1_CLOSE, NULL, 0u, &reply);
     }
     if (session->socket_fd >= 0) (void)close(session->socket_fd);
+    /* Pin attempts that started before the state transition may still be
+     * queued here. With state 2 and all active pins drained, no caller reads
+     * session fields now. Hold the lifecycle gate only for the final reset
+     * and free-state publication; never reset this lock when reusing the row. */
+    result = rin_media_word_lock(&session->state_lock, NULL, NULL, NULL);
+    if (result != RIN_SUCCESS) {
+        rin_media_word_unlock(&session->lock);
+        rin_media_session_unref(session);
+        return;
+    }
     session->socket_fd = -1;
     session->session_id = 0u;
     session->object = RIN_OBJECT_HANDLE_INVALID;
@@ -1035,13 +1249,11 @@ static void rin_media_session_drop_locked(RinMediaSdkSessionV1* session,
     session->sample_rate = 0u;
     session->channels = 0u;
     rin_media_session_reset_image(session);
-    session->owner_pid = 0u;
-}
-
-static void rin_media_session_unlock_free(RinMediaSdkSessionV1* session)
-{
-    rin_media_session_unlock(session);
+    __atomic_store_n(&session->owner_pid, 0u, __ATOMIC_RELAXED);
+    rin_media_word_unlock(&session->lock);
+    rin_media_session_unref(session);
     __atomic_store_n(&session->state, 0u, __ATOMIC_RELEASE);
+    rin_media_word_unlock(&session->state_lock);
 }
 
 /* A forked child has a private copy of the session table but shares the
@@ -1066,32 +1278,29 @@ static void rin_media_session_discard_inherited(
     session->sample_rate = 0u;
     session->channels = 0u;
     rin_media_session_reset_image(session);
-    session->owner_pid = 0u;
+    __atomic_store_n(&session->owner_pid, 0u, __ATOMIC_RELAXED);
+    session->state_lock = 0u;
     session->lock = 0u;
+    session->active_operations = 0u;
     if (socket_fd >= 0) (void)close(socket_fd);
     __atomic_store_n(&session->state, 0u, __ATOMIC_RELEASE);
 }
 
-static RinMediaSdkSessionV1* rin_media_session_find_locked(RinObject object)
+static RinResult rin_media_session_find_locked(
+    RinObject object, RinMediaSdkSessionV1** session_out)
 {
-    const uint64_t caller_pid = rin_media_current_pid();
-    uint32_t index;
-    if (caller_pid == 0u) return NULL;
-    for (index = 0u; index < RIN_MEDIA_MDC1_MAX_SESSIONS; ++index) {
-        RinMediaSdkSessionV1* session = &g_media_sessions[index];
-        if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u)
-            continue;
-        if (session->owner_pid != caller_pid) {
-            rin_media_session_discard_inherited(session);
-            continue;
-        }
-        rin_media_session_lock(session);
-        if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 1u &&
-            session->object == object && session->owner_pid == caller_pid)
-            return session;
-        rin_media_session_unlock(session);
+    RinResult result;
+
+    if (session_out != NULL) *session_out = NULL;
+    if (session_out == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    result = rin_media_session_pin(object, session_out);
+    if (result != RIN_SUCCESS) return result;
+    result = rin_media_session_rpc_lock(*session_out, NULL, NULL, NULL);
+    if (result != RIN_SUCCESS) {
+        rin_media_session_unref(*session_out);
+        *session_out = NULL;
     }
-    return NULL;
+    return result;
 }
 
 static RinResult rin_media_image_register_source(
@@ -1367,10 +1576,11 @@ static RinResult rin_media_image_read_pixels_locked(
 
 static int rin_media_session_pid_valid(RinMediaSdkSessionV1* session)
 {
-    const uint64_t pid = rin_media_current_pid();
+    const uintptr_t pid = rin_media_current_pid();
     /* A forked child inherits the numeric kernel handle and a duplicate of
      * this descriptor, but must not issue requests on the parent's stream. */
-    return pid != 0u && pid == session->owner_pid;
+    return pid != 0u && pid ==
+        __atomic_load_n(&session->owner_pid, __ATOMIC_RELAXED);
 }
 
 static RinResult rin_media_validate_object(RinObject object)
@@ -1403,7 +1613,7 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     RinMediaMdc1OutputFormatV3 output;
     RinMediaMdc1OpenReplyV2 metadata;
     RinMediaMdc1VideoOpenReplyV1 video_metadata;
-    uint64_t owner_pid;
+    uintptr_t owner_pid;
     int source_fd = -1;
     int socket_fd = -1;
     RinResult connect_result;
@@ -1440,13 +1650,17 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     if (request->media_type == RIN_MEDIA_TYPE_IMAGE) {
         RinResult image_result;
         session->object = object;
-        session->owner_pid = owner_pid;
+        __atomic_store_n(&session->owner_pid, owner_pid, __ATOMIC_RELAXED);
         image_result = rin_media_image_register_source(session, request);
         if (image_result != RIN_SUCCESS) {
             rin_media_session_discard_reserved(session);
             return image_result;
         }
-        __atomic_store_n(&session->state, 1u, __ATOMIC_RELEASE);
+        image_result = rin_media_session_publish(session);
+        if (image_result != RIN_SUCCESS) {
+            rin_media_session_discard_reserved(session);
+            return image_result;
+        }
         return RIN_SUCCESS;
     }
     if (!rin_media_snapshot_source(request, &source_fd)) {
@@ -1541,7 +1755,7 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
         session->next_request_id = 2u;
         session->media_type = RIN_MEDIA_TYPE_VIDEO;
         session->session_id = reply_header.session_id;
-        session->owner_pid = owner_pid;
+        __atomic_store_n(&session->owner_pid, owner_pid, __ATOMIC_RELAXED);
         memset(&session->video_info, 0, sizeof(session->video_info));
         session->video_info.struct_size = sizeof(session->video_info);
         session->video_info.version = RIN_SDK_STRUCT_VERSION_1;
@@ -1556,7 +1770,11 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
         session->video_info.fps_numerator = video_metadata.fps_numerator;
         session->video_info.fps_denominator = video_metadata.fps_denominator;
         session->video_next_frame_index = 0u;
-        __atomic_store_n(&session->state, 1u, __ATOMIC_RELEASE);
+        connect_result = rin_media_session_publish(session);
+        if (connect_result != RIN_SUCCESS) {
+            rin_media_session_discard_reserved(session);
+            return connect_result;
+        }
         return RIN_SUCCESS;
     }
     memset(&metadata, 0, sizeof(metadata));
@@ -1599,8 +1817,12 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
     session->channels = output.channels;
     session->media_type = RIN_MEDIA_TYPE_AUDIO;
     session->session_id = reply_header.session_id;
-    session->owner_pid = owner_pid;
-    __atomic_store_n(&session->state, 1u, __ATOMIC_RELEASE);
+    __atomic_store_n(&session->owner_pid, owner_pid, __ATOMIC_RELAXED);
+    connect_result = rin_media_session_publish(session);
+    if (connect_result != RIN_SUCCESS) {
+        rin_media_session_discard_reserved(session);
+        return connect_result;
+    }
     return RIN_SUCCESS;
 }
 
@@ -1612,8 +1834,8 @@ RinResult rin_media_sdk_client_audio_info_v1(RinObject object,
     if (info == NULL) return RIN_ERROR_INVALID_ARGUMENT;
     result = rin_media_validate_object(object);
     if (result != RIN_SUCCESS) return result;
-    session = rin_media_session_find_locked(object);
-    if (session == NULL) return RIN_ERROR_STALE_HANDLE;
+    result = rin_media_session_find_locked(object, &session);
+    if (result != RIN_SUCCESS) return result;
     if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
         session->object != object ||
         session->media_type != RIN_MEDIA_TYPE_AUDIO) {
@@ -1627,7 +1849,6 @@ RinResult rin_media_sdk_client_audio_info_v1(RinObject object,
     }
     if (!rin_media_session_pid_valid(session)) {
         rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
         return RIN_ERROR_STALE_HANDLE;
     }
     memset(info, 0, sizeof(*info));
@@ -1653,8 +1874,8 @@ RinResult rin_media_sdk_client_image_info_v1(RinObject object,
     if (info == NULL) return RIN_ERROR_INVALID_ARGUMENT;
     result = rin_media_validate_object(object);
     if (result != RIN_SUCCESS) return result;
-    session = rin_media_session_find_locked(object);
-    if (session == NULL) return RIN_ERROR_STALE_HANDLE;
+    result = rin_media_session_find_locked(object, &session);
+    if (result != RIN_SUCCESS) return result;
     if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
         session->object != object) {
         rin_media_session_unlock(session);
@@ -1666,7 +1887,6 @@ RinResult rin_media_sdk_client_image_info_v1(RinObject object,
     }
     if (!rin_media_session_pid_valid(session)) {
         rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
         return RIN_ERROR_STALE_HANDLE;
     }
     result = rin_media_image_decode_locked(session);
@@ -1674,8 +1894,6 @@ RinResult rin_media_sdk_client_image_info_v1(RinObject object,
         if (result == RIN_ERROR_IO || result == RIN_ERROR_INTEGRITY ||
             result == RIN_ERROR_STALE_HANDLE)
             rin_media_session_drop_locked(session, 0);
-        if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 2u)
-            rin_media_session_unlock_free(session);
         else
             rin_media_session_unlock(session);
         return result;
@@ -1712,8 +1930,8 @@ RinResult rin_media_sdk_client_image_decode_v1(RinObject object,
         return RIN_ERROR_NOT_SUPPORTED;
     result = rin_media_validate_object(object);
     if (result != RIN_SUCCESS) return result;
-    session = rin_media_session_find_locked(object);
-    if (session == NULL) return RIN_ERROR_STALE_HANDLE;
+    result = rin_media_session_find_locked(object, &session);
+    if (result != RIN_SUCCESS) return result;
     if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
         session->object != object) {
         rin_media_session_unlock(session);
@@ -1725,7 +1943,6 @@ RinResult rin_media_sdk_client_image_decode_v1(RinObject object,
     }
     if (!rin_media_session_pid_valid(session)) {
         rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
         return RIN_ERROR_STALE_HANDLE;
     }
     result = rin_media_image_decode_locked(session);
@@ -1733,8 +1950,6 @@ RinResult rin_media_sdk_client_image_decode_v1(RinObject object,
         if (result == RIN_ERROR_IO || result == RIN_ERROR_INTEGRITY ||
             result == RIN_ERROR_STALE_HANDLE)
             rin_media_session_drop_locked(session, 0);
-        if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 2u)
-            rin_media_session_unlock_free(session);
         else
             rin_media_session_unlock(session);
         return result;
@@ -1757,8 +1972,6 @@ RinResult rin_media_sdk_client_image_decode_v1(RinObject object,
         if (result == RIN_ERROR_IO || result == RIN_ERROR_INTEGRITY ||
             result == RIN_ERROR_STALE_HANDLE)
             rin_media_session_drop_locked(session, 0);
-        if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 2u)
-            rin_media_session_unlock_free(session);
         else
             rin_media_session_unlock(session);
         return result;
@@ -1786,8 +1999,8 @@ RinResult rin_media_sdk_client_audio_decode_v1(RinObject object,
         return RIN_ERROR_INVALID_ARGUMENT;
     result = rin_media_validate_object(object);
     if (result != RIN_SUCCESS) return result;
-    session = rin_media_session_find_locked(object);
-    if (session == NULL) return RIN_ERROR_STALE_HANDLE;
+    result = rin_media_session_find_locked(object, &session);
+    if (result != RIN_SUCCESS) return result;
     if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
         session->object != object ||
         session->media_type != RIN_MEDIA_TYPE_AUDIO) {
@@ -1801,7 +2014,6 @@ RinResult rin_media_sdk_client_audio_decode_v1(RinObject object,
     }
     if (!rin_media_session_pid_valid(session)) {
         rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
         return RIN_ERROR_STALE_HANDLE;
     }
     if (session->channels == 0u || session->channels > 8u ||
@@ -1838,7 +2050,6 @@ RinResult rin_media_sdk_client_audio_decode_v1(RinObject object,
                                    response.frames * frame_bytes, 1))) {
         memset((void*)(uintptr_t)output.address, 0, (size_t)maximum_bytes);
         rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
         return RIN_ERROR_IO;
     }
     *frames_out = response.frames;
@@ -1856,8 +2067,8 @@ RinResult rin_media_sdk_client_video_info_v1(RinObject object,
     if (info == NULL) return RIN_ERROR_INVALID_ARGUMENT;
     result = rin_media_validate_object(object);
     if (result != RIN_SUCCESS) return result;
-    session = rin_media_session_find_locked(object);
-    if (session == NULL) return RIN_ERROR_STALE_HANDLE;
+    result = rin_media_session_find_locked(object, &session);
+    if (result != RIN_SUCCESS) return result;
     if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
         session->object != object) {
         rin_media_session_unlock(session);
@@ -1869,7 +2080,6 @@ RinResult rin_media_sdk_client_video_info_v1(RinObject object,
     }
     if (!rin_media_session_pid_valid(session)) {
         rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
         return RIN_ERROR_STALE_HANDLE;
     }
     *info = session->video_info;
@@ -1890,6 +2100,7 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
     uint8_t* pixels = NULL;
     uint64_t expected_bytes;
     uint64_t target_extent;
+    uint64_t deadline_bytes;
     uint32_t source_row_stride_bytes;
     uint32_t row;
     int cancelled = 0;
@@ -1915,47 +2126,55 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
         target_extent > SIZE_MAX ||
         (uintptr_t)target->pixels > UINTPTR_MAX - (uintptr_t)target_extent)
         return RIN_ERROR_INVALID_ARGUMENT;
+    if (cancellation != NULL && cancellation(cancellation_context))
+        return RIN_ERROR_CANCELLED;
     result = rin_media_validate_object(object);
     if (result != RIN_SUCCESS) return result;
-    session = rin_media_session_find_locked(object);
-    if (session == NULL) return RIN_ERROR_STALE_HANDLE;
+    result = rin_media_session_pin(object, &session);
+    if (result != RIN_SUCCESS) return result;
+    if (session->media_type != RIN_MEDIA_TYPE_VIDEO) {
+        rin_media_session_unref(session);
+        return RIN_ERROR_WRONG_TYPE;
+    }
+    if (!rin_media_session_pid_valid(session)) {
+        rin_media_session_unref(session);
+        return RIN_ERROR_STALE_HANDLE;
+    }
+    source_row_stride_bytes = session->video_info.row_stride_bytes;
+    expected_bytes = (uint64_t)source_row_stride_bytes *
+                     (uint64_t)session->video_info.height;
+    deadline_bytes = expected_bytes > RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES
+        ? RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES : expected_bytes;
+    if (!rin_media_deadline_init(
+            &frame_deadline, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS,
+            deadline_bytes + sizeof(request) + sizeof(reply) +
+                sizeof(received_info))) {
+        rin_media_session_unref(session);
+        return RIN_ERROR_IO;
+    }
+    result = rin_media_session_rpc_lock(session, cancellation,
+                                        cancellation_context, &frame_deadline);
+    if (result != RIN_SUCCESS) {
+        rin_media_session_unref(session);
+        return result;
+    }
     if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) != 1u ||
         session->object != object) {
         rin_media_session_unlock(session);
         return RIN_ERROR_STALE_HANDLE;
     }
-    if (session->media_type != RIN_MEDIA_TYPE_VIDEO) {
-        rin_media_session_unlock(session);
-        return RIN_ERROR_WRONG_TYPE;
-    }
-    if (!rin_media_session_pid_valid(session)) {
+    if (expected_bytes > RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES) {
         rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
-        return RIN_ERROR_STALE_HANDLE;
-    }
-    if (cancellation != NULL && cancellation(cancellation_context)) {
-        rin_media_session_unlock(session);
-        return RIN_ERROR_CANCELLED;
+        return RIN_ERROR_INTEGRITY;
     }
     if (target->width < session->video_info.width ||
         target->height < session->video_info.height) {
         rin_media_session_unlock(session);
         return RIN_ERROR_BUFFER_TOO_SMALL;
     }
-    source_row_stride_bytes = session->video_info.row_stride_bytes;
-    expected_bytes = (uint64_t)source_row_stride_bytes *
-                     (uint64_t)session->video_info.height;
-    if (expected_bytes > RIN_MEDIA_MDC1_VIDEO_MAX_FRAME_BYTES) {
-        rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
-        return RIN_ERROR_INTEGRITY;
-    }
-    if (!rin_media_deadline_init(
-            &frame_deadline, RIN_MEDIA_IMAGE_IO_TIMEOUT_MS,
-            expected_bytes + sizeof(request) + sizeof(reply) +
-                sizeof(received_info))) {
+    if (cancellation != NULL && cancellation(cancellation_context)) {
         rin_media_session_unlock(session);
-        return RIN_ERROR_IO;
+        return RIN_ERROR_CANCELLED;
     }
 
     memset(&request, 0, sizeof(request));
@@ -1978,7 +2197,6 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
         const RinResult failure = cancelled ? RIN_ERROR_CANCELLED
                                             : RIN_ERROR_IO;
         rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
         return failure;
     }
 
@@ -2008,13 +2226,11 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
         reply.payload_bytes != sizeof(received_info) +
                                    received_info.payload_size_bytes) {
         rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
         return RIN_ERROR_INTEGRITY;
     }
     if (received_info.payload_size_bytes != 0u) {
         if (session->video_next_frame_index == UINT64_MAX) {
             rin_media_session_drop_locked(session, 0);
-            rin_media_session_unlock_free(session);
             return RIN_ERROR_INTEGRITY;
         }
         ++session->video_next_frame_index;
@@ -2022,14 +2238,12 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
     if (received_info.payload_size_bytes != 0u &&
         (uint64_t)target->pitch * received_info.height > target_extent) {
         rin_media_session_drop_locked(session, 0);
-        rin_media_session_unlock_free(session);
         return RIN_ERROR_INTEGRITY;
     }
     if (received_info.payload_size_bytes != 0u) {
         pixels = (uint8_t*)malloc((size_t)received_info.payload_size_bytes);
         if (pixels == NULL) {
             rin_media_session_drop_locked(session, 0);
-            rin_media_session_unlock_free(session);
             return RIN_ERROR_NO_MEMORY;
         }
         if (!rin_media_transfer_exact_timeout_cancellable_with_deadline(
@@ -2041,7 +2255,6 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
             const RinResult failure = cancelled ? RIN_ERROR_CANCELLED
                                                 : RIN_ERROR_IO;
             rin_media_session_drop_locked(session, 0);
-            rin_media_session_unlock_free(session);
             return failure;
         }
         for (row = 0u; row < received_info.height; ++row) {
@@ -2074,7 +2287,6 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
         if (cancelled) {
             free(pixels);
             rin_media_session_drop_locked(session, 0);
-            rin_media_session_unlock_free(session);
             return RIN_ERROR_CANCELLED;
         }
         free(pixels);
@@ -2086,15 +2298,15 @@ RinResult rin_media_sdk_client_video_decode_frame_v1(
 
 void rin_media_sdk_client_object_close_hook_v1(RinObject object)
 {
-    RinMediaSdkSessionV1* session = rin_media_session_find_locked(object);
-    if (session == NULL) return;
+    RinMediaSdkSessionV1* session;
+    if (rin_media_session_find_locked(object, &session) != RIN_SUCCESS) return;
     if (__atomic_load_n(&session->state, __ATOMIC_ACQUIRE) == 1u &&
         session->object == object)
         rin_media_session_drop_locked(
-            session, rin_media_current_pid() == session->owner_pid);
+            session, rin_media_current_pid() ==
+                __atomic_load_n(&session->owner_pid, __ATOMIC_RELAXED));
     else {
         rin_media_session_unlock(session);
         return;
     }
-    rin_media_session_unlock_free(session);
 }
