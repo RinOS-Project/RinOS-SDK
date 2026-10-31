@@ -42,7 +42,8 @@
 #define RIN_PATH_AT_FSETXATTR       19u
 #define RIN_PATH_AT_FREMOVEXATTR    20u
 #define RIN_PATH_AT_XATTR_VALUE_MAX 1024u
-/* Return the generation-bound identity of an open RinFS descriptor. */
+/* Return the generation-bound identity of an open RinFS or namespace-bound
+ * tmpfs file/directory descriptor. */
 #define RIN_PATH_AT_FGETIDENTITY    21u
 #define RIN_PATH_AT_FILE_IDENTITY_V1_VERSION 1u
 /* Return the NUL-separated xattr names for an open RinFS descriptor. */
