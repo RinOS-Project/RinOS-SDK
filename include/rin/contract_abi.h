@@ -65,9 +65,9 @@ typedef int32_t RinResultCode;
 #define RIN_FILESYSTEM_USAGE_FLAG_VOLUME_NAME_VALID 8u
 #define RIN_FILESYSTEM_USAGE_FLAG_MEDIA_CLASS_VALID 16u
 #define RIN_FILESYSTEM_USAGE_FLAG_MEDIA_REMOVABLE 32u
-#define RIN_FILESYSTEM_USAGE_FLAG_NOEXEC 64u
-#define RIN_FILESYSTEM_USAGE_FLAG_NOSUID 128u
-#define RIN_FILESYSTEM_USAGE_FLAG_NODEV 256u
+#define RIN_FILESYSTEM_USAGE_FLAG_NOEXEC    64u
+#define RIN_FILESYSTEM_USAGE_FLAG_NOSUID    128u
+#define RIN_FILESYSTEM_USAGE_FLAG_NODEV     256u
 #define RIN_DEVICE_RESOURCE_VERSION         1u
 #define RIN_DEVICE_RESOURCE_OPERATION_OPEN  1u
 #define RIN_DEVICE_RESOURCE_OPERATION_CALL  2u
@@ -78,6 +78,10 @@ typedef int32_t RinResultCode;
 #define RIN_CREDENTIAL_SET_GID              2u
 #define RIN_CREDENTIAL_SET_EUID             3u
 #define RIN_CREDENTIAL_SET_EGID             4u
+#define RIN_CREDENTIAL_SETRES_VERSION       1u
+#define RIN_CREDENTIAL_SETRES_UID           1u
+#define RIN_CREDENTIAL_SETRES_GID           2u
+#define RIN_CREDENTIAL_SETRES_UNCHANGED     0xFFFFFFFFu
 #define RIN_SUPPLEMENTARY_GROUPS_VERSION    1u
 #define RIN_SUPPLEMENTARY_GROUPS_OPERATION_SET 1u
 #define RIN_SUPPLEMENTARY_GROUPS_USER_VERSION 2u
@@ -669,6 +673,16 @@ typedef struct RinCredentialSetV1 {
     uint32_t flags;
     uint64_t reserved;
 } RinCredentialSetV1;
+
+typedef struct RinCredentialSetResV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t operation;
+    uint32_t real_id;
+    uint32_t effective_id;
+    uint32_t saved_id;
+    uint32_t reserved;
+} RinCredentialSetResV1;
 
 typedef struct RinSupplementaryGroupsV1 {
     uint32_t struct_size;
@@ -1771,6 +1785,14 @@ static_assert(offsetof(RinCredentialSetV1, operation) == 6, "RinCredentialSetV1.
 static_assert(offsetof(RinCredentialSetV1, value) == 8, "RinCredentialSetV1.value ABI drift");
 static_assert(offsetof(RinCredentialSetV1, flags) == 12, "RinCredentialSetV1.flags ABI drift");
 static_assert(offsetof(RinCredentialSetV1, reserved) == 16, "RinCredentialSetV1.reserved ABI drift");
+static_assert(sizeof(RinCredentialSetResV1) == 24, "RinCredentialSetResV1 ABI drift");
+static_assert(offsetof(RinCredentialSetResV1, struct_size) == 0, "RinCredentialSetResV1.struct_size ABI drift");
+static_assert(offsetof(RinCredentialSetResV1, version) == 4, "RinCredentialSetResV1.version ABI drift");
+static_assert(offsetof(RinCredentialSetResV1, operation) == 6, "RinCredentialSetResV1.operation ABI drift");
+static_assert(offsetof(RinCredentialSetResV1, real_id) == 8, "RinCredentialSetResV1.real_id ABI drift");
+static_assert(offsetof(RinCredentialSetResV1, effective_id) == 12, "RinCredentialSetResV1.effective_id ABI drift");
+static_assert(offsetof(RinCredentialSetResV1, saved_id) == 16, "RinCredentialSetResV1.saved_id ABI drift");
+static_assert(offsetof(RinCredentialSetResV1, reserved) == 20, "RinCredentialSetResV1.reserved ABI drift");
 static_assert(sizeof(RinSupplementaryGroupsV1) == 64, "RinSupplementaryGroupsV1 ABI drift");
 static_assert(offsetof(RinSupplementaryGroupsV1, struct_size) == 0, "RinSupplementaryGroupsV1.struct_size ABI drift");
 static_assert(offsetof(RinSupplementaryGroupsV1, version) == 4, "RinSupplementaryGroupsV1.version ABI drift");
@@ -2714,6 +2736,14 @@ _Static_assert(offsetof(RinCredentialSetV1, operation) == 6, "RinCredentialSetV1
 _Static_assert(offsetof(RinCredentialSetV1, value) == 8, "RinCredentialSetV1.value ABI drift");
 _Static_assert(offsetof(RinCredentialSetV1, flags) == 12, "RinCredentialSetV1.flags ABI drift");
 _Static_assert(offsetof(RinCredentialSetV1, reserved) == 16, "RinCredentialSetV1.reserved ABI drift");
+_Static_assert(sizeof(RinCredentialSetResV1) == 24, "RinCredentialSetResV1 ABI drift");
+_Static_assert(offsetof(RinCredentialSetResV1, struct_size) == 0, "RinCredentialSetResV1.struct_size ABI drift");
+_Static_assert(offsetof(RinCredentialSetResV1, version) == 4, "RinCredentialSetResV1.version ABI drift");
+_Static_assert(offsetof(RinCredentialSetResV1, operation) == 6, "RinCredentialSetResV1.operation ABI drift");
+_Static_assert(offsetof(RinCredentialSetResV1, real_id) == 8, "RinCredentialSetResV1.real_id ABI drift");
+_Static_assert(offsetof(RinCredentialSetResV1, effective_id) == 12, "RinCredentialSetResV1.effective_id ABI drift");
+_Static_assert(offsetof(RinCredentialSetResV1, saved_id) == 16, "RinCredentialSetResV1.saved_id ABI drift");
+_Static_assert(offsetof(RinCredentialSetResV1, reserved) == 20, "RinCredentialSetResV1.reserved ABI drift");
 _Static_assert(sizeof(RinSupplementaryGroupsV1) == 64, "RinSupplementaryGroupsV1 ABI drift");
 _Static_assert(offsetof(RinSupplementaryGroupsV1, struct_size) == 0, "RinSupplementaryGroupsV1.struct_size ABI drift");
 _Static_assert(offsetof(RinSupplementaryGroupsV1, version) == 4, "RinSupplementaryGroupsV1.version ABI drift");

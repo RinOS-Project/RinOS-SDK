@@ -431,6 +431,7 @@
 #define SYS_FACCESSAT2                  RIN_SYS_FACCESSAT2
 #define SYS_CAPGET                      RIN_SYS_CAPGET
 #define SYS_CAPSET                      RIN_SYS_CAPSET
+#define SYS_CREDENTIALS_SETRES          RIN_SYS_CREDENTIALS_SETRES
 
 #define SYS_CPU_TIME_ABI_VERSION        RIN_CPU_TIME_ABI_VERSION
 #define SYS_AUDIO_CTL_START             RIN_AUDIO_CTL_START
