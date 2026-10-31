@@ -35,6 +35,7 @@
 #include "syscall_abi.h"
 #include "syscall_contract.h"
 #include "syscall_legacy.h"
+#include "kernel_log_abi.h"
 #include "ipc/shm_abi.h"
 #include "ipc/posix_semaphore_abi.h"
 #include "fs/fcntl_lock_abi.h"
