@@ -74,6 +74,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_FORK_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FORK_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_CONDITIONAL
 #define RIN_SYS_FORK_CONDITION_X86_64_COMPAT32 "available when x86_64 compat32 execution is enabled"
+/* The argument vector has up to 64 entries plus its null terminator; the optional environment vector has up to 128 entries plus its terminator. Each string is bounded to 4096 bytes and argv/env strings together are bounded to 256 KiB. */
 #define RIN_SYS_EXEC                        2u
 /* EXEC availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_EXEC_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -282,6 +283,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_FILE_SYNC_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_FILE_SYNC_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* object. */
+/* argument_word is scalar for descriptor/status commands and a command-selected RinNativeFlockAbi or RinCompat32FlockAbi pointer for F_GETLK/F_SETLK/F_SETLKW and OFD lock commands. */
 #define RIN_SYS_FCNTL                       48u
 /* FCNTL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_FCNTL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -670,6 +672,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_SHMDT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHMDT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
+/* argv and envp use the EXEC vector bounds. takeover_name is an input string of at most 128 bytes only when takeover_fd is nonnegative; the final word carries spawn flags. */
 #define RIN_SYS_SPAWN_PROCESS               140u
 /* SPAWN_PROCESS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_SPAWN_PROCESS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -713,6 +716,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* argument_word is a scalar for set operations and an output pointer for GET_PDEATHSIG, GET_DUMPABLE, GET_CHILD_SUBREAPER, GET_ENDIAN and GET_TSC. argument3_word is the input seccomp filter-program pointer for PR_SET_SECCOMP with FILTER mode. arguments 4 and 5 are operation-selected scalars or required zero. */
 #define RIN_SYS_PRCTL                       148u
 /* PRCTL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_PRCTL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -993,6 +997,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_GUI_CREATE_FRAMELESS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_CREATE_FRAMELESS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* thread. */
+/* The low 7 operation bits select WAIT/WAIT_BITSET timeout input or robust-list registration pointer in slot 4; futex word addresses point to one 32-bit word. Other supported commands consume slot 4 as a scalar or ignore it. */
 #define RIN_SYS_FUTEX                       240u
 /* FUTEX availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_FUTEX_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -1125,11 +1130,13 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_AUDIO_OPEN_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_AUDIO_OPEN_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_AUDIO_OPEN_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* buffer is copied in 2048-byte chunks; the byte length is bounded by INT32_MAX on x86 and compat32, and INT64_MAX on x86_64 native. */
 #define RIN_SYS_AUDIO_WRITE                 271u
 /* AUDIO_WRITE availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_AUDIO_WRITE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_AUDIO_WRITE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_AUDIO_WRITE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* argument_word is an output pointer for GET_STATUS and GET_PERIOD, and for POLL_USB_PUBLICATION where supported; other commands consume it as a scalar. */
 #define RIN_SYS_AUDIO_CONTROL               272u
 /* AUDIO_CONTROL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_AUDIO_CONTROL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
