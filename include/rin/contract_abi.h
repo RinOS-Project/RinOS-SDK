@@ -52,6 +52,7 @@ typedef int32_t RinResultCode;
 #define RIN_SYSTEM_INFO_FLAG_VIRTUAL_MEMORY_VALID 32u
 #define RIN_FILESYSTEM_USAGE_VERSION        1u
 #define RIN_FILESYSTEM_USAGE_VERSION_2      2u
+#define RIN_FILESYSTEM_USAGE_VERSION_3      3u
 #define RIN_STATVFS_ABI_VERSION             1u
 #define RIN_FILESYSTEM_MOUNT_TYPE_TMPFS     5u
 #define RIN_FILESYSTEM_MOUNT_TYPE_ISO9660   9u
@@ -680,6 +681,23 @@ typedef struct RinStatVfsRequestV1 {
     uint64_t buffer;
     uint64_t reserved;
 } RinStatVfsRequestV1;
+
+typedef struct RinFilesystemUsageV3 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t filesystem_type;
+    uint64_t flags;
+    uint32_t block_size;
+    uint32_t name_max;
+    uint64_t total_blocks;
+    uint64_t free_blocks;
+    uint64_t available_blocks;
+    uint64_t total_inodes;
+    uint64_t free_inodes;
+    uint8_t volume_name[24];
+    uint64_t available_inodes;
+    uint64_t filesystem_id;
+} RinFilesystemUsageV3;
 
 typedef struct RinVolumeMountIdentityV1 {
     uint32_t struct_size;
@@ -1824,6 +1842,21 @@ static_assert(offsetof(RinStatVfsRequestV1, word_size) == 6, "RinStatVfsRequestV
 static_assert(offsetof(RinStatVfsRequestV1, path) == 8, "RinStatVfsRequestV1.path ABI drift");
 static_assert(offsetof(RinStatVfsRequestV1, buffer) == 16, "RinStatVfsRequestV1.buffer ABI drift");
 static_assert(offsetof(RinStatVfsRequestV1, reserved) == 24, "RinStatVfsRequestV1.reserved ABI drift");
+static_assert(sizeof(RinFilesystemUsageV3) == 104, "RinFilesystemUsageV3 ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, struct_size) == 0, "RinFilesystemUsageV3.struct_size ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, version) == 4, "RinFilesystemUsageV3.version ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, filesystem_type) == 6, "RinFilesystemUsageV3.filesystem_type ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, flags) == 8, "RinFilesystemUsageV3.flags ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, block_size) == 16, "RinFilesystemUsageV3.block_size ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, name_max) == 20, "RinFilesystemUsageV3.name_max ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, total_blocks) == 24, "RinFilesystemUsageV3.total_blocks ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, free_blocks) == 32, "RinFilesystemUsageV3.free_blocks ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, available_blocks) == 40, "RinFilesystemUsageV3.available_blocks ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, total_inodes) == 48, "RinFilesystemUsageV3.total_inodes ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, free_inodes) == 56, "RinFilesystemUsageV3.free_inodes ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, volume_name) == 64, "RinFilesystemUsageV3.volume_name ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, available_inodes) == 88, "RinFilesystemUsageV3.available_inodes ABI drift");
+static_assert(offsetof(RinFilesystemUsageV3, filesystem_id) == 96, "RinFilesystemUsageV3.filesystem_id ABI drift");
 static_assert(sizeof(RinVolumeMountIdentityV1) == 64, "RinVolumeMountIdentityV1 ABI drift");
 static_assert(offsetof(RinVolumeMountIdentityV1, struct_size) == 0, "RinVolumeMountIdentityV1.struct_size ABI drift");
 static_assert(offsetof(RinVolumeMountIdentityV1, version) == 4, "RinVolumeMountIdentityV1.version ABI drift");
@@ -2801,6 +2834,21 @@ _Static_assert(offsetof(RinStatVfsRequestV1, word_size) == 6, "RinStatVfsRequest
 _Static_assert(offsetof(RinStatVfsRequestV1, path) == 8, "RinStatVfsRequestV1.path ABI drift");
 _Static_assert(offsetof(RinStatVfsRequestV1, buffer) == 16, "RinStatVfsRequestV1.buffer ABI drift");
 _Static_assert(offsetof(RinStatVfsRequestV1, reserved) == 24, "RinStatVfsRequestV1.reserved ABI drift");
+_Static_assert(sizeof(RinFilesystemUsageV3) == 104, "RinFilesystemUsageV3 ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, struct_size) == 0, "RinFilesystemUsageV3.struct_size ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, version) == 4, "RinFilesystemUsageV3.version ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, filesystem_type) == 6, "RinFilesystemUsageV3.filesystem_type ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, flags) == 8, "RinFilesystemUsageV3.flags ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, block_size) == 16, "RinFilesystemUsageV3.block_size ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, name_max) == 20, "RinFilesystemUsageV3.name_max ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, total_blocks) == 24, "RinFilesystemUsageV3.total_blocks ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, free_blocks) == 32, "RinFilesystemUsageV3.free_blocks ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, available_blocks) == 40, "RinFilesystemUsageV3.available_blocks ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, total_inodes) == 48, "RinFilesystemUsageV3.total_inodes ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, free_inodes) == 56, "RinFilesystemUsageV3.free_inodes ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, volume_name) == 64, "RinFilesystemUsageV3.volume_name ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, available_inodes) == 88, "RinFilesystemUsageV3.available_inodes ABI drift");
+_Static_assert(offsetof(RinFilesystemUsageV3, filesystem_id) == 96, "RinFilesystemUsageV3.filesystem_id ABI drift");
 _Static_assert(sizeof(RinVolumeMountIdentityV1) == 64, "RinVolumeMountIdentityV1 ABI drift");
 _Static_assert(offsetof(RinVolumeMountIdentityV1, struct_size) == 0, "RinVolumeMountIdentityV1.struct_size ABI drift");
 _Static_assert(offsetof(RinVolumeMountIdentityV1, version) == 4, "RinVolumeMountIdentityV1.version ABI drift");
