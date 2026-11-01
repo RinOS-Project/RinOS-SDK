@@ -10,7 +10,9 @@ separate objects. It does not link for RinOS.
 either SDK target. Pass one installed target prefix produced by
 `package_rinsdk_v1.py`;
 the helper verifies its manifest, public headers, runtime-library hashes, and
-signatures before producing application packages. Supply the signed
+signatures before producing application packages. The installed prefix also
+contains a receipt-verified `crt_startup_v1.ro`, which the helper links as the
+process entry point before invoking each example's `main()`. Supply the signed
 `RinRuntime.rll` built with GUI support using `--rinruntime-rll`; the `window`
 example imports window ownership APIs and the `media` example maps its video
 surface through RinRuntime. The SDK `ringui` library retains clipboard and

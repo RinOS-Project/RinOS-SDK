@@ -225,6 +225,17 @@ def build(args: argparse.Namespace) -> None:
             receipt.get("target") != target or \
             not isinstance(receipt.get("artifacts"), dict):
         raise RuntimeError("SDK install receipt does not match the selected target")
+    startup_name = receipt.get("startup_object")
+    startup_hash = receipt["artifacts"].get(startup_name) \
+        if isinstance(startup_name, str) else None
+    if startup_name != "crt_startup_v1.ro" or \
+            not isinstance(startup_hash, str) or \
+            not re.fullmatch(r"[0-9a-f]{64}", startup_hash):
+        raise RuntimeError("SDK install receipt has no valid startup object")
+    startup_object = sdk_root / startup_name
+    if startup_object.is_symlink() or not startup_object.is_file() or \
+            hashlib.sha256(startup_object.read_bytes()).hexdigest() != startup_hash:
+        raise RuntimeError("SDK startup object does not match its install receipt")
     libraries = metadata.get("libraries")
     if not isinstance(libraries, dict):
         raise RuntimeError("SDK runtime library metadata is malformed")
@@ -313,6 +324,14 @@ def build(args: argparse.Namespace) -> None:
                 ("rincrt", "rin_exit", "function"),
                 ("rincrt", "atexit", "function"),
             ])
+            if architecture == "x86_64":
+                function_imports.extend([
+                    ("rincrt", "_exit", "function"),
+                    ("rincrt", "__rin_run_startup_dependency_initializers",
+                     "function"),
+                    ("rincrt", "__rin_run_process_dependency_finalizers",
+                     "function"),
+                ])
             function_imports.extend(
                 ("rincrt", symbol, "function")
                 for symbol in ("memcpy", "memset", "memcmp")
@@ -325,14 +344,6 @@ def build(args: argparse.Namespace) -> None:
                 "-I", str(include_root), "-o", str(object_path),
                 str(examples_root / (name + ".c")),
             ], timeout)
-
-            startup_object_path = stage / "crt_startup_v1.ro"
-            if not startup_object_path.exists():
-                run([
-                    str(rcc), "--target", target, "-std=c17", "-ffreestanding", "-c",
-                    "-I", str(include_root), "-o", str(startup_object_path),
-                    str(examples_root / "crt_startup_v1.c"),
-                ], timeout)
 
             link_command = [
                 str(rld), "--target", target,
@@ -350,7 +361,7 @@ def build(args: argparse.Namespace) -> None:
                 ))
             link_command.extend((
                 "-o", str(image_path), str(object_path),
-                str(startup_object_path),
+                str(startup_object),
             ))
             run(link_command, timeout)
 
