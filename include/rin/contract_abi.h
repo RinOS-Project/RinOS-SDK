@@ -571,6 +571,19 @@ typedef int32_t RinResultCode;
 #ifndef RIN_SDK_DYNLINK_ADDR_ABI_DEFINED
 #define RIN_SDK_DYNLINK_ADDR_ABI_DEFINED
 /* RLLとnative RIN v3が共用する固定幅のaddress attribution record。 */
+#if defined(_MSC_VER)
+typedef struct __declspec(align(8)) RinDlAddrRllRecordV1 {
+    uint32_t abi_version;
+    uint32_t flags;
+    uint64_t load_address;
+    uint64_t mapped_size;
+    uint64_t symbol_address;
+    uint32_t library_name_length;
+    uint32_t symbol_name_length;
+    char library_name[64];
+    char symbol_name[129];
+} RinDlAddrRllRecordV1;
+#else
 typedef struct RinDlAddrRllRecordV1 {
     uint32_t abi_version;
     uint32_t flags;
@@ -582,6 +595,7 @@ typedef struct RinDlAddrRllRecordV1 {
     char library_name[64];
     char symbol_name[129];
 } __attribute__((aligned(8))) RinDlAddrRllRecordV1;
+#endif
 
 #endif /* RIN_SDK_DYNLINK_ADDR_ABI_DEFINED */
 
