@@ -2427,6 +2427,19 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_EPOLL_PWAIT2_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_EPOLL_PWAIT2_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_EPOLL_PWAIT2_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* thread. */
+#define RIN_SYS_THREAD_CONTROL_V1           0x80C7u
+/* THREAD_CONTROL_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_THREAD_CONTROL_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_CONTROL_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_THREAD_CONTROL_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* diagnostic. */
+/* Attaches, reads, resets, enables, disables, or closes a current-task software TASK_CLOCK event. Handles are scoped to the opening task generation; copyout failure rolls back owner state. */
+#define RIN_SYS_PERF_EVENT_CONTROL_V1       0x80C8u
+/* PERF_EVENT_CONTROL_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 
 /* Returns UNKNOWN for syscall numbers outside this declared availability table. */
 static inline uint32_t rin_syscall_arch_support(
@@ -5385,6 +5398,20 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_EPOLL_PWAIT2_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_EPOLL_PWAIT2_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_EPOLL_PWAIT2_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_THREAD_CONTROL_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_THREAD_CONTROL_V1_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_THREAD_CONTROL_V1_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_THREAD_CONTROL_V1_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_PERF_EVENT_CONTROL_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
     default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;

@@ -30,6 +30,14 @@ typedef int32_t RinResultCode;
 #define RIN_TIMER_NOTIFY_NONE               1u
 #define RIN_TIMER_NOTIFY_THREAD             2u
 #define RIN_TIMER_THREAD_SIGNAL             62u
+#define RIN_PERF_EVENT_CONTROL_VERSION      1u
+#define RIN_PERF_EVENT_CONTROL_OPEN         1u
+#define RIN_PERF_EVENT_CONTROL_READ         2u
+#define RIN_PERF_EVENT_CONTROL_RESET        3u
+#define RIN_PERF_EVENT_CONTROL_CLOSE        4u
+#define RIN_PERF_EVENT_CONTROL_ENABLE       5u
+#define RIN_PERF_EVENT_CONTROL_DISABLE      6u
+#define RIN_PERF_EVENT_TASK_CLOCK           1u
 #define RIN_CLOCK_SETTIME_ABI_VERSION       1u
 #define RIN_CLOCK_GETTIME_ABI_VERSION       1u
 #define RIN_TIMER_ABSTIME                   1u
