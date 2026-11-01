@@ -16,6 +16,26 @@
 #define RIN_POSIX_SPAWN_ACTION_DUP2  3u
 #define RIN_POSIX_SPAWN_ACTION_ATTRIBUTES 4u
 
+#define RIN_POSIX_SPAWN_PIDFD_REQUEST_VERSION 1u
+
+/* Optional pidfd result. The kernel registers the child handle and writes it
+ * here before making the child runnable. */
+typedef struct RinPosixSpawnPidFdRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved;
+    uint32_t spawn_flags;
+    int32_t pidfd;
+} RinPosixSpawnPidFdRequestV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinPosixSpawnPidFdRequestV1) == 16u,
+              "RinPosixSpawnPidFdRequestV1 ABI size");
+#else
+_Static_assert(sizeof(RinPosixSpawnPidFdRequestV1) == 16u,
+               "RinPosixSpawnPidFdRequestV1 ABI size");
+#endif
+
 #define RIN_POSIX_SPAWN_ATTRIBUTE_ABI_VERSION 1u
 #define RIN_POSIX_SPAWN_ATTRIBUTE_SETPGROUP  UINT32_C(0x00000001)
 #define RIN_POSIX_SPAWN_ATTRIBUTE_SETSIGDEF  UINT32_C(0x00000002)

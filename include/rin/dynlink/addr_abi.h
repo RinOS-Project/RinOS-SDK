@@ -20,6 +20,8 @@
  * fields keep the record identical for an IA-32 caller and an x86_64 kernel;
  * names are copied only after the kernel has validated their bounded NUL
  * terminators. */
+#ifndef RIN_SDK_DYNLINK_ADDR_ABI_DEFINED
+#define RIN_SDK_DYNLINK_ADDR_ABI_DEFINED
 typedef struct RinDlAddrRllRecordV1 {
     uint32_t abi_version;
     uint32_t flags;
@@ -31,6 +33,7 @@ typedef struct RinDlAddrRllRecordV1 {
     char library_name[RIN_DLADDR_RLL_V1_LIBRARY_NAME_CAPACITY];
     char symbol_name[RIN_DLADDR_RLL_V1_SYMBOL_NAME_CAPACITY];
 } __attribute__((aligned(8))) RinDlAddrRllRecordV1;
+#endif /* RIN_SDK_DYNLINK_ADDR_ABI_DEFINED */
 
 #ifdef __cplusplus
 static_assert(sizeof(RinDlAddrRllRecordV1) == 240u,

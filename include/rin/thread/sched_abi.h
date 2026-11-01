@@ -15,6 +15,10 @@
 #define RIN_THREAD_SCHED_BATCH    3
 #define RIN_THREAD_SCHED_IDLE     5
 
+/* THREAD_SCHED_SET accepts this value for an atomic priority-only update.
+ * The kernel checks the existing policy while applying the priority. */
+#define RIN_THREAD_SCHED_POLICY_KEEP_CURRENT (-1)
+
 /* The structure is deliberately fixed-width: pthread_t is a target word,
  * while the syscall ABI itself carries a process-local TID and this record. */
 typedef struct RinThreadSchedParametersV1 {

@@ -84,7 +84,9 @@ enum {
     /* One AF_UNSPEC request, with A and AAAA lookups owned concurrently by
      * resolved.  Unlike V2, the response contains both address families. */
     RIN_RESOLVED_CMD_GETADDRINFO_DUAL_V3 = 9,
-    RIN_RESOLVED_CMD_GET_NETWORK_SCOPE_V1 = 10
+    RIN_RESOLVED_CMD_GET_NETWORK_SCOPE_V1 = 10,
+    /* V2 adds an IPv6 sockaddr scope ID while preserving the V1 payload. */
+    RIN_RESOLVED_CMD_GETNAMEINFO_V2 = 11
 };
 
 typedef struct RinResolvedMsgHeader {
@@ -298,6 +300,29 @@ typedef struct RinResolvedGetNameInfoRequest {
     uint16_t reserved0;
     uint8_t addr[16];
 } RinResolvedGetNameInfoRequest;
+
+/* V2 appends the sockaddr scope ID to the unchanged V1 payload prefix. */
+typedef struct RinResolvedGetNameInfoRequestV2 {
+    uint32_t flags;
+    int32_t family;
+    uint32_t addr_len;
+    uint16_t port;
+    uint16_t reserved0;
+    uint8_t addr[16];
+    uint32_t scope_id;
+} RinResolvedGetNameInfoRequestV2;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinResolvedGetNameInfoRequest) == 32u,
+              "RinResolvedGetNameInfoRequest ABI drift");
+static_assert(sizeof(RinResolvedGetNameInfoRequestV2) == 36u,
+              "RinResolvedGetNameInfoRequestV2 ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinResolvedGetNameInfoRequest) == 32u,
+               "RinResolvedGetNameInfoRequest ABI drift");
+_Static_assert(sizeof(RinResolvedGetNameInfoRequestV2) == 36u,
+               "RinResolvedGetNameInfoRequestV2 ABI drift");
+#endif
 
 typedef struct RinResolvedGetNameInfoResponse {
     uint32_t host_len;
@@ -730,6 +755,40 @@ static inline int rin_resolved_getnameinfo_request_valid(
         if (request->addr[index] != 0u) return 0;
     }
     return 1;
+}
+
+/* A nonzero IPv6 zone index is meaningful for link-local unicast and
+ * non-global multicast destinations. Global/unspecified scopes reject it. */
+static inline int rin_resolved_ipv6_scope_id_valid(
+    const uint8_t address[RIN_RESOLVED_IPV6_ADDRESS_BYTES],
+    uint32_t scope_id)
+{
+    uint32_t multicast_scope;
+    if (!address) return 0;
+    if (scope_id == 0u) return 1;
+    if (address[0] == 0xfeu && (address[1] & 0xc0u) == 0x80u) return 1;
+    if (address[0] != 0xffu) return 0;
+    multicast_scope = (uint32_t)(address[1] & 0x0fu);
+    return multicast_scope != 0u && multicast_scope < 0x0eu;
+}
+
+static inline int rin_resolved_getnameinfo_v2_request_valid(
+    const RinResolvedGetNameInfoRequestV2* request)
+{
+    RinResolvedGetNameInfoRequest base;
+    uint32_t index;
+    if (!request) return 0;
+    base.flags = request->flags;
+    base.family = request->family;
+    base.addr_len = request->addr_len;
+    base.port = request->port;
+    base.reserved0 = request->reserved0;
+    for (index = 0u; index < RIN_RESOLVED_IPV6_ADDRESS_BYTES; ++index)
+        base.addr[index] = request->addr[index];
+    return request->family == RIN_RESOLVED_AF_INET6 &&
+           rin_resolved_getnameinfo_request_valid(&base) &&
+           rin_resolved_ipv6_scope_id_valid(request->addr,
+                                             request->scope_id);
 }
 
 static inline int rin_resolved_getnameinfo_response_valid(
