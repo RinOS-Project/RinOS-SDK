@@ -302,9 +302,20 @@ def build(args: argparse.Namespace) -> None:
                         f"SDK runtime artifact does not match its install receipt: {shared}"
                     )
             image_dependencies = [library_names[name] for name in dependency_names]
-            imports = list(spec["imports"]) + [
-                ("rincrt", symbol) for symbol in ("memcpy", "memset", "memcmp")
+            function_imports = [
+                (provider, symbol, "function")
+                for provider, symbol in spec["imports"]
             ]
+            function_imports.extend([
+                ("rincrt", "rin_exit", "function"),
+                ("rincrt", "atexit", "function"),
+            ])
+            function_imports.extend(
+                ("rincrt", symbol, "function")
+                for symbol in ("memcpy", "memset", "memcmp")
+            )
+            data_imports = [("rincrt", "environ", "data")]
+            imports = function_imports + data_imports
 
             run([
                 str(rcc), "--target", target, "-std=c17", "-ffreestanding", "-c",
@@ -312,8 +323,17 @@ def build(args: argparse.Namespace) -> None:
                 str(examples_root / (name + ".c")),
             ], timeout)
 
+            startup_object_path = stage / "crt_startup_v1.ro"
+            if not startup_object_path.exists():
+                run([
+                    str(rcc), "--target", target, "-std=c17", "-ffreestanding", "-c",
+                    "-I", str(include_root), "-o", str(startup_object_path),
+                    str(examples_root / "crt_startup_v1.c"),
+                ], timeout)
+
             link_command = [
                 str(rld), "--target", target,
+                "-e", "_start",
                 "--sign-profile", args.sign_profile,
                 "--rinsign", str(rinsign),
                 "--sign-key", str(rin_sign_key),
@@ -321,11 +341,14 @@ def build(args: argparse.Namespace) -> None:
             ]
             for dependency in image_dependencies:
                 link_command.extend(("--dep", dependency))
-            for provider, symbol in imports:
+            for provider, symbol, kind in imports:
                 link_command.extend((
-                    "--import", f"{symbol}={library_names[provider]}@function"
+                    "--import", f"{symbol}={library_names[provider]}@{kind}"
                 ))
-            link_command.extend(("-o", str(image_path), str(object_path)))
+            link_command.extend((
+                "-o", str(image_path), str(object_path),
+                str(startup_object_path),
+            ))
             run(link_command, timeout)
 
             validation_command = [
@@ -336,9 +359,9 @@ def build(args: argparse.Namespace) -> None:
             for dependency in image_dependencies:
                 validation_command.extend(("--require-dependency", dependency))
             validation_command.append("--exact-imports")
-            for provider, symbol in imports:
+            for provider, symbol, kind in imports:
                 validation_command.extend((
-                    "--require-import", f"{library_names[provider]}:{symbol}@function"
+                    "--require-import", f"{library_names[provider]}:{symbol}@{kind}"
                 ))
             validation_command.append(str(image_path))
             run(validation_command, timeout)
