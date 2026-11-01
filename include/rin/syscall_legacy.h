@@ -13,6 +13,7 @@
 #define SYS_EXIT                        RIN_SYS_EXIT
 #define SYS_FORK                        RIN_SYS_FORK
 #define SYS_EXEC                        RIN_SYS_EXEC
+#define SYS_EXECVEAT                    RIN_SYS_EXECVEAT
 #define SYS_WAIT                        RIN_SYS_WAIT
 #define SYS_GETPID                      RIN_SYS_GETPID
 #define SYS_GETPPID                     RIN_SYS_GETPPID
@@ -234,6 +235,7 @@
 #define SYS_DLINVENTORY_UNWIND_LEASE_END RIN_SYS_DLINVENTORY_UNWIND_LEASE_END
 #define SYS_DLERROR_COPY_V1             RIN_SYS_DLERROR_COPY_V1
 #define SYS_DLOPEN_MEMORY_V1            RIN_SYS_DLOPEN_MEMORY_V1
+#define SYS_EXECVEAT                    RIN_SYS_EXECVEAT
 #define SYS_RINFS_FORMAT                RIN_SYS_RINFS_FORMAT
 #define SYS_RINFS_MOUNT                 RIN_SYS_RINFS_MOUNT
 #define SYS_RINFS_UNMOUNT               RIN_SYS_RINFS_UNMOUNT
