@@ -47,6 +47,10 @@ RIN_SDK_API int rin_shm_protect(void* address, uint64_t size, uint32_t prot);
 RIN_SDK_API uint32_t fs_open(const char* path, int mode);
 RIN_SDK_API int fs_close(uint32_t handle);
 RIN_SDK_API int fs_read(uint32_t handle, void* buffer, unsigned long size);
+/* Returns 0 on success and -1 with errno on failure.  The output is unchanged
+ * unless the descriptor size was retrieved successfully. */
+RIN_SDK_API int fs_get_size(uint32_t handle, uint64_t* size_out);
+/* Legacy ambiguous API: both an empty file and an error return zero. */
 RIN_SDK_API uint64_t fs_size(uint32_t handle);
 
 #define RIN_RUNTIME_PATH_TLS_TRUST_BUNDLE "/system/trust/roots.rinca"
