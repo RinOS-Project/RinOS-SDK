@@ -66,6 +66,19 @@ typedef struct RIN_NDRV_V1_ALIGN8 RinNdrvV1CharReadinessExtensionV1 {
     uint64_t readiness_changed;
 } RinNdrvV1CharReadinessExtensionV1;
 
+/* Optional NDRV v2 storage extension for lease-backed DMA through a physical
+ * VMD requester. It is appended after established runtime records; API2 and
+ * every earlier extension retain their existing layout. */
+#define RIN_NDRV_V1_NVME_DMA_EXTENSION_MAGIC UINT32_C(0x31444D4E) /* NMD1 */
+#define RIN_NDRV_V1_NVME_DMA_EXTENSION_VERSION UINT16_C(1)
+typedef struct RIN_NDRV_V1_ALIGN8 RinNdrvV1NvmeDmaExtensionV1 {
+    uint32_t magic;
+    uint16_t version;
+    uint16_t size;
+    uint64_t map_assignment;
+    uint64_t unmap_assignment;
+} RinNdrvV1NvmeDmaExtensionV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinNdrvV1RuntimeApiV2) == 64u,
               "NDRV v1 runtime API ABI drift");
@@ -79,6 +92,10 @@ static_assert(sizeof(RinNdrvV1CharReadinessExtensionV1) == 16u,
               "NDRV v1 CRW1 ABI drift");
 static_assert(alignof(RinNdrvV1CharReadinessExtensionV1) == 8u,
               "NDRV v1 CRW1 alignment drift");
+static_assert(sizeof(RinNdrvV1NvmeDmaExtensionV1) == 24u,
+              "NDRV v1 NMD1 ABI drift");
+static_assert(alignof(RinNdrvV1NvmeDmaExtensionV1) == 8u,
+              "NDRV v1 NMD1 alignment drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinNdrvV1RuntimeApiV2) == 64u,
                "NDRV v1 runtime API ABI drift");
@@ -92,6 +109,10 @@ _Static_assert(sizeof(RinNdrvV1CharReadinessExtensionV1) == 16u,
                "NDRV v1 CRW1 ABI drift");
 _Static_assert(_Alignof(RinNdrvV1CharReadinessExtensionV1) == 8u,
                "NDRV v1 CRW1 alignment drift");
+_Static_assert(sizeof(RinNdrvV1NvmeDmaExtensionV1) == 24u,
+               "NDRV v1 NMD1 ABI drift");
+_Static_assert(_Alignof(RinNdrvV1NvmeDmaExtensionV1) == 8u,
+               "NDRV v1 NMD1 alignment drift");
 #endif
 
 #undef RIN_NDRV_V1_ALIGN8
