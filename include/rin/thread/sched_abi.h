@@ -8,6 +8,8 @@
 
 #define RIN_THREAD_SCHED_ABI_VERSION UINT16_C(1)
 #define RIN_THREAD_SCHED_ABI_VERSION_2 UINT16_C(2)
+#define RIN_THREAD_SCHED_ABI_VERSION_3 UINT16_C(3)
+#define RIN_THREAD_SCHED_GET_V3_REQUEST_MAGIC UINT16_C(0x5343)
 
 #define RIN_THREAD_SCHED_OTHER    0
 #define RIN_THREAD_SCHED_FIFO     1
@@ -42,16 +44,31 @@ typedef struct RinThreadSchedParametersV2 {
     uint64_t user_priority_address;
 } RinThreadSchedParametersV2;
 
+/* V3 is a THREAD_SCHED_GET request. The kernel snapshots scheduler state,
+ * pins both caller output ranges, then copies policy and priority together.
+ * This prevents a bad second output pointer from leaving policy half-written. */
+typedef struct RinThreadSchedParametersV3 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t request_magic;
+    uint64_t user_policy_address;
+    uint64_t user_priority_address;
+} RinThreadSchedParametersV3;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinThreadSchedParametersV1) == 24u,
               "RinThreadSchedParametersV1 ABI drift");
 static_assert(sizeof(RinThreadSchedParametersV2) == 24u,
               "RinThreadSchedParametersV2 ABI drift");
+static_assert(sizeof(RinThreadSchedParametersV3) == 24u,
+              "RinThreadSchedParametersV3 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinThreadSchedParametersV1) == 24u,
                "RinThreadSchedParametersV1 ABI drift");
 _Static_assert(sizeof(RinThreadSchedParametersV2) == 24u,
                "RinThreadSchedParametersV2 ABI drift");
+_Static_assert(sizeof(RinThreadSchedParametersV3) == 24u,
+               "RinThreadSchedParametersV3 ABI drift");
 #endif
 
 #endif /* RIN_SDK_THREAD_SCHED_ABI_H */
