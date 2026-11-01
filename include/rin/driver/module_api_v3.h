@@ -295,6 +295,12 @@ typedef struct RinDriverV3NetPacket {
     uint32_t flags;
 } RinDriverV3NetPacket;
 
+/* A batch with this flag describes one Ethernet frame split across the
+ * supplied packet records. Drivers retain every lease until the frame's final
+ * DMA descriptor completes. Zero flags retain the independent-frame batch. */
+#define RIN_DRIVER_V3_NET_PACKET_FLAG_FRAME_FRAGMENT UINT32_C(0x00000001)
+#define RIN_DRIVER_V3_NET_MAX_FRAME_FRAGMENTS UINT32_C(4)
+
 /* NDRV v3 network data is intentionally bounded to one ordinary Ethernet
  * frame.  Receive copies are control-plane calls: the NIC-owned DMA ring
  * never leaks into the network stack as an unvalidated pointer. */
@@ -318,7 +324,8 @@ typedef struct RinDriverV3NetPacket {
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_BROADCAST UINT32_C(0x00000001)
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_MULTICAST UINT32_C(0x00000002)
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_POINT_TO_POINT UINT32_C(0x00000004)
-#define RIN_DRIVER_V3_NET_INTERFACE_KNOWN_CAPABILITIES UINT32_C(0x00000007)
+#define RIN_DRIVER_V3_NET_INTERFACE_CAP_TX_SCATTER_GATHER UINT32_C(0x00000008)
+#define RIN_DRIVER_V3_NET_INTERFACE_KNOWN_CAPABILITIES UINT32_C(0x0000000f)
 #define RIN_DRIVER_V3_NET_INTERFACE_UNKNOWN UINT32_C(0)
 #define RIN_DRIVER_V3_NET_INTERFACE_OTHER UINT32_C(1)
 #define RIN_DRIVER_V3_NET_INTERFACE_LOOPBACK UINT32_C(2)
