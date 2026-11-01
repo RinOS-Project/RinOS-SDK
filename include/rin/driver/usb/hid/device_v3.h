@@ -9,9 +9,10 @@
 #include <rin/driver/module_api_v3.h>
 #include <rin/driver/usb/hid/gamepad_v1.h>
 #include <rin/driver/usb/hid/pen_v1.h>
+#include <rin/driver/usb/hid/sensor_v1.h>
 #include <rin/driver/usb/hid/boot_report.h>
 #include <rin/contract_abi.h>
-#define RIN_DRIVER_USB_HID_V3_VERSION UINT32_C(0x00010002)
+#define RIN_DRIVER_USB_HID_V3_VERSION UINT32_C(0x00010004)
 #define RIN_DRIVER_USB_HID_V3_MAGIC UINT32_C(0x33444948)
 #define RIN_DRIVER_USB_HID_V3_MAX_REPORT_SIZE UINT32_C(64)
 #define RIN_DRIVER_USB_HID_V3_MAX_BOOT_EVENTS UINT32_C(24)
@@ -21,6 +22,17 @@
 #define RIN_DRIVER_USB_HID_V3_BOOT_MOUSE UINT32_C(2)
 #define RIN_DRIVER_USB_HID_V3_GAMEPAD UINT32_C(3)
 #define RIN_DRIVER_USB_HID_V3_PEN UINT32_C(4)
+#define RIN_DRIVER_USB_HID_V3_SENSOR UINT32_C(5)
+
+#define RIN_DRIVER_USB_HID_SENSOR_POWER_IDLE UINT32_C(0)
+#define RIN_DRIVER_USB_HID_SENSOR_POWER_PENDING UINT32_C(1)
+#define RIN_DRIVER_USB_HID_SENSOR_POWER_COMPLETE UINT32_C(2)
+#define RIN_DRIVER_USB_HID_SENSOR_POWER_FAILED UINT32_C(3)
+
+#define RIN_DRIVER_USB_HID_OUTPUT_IDLE UINT32_C(0)
+#define RIN_DRIVER_USB_HID_OUTPUT_GAMEPAD UINT32_C(1)
+#define RIN_DRIVER_USB_HID_OUTPUT_SENSOR_GET_FEATURE UINT32_C(2)
+#define RIN_DRIVER_USB_HID_OUTPUT_SENSOR_SET_FEATURE UINT32_C(3)
 
 typedef struct RinDriverUsbHidMemoryV3 {
     uint32_t struct_size;
@@ -42,7 +54,7 @@ typedef struct RinDriverUsbHidPublicationV3 {
     RinUsbHidEvent boot_events[RIN_DRIVER_USB_HID_V3_MAX_BOOT_EVENTS];
     RinUsbHidGamepadSampleV1 gamepad;
     RinUsbHidPenSampleV1 pen;
-    uint64_t reserved[4];
+    RinUsbHidSensorSampleV1 sensor;
 } RinDriverUsbHidPublicationV3;
 
 #if defined(__cplusplus)
@@ -117,6 +129,11 @@ typedef struct RinDriverUsbHidV3 {
     uint32_t report_sequence;
     uint32_t transfer_active;
     uint32_t output_transfer_active;
+    uint32_t output_operation;
+    uint32_t sensor_power_status;
+    uint32_t sensor_power_state;
+    uint32_t sensor_power_sensor_type;
+    RinResultCode sensor_power_result;
     RinDriverV3UsbTransfer request;
     RinDriverV3UsbTransfer output_request;
     uint8_t report[RIN_DRIVER_USB_HID_V3_MAX_REPORT_SIZE];
@@ -126,6 +143,7 @@ typedef struct RinDriverUsbHidV3 {
     RinUsbHidGamepadProfileV1 gamepad_profile;
     RinUsbHidGamepadOutputProfileV1 gamepad_output_profile;
     RinUsbHidPenProfileV1 pen_profile;
+    RinUsbHidSensorProfilesV1 sensor_profiles;
 } RinDriverUsbHidV3;
 
 RinResultCode rin_driver_usb_hid_v3_init(
@@ -142,6 +160,15 @@ RinResultCode rin_driver_usb_hid_v3_submit_gamepad_output(
     RinDriverUsbHidV3* adapter, uint64_t device_id,
     uint32_t port_generation, const uint8_t* report,
     uint32_t report_size);
+/* Queues GET_FEATURE followed by SET_FEATURE for the descriptor-admitted
+ * Power State property. Poll the adapter until status leaves PENDING. */
+RinResultCode rin_driver_usb_hid_v3_submit_sensor_power(
+    RinDriverUsbHidV3* adapter, uint64_t device_id,
+    uint32_t port_generation, uint32_t sensor_type, uint32_t power_state);
+RinResultCode rin_driver_usb_hid_v3_sensor_power_status(
+    RinDriverUsbHidV3* adapter, uint64_t device_id,
+    uint32_t port_generation, uint32_t* status_out,
+    uint32_t* power_state_out, RinResultCode* result_out);
 RinResultCode rin_driver_usb_hid_v3_detach(
     RinDriverUsbHidV3* adapter, uint64_t deadline_ns);
 
