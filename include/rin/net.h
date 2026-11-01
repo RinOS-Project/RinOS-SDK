@@ -29,7 +29,8 @@ enum {
 
 /* HTTP v1 uses bounded HTTP/1.1 messages. `headers` is a byte string of
  * CRLF-separated field lines without a final blank line. The returned
- * response channel contains one message with the raw HTTP/1.1 response. */
+ * response channel contains the raw response bytes, including any interim
+ * 1xx response blocks preceding the final response. */
 #define RIN_HTTP_REQUEST_HEADERS_MAX_BYTES UINT64_C(16384)
 #define RIN_HTTP_RESPONSE_MAX_BYTES UINT64_C(65536)
 
