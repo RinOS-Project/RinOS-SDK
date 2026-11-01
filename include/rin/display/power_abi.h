@@ -126,6 +126,8 @@ typedef struct RinPowerStatusV2 {
 #define RIN_POWER_EVENT_BATTERY_DISCONNECTED 13u
 #define RIN_POWER_EVENT_DOCK_CONNECTED 14u
 #define RIN_POWER_EVENT_DOCK_DISCONNECTED 15u
+/* ACPI thermal-zone _TMP reached or exceeded _CRT; shutdown is requested. */
+#define RIN_POWER_EVENT_THERMAL_CRITICAL 17u
 /* ACPI PNP0C0C power-button press (kernel applies power_button_action). */
 #define RIN_POWER_EVENT_POWER_BUTTON 16u
 typedef struct RinPowerEventPollV1 {
