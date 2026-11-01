@@ -29,7 +29,7 @@ typedef int32_t RinResultCode;
 #define RIN_TIMER_NOTIFY_SIGNAL             0u
 #define RIN_TIMER_NOTIFY_NONE               1u
 #define RIN_TIMER_NOTIFY_THREAD             2u
-#define RIN_TIMER_THREAD_SIGNAL             31u
+#define RIN_TIMER_THREAD_SIGNAL             62u
 #define RIN_CLOCK_SETTIME_ABI_VERSION       1u
 #define RIN_CLOCK_GETTIME_ABI_VERSION       1u
 #define RIN_TIMER_ABSTIME                   1u
