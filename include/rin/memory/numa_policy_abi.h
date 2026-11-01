@@ -23,6 +23,7 @@ enum {
 
 #define RIN_NUMA_POLICY_FLAG_NONE UINT32_C(0)
 #define RIN_NUMA_POLICY_PREFERRED_NODE_ANY UINT16_MAX
+#define RIN_NUMA_POLICY_INHERIT UINT32_MAX
 
 typedef struct RinNumaMemoryPolicyV1 {
     uint32_t struct_size;
