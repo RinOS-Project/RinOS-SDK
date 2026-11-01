@@ -546,7 +546,7 @@ typedef struct RinDriverV3UsbDeviceResponse {
     RIN_DRIVER_V3_USB_TRANSFER_SHORT_OK
 #define RIN_DRIVER_V3_USB_STREAM_ID_NONE UINT32_C(0)
 #define RIN_DRIVER_V3_USB_STREAM_ID_MAX UINT32_C(0xfffd)
-#define RIN_DRIVER_V3_USB_MAX_PSTREAMS UINT32_C(1)
+#define RIN_DRIVER_V3_USB_MAX_PSTREAMS UINT32_C(3)
 
 /* A USB transfer refers only to a kernel-owned memory lease. The driver must
  * copy this descriptor before returning from submit_transfer and must map the
