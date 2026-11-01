@@ -28,6 +28,40 @@ typedef struct RinImageInfoV1 {
 } RinImageInfoV1;
 
 enum {
+    RIN_IMAGE_ANIMATION_LOOP_COUNT_KNOWN = 1u << 0,
+    RIN_IMAGE_FRAME_LOOP_COUNT_KNOWN = 1u << 0,
+    /* Marks the final frame in the encoded sequence; loop_count determines
+     * whether playback ends or returns to frame zero. */
+    RIN_IMAGE_FRAME_LAST = 1u << 1
+};
+
+typedef struct RinImageAnimationInfoV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t frame_count;
+    uint32_t loop_count; /* total plays; zero means infinite */
+    uint32_t flags;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinImageAnimationInfoV1;
+
+typedef struct RinImageFrameInfoV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t width;
+    uint32_t height;
+    uint32_t format;
+    uint32_t row_stride_bytes;
+    uint32_t frame_index;
+    uint32_t duration_ms; /* selected frame delay */
+    uint32_t flags;
+    uint32_t loop_count;
+    uint64_t frame_count;
+    uint64_t pixel_bytes;
+    uint64_t reserved[2];
+} RinImageFrameInfoV1;
+
+enum {
     RIN_AUDIO_INFO_FRAME_COUNT_KNOWN = 1u << 0
 };
 
@@ -152,7 +186,18 @@ _Static_assert(offsetof(RinMediaOpenV1, reserved) == 48u,
 /* A failed open writes RIN_HANDLE_INVALID to a non-null output handle. */
 RIN_SDK_API RinResult rin_media_open_v1(const RinMediaOpenV1* request, RinMediaObject* object);
 RIN_SDK_API RinResult rin_image_get_info_v1(RinMediaObject object, RinImageInfoV1* info);
+/* Loop count is total plays including the initial play; zero means infinite.
+ * A clear LOOP_COUNT_KNOWN flag requires loop_count to be zero. */
+RIN_SDK_API RinResult rin_image_get_animation_info_v1(
+    RinMediaObject object, RinImageAnimationInfoV1* info);
 RIN_SDK_API RinResult rin_image_decode_v1(RinMediaObject object, uint32_t format, RinSliceV1 output, uint64_t* required);
+/* Decode a zero-based GIF/WebP canvas frame. Frame pixels are the complete
+ * disposal/blend-composited canvas; frame_info must be initialized with the
+ * V1 struct size/version and is zeroed on failure. The original
+ * rin_image_decode_v1 remains the frame-zero API. */
+RIN_SDK_API RinResult rin_image_decode_frame_v1(
+    RinMediaObject object, uint32_t frame_index, uint32_t format,
+    RinSliceV1 output, uint64_t* required, RinImageFrameInfoV1* frame_info);
 RIN_SDK_API RinResult rin_audio_get_info_v1(RinMediaObject object, RinAudioInfoV1* info);
 RIN_SDK_API RinResult rin_audio_decode_v1(RinMediaObject object, RinSliceV1 output, uint64_t* frames);
 /* Maps the Runtime-owned target for one decoded frame. Returns NOT_FOUND at
@@ -176,6 +221,10 @@ RIN_SDK_API RinResult rin_video_decode_frame_with_options_v1(
 
 #if defined(__cplusplus)
 static_assert(sizeof(RinImageInfoV1) == 56u, "RinImageInfoV1 ABI drift");
+static_assert(sizeof(RinImageAnimationInfoV1) == 40u,
+              "RinImageAnimationInfoV1 ABI drift");
+static_assert(sizeof(RinImageFrameInfoV1) == 72u,
+              "RinImageFrameInfoV1 ABI drift");
 static_assert(sizeof(RinAudioInfoV1) == 56u, "RinAudioInfoV1 ABI drift");
 static_assert(sizeof(RinVideoInfoV1) == 64u, "RinVideoInfoV1 ABI drift");
 static_assert(sizeof(RinVideoFrameInfoV1) == 72u,
@@ -187,6 +236,10 @@ static_assert(offsetof(RinVideoFrameInfoV1, timestamp_ns) == 32u,
               "RinVideoFrameInfoV1 timestamp offset drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinImageInfoV1) == 56u, "RinImageInfoV1 ABI drift");
+_Static_assert(sizeof(RinImageAnimationInfoV1) == 40u,
+               "RinImageAnimationInfoV1 ABI drift");
+_Static_assert(sizeof(RinImageFrameInfoV1) == 72u,
+               "RinImageFrameInfoV1 ABI drift");
 _Static_assert(sizeof(RinAudioInfoV1) == 56u, "RinAudioInfoV1 ABI drift");
 _Static_assert(sizeof(RinVideoInfoV1) == 64u, "RinVideoInfoV1 ABI drift");
 _Static_assert(sizeof(RinVideoFrameInfoV1) == 72u,

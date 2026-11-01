@@ -1590,12 +1590,37 @@ RinResult rin_image_get_info_v1(RinMediaObject object, RinImageInfoV1* info) {
     if (result != RIN_SUCCESS) reset_versioned_output(info, sizeof(*info));
     return result;
 }
+RinResult rin_image_get_animation_info_v1(
+    RinMediaObject object, RinImageAnimationInfoV1* info) {
+    RinResult result;
+    if (!versioned(info, sizeof(*info))) return RIN_ERROR_ABI_MISMATCH;
+    reset_versioned_output(info, sizeof(*info));
+    result = rin_media_sdk_client_image_animation_info_v1(object, info);
+    if (result != RIN_SUCCESS)
+        reset_versioned_output(info, sizeof(*info));
+    return result;
+}
 RinResult rin_image_decode_v1(RinMediaObject object, uint32_t format,
                               RinSliceV1 output, uint64_t* required) {
     if (required != NULL) *required = 0u;
     if (required == NULL) return RIN_ERROR_INVALID_ARGUMENT;
     return rin_media_sdk_client_image_decode_v1(object, format, output,
                                                  required);
+}
+RinResult rin_image_decode_frame_v1(
+    RinMediaObject object, uint32_t frame_index, uint32_t format,
+    RinSliceV1 output, uint64_t* required, RinImageFrameInfoV1* frame_info) {
+    RinResult result;
+    if (required != NULL) *required = 0u;
+    if (!versioned(frame_info, sizeof(*frame_info)))
+        return RIN_ERROR_ABI_MISMATCH;
+    reset_versioned_output(frame_info, sizeof(*frame_info));
+    if (required == NULL) return RIN_ERROR_INVALID_ARGUMENT;
+    result = rin_media_sdk_client_image_decode_frame_v1(
+        object, frame_index, format, output, required, frame_info);
+    if (result != RIN_SUCCESS)
+        reset_versioned_output(frame_info, sizeof(*frame_info));
+    return result;
 }
 RinResult rin_audio_get_info_v1(RinMediaObject object,RinAudioInfoV1* info) {
     RinResult result;

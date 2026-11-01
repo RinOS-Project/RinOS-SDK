@@ -940,11 +940,33 @@ image_get_info(RinMediaObject object) noexcept {
     return {rin_image_get_info_v1(object, &info), info};
 }
 
+[[nodiscard]] inline outcome<RinImageAnimationInfoV1>
+image_get_animation_info(RinMediaObject object) noexcept {
+    auto info = versioned<RinImageAnimationInfoV1>();
+    return {rin_image_get_animation_info_v1(object, &info), info};
+}
+
 [[nodiscard]] inline outcome<uint64_t>
 image_decode(RinMediaObject object, uint32_t format,
              RinSliceV1 output) noexcept {
     uint64_t required = 0u;
     return {rin_image_decode_v1(object, format, output, &required), required};
+}
+
+struct image_frame_decode_result final {
+    uint64_t required_bytes{};
+    RinImageFrameInfoV1 frame{};
+};
+
+[[nodiscard]] inline outcome<image_frame_decode_result>
+image_decode_frame(RinMediaObject object, uint32_t frame_index,
+                   uint32_t format, RinSliceV1 output) noexcept {
+    image_frame_decode_result result{};
+    result.frame = versioned<RinImageFrameInfoV1>();
+    const RinResult status = rin_image_decode_frame_v1(
+        object, frame_index, format, output, &result.required_bytes,
+        &result.frame);
+    return {status, result};
 }
 
 template<typename T, std::size_t Extent>
@@ -956,6 +978,18 @@ image_decode(RinMediaObject object, uint32_t format,
     const auto bytes = slice(output);
     if (!bytes) return {bytes.code(), 0u};
     return image_decode(object, format, bytes.value());
+}
+
+template<typename T, std::size_t Extent>
+    requires (!std::is_const_v<T> &&
+              std::is_trivially_copyable_v<std::remove_cv_t<T>>)
+[[nodiscard]] inline outcome<image_frame_decode_result>
+image_decode_frame(RinMediaObject object, uint32_t frame_index,
+                   uint32_t format, std::span<T, Extent> output) noexcept {
+    const auto bytes = slice(output);
+    if (!bytes)
+        return {bytes.code(), image_frame_decode_result{}};
+    return image_decode_frame(object, frame_index, format, bytes.value());
 }
 
 [[nodiscard]] inline outcome<uint64_t>

@@ -13,7 +13,7 @@
 #define RIN_IMAGE_DECODER_ALIGNAS_8 _Alignas(8)
 #endif
 
-#define RIN_IMAGE_DECODER_TRANSPORT_VERSION UINT16_C(2)
+#define RIN_IMAGE_DECODER_TRANSPORT_VERSION UINT16_C(3)
 #define RIN_IMAGE_DECODER_TRANSPORT_MAX_SOURCE_BYTES UINT64_C(67108864)
 #define RIN_IMAGE_DECODER_TRANSPORT_MAX_DIMENSION UINT32_C(4096)
 #define RIN_IMAGE_DECODER_TRANSPORT_MAX_PIXELS UINT32_C(16777216)
@@ -26,8 +26,10 @@
 
 #define RIN_IMAGE_DECODER_SERVICE_ID "imagedecoder"
 #define RIN_IMAGE_DECODER_SERVICE_SOCKET_PATH "/run/rin/imagedecoder.sock"
-#define RIN_IMAGE_DECODER_SERVICE_PROTOCOL_VERSION UINT16_C(2)
+#define RIN_IMAGE_DECODER_SERVICE_PROTOCOL_VERSION UINT16_C(3)
 #define RIN_IMAGE_DECODER_SERVICE_PROTOCOL_MAGIC UINT32_C(0x31434449)
+#define RIN_IMAGE_DECODER_DECODE_FLAG_LOOP_COUNT_KNOWN UINT32_C(0x00000001)
+#define RIN_IMAGE_DECODER_DECODE_REQUEST_FLAG_ENFORCE_AGGREGATE_OUTPUT UINT32_C(0x00000001)
 
 typedef enum RinImageDecoderTransportOperation {
     RIN_IMAGE_DECODER_TRANSPORT_DECODE = 1,
@@ -124,6 +126,8 @@ typedef struct RinImageDecoderDecodeRequestV1 {
     uint32_t max_frames;
     uint32_t max_output_bytes;
     uint32_t reserved0;
+    /* flags select aggregate sequence budgeting; no flag preserves the
+     * legacy frame-zero budget. reserved1[0] selects the frame. */
     RIN_IMAGE_DECODER_ALIGNAS_8 uint64_t reserved1[2];
 } RinImageDecoderDecodeRequestV1;
 
@@ -138,11 +142,13 @@ typedef struct RinImageDecoderDecodeResponseV1 {
     uint32_t height;
     uint32_t stride_bytes;
     uint32_t pixel_bytes;
-    /* Total source frame count; only the first frame is returned by V1. */
+    /* Total source frame count; pixel payload is the requested frame. */
     uint32_t frame_count;
     uint32_t pixel_format;
     /* RinImageFrameKind from rinimage/image.h, kept fixed-width on the wire. */
     uint32_t frame_kind;
+    /* reserved1[0] is frame index; reserved1[1] packs loop count high and
+     * frame duration in milliseconds low. flags marks loop-count validity. */
     RIN_IMAGE_DECODER_ALIGNAS_8 uint64_t reserved1[2];
 } RinImageDecoderDecodeResponseV1;
 

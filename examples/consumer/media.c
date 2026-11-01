@@ -124,6 +124,8 @@ static int decode_png(void)
     static const char mime_type[] = "image/png";
     uint32_t decoded_pixel = 0u;
     RinImageInfoV1 info = {0};
+    RinImageAnimationInfoV1 animation = {0};
+    RinImageFrameInfoV1 frame_info = {0};
     RinMediaObject object = RIN_HANDLE_INVALID;
     RinSliceV1 output = {0};
     uint64_t required_bytes = 0u;
@@ -153,6 +155,16 @@ static int decode_png(void)
         return close_media(object, 1);
     }
 
+    animation.struct_size = sizeof(animation);
+    animation.version = RIN_SDK_STRUCT_VERSION_1;
+    result = rin_image_get_animation_info_v1(object, &animation);
+    if (result != RIN_SUCCESS || animation.frame_count != 1u ||
+        animation.flags != RIN_IMAGE_ANIMATION_LOOP_COUNT_KNOWN ||
+        animation.loop_count != 1u) {
+        printf("image animation metadata query failed: %d\n", (int)result);
+        return close_media(object, 1);
+    }
+
     output.address = (uint64_t)(uintptr_t)&decoded_pixel;
     output.size = sizeof(decoded_pixel);
     result = rin_image_decode_v1(
@@ -166,7 +178,20 @@ static int decode_png(void)
                (unsigned long long)required_bytes);
         return close_media(object, 1);
     }
-    puts("typed PNG metadata queried and one ARGB8888 pixel decoded");
+    frame_info.struct_size = sizeof(frame_info);
+    frame_info.version = RIN_SDK_STRUCT_VERSION_1;
+    result = rin_image_decode_frame_v1(
+        object, 0u, RIN_IMAGE_DECODE_FORMAT_ARGB8888, output,
+        &required_bytes, &frame_info);
+    if (result != RIN_SUCCESS || required_bytes != sizeof(decoded_pixel) ||
+        frame_info.frame_index != 0u || frame_info.frame_count != 1u ||
+        frame_info.duration_ms != 0u || frame_info.pixel_bytes !=
+            sizeof(decoded_pixel)) {
+        printf("indexed image decode failed: %d (bytes=%llu)\n", (int)result,
+               (unsigned long long)required_bytes);
+        return close_media(object, 1);
+    }
+    puts("typed PNG metadata queried and both frame-zero APIs decoded ARGB8888");
     return close_media(object, 0);
 }
 

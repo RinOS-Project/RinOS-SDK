@@ -75,7 +75,9 @@ EXAMPLES = {
         "imports": [
             ("rinmedia", "rin_media_open_v1"),
             ("rinmedia", "rin_image_get_info_v1"),
+            ("rinmedia", "rin_image_get_animation_info_v1"),
             ("rinmedia", "rin_image_decode_v1"),
+            ("rinmedia", "rin_image_decode_frame_v1"),
             ("rinmedia", "rin_audio_get_info_v1"),
             ("rinmedia", "rin_audio_decode_v1"),
             ("rinmedia", "rin_video_decode_v1"),

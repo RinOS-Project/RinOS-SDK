@@ -8,10 +8,16 @@ RinResult rin_media_sdk_client_open_v1(RinObject object,
                                        const RinMediaOpenV1* request);
 RinResult rin_media_sdk_client_image_info_v1(RinObject object,
                                               RinImageInfoV1* info);
+RinResult rin_media_sdk_client_image_animation_info_v1(
+    RinObject object, RinImageAnimationInfoV1* info);
 RinResult rin_media_sdk_client_image_decode_v1(RinObject object,
                                                 uint32_t format,
                                                 RinSliceV1 output,
                                                 uint64_t* required);
+RinResult rin_media_sdk_client_image_decode_frame_v1(
+    RinObject object, uint32_t frame_index, uint32_t format,
+    RinSliceV1 output, uint64_t* required,
+    RinImageFrameInfoV1* frame_info);
 RinResult rin_media_sdk_client_audio_info_v1(RinObject object,
                                               RinAudioInfoV1* info);
 RinResult rin_media_sdk_client_audio_decode_v1(RinObject object,
