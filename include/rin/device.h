@@ -19,20 +19,41 @@ extern "C" {
 #define RIN_SDK_DEVICE_CLASS_BUS UINT32_C(7)
 #define RIN_SDK_DEVICE_CLASS_POWER UINT32_C(8)
 
+/* Generic device-handle rights authorize only the SDK operations below.
+ * Raw read/write/map access belongs to a class-specific resource capability,
+ * not to this inventory/query/control handle. */
+#define RIN_DEVICE_HANDLE_RIGHT_READ UINT32_C(0x00000001)
+#define RIN_DEVICE_HANDLE_RIGHT_CONTROL UINT32_C(0x00000004)
+#define RIN_DEVICE_HANDLE_RIGHT_QUERY UINT32_C(0x00000010)
+#define RIN_DEVICE_HANDLE_RIGHT_DUPLICATE UINT32_C(0x00000020)
+#define RIN_DEVICE_HANDLE_RIGHT_MASK (RIN_DEVICE_HANDLE_RIGHT_READ | \
+                                      RIN_DEVICE_HANDLE_RIGHT_CONTROL | \
+                                      RIN_DEVICE_HANDLE_RIGHT_QUERY | \
+                                      RIN_DEVICE_HANDLE_RIGHT_DUPLICATE)
+
+/* Source-compatibility names keep their historical values. WRITE and MAP are
+ * reserved here and rejected by rin_device_open_v1(); use resource rights. */
 #ifndef RIN_DEVICE_RIGHT_READ
-#define RIN_DEVICE_RIGHT_READ UINT32_C(0x00000001)
+#define RIN_DEVICE_RIGHT_READ RIN_DEVICE_HANDLE_RIGHT_READ
 #endif
+#ifndef RIN_DEVICE_RIGHT_WRITE
 #define RIN_DEVICE_RIGHT_WRITE UINT32_C(0x00000002)
-#ifndef RIN_DEVICE_RIGHT_CONTROL
-#define RIN_DEVICE_RIGHT_CONTROL UINT32_C(0x00000004)
 #endif
+#ifndef RIN_DEVICE_RIGHT_CONTROL
+#define RIN_DEVICE_RIGHT_CONTROL RIN_DEVICE_HANDLE_RIGHT_CONTROL
+#endif
+#ifndef RIN_DEVICE_RIGHT_MAP
 #define RIN_DEVICE_RIGHT_MAP UINT32_C(0x00000008)
-#define RIN_DEVICE_RIGHT_QUERY UINT32_C(0x00000010)
-#define RIN_DEVICE_RIGHT_DUPLICATE UINT32_C(0x00000020)
-#define RIN_DEVICE_RIGHT_MASK (RIN_DEVICE_RIGHT_READ | \
-                               RIN_DEVICE_RIGHT_CONTROL | \
-                               RIN_DEVICE_RIGHT_QUERY | \
-                               RIN_DEVICE_RIGHT_DUPLICATE)
+#endif
+#ifndef RIN_DEVICE_RIGHT_QUERY
+#define RIN_DEVICE_RIGHT_QUERY RIN_DEVICE_HANDLE_RIGHT_QUERY
+#endif
+#ifndef RIN_DEVICE_RIGHT_DUPLICATE
+#define RIN_DEVICE_RIGHT_DUPLICATE RIN_DEVICE_HANDLE_RIGHT_DUPLICATE
+#endif
+#ifndef RIN_DEVICE_RIGHT_MASK
+#define RIN_DEVICE_RIGHT_MASK RIN_DEVICE_HANDLE_RIGHT_MASK
+#endif
 
 /* Class-specific operations. Unsupported class/operation pairs return
  * RIN_ERROR_NOT_SUPPORTED; controls never accept untyped kernel pointers. */
