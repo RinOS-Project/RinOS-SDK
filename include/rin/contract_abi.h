@@ -35,6 +35,7 @@ typedef int32_t RinResultCode;
 #define RIN_ITIMER_ABI_VERSION              1u
 #define RIN_TIMER_ABI_VERSION               1u
 #define RIN_TIMER_MAX_SLOTS                 32u
+#define RIN_PROCESS_MAX_THREADS             64u
 #define RIN_TIMER_NOTIFY_SIGNAL             0u
 #define RIN_TIMER_NOTIFY_NONE               1u
 #define RIN_TIMER_NOTIFY_THREAD             2u
