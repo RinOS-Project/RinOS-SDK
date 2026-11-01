@@ -3,14 +3,11 @@
 #define RIN_SDK_SERVICE_DIRECTORY_H
 
 #include "abi.h"
+#include "contract_abi.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* Service-manager scopes are part of the public SDK contract. */
-#define RIN_SERVICE_SCOPE_SYSTEM 1
-#define RIN_SERVICE_SCOPE_USER 2
 
 /* Resolve a kernel-published system service slot before trusting the
  * service identity returned by a connected local socket.  A non-zero return
