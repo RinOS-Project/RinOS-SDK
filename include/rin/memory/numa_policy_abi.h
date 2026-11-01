@@ -12,6 +12,8 @@
 #define RIN_NUMA_POLICY_OPERATION_SET UINT32_C(2)
 #define RIN_NUMA_POLICY_OPERATION_GET_THREAD UINT32_C(3)
 #define RIN_NUMA_POLICY_OPERATION_SET_THREAD UINT32_C(4)
+#define RIN_NUMA_POLICY_OPERATION_GET_RANGE UINT32_C(5)
+#define RIN_NUMA_POLICY_OPERATION_SET_RANGE UINT32_C(6)
 
 enum {
     RIN_NUMA_POLICY_DEFAULT = 0,
@@ -38,12 +40,25 @@ typedef struct RinNumaMemoryPolicyV1 {
     uint64_t node_mask;
 } RinNumaMemoryPolicyV1;
 
+typedef struct RinNumaMemoryPolicyRangeV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    uint64_t address;
+    uint64_t length;
+    RinNumaMemoryPolicyV1 policy;
+} RinNumaMemoryPolicyRangeV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinNumaMemoryPolicyV1) == 24u,
               "RinNumaMemoryPolicyV1 ABI drift");
+static_assert(sizeof(RinNumaMemoryPolicyRangeV1) == 48u,
+              "RinNumaMemoryPolicyRangeV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinNumaMemoryPolicyV1) == 24u,
                "RinNumaMemoryPolicyV1 ABI drift");
+_Static_assert(sizeof(RinNumaMemoryPolicyRangeV1) == 48u,
+               "RinNumaMemoryPolicyRangeV1 ABI drift");
 #endif
 
 #endif /* RIN_SDK_NUMA_POLICY_ABI_H */
