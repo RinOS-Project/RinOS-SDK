@@ -716,7 +716,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SPAWN_PROCESS_ACTIONS_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-/* argument_word is a scalar for set operations and an output pointer for GET_PDEATHSIG, GET_DUMPABLE, GET_CHILD_SUBREAPER, GET_ENDIAN and GET_TSC. argument3_word is the input seccomp filter-program pointer for PR_SET_SECCOMP with FILTER mode. arguments 4 and 5 are operation-selected scalars or required zero. */
+/* argument_word is a scalar for set operations and an output pointer for GET_PDEATHSIG, GET_DUMPABLE, GET_CHILD_SUBREAPER, GET_ENDIAN, GET_TSC and GET_TID_ADDRESS. GET_TID_ADDRESS writes a pointer-sized clear-child-TID address. argument3_word is the input seccomp filter-program pointer for PR_SET_SECCOMP with FILTER mode. arguments 4 and 5 are operation-selected scalars or required zero. */
 #define RIN_SYS_PRCTL                       148u
 /* PRCTL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_PRCTL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
