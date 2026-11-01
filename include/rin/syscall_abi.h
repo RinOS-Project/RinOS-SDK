@@ -2281,13 +2281,13 @@ static inline uint32_t rin_syscall_arch_combine_support(
 /* SHM_ATTACH_RANGE_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_SHM_ATTACH_RANGE_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHM_ATTACH_RANGE_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
-#define RIN_SYS_SHM_ATTACH_RANGE_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_SHM_ATTACH_RANGE_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* IA-32用の固定32 byte request。address／sizeを64-bitで保持する。 */
 #define RIN_SYS_SHM_PROTECT_V1              0x80ADu
 /* SHM_PROTECT_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_SHM_PROTECT_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SHM_PROTECT_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
-#define RIN_SYS_SHM_PROTECT_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_SHM_PROTECT_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 /* 子を作成し、実行可能にする前に呼び出し元へ世代識別付きpidfdを登録する。 */
 #define RIN_SYS_FORK_PIDFD                  0x80AEu
