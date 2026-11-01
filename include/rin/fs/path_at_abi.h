@@ -68,6 +68,36 @@
 /* Read the immutable 16-byte creation owner token from a pinned RinFS fd. */
 #define RIN_PATH_AT_FGETOPERATIONTOKEN 29u
 #define RIN_PATH_AT_OPERATION_TOKEN_SIZE 16u
+/* Linux-compatible openat2 uses the existing path-at syscall envelope.  The
+ * request's buffer points to a size-versioned RinOpenHowV1 record and its
+ * buffer_size carries the caller-supplied structure size. */
+#define RIN_PATH_AT_OPENAT2 30u
+
+#define RIN_OPEN_HOW_V1_SIZE 24u
+#define RIN_OPEN_HOW_MAX_SIZE 4096u
+#define RIN_RESOLVE_NO_XDEV       UINT64_C(0x01)
+#define RIN_RESOLVE_NO_MAGICLINKS UINT64_C(0x02)
+#define RIN_RESOLVE_NO_SYMLINKS   UINT64_C(0x04)
+#define RIN_RESOLVE_BENEATH       UINT64_C(0x08)
+#define RIN_RESOLVE_IN_ROOT       UINT64_C(0x10)
+#define RIN_RESOLVE_CACHED        UINT64_C(0x20)
+#define RIN_RESOLVE_ALL (RIN_RESOLVE_NO_XDEV | RIN_RESOLVE_NO_MAGICLINKS | \
+                         RIN_RESOLVE_NO_SYMLINKS | RIN_RESOLVE_BENEATH | \
+                         RIN_RESOLVE_IN_ROOT | RIN_RESOLVE_CACHED)
+
+typedef struct RinOpenHowV1 {
+    uint64_t flags;
+    uint64_t mode;
+    uint64_t resolve;
+} RinOpenHowV1;
+
+#if defined(__cplusplus) && !defined(MIDL_PASS)
+static_assert(sizeof(RinOpenHowV1) == RIN_OPEN_HOW_V1_SIZE,
+              "RinOpenHowV1 ABI size");
+#elif !defined(MIDL_PASS)
+_Static_assert(sizeof(RinOpenHowV1) == RIN_OPEN_HOW_V1_SIZE,
+               "RinOpenHowV1 ABI size");
+#endif
 
 /* FSETXATTR accepts these flags in addition to EMPTY_PATH. */
 #define RIN_PATH_AT_XATTR_CREATE    0x0001u
