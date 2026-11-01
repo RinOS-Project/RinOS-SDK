@@ -1,6 +1,7 @@
 #include <rin/sdk.h>
 #include <rin/contract_abi.h>
 #include <rin/service_directory.h>
+#include <rin/service.h>
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GUI)
 #include <sys/syscall.h>
@@ -435,6 +436,33 @@ RinResult rin_service_stop(int scope, const char* id) {
 RinResult rin_service_restart(int scope, const char* id) {
     return rin_sdk_service_control((uintptr_t)RIN_SYS_SERVICE_RESTART,
                                    scope, id);
+}
+
+static RinResult rin_sdk_service_dependency(
+    uint32_t operation, const char* id, uint32_t* state_out) {
+    if (id == NULL ||
+        (operation == RIN_SERVICE_DEPENDENCY_OPERATION_GET_STATE
+             ? state_out == NULL : state_out != NULL))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_sdk_service_status_result(_syscall3(
+        (uintptr_t)RIN_SYS_SERVICE_DEPENDENCY_V1,
+        (uintptr_t)operation, (uintptr_t)id, (uintptr_t)state_out));
+}
+
+RinResult rin_service_dependency_acquire(const char* id) {
+    return rin_sdk_service_dependency(
+        RIN_SERVICE_DEPENDENCY_OPERATION_ACQUIRE, id, NULL);
+}
+
+RinResult rin_service_dependency_release(const char* id) {
+    return rin_sdk_service_dependency(
+        RIN_SERVICE_DEPENDENCY_OPERATION_RELEASE, id, NULL);
+}
+
+RinResult rin_service_dependency_get_state(
+    const char* id, uint32_t* state_out) {
+    return rin_sdk_service_dependency(
+        RIN_SERVICE_DEPENDENCY_OPERATION_GET_STATE, id, state_out);
 }
 
 int rin_service_should_stop(void) {

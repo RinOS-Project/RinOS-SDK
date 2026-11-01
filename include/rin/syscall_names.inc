@@ -198,3 +198,4 @@
 [RIN_SYS_REALLOC] = "realloc",
 [RIN_SYS_SERVICE_HEALTH] = "service_health",
 [RIN_SYS_UNAME_V2] = "uname_v2",
+[RIN_SYS_SERVICE_DEPENDENCY_V1] = "service_dependency_v1",

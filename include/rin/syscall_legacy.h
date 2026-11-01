@@ -13,7 +13,6 @@
 #define SYS_EXIT                        RIN_SYS_EXIT
 #define SYS_FORK                        RIN_SYS_FORK
 #define SYS_EXEC                        RIN_SYS_EXEC
-#define SYS_EXECVEAT                    RIN_SYS_EXECVEAT
 #define SYS_WAIT                        RIN_SYS_WAIT
 #define SYS_GETPID                      RIN_SYS_GETPID
 #define SYS_GETPPID                     RIN_SYS_GETPPID
@@ -212,6 +211,7 @@
 #define SYS_REALLOC                     RIN_SYS_REALLOC
 #define SYS_SERVICE_HEALTH              RIN_SYS_SERVICE_HEALTH
 #define SYS_UNAME_V2                    RIN_SYS_UNAME_V2
+#define SYS_SERVICE_DEPENDENCY_V1       RIN_SYS_SERVICE_DEPENDENCY_V1
 #define SYS_TIME_NS                     RIN_SYS_TIME_NS
 #define SYS_DLSYM                       RIN_SYS_DLSYM
 #define SYS_DLOPEN                      RIN_SYS_DLOPEN
