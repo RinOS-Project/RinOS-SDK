@@ -12,6 +12,8 @@
  * bound above for RLL32 callers, but allow the native aggregate snapshot to
  * cover all runtime catalog slots (8 * 64 libraries + the main image). */
 #define RIN_DLINVENTORY_V1_MAX_RECORDS 513u
+/* SYS_DLINVENTORY reserves this index for the versioned lifecycle request. */
+#define RIN_DLINVENTORY_INDEX_LIFECYCLE UINT64_MAX
 #define RIN_DLINVENTORY_V1_FLAG_MAIN_IMAGE 0x00000001u
 /* Legacy RLL32 has no ELF main image.  This flag makes an inventory a
  * complete snapshot of live RLL images without manufacturing a main image
