@@ -18,6 +18,15 @@
 typedef int32_t RinResultCode;
 
 /* Public fixed-value constants shared by all RinNative clients. */
+#define RIN_MSG_OOB                         1u
+#define RIN_MSG_PEEK                        2u
+#define RIN_MSG_TRUNC                       32u
+#define RIN_MSG_DONTWAIT                    64u
+#define RIN_MSG_WAITALL                     256u
+#define RIN_MSG_ERRQUEUE                    0x2000u
+#define RIN_MSG_NOSIGNAL                    0x4000u
+#define RIN_MSG_ZEROCOPY                    0x4000000u
+#define RIN_MSG_CMSG_CLOEXEC                0x40000000u
 #define RIN_SHM_RANGE_REQUEST_VERSION       1u
 #define RIN_TIMER_CREATE_FLAG_VALUE_TIMER_ID 1u
 #define RIN_SYSCALL_IA32_REGISTER_WIDTH_BITS 32u
