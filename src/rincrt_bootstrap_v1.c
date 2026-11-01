@@ -18,6 +18,17 @@ extern void* rin_user_allocator_realloc(void* pointer, size_t size);
 extern size_t rin_user_allocator_usable_size(const void* pointer);
 extern void rin_user_allocator_after_fork_child(void);
 
+#if !defined(RINCRT_HOST_TEST)
+/* Keep SDK CRT termination on the same ordered registry used by libc's C
+ * atexit() and the C++ ABI.  This makes mixed C/C++ registrations unwind in
+ * reverse registration order. */
+extern int __rin_atexit_register(void (*function)(void));
+extern void __cxa_finalize(void* dso);
+extern void (*__fini_array_start[])(void) __attribute__((weak));
+extern void (*__fini_array_end[])(void) __attribute__((weak));
+static volatile uint32_t g_rincrt_exit_started;
+#endif
+
 #if UINTPTR_MAX > 0xffffffffu
 #define RINCRT_ALIGNED_META_MARKER ((size_t)0xC0DEC0DEBADC0FFEULL)
 #else
@@ -144,7 +155,9 @@ enum {
     RINCRT_EOF = -1,
     RINCRT_SEEK_CUR = 1,
     RINCRT_FILE_CAPACITY = 16,
+#if defined(RINCRT_HOST_TEST)
     RINCRT_ATEXIT_CAPACITY = 32,
+#endif
     RINCRT_GETRANDOM = 350
 };
 
@@ -510,8 +523,10 @@ static FILE g_rincrt_stdout = {1, 0, 0, RINCRT_O_WRONLY};
 static FILE g_rincrt_stderr = {2, 0, 0, RINCRT_O_WRONLY};
 static FILE g_rincrt_files[RINCRT_FILE_CAPACITY];
 static unsigned char g_rincrt_file_used[RINCRT_FILE_CAPACITY];
+#if defined(RINCRT_HOST_TEST)
 static RinCrtExitHandler g_rincrt_exit_handlers[RINCRT_ATEXIT_CAPACITY];
 static unsigned int g_rincrt_exit_handler_count;
+#endif
 
 int* __errno_location(void)
 {
@@ -1150,10 +1165,14 @@ void qsort(void* base, size_t count, size_t size,
 
 int atexit(void (*function)(void))
 {
+#if defined(RINCRT_HOST_TEST)
     if (!function || g_rincrt_exit_handler_count >= RINCRT_ATEXIT_CAPACITY)
         return -1;
     g_rincrt_exit_handlers[g_rincrt_exit_handler_count++] = function;
     return 0;
+#else
+    return __rin_atexit_register(function);
+#endif
 }
 
 void _exit(int status)
@@ -1164,11 +1183,38 @@ void _exit(int status)
 
 void exit(int status)
 {
+#if defined(RINCRT_HOST_TEST)
     while (g_rincrt_exit_handler_count != 0u) {
         RinCrtExitHandler function =
             g_rincrt_exit_handlers[--g_rincrt_exit_handler_count];
         function();
     }
+#else
+    if (__atomic_exchange_n(&g_rincrt_exit_started, 1u, __ATOMIC_ACQ_REL) != 0u)
+        _exit(status);
+
+    /* The shared registry consumes each callback before invoking it, so
+     * callbacks that register more work or reenter finalization cannot run
+     * an already-selected C or C++ callback twice. */
+    __cxa_finalize((void*)0);
+
+    /* ELF finalizers are independent of the C/C++ registration list.  Run
+     * them once in reverse link order, as required for .fini_array. */
+    {
+        uintptr_t begin = (uintptr_t)__fini_array_start;
+        uintptr_t end = (uintptr_t)__fini_array_end;
+        if (begin != 0u && end >= begin &&
+            (end - begin) % sizeof(*__fini_array_start) == 0u) {
+            while (end > begin) {
+                void (*function)(void);
+                end -= sizeof(*__fini_array_start);
+                function = *(void (**)(void))end;
+                if (function != 0) function();
+            }
+        }
+    }
+    __cxa_finalize((void*)0);
+#endif
     _exit(status);
 }
 
