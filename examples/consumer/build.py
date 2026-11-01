@@ -209,7 +209,10 @@ def build(args: argparse.Namespace) -> None:
     metadata_path = sdk_root / "pkg" / "rinsdk-v1.json"
     if not (include_root / "rin" / "sdk.h").is_file():
         raise RuntimeError("SDK root must contain include/rin/sdk.h")
-    for dependency in ("ringpu/ringpu.h", "rinresource/loader.h"):
+    for dependency in (
+        "ringpu/ringpu.h", "rinresource/loader.h",
+        "rinruntime/rin_capture_transport.h",
+    ):
         if not (include_root / dependency).is_file():
             raise RuntimeError(
                 f"SDK include tree is missing {dependency}; use the packaged SDK prefix"
