@@ -8,7 +8,7 @@
 
 /* 文字列容量には終端NULを含む。vectorの件数には終端null pointerを含まない。
  * ARG_MAXはargvとenvpの文字列を各終端NUL込みで数え、実行pathは別上限とする。 */
-#define RIN_EXEC_ARGUMENT_PATH_MAX 512u
+#define RIN_EXEC_ARGUMENT_PATH_MAX 1024u
 #define RIN_EXEC_ARGUMENT_COUNT_MAX 64u
 #define RIN_EXEC_ENVIRONMENT_COUNT_MAX 128u
 #define RIN_EXEC_ARGUMENT_STRING_MAX 4096u
