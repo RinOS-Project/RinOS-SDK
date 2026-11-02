@@ -81,6 +81,15 @@ typedef enum RinDriverV3Result {
     RIN_DRIVER_V3_UNSUPPORTED = -13
 } RinDriverV3Result;
 
+/* NDRV v3 power-entry contract. Drivers start in D0. D3 is the system
+ * suspend state; D1 and D2 are reserved until the platform defines their
+ * device-wide transition semantics. */
+#define RIN_DRIVER_POWER_STATE_D0 UINT32_C(0)
+#define RIN_DRIVER_POWER_STATE_D1 UINT32_C(1)
+#define RIN_DRIVER_POWER_STATE_D2 UINT32_C(2)
+#define RIN_DRIVER_POWER_STATE_D3 UINT32_C(3)
+#define RIN_DRIVER_POWER_STATE_MAX RIN_DRIVER_POWER_STATE_D3
+
 /* A quarantined session must never be presented as healthy by a management
  * or recovery owner.  The health value is monotonic until the session is
  * closed and reopened; ACTIVE is the only state in which new leases may be
