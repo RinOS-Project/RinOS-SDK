@@ -768,6 +768,12 @@ typedef RinDriverV3Result (*RinDriverV3NetSetRxModeFn)(
  * polling. A null callback retains the poll-only contract. */
 typedef RinDriverV3Result (*RinDriverV3NetSetRxInterruptsFn)(
     uint64_t driver_context, uint32_t enabled);
+/* Recover a driver after a hardware failure. Success means DMA is quiesced,
+ * outstanding mappings are retired, and normal transmit/receive operation has
+ * restarted. The kernel invokes this after a device operation fails; malformed
+ * callbacks and kernel-owned DMA lease failures remain quarantined. */
+typedef RinDriverV3Result (*RinDriverV3NetRecoverFn)(
+    uint64_t driver_context);
 typedef RinDriverV3Result (*RinDriverV3AudioGetFormatFn)(
     uint64_t driver_context, RinDriverV3AudioFormat* output);
 typedef RinDriverV3Result (*RinDriverV3AudioConfigureFn)(
@@ -1112,6 +1118,19 @@ typedef struct RinDriverV3NetOpsV3 {
 #endif
 } RinDriverV3NetOpsV3;
 
+/* Optional V4 hardware recovery extension. Existing V1-V3 operation tables
+ * remain valid and keep their original wire sizes. */
+#define RIN_DRIVER_V3_NET_OPS_V4_EXTENSION_VERSION UINT32_C(1)
+typedef struct RinDriverV3NetOpsV4 {
+    RinDriverV3NetOpsV3 base;
+    uint32_t extension_size;
+    uint32_t extension_version;
+    RinDriverV3NetRecoverFn recover;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t recover_padding;
+#endif
+} RinDriverV3NetOpsV4;
+
 typedef struct RinDriverV3AudioOps {
     uint32_t struct_size;
     uint32_t version;
@@ -1334,6 +1353,19 @@ static inline int rin_driver_v3_net_ops_v3_valid(
         return 0;
 #if UINTPTR_MAX == UINT32_MAX
     if (ops->receive_v2_padding != 0u) return 0;
+#endif
+    return 1;
+}
+
+static inline int rin_driver_v3_net_ops_v4_valid(
+    const RinDriverV3NetOpsV4* ops) {
+    if (!ops || !rin_driver_v3_net_ops_v3_valid(&ops->base) ||
+        ops->extension_size != sizeof(*ops) - sizeof(ops->base) ||
+        ops->extension_version !=
+            RIN_DRIVER_V3_NET_OPS_V4_EXTENSION_VERSION)
+        return 0;
+#if UINTPTR_MAX == UINT32_MAX
+    if (ops->recover_padding != 0u) return 0;
 #endif
     return 1;
 }
@@ -1827,6 +1859,8 @@ static_assert(sizeof(RinDriverV3NetOpsV2) == 80u,
 static_assert(sizeof(RinDriverV3NetRxMetadataV1) == 16u &&
                   sizeof(RinDriverV3NetOpsV3) == 96u,
               "NDRV v3 network receive metadata ABI drift");
+static_assert(sizeof(RinDriverV3NetOpsV4) == 112u,
+              "NDRV v3 network recovery operations ABI drift");
 static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                   offsetof(RinDriverV3NetOps, poll_rx) == 16u &&
                   offsetof(RinDriverV3NetOps, remove) == 24u &&
@@ -1920,6 +1954,8 @@ _Static_assert(sizeof(RinDriverV3NetOpsV2) == 80u,
 _Static_assert(sizeof(RinDriverV3NetRxMetadataV1) == 16u &&
                    sizeof(RinDriverV3NetOpsV3) == 96u,
                "NDRV v3 network receive metadata ABI drift");
+_Static_assert(sizeof(RinDriverV3NetOpsV4) == 112u,
+               "NDRV v3 network recovery operations ABI drift");
 _Static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                    offsetof(RinDriverV3NetOps, poll_rx) == 16u &&
                    offsetof(RinDriverV3NetOps, remove) == 24u &&
