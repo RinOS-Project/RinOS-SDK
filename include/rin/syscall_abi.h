@@ -365,7 +365,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_SLEEP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SLEEP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SLEEP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-/* slot 1は旧timespec、V1 duration request、またはV2 checked user-pointer request。V2はclock_id/absolute指定と、wait前にpinするremainder pointerを持つ。 */
+/* slot 1は旧形式timespec、V1 versioned request、またはV2 user-pointer requestを受ける。V2はnative timespecをkernelでcopyinし、残時間出力をwait前にpinする。clock_idとabsolute flagでdeadlineを指定する。 */
 #define RIN_SYS_NANOSLEEP                   63u
 /* NANOSLEEP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_NANOSLEEP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -1521,7 +1521,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-/* V1は固定長配列、V2はuint32_t利用者配列、V3はgid_t幅・signedness付き利用者配列。GETのgroup_countが0なら必要件数だけを返す。 */
+/* V1は固定長配列、V2はuint32_t利用者配列、V3はgid_t幅とsignednessを指定する利用者配列を使う。GETのgroup_countが0なら必要件数だけを返す。 */
 #define RIN_SYS_CREDENTIAL_GROUPS_SET       0x8028u
 /* CREDENTIAL_GROUPS_SET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_CREDENTIAL_GROUPS_SET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
@@ -2454,6 +2454,13 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* time. */
+/* Performs clock_gettime, clock_getres, or clock_settime using a generation-stable caller-width timespec pointer transaction. */
+#define RIN_SYS_CLOCK_TIMESPEC_USER_V1      0x80C9u
+/* CLOCK_TIMESPEC_USER_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_CLOCK_TIMESPEC_USER_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLOCK_TIMESPEC_USER_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CLOCK_TIMESPEC_USER_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 
 /* Returns UNKNOWN for syscall numbers outside this declared availability table. */
 static inline uint32_t rin_syscall_arch_support(
@@ -5440,6 +5447,13 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_CLOCK_TIMESPEC_USER_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_CLOCK_TIMESPEC_USER_V1_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_CLOCK_TIMESPEC_USER_V1_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_CLOCK_TIMESPEC_USER_V1_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
     default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
