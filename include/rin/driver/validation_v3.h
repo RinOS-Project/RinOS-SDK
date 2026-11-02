@@ -26,10 +26,12 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
         (((capabilities & RIN_DRIVER_V3_CAP_PCI_CONFIG) != 0u) &&
          (!api->pci_config_read || !api->pci_config_write)) ||
         (((capabilities & RIN_DRIVER_V3_CAP_DMA_START) != 0u) &&
-         !api->device_dma_start)) {
+         !api->device_dma_start) ||
+        (((api->capabilities & RIN_DRIVER_V3_CAP_DMA_STOP) != 0u) !=
+         (api->device_dma_stop != NULL))) {
         return 0;
     }
-    for (uint32_t index = 0u; index < 3u; ++index) {
+    for (uint32_t index = 0u; index < 2u; ++index) {
         if (api->reserved[index] != 0u) return 0;
     }
     for (uint32_t index = 0u; index < 8u; ++index) {
@@ -47,6 +49,7 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
         api->pci_config_write_padding != 0u || api->log_padding != 0u ||
         api->monotonic_time_ns_padding != 0u ||
         api->device_dma_start_padding != 0u ||
+        api->device_dma_stop_padding != 0u ||
         api->entropy_mix_padding != 0u)
         return 0;
 #endif
