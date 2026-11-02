@@ -2455,7 +2455,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PERF_EVENT_CONTROL_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* time. */
-/* Performs clock_gettime, clock_getres, clock_settime, or gettimeofday using a generation-stable caller-width time-value pointer transaction. */
+/* Reads or writes clock values, converts gettimeofday values, or snapshots a caller-width timespec through checked nested pointers. */
 #define RIN_SYS_CLOCK_TIMESPEC_USER_V1      0x80C9u
 /* CLOCK_TIMESPEC_USER_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_CLOCK_TIMESPEC_USER_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED

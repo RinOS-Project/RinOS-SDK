@@ -13,6 +13,17 @@
 #define RIN_CLOCK_TIMESPEC_USER_GETRES 2u
 #define RIN_CLOCK_TIMESPEC_USER_SETTIME 3u
 #define RIN_CLOCK_TIMESPEC_USER_GETTIMEOFDAY 4u
+#define RIN_CLOCK_TIMESPEC_USER_SNAPSHOT 5u
+
+/* The SNAPSHOT operation returns one stable, fixed-width value to a local
+ * caller buffer. For this operation only, reserved[0] is the output pointer. */
+#define RIN_CLOCK_TIMESPEC_USER_SNAPSHOT_OUTPUT(request) \
+    ((request)->reserved[0])
+
+typedef struct RinTimespecSnapshotUserV1 {
+    int64_t tv_sec;
+    int64_t tv_nsec;
+} RinTimespecSnapshotUserV1;
 
 typedef struct RinClockTimespecUserV1 {
     uint32_t struct_size;
@@ -31,11 +42,15 @@ static_assert(sizeof(RinClockTimespecUserV1) == 48u,
               "RinClockTimespecUserV1 ABI drift");
 static_assert(offsetof(RinClockTimespecUserV1, timespec_address) == 24u,
               "RinClockTimespecUserV1.timespec_address ABI drift");
+static_assert(sizeof(RinTimespecSnapshotUserV1) == 16u,
+              "RinTimespecSnapshotUserV1 ABI drift");
 #else
 _Static_assert(sizeof(RinClockTimespecUserV1) == 48u,
                "RinClockTimespecUserV1 ABI drift");
 _Static_assert(offsetof(RinClockTimespecUserV1, timespec_address) == 24u,
                "RinClockTimespecUserV1.timespec_address ABI drift");
+_Static_assert(sizeof(RinTimespecSnapshotUserV1) == 16u,
+               "RinTimespecSnapshotUserV1 ABI drift");
 #endif
 
 static inline int rin_clock_timespec_user_v1_valid(
@@ -45,13 +60,19 @@ static inline int rin_clock_timespec_user_v1_valid(
            request->struct_size == sizeof(*request) &&
            request->version == RIN_CLOCK_TIMESPEC_USER_ABI_VERSION &&
            request->operation >= RIN_CLOCK_TIMESPEC_USER_GETTIME &&
-           request->operation <= RIN_CLOCK_TIMESPEC_USER_GETTIMEOFDAY &&
+           request->operation <= RIN_CLOCK_TIMESPEC_USER_SNAPSHOT &&
            request->clock_id >= RIN_CLOCK_ID_REALTIME &&
            request->clock_id <= RIN_CLOCK_ID_THREAD_CPUTIME &&
            rin_nanosleep_timespec_user_size(
                request->time_width, request->long_width) != 0u &&
-           request->reserved0 == 0u && request->reserved[0] == 0u &&
-           request->reserved[1] == 0u &&
+           request->reserved0 == 0u &&
+           (request->operation == RIN_CLOCK_TIMESPEC_USER_SNAPSHOT
+                ? (request->clock_id == RIN_CLOCK_ID_REALTIME ||
+                   request->clock_id == RIN_CLOCK_ID_MONOTONIC) &&
+                      RIN_CLOCK_TIMESPEC_USER_SNAPSHOT_OUTPUT(request) != 0u &&
+                      request->reserved[1] == 0u
+                : request->reserved[0] == 0u &&
+                      request->reserved[1] == 0u) &&
            (request->timespec_address != 0u ||
             request->operation == RIN_CLOCK_TIMESPEC_USER_GETRES);
 }
