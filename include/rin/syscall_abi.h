@@ -1469,7 +1469,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 /* CRASH_SUMMARY_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* management. */
 #define RIN_SYS_MANAGEMENT_CALL             0x801Eu
 /* MANAGEMENT_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
