@@ -81,6 +81,15 @@ typedef enum RinDriverV3Result {
     RIN_DRIVER_V3_UNSUPPORTED = -13
 } RinDriverV3Result;
 
+/* NDRV v3 power-entry contract. Drivers start in D0. D3 is the system
+ * suspend state; D1 and D2 are reserved until the platform defines their
+ * device-wide transition semantics. */
+#define RIN_DRIVER_POWER_STATE_D0 UINT32_C(0)
+#define RIN_DRIVER_POWER_STATE_D1 UINT32_C(1)
+#define RIN_DRIVER_POWER_STATE_D2 UINT32_C(2)
+#define RIN_DRIVER_POWER_STATE_D3 UINT32_C(3)
+#define RIN_DRIVER_POWER_STATE_MAX RIN_DRIVER_POWER_STATE_D3
+
 /* A quarantined session must never be presented as healthy by a management
  * or recovery owner.  The health value is monotonic until the session is
  * closed and reopened; ACTIVE is the only state in which new leases may be
@@ -296,6 +305,12 @@ typedef struct RinDriverV3NetPacket {
     uint32_t flags;
 } RinDriverV3NetPacket;
 
+/* A batch with this flag describes one Ethernet frame split across the
+ * supplied packet records. Drivers retain every lease until the frame's final
+ * DMA descriptor completes. Zero flags retain the independent-frame batch. */
+#define RIN_DRIVER_V3_NET_PACKET_FLAG_FRAME_FRAGMENT UINT32_C(0x00000001)
+#define RIN_DRIVER_V3_NET_MAX_FRAME_FRAGMENTS UINT32_C(4)
+
 /* NDRV v3 network data is intentionally bounded to one ordinary Ethernet
  * frame.  Receive copies are control-plane calls: the NIC-owned DMA ring
  * never leaks into the network stack as an unvalidated pointer. */
@@ -303,6 +318,7 @@ typedef struct RinDriverV3NetPacket {
 #define RIN_DRIVER_V3_NET_MAX_FRAME_SIZE UINT32_C(1518)
 #define RIN_DRIVER_V3_NET_INFO_VERSION_V1 UINT32_C(0x00010000)
 #define RIN_DRIVER_V3_NET_INFO_VERSION_V2 UINT32_C(0x00020000)
+#define RIN_DRIVER_V3_NET_INFO_VERSION_V3 UINT32_C(0x00030000)
 #define RIN_DRIVER_V3_NET_INFO_VERSION RIN_DRIVER_V3_NET_INFO_VERSION_V2
 #define RIN_DRIVER_V3_NET_LINK_UP UINT32_C(0x00000001)
 /* LINK_UP is meaningful only when LINK_KNOWN is set.  This prevents a
@@ -319,7 +335,8 @@ typedef struct RinDriverV3NetPacket {
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_BROADCAST UINT32_C(0x00000001)
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_MULTICAST UINT32_C(0x00000002)
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_POINT_TO_POINT UINT32_C(0x00000004)
-#define RIN_DRIVER_V3_NET_INTERFACE_KNOWN_CAPABILITIES UINT32_C(0x00000007)
+#define RIN_DRIVER_V3_NET_INTERFACE_CAP_TX_SCATTER_GATHER UINT32_C(0x00000008)
+#define RIN_DRIVER_V3_NET_INTERFACE_KNOWN_CAPABILITIES UINT32_C(0x0000000f)
 #define RIN_DRIVER_V3_NET_INTERFACE_UNKNOWN UINT32_C(0)
 #define RIN_DRIVER_V3_NET_INTERFACE_OTHER UINT32_C(1)
 #define RIN_DRIVER_V3_NET_INTERFACE_LOOPBACK UINT32_C(2)
@@ -334,7 +351,12 @@ typedef struct RinDriverV3NetInfo {
     uint32_t flags;
     uint16_t mtu;
     uint8_t mac[6];
-    uint16_t reserved0;
+    /* Version 3 reuses the V1/V2 reserved field without changing the ABI
+     * layout. For V1/V2 it must remain zero. For V3, zero means unknown. */
+    union {
+        uint16_t reserved0;
+        uint16_t link_speed_mbps;
+    };
     /* Introduced by INFO_VERSION_V2. Version 1 drivers leave this extension
      * zero; they remain valid but publish no L3/admin properties. */
     uint32_t interface_flags;
@@ -1267,11 +1289,28 @@ static inline int rin_driver_v3_net_info_valid(
     uint8_t peer_nonzero = 0u;
     if (!info || info->struct_size < sizeof(*info) ||
         (info->version != RIN_DRIVER_V3_NET_INFO_VERSION_V1 &&
-         info->version != RIN_DRIVER_V3_NET_INFO_VERSION_V2) ||
-        (info->flags & ~RIN_DRIVER_V3_NET_INFO_FLAG_MASK) != 0u ||
+         info->version != RIN_DRIVER_V3_NET_INFO_VERSION_V2 &&
+         info->version != RIN_DRIVER_V3_NET_INFO_VERSION_V3))
+        return 0;
+    if (info->version == RIN_DRIVER_V3_NET_INFO_VERSION_V3) {
+        if ((info->link_speed_mbps != 0u &&
+             info->link_speed_mbps != 10u &&
+             info->link_speed_mbps != 100u &&
+             info->link_speed_mbps != 1000u &&
+             info->link_speed_mbps != 2500u) ||
+            (info->link_speed_mbps != 0u &&
+             (info->flags & (RIN_DRIVER_V3_NET_LINK_KNOWN |
+                             RIN_DRIVER_V3_NET_LINK_UP)) !=
+             (RIN_DRIVER_V3_NET_LINK_KNOWN |
+              RIN_DRIVER_V3_NET_LINK_UP)))
+            return 0;
+    } else if (info->reserved0 != 0u) {
+        return 0;
+    }
+    if ((info->flags & ~RIN_DRIVER_V3_NET_INFO_FLAG_MASK) != 0u ||
         ((info->flags & RIN_DRIVER_V3_NET_LINK_UP) != 0u &&
          (info->flags & RIN_DRIVER_V3_NET_LINK_KNOWN) == 0u) ||
-        info->mtu < 68u || info->mtu > 1500u || info->reserved0 != 0u)
+        info->mtu < 68u || info->mtu > 1500u)
         return 0;
     if (info->version == RIN_DRIVER_V3_NET_INFO_VERSION_V1) {
         if (info->interface_flags != 0u || info->interface_type != 0u ||
@@ -1321,7 +1360,7 @@ static inline int rin_driver_v3_net_info_valid(
                  (info->interface_capabilities &
                   RIN_DRIVER_V3_NET_INTERFACE_CAP_BROADCAST) != 0u)))
         return 0;
-    if (info->version == RIN_DRIVER_V3_NET_INFO_VERSION_V2)
+    if (info->version >= RIN_DRIVER_V3_NET_INFO_VERSION_V2)
         for (uint32_t index = 0u; index < sizeof(info->ipv4_peer); ++index)
             peer_nonzero |= info->ipv4_peer[index];
     if (peer_nonzero != 0u &&
@@ -1597,7 +1636,8 @@ static_assert(sizeof(RinDriverContextV3) == 128u,
               "NDRV v3 context ABI drift");
 static_assert(sizeof(RinDriverV3DeviceRegistration) == 72u,
               "NDRV v3 registration ABI drift");
-static_assert(sizeof(RinDriverV3NetInfo) == 40u,
+static_assert(sizeof(RinDriverV3NetInfo) == 40u &&
+                  offsetof(RinDriverV3NetInfo, link_speed_mbps) == 20u,
               "NDRV v3 network information ABI drift");
 static_assert(sizeof(RinDriverV3NetOps) == 64u,
               "NDRV v3 network operations ABI drift");
@@ -1680,7 +1720,8 @@ _Static_assert(sizeof(RinDriverContextV3) == 128u,
                "NDRV v3 context ABI drift");
 _Static_assert(sizeof(RinDriverV3DeviceRegistration) == 72u,
                "NDRV v3 registration ABI drift");
-_Static_assert(sizeof(RinDriverV3NetInfo) == 40u,
+_Static_assert(sizeof(RinDriverV3NetInfo) == 40u &&
+                   offsetof(RinDriverV3NetInfo, link_speed_mbps) == 20u,
                "NDRV v3 network information ABI drift");
 _Static_assert(sizeof(RinDriverV3NetOps) == 64u,
                "NDRV v3 network operations ABI drift");
