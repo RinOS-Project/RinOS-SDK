@@ -1555,7 +1555,7 @@ RinResult rin_http_execute_v1(const RinHttpRequestV1* request, RinChannel* respo
         RIN_SDK_LIBRARY_NET, NET_HTTP_EXECUTE, request, sizeof(*request),
         response_stream);
 }
-RinResult rin_http_connect_tunnel_v1(const RinHttpRequestV1* request,
+RinResult rin_http_connect_tunnel_v1(const RinHttpConnectRequestV1* request,
                                     RinHttpTunnelV1* tunnel) {
     RinResult result;
     if (!versioned(request, sizeof(*request)) ||

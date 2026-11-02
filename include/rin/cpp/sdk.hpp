@@ -853,7 +853,7 @@ http_execute(const RinHttpRequestV1& request) noexcept {
 }
 
 [[nodiscard]] inline outcome<RinHttpTunnelV1>
-http_connect_tunnel(const RinHttpRequestV1& request) noexcept {
+http_connect_tunnel(const RinHttpConnectRequestV1& request) noexcept {
     auto tunnel = versioned<RinHttpTunnelV1>();
     return {rin_http_connect_tunnel_v1(&request, &tunnel), tunnel};
 }
