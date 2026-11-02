@@ -158,6 +158,7 @@ enum {
     RIN_WEBCONTENT_CMD_REVOKE_MICROPHONE_V1 = 34,
     RIN_WEBCONTENT_CMD_CAMERA_CAPTURE_OWNER_V1 = 35,
     RIN_WEBCONTENT_CMD_REVOKE_CAMERA_V1 = 36,
+    RIN_WEBCONTENT_CMD_CLIPBOARD_OWNER_V1 = 37,
     RIN_WEBCONTENT_CMD_REVOKE_LOCATION_V1 = 39,
     RIN_WEBCONTENT_CMD_DISPATCH_COMPOSITION_V1 = 40
 };
@@ -459,6 +460,21 @@ enum {
 #define RIN_WEBCONTENT_DOWNLOAD_VALIDATOR_MAX UINT32_C(128)
 #define RIN_WEBCONTENT_DOWNLOAD_MAX_BYTES UINT64_C(134217728)
 
+/* Async Clipboard owner bridge. Writes carry one item with multiple
+ * representations; reads return bounded chunks. Web custom formats retain
+ * their required "web " prefix on this wire. */
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_VERSION UINT32_C(1)
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_FORMATS UINT32_C(16)
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_DATA_BYTES UINT64_C(16777216)
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_CHUNK_BYTES UINT32_C(32768)
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_MIME_BYTES UINT32_C(131)
+
+enum {
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_QUERY = 1,
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_READ_CHUNK = 2,
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_WRITE = 3
+};
+
 /* P5-2: ロードフェーズ定数。load_phase に格納。 */
 enum {
     RIN_WEBCONTENT_LOAD_PHASE_NONE = 0,
@@ -481,6 +497,39 @@ typedef struct RinWebContentMsgHeader {
     uint32_t reserved0;
     uint32_t reserved1;
 } RinWebContentMsgHeader;
+
+typedef struct RinWebContentClipboardOwnerRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t operation;
+    uint32_t format_count;
+    uint32_t format_index;
+    uint32_t chunk_size;
+    uint64_t generation;
+    uint64_t offset;
+    uint64_t frame_identity;
+    uint32_t reserved0;
+    uint32_t reserved1;
+    char origin[RIN_WEBCONTENT_URL_MAX];
+} RinWebContentClipboardOwnerRequestV1;
+
+typedef struct RinWebContentClipboardOwnerFormatV1 {
+    uint32_t format_index;
+    uint32_t mime_size;
+    uint64_t data_size;
+    char mime[RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_MIME_BYTES + 1u];
+} RinWebContentClipboardOwnerFormatV1;
+
+typedef struct RinWebContentClipboardOwnerResponseV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t format_count;
+    uint32_t reserved0;
+    uint64_t generation;
+    uint64_t total_data_size;
+    uint32_t data_size;
+    uint32_t reserved1;
+} RinWebContentClipboardOwnerResponseV1;
 
 typedef struct RinWebContentShmRegion {
     uint32_t size;
