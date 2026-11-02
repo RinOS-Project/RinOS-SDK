@@ -21,6 +21,8 @@
 #define RIN_CLOCK_ID_THREAD_CPUTIME 3
 #define RIN_TIMER_ABSTIME 1u
 #define RIN_CPU_TIME_ABI_VERSION 1u
+#define RIN_TIMES_ABI_VERSION 1u
+#define RIN_TIMES_CLOCK_TICKS_PER_SECOND 100u
 
 #ifndef RIN_SDK_TIME_ABI_DEFINED
 #define RIN_SDK_TIME_ABI_DEFINED
@@ -83,6 +85,44 @@ typedef struct RinClockGettimeV1 {
     int64_t tv_nsec;
 } RinClockGettimeV1;
 
+/* `times` writes the target-width POSIX struct tms.  These layouts describe
+ * the checked V1 syscall output for native/compat32 and x86_64 callers. */
+typedef struct RinTimesTms32V1 {
+    int32_t user_ticks;
+    int32_t system_ticks;
+    int32_t child_user_ticks;
+    int32_t child_system_ticks;
+} RinTimesTms32V1;
+
+typedef struct RinTimesTms64V1 {
+    int64_t user_ticks;
+    int64_t system_ticks;
+    int64_t child_user_ticks;
+    int64_t child_system_ticks;
+} RinTimesTms64V1;
+
+static inline int rin_times_ns_to_ticks_v1(uint64_t nanoseconds,
+                                           uint64_t maximum,
+                                           uint64_t* ticks_out)
+{
+    const uint64_t nanoseconds_per_second = UINT64_C(1000000000);
+    uint64_t seconds;
+    uint64_t fraction;
+    uint64_t whole_ticks;
+    uint64_t fractional_ticks;
+    if (ticks_out == 0) return 0;
+    seconds = nanoseconds / nanoseconds_per_second;
+    fraction = nanoseconds % nanoseconds_per_second;
+    if (seconds > maximum / RIN_TIMES_CLOCK_TICKS_PER_SECOND) return 0;
+    whole_ticks = seconds * RIN_TIMES_CLOCK_TICKS_PER_SECOND;
+    fractional_ticks =
+        (fraction * RIN_TIMES_CLOCK_TICKS_PER_SECOND) /
+        nanoseconds_per_second;
+    if (whole_ticks > maximum - fractional_ticks) return 0;
+    *ticks_out = whole_ticks + fractional_ticks;
+    return 1;
+}
+
 static inline int rin_clock_gettime_v1_request_valid(
     const RinClockGettimeV1* value)
 {
@@ -103,6 +143,10 @@ static_assert(sizeof(RinClockSettimeV1) == 32u,
               "RinClockSettimeV1 ABI drift");
 static_assert(sizeof(RinClockGettimeV1) == 32u,
               "RinClockGettimeV1 ABI drift");
+static_assert(sizeof(RinTimesTms32V1) == 16u,
+              "RinTimesTms32V1 ABI drift");
+static_assert(sizeof(RinTimesTms64V1) == 32u,
+              "RinTimesTms64V1 ABI drift");
 #elif !defined(MIDL_PASS)
 _Static_assert(sizeof(RinCpuTimeV1) == 32u, "RinCpuTimeV1 ABI drift");
 _Static_assert(sizeof(RinItimerV1) == 32u, "RinItimerV1 ABI drift");
@@ -112,6 +156,10 @@ _Static_assert(sizeof(RinClockSettimeV1) == 32u,
                "RinClockSettimeV1 ABI drift");
 _Static_assert(sizeof(RinClockGettimeV1) == 32u,
                "RinClockGettimeV1 ABI drift");
+_Static_assert(sizeof(RinTimesTms32V1) == 16u,
+               "RinTimesTms32V1 ABI drift");
+_Static_assert(sizeof(RinTimesTms64V1) == 32u,
+               "RinTimesTms64V1 ABI drift");
 #endif
 #endif /* RIN_SDK_TIME_ABI_DEFINED */
 
