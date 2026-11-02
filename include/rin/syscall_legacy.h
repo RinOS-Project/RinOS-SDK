@@ -136,6 +136,7 @@
 #define SYS_SECCOMP                     RIN_SYS_SECCOMP
 #define SYS_VFORK                       RIN_SYS_VFORK
 #define SYS_UNSHARE                     RIN_SYS_UNSHARE
+#define SYS_CLONE3                      RIN_SYS_CLONE3
 #define SYS_RT_SIGRETURN                RIN_SYS_RT_SIGRETURN
 #define SYS_RT_SIGACTION                RIN_SYS_RT_SIGACTION
 #define SYS_RT_SIGPROCMASK              RIN_SYS_RT_SIGPROCMASK

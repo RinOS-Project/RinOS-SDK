@@ -128,6 +128,7 @@
 [RIN_SYS_SECCOMP] = "seccomp",
 [RIN_SYS_VFORK] = "vfork",
 [RIN_SYS_UNSHARE] = "unshare",
+[RIN_SYS_CLONE3] = "clone3",
 [RIN_SYS_RT_SIGRETURN] = "rt_sigreturn",
 [RIN_SYS_RT_SIGACTION] = "rt_sigaction",
 [RIN_SYS_RT_SIGPROCMASK] = "rt_sigprocmask",
