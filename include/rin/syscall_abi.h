@@ -1859,12 +1859,12 @@ static inline uint32_t rin_syscall_arch_combine_support(
 /* READV availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_READV_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_READV_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_READV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_READV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_WRITEV                      0x8064u
 /* WRITEV availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_WRITEV_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_WRITEV_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_WRITEV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_WRITEV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 #define RIN_SYS_PROCESS_MEMORY_INFO_GET     0x8065u
 /* PROCESS_MEMORY_INFO_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
