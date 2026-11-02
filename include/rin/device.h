@@ -20,8 +20,9 @@ extern "C" {
 #define RIN_SDK_DEVICE_CLASS_POWER UINT32_C(8)
 
 /* Generic device-handle rights authorize only the SDK operations below.
- * Raw read/write/map access belongs to a class-specific resource capability,
- * not to this inventory/query/control handle. */
+ * READ is retained at its original ABI value as a read-only metadata/query
+ * alias; it does not expose a raw device data path. Raw write/map access
+ * belongs to class-specific resource capabilities. */
 #define RIN_DEVICE_HANDLE_RIGHT_READ UINT32_C(0x00000001)
 #define RIN_DEVICE_HANDLE_RIGHT_CONTROL UINT32_C(0x00000004)
 #define RIN_DEVICE_HANDLE_RIGHT_QUERY UINT32_C(0x00000010)
@@ -31,29 +32,10 @@ extern "C" {
                                       RIN_DEVICE_HANDLE_RIGHT_QUERY | \
                                       RIN_DEVICE_HANDLE_RIGHT_DUPLICATE)
 
-/* Source-compatibility names keep their historical values. WRITE and MAP are
- * reserved here and rejected by rin_device_open_v1(); use resource rights. */
-#ifndef RIN_DEVICE_RIGHT_READ
-#define RIN_DEVICE_RIGHT_READ RIN_DEVICE_HANDLE_RIGHT_READ
-#endif
-#ifndef RIN_DEVICE_RIGHT_WRITE
-#define RIN_DEVICE_RIGHT_WRITE UINT32_C(0x00000002)
-#endif
-#ifndef RIN_DEVICE_RIGHT_CONTROL
-#define RIN_DEVICE_RIGHT_CONTROL RIN_DEVICE_HANDLE_RIGHT_CONTROL
-#endif
-#ifndef RIN_DEVICE_RIGHT_MAP
-#define RIN_DEVICE_RIGHT_MAP UINT32_C(0x00000008)
-#endif
-#ifndef RIN_DEVICE_RIGHT_QUERY
-#define RIN_DEVICE_RIGHT_QUERY RIN_DEVICE_HANDLE_RIGHT_QUERY
-#endif
-#ifndef RIN_DEVICE_RIGHT_DUPLICATE
-#define RIN_DEVICE_RIGHT_DUPLICATE RIN_DEVICE_HANDLE_RIGHT_DUPLICATE
-#endif
-#ifndef RIN_DEVICE_RIGHT_MASK
-#define RIN_DEVICE_RIGHT_MASK RIN_DEVICE_HANDLE_RIGHT_MASK
-#endif
+/* The old RIN_DEVICE_RIGHT_* spellings were also used for resource grants.
+ * They are available only through <rin/legacy_device_rights.h> so including
+ * this header with <rin/resource/capability.h> cannot make rights depend on
+ * include order. */
 
 /* Class-specific operations. Unsupported class/operation pairs return
  * RIN_ERROR_NOT_SUPPORTED; controls never accept untyped kernel pointers. */

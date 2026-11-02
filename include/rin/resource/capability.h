@@ -32,24 +32,9 @@ extern "C" {
      RIN_RESOURCE_RIGHT_CONTROL | \
      RIN_RESOURCE_RIGHT_MAP)
 
-/* Historical spellings were also used by rin/device.h for unrelated
- * inventory handles. Keep their numeric values as compatibility aliases;
- * new code must use the resource-capability namespace above. */
-#ifndef RIN_DEVICE_RIGHT_READ
-#define RIN_DEVICE_RIGHT_READ RIN_RESOURCE_RIGHT_READ
-#endif
-#ifndef RIN_DEVICE_RIGHT_WRITE
-#define RIN_DEVICE_RIGHT_WRITE RIN_RESOURCE_RIGHT_WRITE
-#endif
-#ifndef RIN_DEVICE_RIGHT_CONTROL
-#define RIN_DEVICE_RIGHT_CONTROL RIN_RESOURCE_RIGHT_CONTROL
-#endif
-#ifndef RIN_DEVICE_RIGHT_MAP
-#define RIN_DEVICE_RIGHT_MAP RIN_RESOURCE_RIGHT_MAP
-#endif
-#ifndef RIN_DEVICE_RIGHT_ALL
-#define RIN_DEVICE_RIGHT_ALL RIN_RESOURCE_RIGHT_ALL
-#endif
+/* The old RIN_DEVICE_RIGHT_* spellings overlapped with generic inventory
+ * handle rights. Source-compatibility aliases are opt-in through
+ * <rin/legacy_device_rights.h>; new code must use this resource namespace. */
 
 typedef enum RinAppResource {
     RIN_APP_RESOURCE_NETWORK = 1,
