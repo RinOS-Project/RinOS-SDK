@@ -1300,6 +1300,13 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* thread. */
+/* Atomically compare and wait on 1..128 FUTEX_32 entries; return the index of the entry that wakes the caller. */
+#define RIN_SYS_FUTEX_WAITV                 449u
+/* FUTEX_WAITV availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_FUTEX_WAITV_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FUTEX_WAITV_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_FUTEX_WAITV_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* signal. */
 /* TIDは呼出側から見える名前空間で解決し、所有process/thread generationと同一UIDまたはroot・session許可を検証する。signal 0は配送せず存在と権限を検査する。 */
 #define RIN_SYS_TKILL                       500u
@@ -1469,7 +1476,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 /* CRASH_SUMMARY_GET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_CRASH_SUMMARY_GET_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 /* management. */
 #define RIN_SYS_MANAGEMENT_CALL             0x801Eu
 /* MANAGEMENT_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
@@ -4073,6 +4080,13 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_FUTEX_WAITV:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_FUTEX_WAITV_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_FUTEX_WAITV_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_FUTEX_WAITV_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
     case RIN_SYS_TKILL:

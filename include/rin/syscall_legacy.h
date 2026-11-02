@@ -250,6 +250,7 @@
 #define SYS_GETRANDOM                   RIN_SYS_GETRANDOM
 #define SYS_SET_TID_ADDRESS             RIN_SYS_SET_TID_ADDRESS
 #define SYS_GETCPU_ONLINE_COUNT         RIN_SYS_GETCPU_ONLINE_COUNT
+#define SYS_FUTEX_WAITV                 RIN_SYS_FUTEX_WAITV
 #define SYS_TKILL                       RIN_SYS_TKILL
 #define SYS_TGKILL                      RIN_SYS_TGKILL
 #define SYS_THREAD_STACK_INFO           RIN_SYS_THREAD_STACK_INFO
