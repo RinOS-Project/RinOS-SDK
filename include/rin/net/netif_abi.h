@@ -441,19 +441,6 @@ typedef struct RinNetIPv6InterfaceAddressListV1 {
         addresses[RIN_NET_IPV6_INTERFACE_ADDRESS_CAPACITY];
 } RinNetIPv6InterfaceAddressListV1;
 
-/* V2 retains the V1 format and provides space for every non-link-local
- * address supported by one NDP interface: four SLAAC and four DHCPv6 IAADDR. */
-#define RIN_NET_IPV6_ADDRESS_LIST_V2_VERSION 2u
-#define RIN_NET_IPV6_ADDRESS_LIST_V2_CAPACITY 8u
-typedef struct RinNetIPv6AddressListV2 {
-    uint32_t version;
-    uint32_t struct_size;
-    uint32_t ndp_generation;
-    uint16_t device_generation;
-    uint16_t address_count;
-    uint8_t addresses[RIN_NET_IPV6_ADDRESS_LIST_V2_CAPACITY][16];
-} RinNetIPv6AddressListV2;
-
 #define RIN_NET_IPV6_INFO_VERSION             1u
 #define RIN_NET_IPV6_INFO_FLAG_LINK_LOCAL     0x01u
 #define RIN_NET_IPV6_INFO_FLAG_MANAGED         0x02u
@@ -493,8 +480,6 @@ static_assert(sizeof(RinNetIPv6InterfaceAddressV1) == 20u,
               "RinNetIPv6InterfaceAddressV1 ABI drift");
 static_assert(sizeof(RinNetIPv6InterfaceAddressListV1) == 136u,
               "RinNetIPv6InterfaceAddressListV1 ABI drift");
-static_assert(sizeof(RinNetIPv6AddressListV2) == 144u,
-              "RinNetIPv6AddressListV2 ABI drift");
 #else
 _Static_assert(sizeof(RinNetPrimaryInfo) == 52u,
                "RinNetPrimaryInfo ABI drift");
@@ -528,8 +513,6 @@ _Static_assert(sizeof(RinNetIPv6InterfaceAddressV1) == 20u,
                "RinNetIPv6InterfaceAddressV1 ABI drift");
 _Static_assert(sizeof(RinNetIPv6InterfaceAddressListV1) == 136u,
                "RinNetIPv6InterfaceAddressListV1 ABI drift");
-_Static_assert(sizeof(RinNetIPv6AddressListV2) == 144u,
-               "RinNetIPv6AddressListV2 ABI drift");
 #endif
 
 int rin_net_get_interface_statistics(RinNetInterfaceStatisticsV1* out);
