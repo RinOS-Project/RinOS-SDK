@@ -56,6 +56,22 @@ static void rin_sdk_zero_bytes(void* destination, uint64_t size) {
 }
 #endif
 
+#if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_NET)
+static int rin_sdk_net_ranges_overlap(uint64_t first_address,
+                                      uint64_t first_size,
+                                      uint64_t second_address,
+                                      uint64_t second_size) {
+    if (first_size == 0u || second_size == 0u) return 0;
+    if (first_address > (uint64_t)UINTPTR_MAX ||
+        second_address > (uint64_t)UINTPTR_MAX ||
+        first_size > (uint64_t)UINTPTR_MAX - first_address ||
+        second_size > (uint64_t)UINTPTR_MAX - second_address)
+        return 1;
+    return first_address < second_address + second_size &&
+           second_address < first_address + first_size;
+}
+#endif
+
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_CORE)
 static RinSdkBackendV1 g_backend;
 static RinSdkTargetBackendV1 g_target_backend;
@@ -1442,9 +1458,17 @@ RinResult rin_socket_receive_v1(RinSocket socket, RinSliceV1 data, uint32_t flag
 RinResult rin_socket_sendto_v1(RinSocket socket, RinSliceV1 data, const RinSocketAddressV1* destination, uint32_t flags, uint64_t* sent) {
     RinSdkNetSocketSendToRequestV1 request;
     uint64_t ignored_sent = 0u;
+    if (sent != NULL &&
+        (rin_sdk_net_ranges_overlap(
+             data.address, data.size, (uint64_t)(uintptr_t)sent,
+             sizeof(*sent)) ||
+         (destination != NULL && rin_sdk_net_ranges_overlap(
+             (uint64_t)(uintptr_t)destination, sizeof(*destination),
+             (uint64_t)(uintptr_t)sent, sizeof(*sent)))))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (sent != NULL) *sent = 0u;
     if (destination != NULL && !versioned(destination, sizeof(*destination)))
         return RIN_ERROR_ABI_MISMATCH;
-    if (sent != NULL) *sent = 0u;
     if (destination == NULL)
         return rin_socket_send_v1(socket, data, flags,
                                   sent != NULL ? sent : &ignored_sent);
@@ -1468,13 +1492,26 @@ RinResult rin_socket_recvfrom_v1(RinSocket socket, RinSliceV1 data, uint32_t fla
     uint64_t ignored_received = 0u;
     RinResult result;
     if (source_address != NULL &&
+        rin_sdk_net_ranges_overlap(
+            data.address, data.size,
+            (uint64_t)(uintptr_t)source_address, sizeof(*source_address)))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (received != NULL &&
+        (rin_sdk_net_ranges_overlap(
+             data.address, data.size, (uint64_t)(uintptr_t)received,
+             sizeof(*received)) ||
+         (source_address != NULL && rin_sdk_net_ranges_overlap(
+             (uint64_t)(uintptr_t)source_address, sizeof(*source_address),
+             (uint64_t)(uintptr_t)received, sizeof(*received))))))
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (received != NULL) *received = 0u;
+    if (source_address != NULL &&
         !versioned(source_address, sizeof(*source_address)))
         return RIN_ERROR_ABI_MISMATCH;
     if (output_source == NULL) output_source = &discarded_source;
     rin_sdk_zero_bytes(output_source, sizeof(*output_source));
     output_source->struct_size = sizeof(*output_source);
     output_source->version = RIN_SDK_STRUCT_VERSION_1;
-    if (received != NULL) *received = 0u;
     rin_sdk_zero_bytes(&request, sizeof(request));
     request.struct_size = sizeof(request);
     request.version = RIN_SDK_STRUCT_VERSION_1;
