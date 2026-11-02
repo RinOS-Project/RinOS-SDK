@@ -11,7 +11,7 @@
 #include "permission_abi.h"
 #include "profile_abi.h"
 
-#define RIN_FIREWALL_SERVICE_ABI_VERSION UINT32_C(3)
+#define RIN_FIREWALL_SERVICE_ABI_VERSION UINT32_C(2)
 #define RIN_FIREWALL_SERVICE_CAP_READ UINT32_C(0x00000001)
 #define RIN_FIREWALL_SERVICE_CAP_ADMIN UINT32_C(0x00000002)
 #define RIN_FIREWALL_SERVICE_CAP_AUDIT UINT32_C(0x00000004)
@@ -117,7 +117,7 @@ static_assert(sizeof(RinFirewallServicePeerV1) == 56u,
               "Firewall service peer ABI drift");
 static_assert(sizeof(RinFirewallServiceStatusV1) == 80u,
               "Firewall service status ABI drift");
-static_assert(sizeof(RinFirewallServiceLogEventV1) == 216u,
+static_assert(sizeof(RinFirewallServiceLogEventV1) == 200u,
               "Firewall service log ABI drift");
 static_assert(sizeof(RinFirewallServiceEventV1) == 72u,
               "Firewall service event ABI drift");
@@ -130,7 +130,7 @@ _Static_assert(sizeof(RinFirewallServicePeerV1) == 56u,
                "Firewall service peer ABI drift");
 _Static_assert(sizeof(RinFirewallServiceStatusV1) == 80u,
                "Firewall service status ABI drift");
-_Static_assert(sizeof(RinFirewallServiceLogEventV1) == 216u,
+_Static_assert(sizeof(RinFirewallServiceLogEventV1) == 200u,
                "Firewall service log ABI drift");
 _Static_assert(sizeof(RinFirewallServiceEventV1) == 72u,
                "Firewall service event ABI drift");

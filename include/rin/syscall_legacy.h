@@ -247,6 +247,7 @@
 #define SYS_ISO_READ                    RIN_SYS_ISO_READ
 #define SYS_GET_HDDBOOT                 RIN_SYS_GET_HDDBOOT
 #define SYS_SYSTEM_IMAGE_VERIFY         RIN_SYS_SYSTEM_IMAGE_VERIFY
+#define SYS_RSEQ                        RIN_SYS_RSEQ
 #define SYS_GETRANDOM                   RIN_SYS_GETRANDOM
 #define SYS_SET_TID_ADDRESS             RIN_SYS_SET_TID_ADDRESS
 #define SYS_GETCPU_ONLINE_COUNT         RIN_SYS_GETCPU_ONLINE_COUNT
