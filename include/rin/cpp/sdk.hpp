@@ -703,6 +703,48 @@ socket_receive(RinSocket socket, std::span<T, Extent> data,
     return socket_receive(socket, bytes.value(), flags);
 }
 
+[[nodiscard]] inline outcome<uint64_t>
+socket_send_to(RinSocket socket, RinSliceV1 data,
+               const RinSocketAddressV1& destination,
+               uint32_t flags = 0u) noexcept {
+    uint64_t sent = 0u;
+    return {rin_socket_sendto_v1(socket, data, &destination, flags, &sent),
+            sent};
+}
+
+template<typename T, std::size_t Extent>
+    requires std::is_trivially_copyable_v<std::remove_cv_t<T>>
+[[nodiscard]] inline outcome<uint64_t>
+socket_send_to(RinSocket socket, std::span<T, Extent> data,
+               const RinSocketAddressV1& destination,
+               uint32_t flags = 0u) noexcept {
+    const auto bytes = slice(data);
+    if (!bytes) return {bytes.code(), 0u};
+    return socket_send_to(socket, bytes.value(), destination, flags);
+}
+
+[[nodiscard]] inline outcome<uint64_t>
+socket_receive_from(RinSocket socket, RinSliceV1 data,
+                    RinSocketAddressV1& source_address,
+                    uint32_t flags = 0u) noexcept {
+    uint64_t received = 0u;
+    return {rin_socket_recvfrom_v1(socket, data, flags, &source_address,
+                                   &received),
+            received};
+}
+
+template<typename T, std::size_t Extent>
+    requires (!std::is_const_v<T> &&
+              std::is_trivially_copyable_v<std::remove_cv_t<T>>)
+[[nodiscard]] inline outcome<uint64_t>
+socket_receive_from(RinSocket socket, std::span<T, Extent> data,
+                    RinSocketAddressV1& source_address,
+                    uint32_t flags = 0u) noexcept {
+    const auto bytes = slice(data);
+    if (!bytes) return {bytes.code(), 0u};
+    return socket_receive_from(socket, bytes.value(), source_address, flags);
+}
+
 [[nodiscard]] inline status socket_bind(
     RinSocket socket, const RinSocketAddressV1& address) noexcept {
     return status{rin_socket_bind_v1(socket, &address)};

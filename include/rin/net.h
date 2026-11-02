@@ -97,6 +97,15 @@ RIN_SDK_API RinResult rin_socket_create_v1(uint32_t domain, uint32_t type, uint3
 RIN_SDK_API RinResult rin_socket_connect_v1(RinSocket socket, const RinSocketAddressV1* address);
 RIN_SDK_API RinResult rin_socket_send_v1(RinSocket socket, RinSliceV1 data, uint32_t flags, uint64_t* sent);
 RIN_SDK_API RinResult rin_socket_receive_v1(RinSocket socket, RinSliceV1 data, uint32_t flags, uint64_t* received);
+/* These operations support datagram sockets. A non-NULL address must be a
+ * version-1 RinSocketAddressV1. A NULL destination uses the connected peer;
+ * a NULL source_address discards the sender address. Zero-length datagrams are
+ * valid. receive accepts PEEK and DONT_WAIT (WAIT_ALL and truncation flags are
+ * invalid); an oversized datagram is consumed in full while the byte count
+ * reports only copied data. PEEK leaves it queued. receive commits only after
+ * payload, optional source address, and optional byte count have copied. */
+RIN_SDK_API RinResult rin_socket_sendto_v1(RinSocket socket, RinSliceV1 data, const RinSocketAddressV1* destination, uint32_t flags, uint64_t* sent);
+RIN_SDK_API RinResult rin_socket_recvfrom_v1(RinSocket socket, RinSliceV1 data, uint32_t flags, RinSocketAddressV1* source_address, uint64_t* received);
 RIN_SDK_API RinResult rin_dns_resolve_v1(RinStringV1 host, RinStringV1 service, RinSliceV1 results, uint64_t* count);
 RIN_SDK_API RinResult rin_tls_connect_v1(RinSocket socket, RinStringV1 server_name, uint32_t flags, RinTlsSession* session);
 RIN_SDK_API RinResult rin_http_execute_v1(const RinHttpRequestV1* request, RinChannel* response_stream);

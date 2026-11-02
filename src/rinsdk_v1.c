@@ -98,7 +98,7 @@ enum {
     NET_SOCKET_RECEIVE, NET_DNS_RESOLVE, NET_TLS_CONNECT, NET_HTTP_EXECUTE,
     NET_TLS_SEND, NET_TLS_RECEIVE, NET_TLS_SHUTDOWN,
     NET_SOCKET_BIND, NET_SOCKET_LISTEN, NET_SOCKET_ACCEPT,
-    NET_SOCKET_SHUTDOWN,
+    NET_SOCKET_SHUTDOWN, NET_SOCKET_SEND_TO, NET_SOCKET_RECEIVE_FROM,
     GUI_WINDOW_CREATE = 1, GUI_WINDOW_NEXT_EVENT, GUI_SURFACE_CREATE,
     GUI_WINDOW_PRESENT, GUI_CLIPBOARD_SET, GUI_CLIPBOARD_GET,
     GUI_DIALOG_SHOW, GUI_NOTIFICATION_SHOW,
@@ -108,6 +108,40 @@ enum {
     PKG_OPEN = 1, PKG_QUERY, PKG_INSTALL, PKG_REMOVE, PKG_ENUMERATE,
     DEVICE_ENUMERATE = 1, DEVICE_OPEN, DEVICE_CONTROL, DEVICE_QUERY
 };
+
+typedef struct RinSdkNetSocketSendToRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinSocket socket;
+    uint64_t data_address;
+    uint64_t data_size;
+    RinSocketAddressV1 destination;
+    uint32_t flags;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinSdkNetSocketSendToRequestV1;
+
+typedef struct RinSdkNetSocketReceiveFromRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinSocket socket;
+    uint64_t data_address;
+    uint64_t data_size;
+    uint64_t source_address;
+    uint32_t flags;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinSdkNetSocketReceiveFromRequestV1;
+
+_Static_assert(offsetof(RinSdkNetSocketSendToRequestV1, destination) == 32u,
+               "NET send-to request offset drift");
+_Static_assert(sizeof(RinSdkNetSocketSendToRequestV1) == 104u,
+               "NET send-to request ABI drift");
+_Static_assert(offsetof(RinSdkNetSocketReceiveFromRequestV1,
+                        source_address) == 32u,
+               "NET receive-from request offset drift");
+_Static_assert(sizeof(RinSdkNetSocketReceiveFromRequestV1) == 64u,
+               "NET receive-from request ABI drift");
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE) || \
     defined(RINSDK_BUILD_IPC) || defined(RINSDK_BUILD_FS) || \
@@ -1405,6 +1439,76 @@ RinResult rin_socket_connect_v1(RinSocket socket, const RinSocketAddressV1* addr
 }
 RinResult rin_socket_send_v1(RinSocket socket, RinSliceV1 data, uint32_t flags, uint64_t* sent) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_SOCKET_SEND, sent, socket,data.address,data.size,flags,0,0); }
 RinResult rin_socket_receive_v1(RinSocket socket, RinSliceV1 data, uint32_t flags, uint64_t* received) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_SOCKET_RECEIVE, received, socket,data.address,data.size,flags,0,0); }
+RinResult rin_socket_sendto_v1(RinSocket socket, RinSliceV1 data, const RinSocketAddressV1* destination, uint32_t flags, uint64_t* sent) {
+    RinSdkNetSocketSendToRequestV1 request;
+    uint64_t ignored_sent = 0u;
+    if (destination != NULL && !versioned(destination, sizeof(*destination)))
+        return RIN_ERROR_ABI_MISMATCH;
+    if (sent != NULL) *sent = 0u;
+    if (destination == NULL)
+        return rin_socket_send_v1(socket, data, flags,
+                                  sent != NULL ? sent : &ignored_sent);
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.socket = socket;
+    request.data_address = data.address;
+    request.data_size = data.size;
+    rin_sdk_copy_bytes(&request.destination, destination,
+                       sizeof(request.destination));
+    request.flags = flags;
+    return rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_NET, NET_SOCKET_SEND_TO, &request, sizeof(request),
+        sent != NULL ? sent : &ignored_sent, sizeof(uint64_t));
+}
+RinResult rin_socket_recvfrom_v1(RinSocket socket, RinSliceV1 data, uint32_t flags, RinSocketAddressV1* source_address, uint64_t* received) {
+    RinSdkNetSocketReceiveFromRequestV1 request;
+    RinSocketAddressV1 discarded_source;
+    RinSocketAddressV1* output_source = source_address;
+    uint64_t ignored_received = 0u;
+    RinResult result;
+    if (source_address != NULL &&
+        !versioned(source_address, sizeof(*source_address)))
+        return RIN_ERROR_ABI_MISMATCH;
+    if (output_source == NULL) output_source = &discarded_source;
+    rin_sdk_zero_bytes(output_source, sizeof(*output_source));
+    output_source->struct_size = sizeof(*output_source);
+    output_source->version = RIN_SDK_STRUCT_VERSION_1;
+    if (received != NULL) *received = 0u;
+    rin_sdk_zero_bytes(&request, sizeof(request));
+    request.struct_size = sizeof(request);
+    request.version = RIN_SDK_STRUCT_VERSION_1;
+    request.socket = socket;
+    request.data_address = data.address;
+    request.data_size = data.size;
+    request.source_address = (uint64_t)(uintptr_t)output_source;
+    request.flags = flags;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_NET, NET_SOCKET_RECEIVE_FROM, &request,
+        sizeof(request), received != NULL ? received : &ignored_received,
+        sizeof(uint64_t));
+    if (source_address != NULL) {
+        if (result == RIN_SUCCESS && source_address->struct_size == 0u &&
+            source_address->version == 0u &&
+            (received != NULL ? *received : ignored_received) == 0u) {
+            /* The kernel cancelled a pending receive during read shutdown
+             * before it published peer output. */
+            reset_versioned_output(source_address, sizeof(*source_address));
+        } else {
+            result = finalize_versioned_output(
+                result, source_address, sizeof(*source_address));
+            if (result == RIN_SUCCESS &&
+                source_address->family != RIN_NET_DOMAIN_INET &&
+                source_address->family != RIN_NET_DOMAIN_INET6) {
+                reset_versioned_output(source_address,
+                                       sizeof(*source_address));
+                result = RIN_ERROR_ABI_MISMATCH;
+            }
+        }
+    }
+    if (result != RIN_SUCCESS && received != NULL) *received = 0u;
+    return result;
+}
 RinResult rin_dns_resolve_v1(RinStringV1 host, RinStringV1 service, RinSliceV1 results, uint64_t* count) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_DNS_RESOLVE, count, host.address,host.size,service.address,service.size,results.address,results.size); }
 RinResult rin_tls_connect_v1(RinSocket socket, RinStringV1 server_name, uint32_t flags, RinTlsSession* session) { HANDLE_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_TLS_CONNECT, session, socket,server_name.address,server_name.size,flags,0,0); }
 RinResult rin_http_execute_v1(const RinHttpRequestV1* request, RinChannel* response_stream) {
