@@ -365,7 +365,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_SLEEP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SLEEP_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_SLEEP_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-/* slot 1は旧形式timespecを受け、slot 2は旧形式では無視する。slot 2がRIN_NANOSLEEP_ABI_SELECTOR_V1の場合、slot 1をRinNanosleepRequestV1として扱い、単調時計期限とEINTR時の残時間を返す。wake精度はscheduler timerの分解能に従う。 */
+/* slot 1は旧timespec、V1 duration request、またはV2 checked user-pointer request。V2はclock_id/absolute指定と、wait前にpinするremainder pointerを持つ。 */
 #define RIN_SYS_NANOSLEEP                   63u
 /* NANOSLEEP availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_NANOSLEEP_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
