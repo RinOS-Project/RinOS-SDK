@@ -1383,7 +1383,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 /* GUI_V2_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_GUI_V2_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GUI_V2_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_GUI_V2_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_GUI_V2_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 /* RinNT Win32 targets use a bounded 32-bit stop token for compat32 INT 0x80 return; Win64 native targets retain the 64-bit stop token. */
 #define RIN_SYS_RINNT_EXCEPTION_RETURN      0x800Fu
