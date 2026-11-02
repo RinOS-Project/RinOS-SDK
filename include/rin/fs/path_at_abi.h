@@ -133,6 +133,10 @@ _Static_assert(sizeof(RinPathAtFileIdentityV1) == 32u,
 #define RIN_PATH_AT_RENAME_NOREPLACE 0x0001u
 /* Require RENAME to match the device and inode inspected by the caller. */
 #define RIN_PATH_AT_RENAME_EXPECT_SOURCE_IDENTITY 0x0002u
+/* Linux renameat2 operations. Keep these distinct from the private expected-
+ * source identity bit, which is only valid with NOREPLACE. */
+#define RIN_PATH_AT_RENAME_EXCHANGE 0x0004u
+#define RIN_PATH_AT_RENAME_WHITEOUT 0x0008u
 #define RIN_PATH_AT_EXPECTED_SOURCE_IDENTITY_VERSION 2u
 
 typedef struct RinPathAtExpectedSourceIdentityV2 {
