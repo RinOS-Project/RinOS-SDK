@@ -65,6 +65,7 @@ RIN_SDK_API int rin_audio_write(int handle, const void* samples,
 RIN_SDK_API int rin_audio_control(int handle, uint32_t command,
                                   uintptr_t argument);
 RIN_SDK_API int rin_audio_get_status(int handle, RinAudioStatusV1* status);
+RIN_SDK_API int rin_audio_get_period(int handle, RinAudioPeriodV1* period);
 RIN_SDK_API int rin_audio_wait_period(int handle, uint32_t timeout_ms);
 RIN_SDK_API int rin_audio_close(int handle);
 
