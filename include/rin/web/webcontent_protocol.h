@@ -460,19 +460,24 @@ enum {
 #define RIN_WEBCONTENT_DOWNLOAD_VALIDATOR_MAX UINT32_C(128)
 #define RIN_WEBCONTENT_DOWNLOAD_MAX_BYTES UINT64_C(134217728)
 
-/* Async Clipboard owner bridge. Writes carry one item with multiple
- * representations; reads return bounded chunks. Web custom formats retain
- * their required "web " prefix on this wire. */
+/* Async Clipboard owner bridge. Reads return bounded chunks. Writes use a
+ * metadata begin, ordered bounded chunks, and an atomic commit/abort. Web
+ * custom formats retain their required "web " prefix on this wire. */
 #define RIN_WEBCONTENT_CLIPBOARD_OWNER_VERSION UINT32_C(1)
 #define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_FORMATS UINT32_C(16)
-#define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_DATA_BYTES UINT64_C(16777216)
+#define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_DATA_BYTES UINT64_C(134217728)
 #define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_CHUNK_BYTES UINT32_C(32768)
 #define RIN_WEBCONTENT_CLIPBOARD_OWNER_MAX_MIME_BYTES UINT32_C(131)
 
 enum {
     RIN_WEBCONTENT_CLIPBOARD_OWNER_QUERY = 1,
     RIN_WEBCONTENT_CLIPBOARD_OWNER_READ_CHUNK = 2,
-    RIN_WEBCONTENT_CLIPBOARD_OWNER_WRITE = 3
+    /* Legacy single-message write retained for older WebContent clients. */
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_WRITE = 3,
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_WRITE_BEGIN = 4,
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_WRITE_CHUNK = 5,
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_WRITE_COMMIT = 6,
+    RIN_WEBCONTENT_CLIPBOARD_OWNER_WRITE_ABORT = 7
 };
 
 /* P5-2: ロードフェーズ定数。load_phase に格納。 */
