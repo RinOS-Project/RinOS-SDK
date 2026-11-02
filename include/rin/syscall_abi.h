@@ -1676,12 +1676,12 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_WALLPAPER_LEASE_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_WALLPAPER_LEASE_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* container. */
-/* x86_64 native only; runtime records carry 64-bit addresses and are not exposed through the IA-32 personality. */
+/* x86_64 native and compat32; IA-32 native is unsupported because the product runtime owner requires the x86_64 kernel. */
 #define RIN_SYS_CONTAINER_RUNTIME_CALL      0x8043u
 /* CONTAINER_RUNTIME_CALL availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_CONTAINER_RUNTIME_CALL_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
 #define RIN_SYS_CONTAINER_RUNTIME_CALL_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_CONTAINER_RUNTIME_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_CONTAINER_RUNTIME_CALL_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 #define RIN_SYS_WAITID                      0x8044u
 /* WAITID availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
