@@ -256,6 +256,10 @@ typedef RinDriverV3Result (*RinDriverV3NpuContextCreateFn)(
     uint64_t driver_context, const RinDriverV3NpuContextOwnerV1* owner,
     const RinDriverV3NpuContextConfigV1* config,
     uint64_t* context_handle, uint64_t* context_generation);
+/* Returning OK from context_destroy is the process-lifetime quiesce point:
+ * the driver must stop that context's queues, retire outstanding fences, and
+ * guarantee that no further DMA can reference its buffers. On failure the
+ * kernel retains all host-memory pins and retries teardown. */
 typedef RinDriverV3Result (*RinDriverV3NpuContextDestroyFn)(
     uint64_t driver_context, uint64_t context_handle,
     uint64_t context_generation);
@@ -290,6 +294,8 @@ typedef RinDriverV3Result (*RinDriverV3NpuPollEventsFn)(
 typedef RinDriverV3Result (*RinDriverV3NpuCancelFn)(
     uint64_t driver_context, uint64_t context_handle,
     uint64_t context_generation, RinDriverV3NpuFenceV1 fence);
+/* A successful context-scoped reset must quiesce that context's submissions
+ * before returning; the kernel retires its outstanding fence tokens then. */
 typedef RinDriverV3Result (*RinDriverV3NpuResetFn)(
     uint64_t driver_context, const RinDriverV3NpuResetV1* request);
 typedef RinDriverV3Result (*RinDriverV3NpuSetPowerFn)(
