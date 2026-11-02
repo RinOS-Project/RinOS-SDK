@@ -30,9 +30,11 @@
 #define RTMGRP_IPV6_ROUTE (1u << 10)
 
 /* RinOS serves GETLINK/GETADDR/GETROUTE dumps, route add/delete, link
- * administrative up/down, root-namespace IPv4 address add/replace/delete,
- * and link/address/route multicast snapshots. Link deletion, IPv6 address
- * mutation, and non-root link/address administration remain unsupported. */
+ * administrative up/down, root-namespace IPv4 and IPv6 address
+ * add/replace/delete, and link/address/route multicast snapshots. IPv6 static
+ * addresses pass through NDP duplicate-address detection. Link deletion,
+ * non-root link/address administration, and other link attributes remain
+ * unsupported. */
 #define RIN_RTNL_SUPPORT_GETLINK 1
 #define RIN_RTNL_SUPPORT_GETADDR 1
 #define RIN_RTNL_SUPPORT_GETROUTE 1
@@ -41,6 +43,7 @@
 #define RIN_RTNL_SUPPORT_LINK_ADDRESS_MUTATION 0
 #define RIN_RTNL_SUPPORT_LINK_ADMIN_STATE 1
 #define RIN_RTNL_SUPPORT_IPV4_ADDRESS_MUTATION 1
+#define RIN_RTNL_SUPPORT_IPV6_ADDRESS_MUTATION 1
 
 #define IFLA_UNSPEC 0
 #define IFLA_ADDRESS 1
