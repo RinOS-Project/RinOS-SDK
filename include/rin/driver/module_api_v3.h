@@ -336,6 +336,16 @@ typedef struct RinDriverV3NetPacketV2 {
     uint16_t reserved;
 } RinDriverV3NetPacketV2;
 
+/* Hardware RX checksum results describe this one copied frame only.  A
+ * driver sets a flag only when the device reports a successful checksum and
+ * the descriptor has no corresponding checksum-error/ignore status. */
+typedef struct RinDriverV3NetRxMetadataV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t checksum_flags;
+    uint32_t reserved;
+} RinDriverV3NetRxMetadataV1;
+
 /* NDRV v3 network data is intentionally bounded to one ordinary Ethernet
  * frame.  Receive copies are control-plane calls: the NIC-owned DMA ring
  * never leaks into the network stack as an unvalidated pointer. */
@@ -362,7 +372,12 @@ typedef struct RinDriverV3NetPacketV2 {
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_POINT_TO_POINT UINT32_C(0x00000004)
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_TX_SCATTER_GATHER UINT32_C(0x00000008)
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_TX_CHECKSUM_IPV4 UINT32_C(0x00000010)
-#define RIN_DRIVER_V3_NET_INTERFACE_KNOWN_CAPABILITIES UINT32_C(0x0000001f)
+#define RIN_DRIVER_V3_NET_INTERFACE_CAP_RX_CHECKSUM_IPV4 UINT32_C(0x00000020)
+#define RIN_DRIVER_V3_NET_INTERFACE_KNOWN_CAPABILITIES UINT32_C(0x0000003f)
+#define RIN_DRIVER_V3_NET_RX_METADATA_VERSION UINT32_C(1)
+#define RIN_DRIVER_V3_NET_RX_CHECKSUM_IPV4_HEADER UINT32_C(0x00000001)
+#define RIN_DRIVER_V3_NET_RX_CHECKSUM_IPV4_TRANSPORT UINT32_C(0x00000002)
+#define RIN_DRIVER_V3_NET_RX_CHECKSUM_FLAG_MASK UINT32_C(0x00000003)
 #define RIN_DRIVER_V3_NET_INTERFACE_UNKNOWN UINT32_C(0)
 #define RIN_DRIVER_V3_NET_INTERFACE_OTHER UINT32_C(1)
 #define RIN_DRIVER_V3_NET_INTERFACE_LOOPBACK UINT32_C(2)
@@ -740,6 +755,9 @@ typedef RinDriverV3Result (*RinDriverV3NetPollFn)(
 typedef RinDriverV3Result (*RinDriverV3NetReceiveFn)(
     uint64_t driver_context, void* buffer, uint32_t capacity,
     uint32_t* received);
+typedef RinDriverV3Result (*RinDriverV3NetReceiveV2Fn)(
+    uint64_t driver_context, void* buffer, uint32_t capacity,
+    uint32_t* received, RinDriverV3NetRxMetadataV1* metadata);
 typedef RinDriverV3Result (*RinDriverV3NetGetInfoFn)(
     uint64_t driver_context, RinDriverV3NetInfo* output);
 /* Set only the explicitly supported receive flags. A driver must return an
@@ -1081,6 +1099,19 @@ typedef struct RinDriverV3NetOpsV2 {
 #endif
 } RinDriverV3NetOpsV2;
 
+/* Optional V3 receive metadata extension.  It preserves both earlier table
+ * layouts and is accepted only when registration.operations_size matches. */
+#define RIN_DRIVER_V3_NET_OPS_V3_EXTENSION_VERSION UINT32_C(1)
+typedef struct RinDriverV3NetOpsV3 {
+    RinDriverV3NetOpsV2 base;
+    uint32_t extension_size;
+    uint32_t extension_version;
+    RinDriverV3NetReceiveV2Fn receive_v2;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t receive_v2_padding;
+#endif
+} RinDriverV3NetOpsV3;
+
 typedef struct RinDriverV3AudioOps {
     uint32_t struct_size;
     uint32_t version;
@@ -1280,6 +1311,29 @@ static inline int rin_driver_v3_net_ops_v2_valid(
         return 0;
 #if UINTPTR_MAX == UINT32_MAX
     if (ops->transmit_v2_padding != 0u) return 0;
+#endif
+    return 1;
+}
+
+static inline int rin_driver_v3_net_rx_metadata_valid(
+    const RinDriverV3NetRxMetadataV1* metadata) {
+    return metadata && metadata->struct_size == sizeof(*metadata) &&
+        metadata->version == RIN_DRIVER_V3_NET_RX_METADATA_VERSION &&
+        (metadata->checksum_flags &
+         ~RIN_DRIVER_V3_NET_RX_CHECKSUM_FLAG_MASK) == 0u &&
+        metadata->reserved == 0u;
+}
+
+static inline int rin_driver_v3_net_ops_v3_valid(
+    const RinDriverV3NetOpsV3* ops) {
+    if (!ops || !rin_driver_v3_net_ops_v2_valid(&ops->base) ||
+        ops->extension_size != sizeof(*ops) - sizeof(ops->base) ||
+        ops->extension_version !=
+            RIN_DRIVER_V3_NET_OPS_V3_EXTENSION_VERSION ||
+        !ops->receive_v2)
+        return 0;
+#if UINTPTR_MAX == UINT32_MAX
+    if (ops->receive_v2_padding != 0u) return 0;
 #endif
     return 1;
 }
@@ -1769,6 +1823,9 @@ static_assert(sizeof(RinDriverV3NetOps) == 64u,
               "NDRV v3 network operations ABI drift");
 static_assert(sizeof(RinDriverV3NetOpsV2) == 80u,
               "NDRV v3 network operations V2 ABI drift");
+static_assert(sizeof(RinDriverV3NetRxMetadataV1) == 16u &&
+                  sizeof(RinDriverV3NetOpsV3) == 96u,
+              "NDRV v3 network receive metadata ABI drift");
 static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                   offsetof(RinDriverV3NetOps, poll_rx) == 16u &&
                   offsetof(RinDriverV3NetOps, remove) == 24u &&
@@ -1859,6 +1916,9 @@ _Static_assert(sizeof(RinDriverV3NetOps) == 64u,
                "NDRV v3 network operations ABI drift");
 _Static_assert(sizeof(RinDriverV3NetOpsV2) == 80u,
                "NDRV v3 network operations V2 ABI drift");
+_Static_assert(sizeof(RinDriverV3NetRxMetadataV1) == 16u &&
+                   sizeof(RinDriverV3NetOpsV3) == 96u,
+               "NDRV v3 network receive metadata ABI drift");
 _Static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                    offsetof(RinDriverV3NetOps, poll_rx) == 16u &&
                    offsetof(RinDriverV3NetOps, remove) == 24u &&
