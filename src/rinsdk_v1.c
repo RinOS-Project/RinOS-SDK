@@ -115,6 +115,7 @@ enum {
     NET_TLS_SEND, NET_TLS_RECEIVE, NET_TLS_SHUTDOWN,
     NET_SOCKET_BIND, NET_SOCKET_LISTEN, NET_SOCKET_ACCEPT,
     NET_SOCKET_SHUTDOWN, NET_SOCKET_SEND_TO, NET_SOCKET_RECEIVE_FROM,
+    NET_HTTP_CONNECT_TUNNEL,
     GUI_WINDOW_CREATE = 1, GUI_WINDOW_NEXT_EVENT, GUI_SURFACE_CREATE,
     GUI_WINDOW_PRESENT, GUI_CLIPBOARD_SET, GUI_CLIPBOARD_GET,
     GUI_DIALOG_SHOW, GUI_NOTIFICATION_SHOW,
@@ -1502,7 +1503,7 @@ RinResult rin_socket_recvfrom_v1(RinSocket socket, RinSliceV1 data, uint32_t fla
              sizeof(*received)) ||
          (source_address != NULL && rin_sdk_net_ranges_overlap(
              (uint64_t)(uintptr_t)source_address, sizeof(*source_address),
-             (uint64_t)(uintptr_t)received, sizeof(*received))))))
+             (uint64_t)(uintptr_t)received, sizeof(*received)))))
         return RIN_ERROR_INVALID_ARGUMENT;
     if (received != NULL) *received = 0u;
     if (source_address != NULL &&
@@ -1553,6 +1554,90 @@ RinResult rin_http_execute_v1(const RinHttpRequestV1* request, RinChannel* respo
     return rin_sdk_invoke_handle_output_v1(
         RIN_SDK_LIBRARY_NET, NET_HTTP_EXECUTE, request, sizeof(*request),
         response_stream);
+}
+RinResult rin_http_connect_tunnel_v1(const RinHttpRequestV1* request,
+                                    RinHttpTunnelV1* tunnel) {
+    RinResult result;
+    if (!versioned(request, sizeof(*request)) ||
+        !versioned(tunnel, sizeof(*tunnel)))
+        return RIN_ERROR_ABI_MISMATCH;
+    rin_sdk_zero_bytes(tunnel, sizeof(*tunnel));
+    tunnel->struct_size = sizeof(*tunnel);
+    tunnel->version = RIN_SDK_STRUCT_VERSION_1;
+    tunnel->transport = RIN_HANDLE_INVALID;
+    tunnel->response_stream = RIN_HANDLE_INVALID;
+    result = rin_sdk_invoke_v1(
+        RIN_SDK_LIBRARY_NET, NET_HTTP_CONNECT_TUNNEL,
+        request, sizeof(*request), tunnel, sizeof(*tunnel));
+    result = finalize_versioned_output(result, tunnel, sizeof(*tunnel));
+    if (result == RIN_SUCCESS &&
+        (tunnel->status_code < 200u || tunnel->status_code > 599u ||
+         tunnel->response_stream == RIN_HANDLE_INVALID ||
+         ((tunnel->status_code >= 200u && tunnel->status_code < 300u) &&
+          (tunnel->transport == RIN_HANDLE_INVALID ||
+           (tunnel->transport_kind != RIN_HTTP_TUNNEL_TRANSPORT_SOCKET &&
+            tunnel->transport_kind != RIN_HTTP_TUNNEL_TRANSPORT_TLS))) ||
+         ((tunnel->status_code < 200u || tunnel->status_code >= 300u) &&
+          (tunnel->transport != RIN_HANDLE_INVALID ||
+           tunnel->transport_kind != RIN_HTTP_TUNNEL_TRANSPORT_NONE)))) {
+        (void)rin_http_tunnel_close_v1(tunnel);
+        reset_versioned_output(tunnel, sizeof(*tunnel));
+        result = RIN_ERROR_ABI_MISMATCH;
+    }
+    return result;
+}
+RinResult rin_http_tunnel_send_v1(const RinHttpTunnelV1* tunnel,
+                                 RinSliceV1 data, uint64_t* sent) {
+    if (!versioned(tunnel, sizeof(*tunnel)) ||
+        tunnel->transport == RIN_HANDLE_INVALID ||
+        tunnel->status_code < 200u || tunnel->status_code >= 300u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (tunnel->transport_kind == RIN_HTTP_TUNNEL_TRANSPORT_SOCKET)
+        return rin_socket_send_v1((RinSocket)tunnel->transport, data, 0u,
+                                  sent);
+    if (tunnel->transport_kind == RIN_HTTP_TUNNEL_TRANSPORT_TLS)
+        return rin_tls_send_v1((RinTlsSession)tunnel->transport, data, 0u,
+                               sent);
+    if (sent != NULL) *sent = 0u;
+    return RIN_ERROR_ABI_MISMATCH;
+}
+RinResult rin_http_tunnel_receive_v1(const RinHttpTunnelV1* tunnel,
+                                    RinSliceV1 data, uint64_t* received) {
+    if (!versioned(tunnel, sizeof(*tunnel)) ||
+        tunnel->transport == RIN_HANDLE_INVALID ||
+        tunnel->status_code < 200u || tunnel->status_code >= 300u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    if (tunnel->transport_kind == RIN_HTTP_TUNNEL_TRANSPORT_SOCKET)
+        return rin_socket_receive_v1((RinSocket)tunnel->transport, data, 0u,
+                                     received);
+    if (tunnel->transport_kind == RIN_HTTP_TUNNEL_TRANSPORT_TLS)
+        return rin_tls_receive_v1((RinTlsSession)tunnel->transport, data, 0u,
+                                  received);
+    if (received != NULL) *received = 0u;
+    return RIN_ERROR_ABI_MISMATCH;
+}
+RinResult rin_http_tunnel_close_v1(RinHttpTunnelV1* tunnel) {
+    RinResult first_error = RIN_SUCCESS;
+    RinResult result;
+    if (!versioned(tunnel, sizeof(*tunnel)))
+        return RIN_ERROR_ABI_MISMATCH;
+    if (tunnel->transport != RIN_HANDLE_INVALID) {
+        result = rin_object_close_v1(tunnel->transport);
+        if (result == RIN_SUCCESS || result == RIN_ERROR_STALE_HANDLE) {
+            tunnel->transport = RIN_HANDLE_INVALID;
+            tunnel->transport_kind = RIN_HTTP_TUNNEL_TRANSPORT_NONE;
+        } else {
+            first_error = result;
+        }
+    }
+    if (tunnel->response_stream != RIN_HANDLE_INVALID) {
+        result = rin_object_close_v1(tunnel->response_stream);
+        if (result == RIN_SUCCESS || result == RIN_ERROR_STALE_HANDLE)
+            tunnel->response_stream = RIN_HANDLE_INVALID;
+        else if (first_error == RIN_SUCCESS)
+            first_error = result;
+    }
+    return first_error;
 }
 RinResult rin_tls_send_v1(RinTlsSession session, RinSliceV1 data, uint32_t flags, uint64_t* sent) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_TLS_SEND, sent, session,data.address,data.size,flags,0,0); }
 RinResult rin_tls_receive_v1(RinTlsSession session, RinSliceV1 data, uint32_t flags, uint64_t* received) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_NET, NET_TLS_RECEIVE, received, session,data.address,data.size,flags,0,0); }

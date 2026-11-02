@@ -852,6 +852,17 @@ http_execute(const RinHttpRequestV1& request) noexcept {
     return {rin_http_execute_v1(&request, &stream), stream};
 }
 
+[[nodiscard]] inline outcome<RinHttpTunnelV1>
+http_connect_tunnel(const RinHttpRequestV1& request) noexcept {
+    auto tunnel = versioned<RinHttpTunnelV1>();
+    return {rin_http_connect_tunnel_v1(&request, &tunnel), tunnel};
+}
+
+[[nodiscard]] inline status
+http_tunnel_close(RinHttpTunnelV1& tunnel) noexcept {
+    return status{rin_http_tunnel_close_v1(&tunnel)};
+}
+
 [[nodiscard]] inline outcome<RinWindow>
 window_create(const RinWindowCreateV1& request) noexcept {
     RinWindow window = RIN_HANDLE_INVALID;

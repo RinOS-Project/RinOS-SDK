@@ -85,6 +85,29 @@ typedef struct RinHttpRequestV1 {
     uint64_t reserved[3];
 } RinHttpRequestV1;
 
+/* HTTP CONNECT opens a bounded HTTP/1.1 tunnel through `request.url`. The
+ * request method must be CONNECT and its body must be empty. `response_stream`
+ * receives the raw interim/final response; for a 2xx status it contains only
+ * response headers, so bytes after the header delimiter remain available to
+ * the tunnel reader. A non-2xx result has no transport and retains ordinary
+ * HTTP response framing in the channel. The transport handle is generation
+ * bound and is either a socket or TLS session selected by `transport_kind`. */
+enum {
+    RIN_HTTP_TUNNEL_TRANSPORT_NONE = 0,
+    RIN_HTTP_TUNNEL_TRANSPORT_SOCKET = 1,
+    RIN_HTTP_TUNNEL_TRANSPORT_TLS = 2
+};
+
+typedef struct RinHttpTunnelV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t status_code;
+    uint32_t transport_kind;
+    RinObject transport;
+    RinChannel response_stream;
+    uint64_t reserved[2];
+} RinHttpTunnelV1;
+
 typedef struct RinSocketAcceptV1 {
     uint32_t struct_size;
     uint32_t version;
@@ -109,6 +132,10 @@ RIN_SDK_API RinResult rin_socket_recvfrom_v1(RinSocket socket, RinSliceV1 data, 
 RIN_SDK_API RinResult rin_dns_resolve_v1(RinStringV1 host, RinStringV1 service, RinSliceV1 results, uint64_t* count);
 RIN_SDK_API RinResult rin_tls_connect_v1(RinSocket socket, RinStringV1 server_name, uint32_t flags, RinTlsSession* session);
 RIN_SDK_API RinResult rin_http_execute_v1(const RinHttpRequestV1* request, RinChannel* response_stream);
+RIN_SDK_API RinResult rin_http_connect_tunnel_v1(const RinHttpRequestV1* request, RinHttpTunnelV1* tunnel);
+RIN_SDK_API RinResult rin_http_tunnel_send_v1(const RinHttpTunnelV1* tunnel, RinSliceV1 data, uint64_t* sent);
+RIN_SDK_API RinResult rin_http_tunnel_receive_v1(const RinHttpTunnelV1* tunnel, RinSliceV1 data, uint64_t* received);
+RIN_SDK_API RinResult rin_http_tunnel_close_v1(RinHttpTunnelV1* tunnel);
 RIN_SDK_API RinResult rin_tls_send_v1(RinTlsSession session, RinSliceV1 data, uint32_t flags, uint64_t* sent);
 RIN_SDK_API RinResult rin_tls_receive_v1(RinTlsSession session, RinSliceV1 data, uint32_t flags, uint64_t* received);
 RIN_SDK_API RinResult rin_tls_shutdown_v1(RinTlsSession session, uint32_t flags);
