@@ -1465,7 +1465,8 @@ static inline int rin_driver_v3_net_info_valid(
              info->link_speed_mbps != 10u &&
              info->link_speed_mbps != 100u &&
              info->link_speed_mbps != 1000u &&
-             info->link_speed_mbps != 2500u) ||
+             info->link_speed_mbps != 2500u &&
+             info->link_speed_mbps != 5000u) ||
             (info->link_speed_mbps != 0u &&
              (info->flags & (RIN_DRIVER_V3_NET_LINK_KNOWN |
                              RIN_DRIVER_V3_NET_LINK_UP)) !=
