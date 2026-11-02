@@ -116,8 +116,13 @@ typedef enum RinNTServiceRawInputEventTypeV1 {
     RINNT_SERVICE_RAW_INPUT_EVENT_MOUSE_HORIZONTAL_WHEEL = 6,
     RINNT_SERVICE_RAW_INPUT_EVENT_MOUSE_ABSOLUTE = 7,
     RINNT_SERVICE_RAW_INPUT_EVENT_HID_REPORT = 8,
-    RINNT_SERVICE_RAW_INPUT_EVENT_HID_SENSOR_SAMPLE = 9
+    RINNT_SERVICE_RAW_INPUT_EVENT_HID_SENSOR_SAMPLE = 9,
+    RINNT_SERVICE_RAW_INPUT_EVENT_DEVICE_RESET = 10
 } RinNTServiceRawInputEventTypeV1;
+
+#define RINNT_SERVICE_RAW_INPUT_RESET_REASON_REMOVED UINT32_C(1)
+#define RINNT_SERVICE_RAW_INPUT_RESET_REASON_OVERFLOW UINT32_C(2)
+#define RINNT_SERVICE_RAW_INPUT_RESET_REASON_REVOKED UINT32_C(3)
 
 /* HID sensor sample metadata is packed into NativeEvent.flags; data[0] is the
  * sensor type, data[1..3] are the logical values, data[4] is the HID Unit and
@@ -525,7 +530,12 @@ typedef struct RinNTServiceRawInputReadRequestV1 {
  * WHEEL/HORIZONTAL_WHEEL: signed delta, then zeroes.
  * ABSOLUTE: x, y, minimum x, maximum x, minimum y, maximum y.
  * HID_REPORT: byte length 1..20, then five little-endian packed report
- * words.  Bytes after the declared length must be zero. */
+ * words. Bytes after the declared length must be zero.
+ * DEVICE_RESET: flags is a nonzero raw input class mask and data[0] is a
+ * RINNT_SERVICE_RAW_INPUT_RESET_REASON_* value; data[1..5] are zero. A
+ * removal/revocation carries the removed device handle and generation. An
+ * overflow reset has both identity fields zero and clears state for every
+ * requested class through this sequence. */
 typedef struct RinNTServiceRawInputEventResponseV1 {
     uint32_t struct_size;
     uint32_t version;
