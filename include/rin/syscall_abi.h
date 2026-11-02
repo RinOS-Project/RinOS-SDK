@@ -1351,7 +1351,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 /* DISPLAY_APPLY_CONFIG availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_DISPLAY_APPLY_CONFIG_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_DISPLAY_APPLY_CONFIG_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-#define RIN_SYS_DISPLAY_APPLY_CONFIG_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_UNSUPPORTED
+#define RIN_SYS_DISPLAY_APPLY_CONFIG_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* power. */
 #define RIN_SYS_POWER_GET_SETTINGS          0x8009u
 /* POWER_GET_SETTINGS availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
