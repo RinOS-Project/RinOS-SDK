@@ -107,6 +107,8 @@ enum {
     FS_PATH_MKDIR = RIN_FS_OPERATION_PATH_MKDIR,
     FS_PATH_UNLINK = RIN_FS_OPERATION_PATH_UNLINK,
     FS_PATH_RENAME = RIN_FS_OPERATION_PATH_RENAME,
+    FS_PATH_RENAME_IF_NEWER =
+        RIN_FS_OPERATION_PATH_RENAME_IF_NEWER,
     FS_PORTAL_OPEN = RIN_FS_OPERATION_PORTAL_OPEN,
     FS_DIRECTORY_NEXT_BATCH = RIN_FS_OPERATION_DIRECTORY_NEXT_BATCH,
     FS_FILE_STAT = RIN_FS_OPERATION_FILE_STAT,
@@ -1430,6 +1432,19 @@ RinResult rin_path_rename_v1(const RinFsPathRequestV1* request) {
         request->reserved[1] != 0u)
         return RIN_ERROR_INVALID_ARGUMENT;
     return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PATH_RENAME,
+                             request, sizeof(*request), NULL, 0u);
+}
+RinResult rin_path_rename_if_newer_v1(
+    const RinFsPathRequestV1* request) {
+    if (!versioned(request, sizeof(*request)) ||
+        request->directory != RIN_HANDLE_INVALID ||
+        request->secondary_directory != RIN_HANDLE_INVALID ||
+        request->path.address == 0u || request->path.size == 0u ||
+        request->secondary_path.address == 0u ||
+        request->secondary_path.size == 0u || request->flags != 0u ||
+        request->mode != 0u || request->reserved[1] != 0u)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    return rin_sdk_invoke_v1(RIN_SDK_LIBRARY_FS, FS_PATH_RENAME_IF_NEWER,
                              request, sizeof(*request), NULL, 0u);
 }
 RinResult rin_fs_portal_open_v1(const RinFsPortalOpenV1* request,

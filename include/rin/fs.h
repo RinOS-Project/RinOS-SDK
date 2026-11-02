@@ -35,7 +35,8 @@ enum {
     RIN_FS_OPERATION_PATH_RENAME = 23,
     RIN_FS_OPERATION_PORTAL_OPEN = 24,
     RIN_FS_OPERATION_DIRECTORY_NEXT_BATCH = 25,
-    RIN_FS_OPERATION_FILE_STAT = 26
+    RIN_FS_OPERATION_FILE_STAT = 26,
+    RIN_FS_OPERATION_PATH_RENAME_IF_NEWER = 27
 };
 
 #define RIN_FS_PATH_UNLINK_DIRECTORY UINT32_C(1)
@@ -104,6 +105,8 @@ typedef struct RinFsPathRequestV1 {
     RinStringV1 secondary_path;
     uint32_t flags;
     uint32_t mode;
+    /* PATH_RENAME_IF_NEWER uses reserved[0] for the source mtime in seconds;
+     * all other operations require both words to be zero. */
     uint64_t reserved[2];
 } RinFsPathRequestV1;
 
@@ -236,6 +239,11 @@ RIN_SDK_API RinResult rin_path_stat_v1(const RinFsPathRequestV1* request, RinFil
 RIN_SDK_API RinResult rin_path_mkdir_v1(const RinFsPathRequestV1* request);
 RIN_SDK_API RinResult rin_path_unlink_v1(const RinFsPathRequestV1* request);
 RIN_SDK_API RinResult rin_path_rename_v1(const RinFsPathRequestV1* request);
+/* Atomically replaces the destination only when its mtime is older than the
+ * source mtime. RIN_ERROR_EXISTS means the destination was retained. This
+ * operation accepts path-based requests without directory handles. */
+RIN_SDK_API RinResult rin_path_rename_if_newer_v1(
+    const RinFsPathRequestV1* request);
 RIN_SDK_API RinResult rin_fs_portal_open_v1(const RinFsPortalOpenV1* request,
                                             uint64_t* handle);
 #endif /* !RIN_SDK_KERNEL_INTERNAL_ABI */
