@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "../syscall_abi.h"
+#include <sys/syscall.h>
 
 #ifndef RIN_DISPLAY_CONFIG_DEFINED
 #define RIN_DISPLAY_CONFIG_DEFINED 1
@@ -50,6 +51,32 @@ typedef struct RinPowerSettings {
     int low_battery_percent;
 } RinPowerSettings;
 #endif
+
+/* Typed clients for the display and power settings syscalls. Results preserve
+ * the syscall ABI: zero on success, otherwise a negative errno value. */
+static inline intptr_t rin_display_config_get_v1(
+    RinDisplayConfig* config)
+{
+    return (intptr_t)syscall(RIN_SYS_DISPLAY_GET_CONFIG, config);
+}
+
+static inline intptr_t rin_display_config_apply_v1(
+    const RinDisplayConfig* config)
+{
+    return (intptr_t)syscall(RIN_SYS_DISPLAY_APPLY_CONFIG, config);
+}
+
+static inline intptr_t rin_power_settings_get_v1(
+    RinPowerSettings* settings)
+{
+    return (intptr_t)syscall(RIN_SYS_POWER_GET_SETTINGS, settings);
+}
+
+static inline intptr_t rin_power_settings_set_v1(
+    const RinPowerSettings* settings)
+{
+    return (intptr_t)syscall(RIN_SYS_POWER_SET_SETTINGS, settings);
+}
 
 #define RIN_POWER_STATUS_VERSION_1 1u
 #define RIN_POWER_STATUS_VERSION_2 2u
@@ -126,10 +153,10 @@ typedef struct RinPowerStatusV2 {
 #define RIN_POWER_EVENT_BATTERY_DISCONNECTED 13u
 #define RIN_POWER_EVENT_DOCK_CONNECTED 14u
 #define RIN_POWER_EVENT_DOCK_DISCONNECTED 15u
-/* ACPI thermal-zone _TMP reached or exceeded _CRT; shutdown is requested. */
-#define RIN_POWER_EVENT_THERMAL_CRITICAL 17u
 /* ACPI PNP0C0C power-button press (kernel applies power_button_action). */
 #define RIN_POWER_EVENT_POWER_BUTTON 16u
+/* ACPI thermal-zone _TMP reached or exceeded _CRT; shutdown is requested. */
+#define RIN_POWER_EVENT_THERMAL_CRITICAL 17u
 typedef struct RinPowerEventPollV1 {
     uint32_t struct_size;
     uint32_t version;
