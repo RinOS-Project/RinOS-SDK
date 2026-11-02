@@ -8,6 +8,9 @@
 extern "C" {
 #endif
 
+/* `port` is host byte order. `address` contains network-order address bytes:
+ * IPv4 uses the first 4 bytes and requires the rest to be zero; IPv6 uses all
+ * 16 bytes. `scope_id` is IPv6-only and must be zero for IPv4. */
 typedef struct RinSocketAddressV1 {
     uint32_t struct_size;
     uint32_t version;
