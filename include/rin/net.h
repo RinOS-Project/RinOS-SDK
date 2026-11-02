@@ -18,6 +18,24 @@ typedef struct RinSocketAddressV1 {
     uint64_t reserved[2];
 } RinSocketAddressV1;
 
+/* rin_socket_create_v1() domain, type, and protocol values. Address family
+ * fields in RinSocketAddressV1 use the same INET/INET6 values. Socket flags
+ * are ORed into the type; raw sockets currently support only IPv6 ICMP. */
+enum {
+    RIN_NET_DOMAIN_INET = UINT32_C(2),
+    RIN_NET_DOMAIN_INET6 = UINT32_C(10),
+    RIN_NET_SOCKET_TYPE_STREAM = UINT32_C(1),
+    RIN_NET_SOCKET_TYPE_DGRAM = UINT32_C(2),
+    RIN_NET_SOCKET_TYPE_RAW = UINT32_C(3),
+    RIN_NET_SOCKET_FLAG_NONBLOCK = UINT32_C(0x00000800),
+    RIN_NET_SOCKET_FLAG_CLOEXEC = UINT32_C(0x00080000),
+    RIN_NET_PROTOCOL_DEFAULT = UINT32_C(0),
+    RIN_NET_PROTOCOL_ICMP = UINT32_C(1),
+    RIN_NET_PROTOCOL_TCP = UINT32_C(6),
+    RIN_NET_PROTOCOL_UDP = UINT32_C(17),
+    RIN_NET_PROTOCOL_ICMPV6 = UINT32_C(58),
+};
+
 enum {
     RIN_NET_SOCKET_IO_PEEK = UINT32_C(0x00000001),
     RIN_NET_SOCKET_IO_WAIT_ALL = UINT32_C(0x00000002),
