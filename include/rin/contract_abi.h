@@ -556,6 +556,8 @@ typedef int32_t RinResultCode;
 #define RIN_INPUT_EVENT_TEXT_COMMIT          5u
 #define RIN_INPUT_EVENT_POINTER_WHEEL        6u
 #define RIN_INPUT_EVENT_FOCUS                7u /* reserved */
+/* Consumers must clear held key, modifier, pointer-button, and repeat state. */
+#define RIN_INPUT_EVENT_DEVICE_RESET         8u
 
 /* Control IDs use group in bits 31..16 and operation in bits 15..0. */
 #define RIN_CONTROL_GROUP_OBJECT           1u
