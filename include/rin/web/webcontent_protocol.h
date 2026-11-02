@@ -510,6 +510,8 @@ typedef struct RinWebContentClipboardOwnerRequestV1 {
     uint32_t format_count;
     uint32_t format_index;
     uint32_t chunk_size;
+    /* Clipboard snapshot generation for READ_CHUNK; write transaction ID
+     * for WRITE_CHUNK, WRITE_COMMIT, and WRITE_ABORT. */
     uint64_t generation;
     uint64_t offset;
     uint64_t frame_identity;
