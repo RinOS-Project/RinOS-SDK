@@ -27,6 +27,17 @@ enum {
                                   RIN_NET_SOCKET_IO_DONT_WAIT
 };
 
+/* rin_socket_shutdown_v1() takes a shutdown mode (matching POSIX SHUT_*),
+ * not a bitmask. */
+enum {
+    RIN_NET_SOCKET_SHUTDOWN_RECEIVE = UINT32_C(0),
+    RIN_NET_SOCKET_SHUTDOWN_SEND = UINT32_C(1),
+    RIN_NET_SOCKET_SHUTDOWN_BOTH = UINT32_C(2)
+};
+
+/* TLS shutdown sends close_notify. Version 1 has no shutdown options. */
+#define RIN_NET_TLS_SHUTDOWN_FLAGS_NONE UINT32_C(0)
+
 /* TCP listen() accepts zero as the default backlog and caps requests above
  * the system maximum. POSIX callers pass a signed value and reject negatives. */
 #define RIN_NET_TCP_LISTEN_BACKLOG_DEFAULT UINT32_C(128)
@@ -72,7 +83,7 @@ RIN_SDK_API RinResult rin_tls_shutdown_v1(RinTlsSession session, uint32_t flags)
 RIN_SDK_API RinResult rin_socket_bind_v1(RinSocket socket, const RinSocketAddressV1* address);
 RIN_SDK_API RinResult rin_socket_listen_v1(RinSocket socket, uint32_t backlog);
 RIN_SDK_API RinResult rin_socket_accept_v1(RinSocket socket, uint64_t timeout_ns, RinSocketAcceptV1* accepted);
-RIN_SDK_API RinResult rin_socket_shutdown_v1(RinSocket socket, uint32_t flags);
+RIN_SDK_API RinResult rin_socket_shutdown_v1(RinSocket socket, uint32_t how);
 
 #ifdef __cplusplus
 }
