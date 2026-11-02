@@ -10,6 +10,40 @@
 #include "abi.h"
 #include "../syscall_abi.h"
 
+#define RIN_TIMERFD_SET_ABI_VERSION 2u
+
+/* timerfd_settime request with a signed timespec value. Keeping the deadline
+ * in seconds/nanoseconds preserves CLOCK_REALTIME values before the Unix
+ * epoch and lets the kernel distinguish an absolute zero disarm from a
+ * nonzero negative deadline. */
+typedef struct RinTimerFdSetSpecV2 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    int64_t value_sec;
+    int64_t value_nsec;
+    uint64_t interval_ns;
+    uint64_t reserved0;
+} RinTimerFdSetSpecV2;
+
+static inline int rin_timerfd_set_spec_v2_valid(
+    const RinTimerFdSetSpecV2* value)
+{
+    return value != 0 && value->struct_size == sizeof(*value) &&
+           value->version == RIN_TIMERFD_SET_ABI_VERSION &&
+           value->flags == 0u && value->value_nsec >= 0 &&
+           value->value_nsec < INT64_C(1000000000) &&
+           value->reserved0 == 0u;
+}
+
+#if !defined(MIDL_PASS) && defined(__cplusplus)
+static_assert(sizeof(RinTimerFdSetSpecV2) == 40u,
+              "RinTimerFdSetSpecV2 ABI drift");
+#elif !defined(MIDL_PASS)
+_Static_assert(sizeof(RinTimerFdSetSpecV2) == 40u,
+               "RinTimerFdSetSpecV2 ABI drift");
+#endif
+
 #ifndef MIDL_PASS
 static inline int rin_timer_create_v1_valid(const RinTimerCreateV1* value)
 {
