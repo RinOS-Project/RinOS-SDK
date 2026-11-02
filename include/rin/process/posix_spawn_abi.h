@@ -5,6 +5,7 @@
 #define RIN_SDK_POSIX_SPAWN_ABI_H
 
 #include <stdint.h>
+#include <rin/contract_abi.h>
 
 #define RIN_POSIX_SPAWN_ACTION_ABI_VERSION 1u
 #define RIN_POSIX_SPAWN_ACTION_MAX 32u
@@ -16,26 +17,8 @@
 #define RIN_POSIX_SPAWN_ACTION_DUP2  3u
 #define RIN_POSIX_SPAWN_ACTION_ATTRIBUTES 4u
 
-#define RIN_POSIX_SPAWN_PIDFD_REQUEST_VERSION 1u
-
 /* Optional pidfd result. The kernel registers the child handle and writes it
  * here before making the child runnable. */
-typedef struct RinPosixSpawnPidFdRequestV1 {
-    uint32_t struct_size;
-    uint16_t version;
-    uint16_t reserved;
-    uint32_t spawn_flags;
-    int32_t pidfd;
-} RinPosixSpawnPidFdRequestV1;
-
-#if defined(__cplusplus)
-static_assert(sizeof(RinPosixSpawnPidFdRequestV1) == 16u,
-              "RinPosixSpawnPidFdRequestV1 ABI size");
-#else
-_Static_assert(sizeof(RinPosixSpawnPidFdRequestV1) == 16u,
-               "RinPosixSpawnPidFdRequestV1 ABI size");
-#endif
-
 #define RIN_POSIX_SPAWN_ATTRIBUTE_ABI_VERSION 1u
 #define RIN_POSIX_SPAWN_ATTRIBUTE_SETPGROUP  UINT32_C(0x00000001)
 #define RIN_POSIX_SPAWN_ATTRIBUTE_SETSIGDEF  UINT32_C(0x00000002)
@@ -71,9 +54,6 @@ _Static_assert(sizeof(RinPosixSpawnAttributesV1) == 40u,
  * use the reserved attributes action record below, preserving the fixed
  * six-word syscall ABI.  Scheduler policy/priority use the same payload and
  * are applied by the child scheduler owner before activation. */
-#define RIN_POSIX_SPAWN_FLAG_RESETIDS 1u
-#define RIN_POSIX_SPAWN_FLAG_SETSID 2u
-
 /* The record contains no target-width long or pointer.  The kernel receives
  * an array of these records through the six-word spawn syscall and validates
  * every unused byte in path before mutating the blocked child. */

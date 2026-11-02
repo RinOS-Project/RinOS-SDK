@@ -205,6 +205,9 @@ typedef int32_t RinResultCode;
 #define RIN_EXCEPTION_STOP_STATE_HANDLER_RETURNED 2u
 #define RIN_EXCEPTION_STOP_NO_RETURN_CODE   0xFFFFFFFFu
 #define RIN_SPAWN_FLAG_SUSPENDED            1u
+#define RIN_POSIX_SPAWN_PIDFD_REQUEST_VERSION 1u
+#define RIN_POSIX_SPAWN_FLAG_RESETIDS       1u
+#define RIN_POSIX_SPAWN_FLAG_SETSID         2u
 #define RIN_THREAD_CREATE_FLAG_SUSPENDED    0x40000000u
 #define RIN_GUI_V2_VERSION                  2u
 #define RIN_GUI_V2_OPERATION_CREATE         1u
@@ -1789,6 +1792,19 @@ typedef struct RinShmProtectV1 {
     uint32_t reserved1;
 } RinShmProtectV1;
 
+#ifndef RIN_SDK_POSIX_SPAWN_PIDFD_ABI_DEFINED
+#define RIN_SDK_POSIX_SPAWN_PIDFD_ABI_DEFINED
+/* SPAWN_PROCESS_ACTIONS_PIDFDの固定幅request。pidfdは入力時-1、成功時に子プロセスのdescriptorを返す。 */
+typedef struct RinPosixSpawnPidFdRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved;
+    uint32_t spawn_flags;
+    int32_t pidfd;
+} RinPosixSpawnPidFdRequestV1;
+
+#endif /* RIN_SDK_POSIX_SPAWN_PIDFD_ABI_DEFINED */
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinDlAddrRllRecordV1) == 240, "RinDlAddrRllRecordV1 ABI drift");
 static_assert(offsetof(RinDlAddrRllRecordV1, abi_version) == 0, "RinDlAddrRllRecordV1.abi_version ABI drift");
@@ -2798,6 +2814,12 @@ static_assert(offsetof(RinShmProtectV1, address) == 8, "RinShmProtectV1.address 
 static_assert(offsetof(RinShmProtectV1, size) == 16, "RinShmProtectV1.size ABI drift");
 static_assert(offsetof(RinShmProtectV1, protection) == 24, "RinShmProtectV1.protection ABI drift");
 static_assert(offsetof(RinShmProtectV1, reserved1) == 28, "RinShmProtectV1.reserved1 ABI drift");
+static_assert(sizeof(RinPosixSpawnPidFdRequestV1) == 16, "RinPosixSpawnPidFdRequestV1 ABI drift");
+static_assert(offsetof(RinPosixSpawnPidFdRequestV1, struct_size) == 0, "RinPosixSpawnPidFdRequestV1.struct_size ABI drift");
+static_assert(offsetof(RinPosixSpawnPidFdRequestV1, version) == 4, "RinPosixSpawnPidFdRequestV1.version ABI drift");
+static_assert(offsetof(RinPosixSpawnPidFdRequestV1, reserved) == 6, "RinPosixSpawnPidFdRequestV1.reserved ABI drift");
+static_assert(offsetof(RinPosixSpawnPidFdRequestV1, spawn_flags) == 8, "RinPosixSpawnPidFdRequestV1.spawn_flags ABI drift");
+static_assert(offsetof(RinPosixSpawnPidFdRequestV1, pidfd) == 12, "RinPosixSpawnPidFdRequestV1.pidfd ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinDlAddrRllRecordV1) == 240, "RinDlAddrRllRecordV1 ABI drift");
 _Static_assert(offsetof(RinDlAddrRllRecordV1, abi_version) == 0, "RinDlAddrRllRecordV1.abi_version ABI drift");
@@ -3807,6 +3829,12 @@ _Static_assert(offsetof(RinShmProtectV1, address) == 8, "RinShmProtectV1.address
 _Static_assert(offsetof(RinShmProtectV1, size) == 16, "RinShmProtectV1.size ABI drift");
 _Static_assert(offsetof(RinShmProtectV1, protection) == 24, "RinShmProtectV1.protection ABI drift");
 _Static_assert(offsetof(RinShmProtectV1, reserved1) == 28, "RinShmProtectV1.reserved1 ABI drift");
+_Static_assert(sizeof(RinPosixSpawnPidFdRequestV1) == 16, "RinPosixSpawnPidFdRequestV1 ABI drift");
+_Static_assert(offsetof(RinPosixSpawnPidFdRequestV1, struct_size) == 0, "RinPosixSpawnPidFdRequestV1.struct_size ABI drift");
+_Static_assert(offsetof(RinPosixSpawnPidFdRequestV1, version) == 4, "RinPosixSpawnPidFdRequestV1.version ABI drift");
+_Static_assert(offsetof(RinPosixSpawnPidFdRequestV1, reserved) == 6, "RinPosixSpawnPidFdRequestV1.reserved ABI drift");
+_Static_assert(offsetof(RinPosixSpawnPidFdRequestV1, spawn_flags) == 8, "RinPosixSpawnPidFdRequestV1.spawn_flags ABI drift");
+_Static_assert(offsetof(RinPosixSpawnPidFdRequestV1, pidfd) == 12, "RinPosixSpawnPidFdRequestV1.pidfd ABI drift");
 #endif
 
 #endif /* RIN_SDK_CONTRACT_ABI_H */
