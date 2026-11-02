@@ -112,6 +112,8 @@ typedef int32_t RinResultCode;
 #define RIN_SUPPLEMENTARY_GROUPS_VERSION    1u
 #define RIN_SUPPLEMENTARY_GROUPS_OPERATION_SET 1u
 #define RIN_SUPPLEMENTARY_GROUPS_USER_VERSION 2u
+#define RIN_SUPPLEMENTARY_GROUPS_USER_VERSION_3 3u
+#define RIN_SUPPLEMENTARY_GROUPS_USER_V3_FLAG_SIGNED_GID 1u
 #define RIN_SUPPLEMENTARY_GROUPS_OPERATION_GET 2u
 #define RIN_ACCOUNT_QUERY_VERSION           1u
 #define RIN_ACCOUNT_INFO_VERSION            1u
@@ -805,6 +807,20 @@ typedef struct RinSupplementaryGroupsUserV2 {
     uint64_t groups_address;
     uint64_t reserved;
 } RinSupplementaryGroupsUserV2;
+
+/* Width-aware user array request for hosts whose gid_t is not uint32_t.
+ * The kernel copies the complete byte range before decoding any value. */
+typedef struct RinSupplementaryGroupsUserV3 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t operation;
+    uint32_t target_uid;
+    uint32_t group_count;
+    uint64_t groups_address;
+    uint32_t group_element_size;
+    uint32_t group_flags;
+    uint64_t reserved;
+} RinSupplementaryGroupsUserV3;
 
 typedef struct RinAccountQueryV1 {
     uint32_t struct_size;
@@ -1959,6 +1975,16 @@ static_assert(offsetof(RinSupplementaryGroupsUserV2, target_uid) == 8, "RinSuppl
 static_assert(offsetof(RinSupplementaryGroupsUserV2, group_count) == 12, "RinSupplementaryGroupsUserV2.group_count ABI drift");
 static_assert(offsetof(RinSupplementaryGroupsUserV2, groups_address) == 16, "RinSupplementaryGroupsUserV2.groups_address ABI drift");
 static_assert(offsetof(RinSupplementaryGroupsUserV2, reserved) == 24, "RinSupplementaryGroupsUserV2.reserved ABI drift");
+static_assert(sizeof(RinSupplementaryGroupsUserV3) == 40, "RinSupplementaryGroupsUserV3 ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV3, struct_size) == 0, "RinSupplementaryGroupsUserV3.struct_size ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV3, version) == 4, "RinSupplementaryGroupsUserV3.version ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV3, operation) == 6, "RinSupplementaryGroupsUserV3.operation ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV3, target_uid) == 8, "RinSupplementaryGroupsUserV3.target_uid ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV3, group_count) == 12, "RinSupplementaryGroupsUserV3.group_count ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV3, groups_address) == 16, "RinSupplementaryGroupsUserV3.groups_address ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV3, group_element_size) == 24, "RinSupplementaryGroupsUserV3.group_element_size ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV3, group_flags) == 28, "RinSupplementaryGroupsUserV3.group_flags ABI drift");
+static_assert(offsetof(RinSupplementaryGroupsUserV3, reserved) == 32, "RinSupplementaryGroupsUserV3.reserved ABI drift");
 static_assert(sizeof(RinAccountQueryV1) == 56, "RinAccountQueryV1 ABI drift");
 static_assert(offsetof(RinAccountQueryV1, struct_size) == 0, "RinAccountQueryV1.struct_size ABI drift");
 static_assert(offsetof(RinAccountQueryV1, version) == 4, "RinAccountQueryV1.version ABI drift");
@@ -2958,6 +2984,16 @@ _Static_assert(offsetof(RinSupplementaryGroupsUserV2, target_uid) == 8, "RinSupp
 _Static_assert(offsetof(RinSupplementaryGroupsUserV2, group_count) == 12, "RinSupplementaryGroupsUserV2.group_count ABI drift");
 _Static_assert(offsetof(RinSupplementaryGroupsUserV2, groups_address) == 16, "RinSupplementaryGroupsUserV2.groups_address ABI drift");
 _Static_assert(offsetof(RinSupplementaryGroupsUserV2, reserved) == 24, "RinSupplementaryGroupsUserV2.reserved ABI drift");
+_Static_assert(sizeof(RinSupplementaryGroupsUserV3) == 40, "RinSupplementaryGroupsUserV3 ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV3, struct_size) == 0, "RinSupplementaryGroupsUserV3.struct_size ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV3, version) == 4, "RinSupplementaryGroupsUserV3.version ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV3, operation) == 6, "RinSupplementaryGroupsUserV3.operation ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV3, target_uid) == 8, "RinSupplementaryGroupsUserV3.target_uid ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV3, group_count) == 12, "RinSupplementaryGroupsUserV3.group_count ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV3, groups_address) == 16, "RinSupplementaryGroupsUserV3.groups_address ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV3, group_element_size) == 24, "RinSupplementaryGroupsUserV3.group_element_size ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV3, group_flags) == 28, "RinSupplementaryGroupsUserV3.group_flags ABI drift");
+_Static_assert(offsetof(RinSupplementaryGroupsUserV3, reserved) == 32, "RinSupplementaryGroupsUserV3.reserved ABI drift");
 _Static_assert(sizeof(RinAccountQueryV1) == 56, "RinAccountQueryV1 ABI drift");
 _Static_assert(offsetof(RinAccountQueryV1, struct_size) == 0, "RinAccountQueryV1.struct_size ABI drift");
 _Static_assert(offsetof(RinAccountQueryV1, version) == 4, "RinAccountQueryV1.version ABI drift");

@@ -1521,7 +1521,7 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_ACCOUNT_QUERY_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
-/* V1は固定長の補助グループ配列を使う。V2はgroups_addressで利用者配列を指定し、GETではgroup_countを容量として扱う。GETのgroup_countが0なら必要件数だけを返す。 */
+/* V1は固定長配列、V2はuint32_t利用者配列、V3はgid_t幅・signedness付き利用者配列。GETのgroup_countが0なら必要件数だけを返す。 */
 #define RIN_SYS_CREDENTIAL_GROUPS_SET       0x8028u
 /* CREDENTIAL_GROUPS_SET availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
 #define RIN_SYS_CREDENTIAL_GROUPS_SET_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
