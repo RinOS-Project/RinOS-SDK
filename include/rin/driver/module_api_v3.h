@@ -311,6 +311,29 @@ typedef struct RinDriverV3NetPacket {
 #define RIN_DRIVER_V3_NET_PACKET_FLAG_FRAME_FRAGMENT UINT32_C(0x00000001)
 #define RIN_DRIVER_V3_NET_MAX_FRAME_FRAGMENTS UINT32_C(4)
 
+/* The extended packet record is carried only by the optional NetOps V2
+ * callback.  The original packet and NetOps layouts remain unchanged for
+ * drivers that do not consume transmit metadata. */
+#define RIN_DRIVER_V3_NET_PACKET_V2_VERSION UINT32_C(1)
+#define RIN_DRIVER_V3_NET_TX_CHECKSUM_IPV4_HEADER UINT32_C(0x00000001)
+#define RIN_DRIVER_V3_NET_TX_CHECKSUM_TRANSPORT UINT32_C(0x00000002)
+#define RIN_DRIVER_V3_NET_TX_CHECKSUM_UDP UINT32_C(0x00000004)
+#define RIN_DRIVER_V3_NET_TX_CHECKSUM_KNOWN_FLAGS UINT32_C(0x00000007)
+typedef struct RinDriverV3NetPacketV2 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinDriverV3NetPacket packet;
+    uint32_t checksum_flags;
+    uint32_t checksum_start;
+    uint32_t checksum_length;
+    uint16_t mac_header_length;
+    uint16_t network_header_length;
+    uint16_t transport_header_length;
+    uint16_t checksum_offset;
+    uint16_t pseudo_header_seed;
+    uint16_t reserved;
+} RinDriverV3NetPacketV2;
+
 /* NDRV v3 network data is intentionally bounded to one ordinary Ethernet
  * frame.  Receive copies are control-plane calls: the NIC-owned DMA ring
  * never leaks into the network stack as an unvalidated pointer. */
@@ -336,7 +359,8 @@ typedef struct RinDriverV3NetPacket {
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_MULTICAST UINT32_C(0x00000002)
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_POINT_TO_POINT UINT32_C(0x00000004)
 #define RIN_DRIVER_V3_NET_INTERFACE_CAP_TX_SCATTER_GATHER UINT32_C(0x00000008)
-#define RIN_DRIVER_V3_NET_INTERFACE_KNOWN_CAPABILITIES UINT32_C(0x0000000f)
+#define RIN_DRIVER_V3_NET_INTERFACE_CAP_TX_CHECKSUM_IPV4 UINT32_C(0x00000010)
+#define RIN_DRIVER_V3_NET_INTERFACE_KNOWN_CAPABILITIES UINT32_C(0x0000001f)
 #define RIN_DRIVER_V3_NET_INTERFACE_UNKNOWN UINT32_C(0)
 #define RIN_DRIVER_V3_NET_INTERFACE_OTHER UINT32_C(1)
 #define RIN_DRIVER_V3_NET_INTERFACE_LOOPBACK UINT32_C(2)
@@ -703,6 +727,9 @@ typedef RinDriverV3Result (*RinDriverV3InputReadFn)(
 typedef RinDriverV3Result (*RinDriverV3NetTransmitFn)(
     uint64_t driver_context, const RinDriverV3NetPacket* packets,
     uint32_t packet_count);
+typedef RinDriverV3Result (*RinDriverV3NetTransmitV2Fn)(
+    uint64_t driver_context, const RinDriverV3NetPacketV2* packets,
+    uint32_t packet_count);
 typedef RinDriverV3Result (*RinDriverV3NetPollFn)(
     uint64_t driver_context, uint32_t budget, uint32_t* completed);
 /* `buffer` is caller-owned, transient control memory.  The driver copies a
@@ -1038,6 +1065,20 @@ typedef struct RinDriverV3NetOps {
 #endif
 } RinDriverV3NetOps;
 
+/* Optional V2 network transmit extension.  The embedded V1 table preserves
+ * its 64-byte wire layout; registration.operations_size distinguishes this
+ * extension from an older image before the kernel reads it. */
+#define RIN_DRIVER_V3_NET_OPS_EXTENSION_VERSION UINT32_C(1)
+typedef struct RinDriverV3NetOpsV2 {
+    RinDriverV3NetOps base;
+    uint32_t extension_size;
+    uint32_t extension_version;
+    RinDriverV3NetTransmitV2Fn transmit_v2;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t transmit_v2_padding;
+#endif
+} RinDriverV3NetOpsV2;
+
 typedef struct RinDriverV3AudioOps {
     uint32_t struct_size;
     uint32_t version;
@@ -1227,6 +1268,20 @@ static inline int rin_driver_v3_net_ops_valid(const RinDriverV3NetOps* ops) {
     return 1;
 }
 
+static inline int rin_driver_v3_net_ops_v2_valid(
+    const RinDriverV3NetOpsV2* ops) {
+    if (!ops || !rin_driver_v3_net_ops_valid(&ops->base) ||
+        ops->extension_size != sizeof(*ops) - sizeof(ops->base) ||
+        ops->extension_version !=
+            RIN_DRIVER_V3_NET_OPS_EXTENSION_VERSION ||
+        !ops->transmit_v2)
+        return 0;
+#if UINTPTR_MAX == UINT32_MAX
+    if (ops->transmit_v2_padding != 0u) return 0;
+#endif
+    return 1;
+}
+
 static inline int rin_driver_v3_audio_ops_valid(
     const RinDriverV3AudioOps* ops) {
     if (!ops || ops->struct_size != sizeof(*ops) ||
@@ -1281,6 +1336,63 @@ static inline int rin_driver_v3_net_packet_valid(
            packet->length <= RIN_DRIVER_V3_NET_MAX_FRAME_SIZE &&
            packet->flags == 0u &&
            packet->offset <= UINT64_MAX - packet->length;
+}
+
+static inline int rin_driver_v3_net_packet_v2_valid(
+    const RinDriverV3NetPacketV2* packet) {
+    uint32_t flags;
+    if (!packet || packet->struct_size != sizeof(*packet) ||
+        packet->version != RIN_DRIVER_V3_NET_PACKET_V2_VERSION ||
+        packet->packet.memory_lease == 0u ||
+        packet->packet.length == 0u ||
+        (((packet->packet.flags &
+           RIN_DRIVER_V3_NET_PACKET_FLAG_FRAME_FRAGMENT) == 0u) &&
+         packet->packet.length < RIN_DRIVER_V3_NET_MIN_FRAME_SIZE) ||
+        packet->packet.length > RIN_DRIVER_V3_NET_MAX_FRAME_SIZE ||
+        (packet->packet.flags &
+         ~RIN_DRIVER_V3_NET_PACKET_FLAG_FRAME_FRAGMENT) != 0u ||
+        packet->packet.offset >
+            UINT64_MAX - packet->packet.length ||
+        packet->reserved != 0u)
+        return 0;
+    flags = packet->checksum_flags;
+    if (flags == 0u)
+        return packet->checksum_start == 0u &&
+               packet->checksum_length == 0u &&
+               packet->mac_header_length == 0u &&
+               packet->network_header_length == 0u &&
+               packet->transport_header_length == 0u &&
+               packet->checksum_offset == 0u &&
+               packet->pseudo_header_seed == 0u;
+    if ((flags & ~RIN_DRIVER_V3_NET_TX_CHECKSUM_KNOWN_FLAGS) != 0u ||
+        (packet->packet.flags &
+         RIN_DRIVER_V3_NET_PACKET_FLAG_FRAME_FRAGMENT) != 0u ||
+        (flags & (RIN_DRIVER_V3_NET_TX_CHECKSUM_IPV4_HEADER |
+                  RIN_DRIVER_V3_NET_TX_CHECKSUM_TRANSPORT)) !=
+            (RIN_DRIVER_V3_NET_TX_CHECKSUM_IPV4_HEADER |
+             RIN_DRIVER_V3_NET_TX_CHECKSUM_TRANSPORT) ||
+        packet->mac_header_length < 14u ||
+        packet->mac_header_length > 30u ||
+        packet->network_header_length < 20u ||
+        packet->network_header_length > 60u ||
+        (packet->network_header_length & 3u) != 0u ||
+        packet->checksum_start !=
+            (uint32_t)packet->mac_header_length +
+                packet->network_header_length ||
+        packet->checksum_start > packet->packet.length ||
+        packet->checksum_length == 0u ||
+        packet->checksum_length >
+            packet->packet.length - packet->checksum_start ||
+        packet->transport_header_length == 0u ||
+        packet->transport_header_length > packet->checksum_length)
+        return 0;
+    if ((flags & RIN_DRIVER_V3_NET_TX_CHECKSUM_UDP) != 0u)
+        return packet->transport_header_length == 8u &&
+               packet->checksum_offset == 6u;
+    return packet->transport_header_length >= 20u &&
+           packet->transport_header_length <= 60u &&
+           (packet->transport_header_length & 3u) == 0u &&
+           packet->checksum_offset == 16u;
 }
 
 static inline int rin_driver_v3_net_info_valid(
@@ -1639,8 +1751,13 @@ static_assert(sizeof(RinDriverV3DeviceRegistration) == 72u,
 static_assert(sizeof(RinDriverV3NetInfo) == 40u &&
                   offsetof(RinDriverV3NetInfo, link_speed_mbps) == 20u,
               "NDRV v3 network information ABI drift");
+static_assert(sizeof(RinDriverV3NetPacket) == 24u &&
+                  sizeof(RinDriverV3NetPacketV2) == 56u,
+              "NDRV v3 network packet ABI drift");
 static_assert(sizeof(RinDriverV3NetOps) == 64u,
               "NDRV v3 network operations ABI drift");
+static_assert(sizeof(RinDriverV3NetOpsV2) == 80u,
+              "NDRV v3 network operations V2 ABI drift");
 static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                   offsetof(RinDriverV3NetOps, poll_rx) == 16u &&
                   offsetof(RinDriverV3NetOps, remove) == 24u &&
@@ -1723,8 +1840,13 @@ _Static_assert(sizeof(RinDriverV3DeviceRegistration) == 72u,
 _Static_assert(sizeof(RinDriverV3NetInfo) == 40u &&
                    offsetof(RinDriverV3NetInfo, link_speed_mbps) == 20u,
                "NDRV v3 network information ABI drift");
+_Static_assert(sizeof(RinDriverV3NetPacket) == 24u &&
+                   sizeof(RinDriverV3NetPacketV2) == 56u,
+               "NDRV v3 network packet ABI drift");
 _Static_assert(sizeof(RinDriverV3NetOps) == 64u,
                "NDRV v3 network operations ABI drift");
+_Static_assert(sizeof(RinDriverV3NetOpsV2) == 80u,
+               "NDRV v3 network operations V2 ABI drift");
 _Static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                    offsetof(RinDriverV3NetOps, poll_rx) == 16u &&
                    offsetof(RinDriverV3NetOps, remove) == 24u &&
