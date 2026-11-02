@@ -5,6 +5,7 @@
 
 #include <rin/input/keyboard_layout_preference_v1.h>
 #include <rin/syscall_abi.h>
+#include <rin/syscall.h>
 #include <sys/syscall.h>
 
 #ifdef __cplusplus

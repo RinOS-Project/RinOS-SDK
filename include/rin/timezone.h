@@ -5,6 +5,7 @@
 
 #include <rin/contract_abi.h>
 #include <rin/syscall_abi.h>
+#include <rin/syscall.h>
 #include <sys/syscall.h>
 
 #ifdef __cplusplus

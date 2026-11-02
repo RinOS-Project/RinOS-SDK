@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "../syscall_abi.h"
+#include "../syscall.h"
 #include <sys/syscall.h>
 
 #ifndef RIN_DISPLAY_CONFIG_DEFINED
