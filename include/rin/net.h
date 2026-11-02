@@ -27,6 +27,11 @@ enum {
                                   RIN_NET_SOCKET_IO_DONT_WAIT
 };
 
+/* TCP listen() accepts zero as the default backlog and caps requests above
+ * the system maximum. POSIX callers pass a signed value and reject negatives. */
+#define RIN_NET_TCP_LISTEN_BACKLOG_DEFAULT UINT32_C(128)
+#define RIN_NET_TCP_LISTEN_BACKLOG_MAX UINT32_C(4096)
+
 /* HTTP v1 uses bounded HTTP/1.1 messages. `headers` is a byte string of
  * CRLF-separated field lines without a final blank line. The returned
  * response channel contains the raw response bytes, including any interim
