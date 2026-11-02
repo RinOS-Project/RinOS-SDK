@@ -35,6 +35,10 @@ extern "C" {
 #define RIN_FILE_PORTAL_OPERATION_PAYLOAD_WRITE    UINT16_C(11)
 #define RIN_FILE_PORTAL_OPERATION_PAYLOAD_SYNC     UINT16_C(12)
 #define RIN_FILE_PORTAL_OPERATION_PAYLOAD_TRUNCATE UINT16_C(13)
+/* One authenticated Settings snapshot page.  The output array is passed
+ * separately so the fixed RinFilePortalCallV1 layout remains unchanged. */
+#define RIN_FILE_PORTAL_OPERATION_SETTINGS_LIST_PAGE UINT16_C(14)
+#define RIN_FILE_PORTAL_SETTINGS_LIST_PAGE_CAPACITY 8u
 
 #define RIN_FILE_PORTAL_CALL_FD_CLOEXEC UINT32_C(1)
 #define RIN_FILE_PORTAL_TOKEN_LIFETIME_SECONDS UINT64_C(120)
@@ -128,6 +132,15 @@ _Static_assert(sizeof(RinFilePortalPayloadV1) == RIN_FILE_PORTAL_TOKEN_SIZE,
  *   descriptor = -1; all token/open inputs and outputs = zero/-1
  *   output file_object_id = next cursor; expires_at_epoch and settings_entry
  *   carry the selected record's expiry/metadata
+ * SETTINGS_LIST_PAGE input:
+ *   file_object_id = zero-based global RFPG record cursor
+ *   new_generation = expected generation (zero only when cursor is zero)
+ *   reserved_status = output capacity, 1..PAGE_CAPACITY
+ *   reserved[0] = user address of an array of that many settings entries
+ *   descriptor = -1; remaining token/open inputs and outputs are empty
+ *   success returns granted_rights = entry count, new_generation = the
+ *   verified generation, file_object_id = next cursor or zero at end. A
+ *   generation change returns BUSY without publishing the page.
  * REVOKE input:
  *   file_object_id = kernel-issued ISSUE object ID; all other inputs and
  *   outputs use their canonical empty values. A successful revoke clears the
