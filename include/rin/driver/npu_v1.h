@@ -72,6 +72,16 @@
 
 /* Stable device identity returned by the NPU driver. device_generation is
  * supplied by the kernel and must match the active NDRV session generation. */
+#if defined(__cplusplus)
+#define RIN_DRIVER_NPU_ALIGNAS(n) alignas(n)
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#define RIN_DRIVER_NPU_ALIGNAS(n) _Alignas(n)
+#elif defined(__GNUC__) || defined(__clang__)
+#define RIN_DRIVER_NPU_ALIGNAS(n) __attribute__((aligned(n)))
+#else
+#define RIN_DRIVER_NPU_ALIGNAS(n)
+#endif
+
 typedef struct RinDriverV3NpuIdentityV1 {
     uint32_t struct_size;
     uint32_t version;
@@ -84,11 +94,15 @@ typedef struct RinDriverV3NpuIdentityV1 {
     uint32_t revision_id;
     uint32_t engine_count;
     uint32_t reserved0;
-    uint64_t device_generation;
+    /* The identity ABI places 64-bit generations on an 8-byte boundary on
+     * IA-32 as well as x86_64. Do not make this depend on -malign-double. */
+    RIN_DRIVER_NPU_ALIGNAS(8) uint64_t device_generation;
     uint64_t firmware_version;
     uint8_t hardware_uuid[16];
     uint64_t reserved[2];
 } RinDriverV3NpuIdentityV1;
+
+#undef RIN_DRIVER_NPU_ALIGNAS
 
 typedef struct RinDriverV3NpuCapabilitiesV1 {
     uint32_t struct_size;
