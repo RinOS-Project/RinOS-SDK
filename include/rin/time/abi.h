@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #define RIN_TIMER_ABI_VERSION 1u
+#define RIN_TIMER_SET_ABI_VERSION 2u
 #define RIN_TIMER_CREATE_FLAG_VALUE_TIMER_ID 1u
 #define RIN_ITIMER_ABI_VERSION 1u
 #define RIN_TIMER_MAX_SLOTS 32u
@@ -65,6 +66,31 @@ typedef struct RinTimerSpecV1 {
     uint64_t reserved1;
 } RinTimerSpecV1;
 
+/* POSIX timer_settime input. Absolute values remain split into signed seconds
+ * and normalized nanoseconds so CLOCK_REALTIME deadlines before the Unix epoch
+ * and deadlines across that epoch are representable. Relative values use
+ * value_ns; absolute requests use absolute_value_sec/nsec. */
+typedef struct RinTimerSetSpecV2 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t value_ns;
+    uint64_t interval_ns;
+    int64_t absolute_value_sec;
+    int64_t absolute_value_nsec;
+    uint64_t reserved0;
+} RinTimerSetSpecV2;
+
+static inline int rin_timer_set_spec_v2_valid(
+    const RinTimerSetSpecV2* value)
+{
+    return value != 0 && value->struct_size == sizeof(*value) &&
+           value->version == RIN_TIMER_SET_ABI_VERSION &&
+           value->flags == 0u && value->absolute_value_nsec >= 0 &&
+           value->absolute_value_nsec < INT64_C(1000000000) &&
+           value->reserved0 == 0u;
+}
+
 typedef struct RinClockSettimeV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -101,6 +127,8 @@ static_assert(sizeof(RinCpuTimeV1) == 32u, "RinCpuTimeV1 ABI drift");
 static_assert(sizeof(RinItimerV1) == 32u, "RinItimerV1 ABI drift");
 static_assert(sizeof(RinTimerCreateV1) == 32u, "RinTimerCreateV1 ABI drift");
 static_assert(sizeof(RinTimerSpecV1) == 40u, "RinTimerSpecV1 ABI drift");
+static_assert(sizeof(RinTimerSetSpecV2) == 48u,
+              "RinTimerSetSpecV2 ABI drift");
 static_assert(sizeof(RinClockSettimeV1) == 32u,
               "RinClockSettimeV1 ABI drift");
 static_assert(sizeof(RinClockGettimeV1) == 32u,
