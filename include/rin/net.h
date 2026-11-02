@@ -47,6 +47,8 @@ enum {
                                   RIN_NET_SOCKET_IO_DONT_WAIT
 };
 
+#define RIN_NET_TIMEOUT_INFINITE UINT64_MAX
+
 /* rin_socket_shutdown_v1() takes a shutdown mode (matching POSIX SHUT_*),
  * not a bitmask. */
 enum {
@@ -66,7 +68,8 @@ enum {
 /* HTTP v1 uses bounded HTTP/1.1 messages. `headers` is a byte string of
  * CRLF-separated field lines without a final blank line. The returned
  * response channel contains the raw response bytes, including any interim
- * 1xx response blocks preceding the final response. */
+ * 1xx response blocks preceding the final response. `timeout_ns` must be
+ * nonzero; RIN_NET_TIMEOUT_INFINITE disables the deadline. */
 #define RIN_HTTP_REQUEST_HEADERS_MAX_BYTES UINT64_C(16384)
 #define RIN_HTTP_RESPONSE_MAX_BYTES UINT64_C(65536)
 
@@ -102,6 +105,8 @@ RIN_SDK_API RinResult rin_tls_receive_v1(RinTlsSession session, RinSliceV1 data,
 RIN_SDK_API RinResult rin_tls_shutdown_v1(RinTlsSession session, uint32_t flags);
 RIN_SDK_API RinResult rin_socket_bind_v1(RinSocket socket, const RinSocketAddressV1* address);
 RIN_SDK_API RinResult rin_socket_listen_v1(RinSocket socket, uint32_t backlog);
+/* timeout_ns == 0 performs an immediate accept attempt; INFINITE waits without
+ * a deadline. */
 RIN_SDK_API RinResult rin_socket_accept_v1(RinSocket socket, uint64_t timeout_ns, RinSocketAcceptV1* accepted);
 RIN_SDK_API RinResult rin_socket_shutdown_v1(RinSocket socket, uint32_t how);
 
