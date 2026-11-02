@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MIT */
-/* Checked-copy clock APIs for caller-width timespec records. */
+/* Checked-copy clock and timeval APIs for caller-width time records. */
 #ifndef RIN_SDK_TIME_USER_TIMESPEC_ABI_H
 #define RIN_SDK_TIME_USER_TIMESPEC_ABI_H
 
@@ -12,6 +12,7 @@
 #define RIN_CLOCK_TIMESPEC_USER_GETTIME 1u
 #define RIN_CLOCK_TIMESPEC_USER_GETRES 2u
 #define RIN_CLOCK_TIMESPEC_USER_SETTIME 3u
+#define RIN_CLOCK_TIMESPEC_USER_GETTIMEOFDAY 4u
 
 typedef struct RinClockTimespecUserV1 {
     uint32_t struct_size;
@@ -44,7 +45,7 @@ static inline int rin_clock_timespec_user_v1_valid(
            request->struct_size == sizeof(*request) &&
            request->version == RIN_CLOCK_TIMESPEC_USER_ABI_VERSION &&
            request->operation >= RIN_CLOCK_TIMESPEC_USER_GETTIME &&
-           request->operation <= RIN_CLOCK_TIMESPEC_USER_SETTIME &&
+           request->operation <= RIN_CLOCK_TIMESPEC_USER_GETTIMEOFDAY &&
            request->clock_id >= RIN_CLOCK_ID_REALTIME &&
            request->clock_id <= RIN_CLOCK_ID_THREAD_CPUTIME &&
            rin_nanosleep_timespec_user_size(
@@ -69,7 +70,7 @@ static inline int rin_clock_timespec_user_encode_signed(
     return 1;
 }
 
-static inline int rin_clock_timespec_user_encode_timespec(
+static inline int rin_clock_timespec_user_encode_value(
     uint8_t* bytes, uint32_t time_width, uint32_t long_width,
     int64_t seconds, int64_t nanoseconds)
 {
