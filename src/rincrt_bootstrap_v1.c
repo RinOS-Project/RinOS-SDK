@@ -24,6 +24,9 @@ extern void rin_user_allocator_after_fork_child(void);
  * reverse registration order. */
 extern int __rin_atexit_register(void (*function)(void));
 extern void __cxa_finalize(void* dso);
+/* rincrt also runs in minimal images without stdio.  When the full libc is
+ * linked, preserve exit()'s stream-flush contract after all user finalizers. */
+extern int fflush(void* stream) __attribute__((weak));
 extern void (*__fini_array_start[])(void) __attribute__((weak));
 extern void (*__fini_array_end[])(void) __attribute__((weak));
 static volatile uint32_t g_rincrt_exit_started;
@@ -1214,6 +1217,7 @@ void exit(int status)
         }
     }
     __cxa_finalize((void*)0);
+    if (fflush != 0) (void)fflush((void*)0);
 #endif
     _exit(status);
 }
