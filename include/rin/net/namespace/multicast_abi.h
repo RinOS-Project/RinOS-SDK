@@ -10,10 +10,7 @@
 typedef enum RinNetworkNamespaceMulticastSyscallOperationV1 {
     RIN_NETWORK_NAMESPACE_MULTICAST_OP_JOIN = 1,
     RIN_NETWORK_NAMESPACE_MULTICAST_OP_LEAVE = 2,
-    RIN_NETWORK_NAMESPACE_MULTICAST_OP_QUERY = 3,
-    /* Result-recoverable leave. reserved[0] in both structures carries the
-     * nonzero caller operation ID and is echoed in the response. */
-    RIN_NETWORK_NAMESPACE_MULTICAST_OP_LEAVE_V2 = 4
+    RIN_NETWORK_NAMESPACE_MULTICAST_OP_QUERY = 3
 } RinNetworkNamespaceMulticastSyscallOperationV1;
 
 typedef struct RinNetworkNamespaceMulticastSyscallRequestV1 {

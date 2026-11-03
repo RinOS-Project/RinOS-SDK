@@ -89,8 +89,6 @@ enum {
      * minute-based compatibility ABI. */
     RIN_ICU_CMD_TIME_ZONE_OFFSET_SECONDS_V2 = 136,
     RIN_ICU_CMD_TIME_ZONE_LOCAL_OFFSETS_SECONDS_V2 = 137,
-    /* One versioned text snapshot of aliases and leap-second entries. */
-    RIN_ICU_CMD_TIME_ZONE_TZDB_CATALOG_V1 = 138,
 
     RIN_ICU_CMD_DESTROY_HANDLE_V1 = 96
 };
@@ -549,7 +547,6 @@ static inline int rin_icu_command_known_v2(uint32_t command)
     case RIN_ICU_CMD_TIME_ZONE_LOCAL_OFFSETS_V1:
     case RIN_ICU_CMD_TIME_ZONE_OFFSET_SECONDS_V2:
     case RIN_ICU_CMD_TIME_ZONE_LOCAL_OFFSETS_SECONDS_V2:
-    case RIN_ICU_CMD_TIME_ZONE_TZDB_CATALOG_V1:
     case RIN_ICU_CMD_DESTROY_HANDLE_V1:
         return 1;
     default:
