@@ -20,6 +20,36 @@
 #define EDID_MIN_REFRESH_MILLIHZ 1000u
 #define EDID_MAX_REFRESH_MILLIHZ 1000000u
 
+static void edid_zero(void* destination, uint32_t size);
+
+#define EDID_MODE_WORKSPACE_COUNT 4u
+typedef struct EdidModeWorkspace {
+    volatile uint32_t busy;
+    RinDisplayEdidModeListV1 modes;
+} EdidModeWorkspace;
+
+static EdidModeWorkspace edid_mode_workspaces[EDID_MODE_WORKSPACE_COUNT];
+
+static EdidModeWorkspace* edid_mode_workspace_acquire(void) {
+    for (uint32_t index = 0u; index < EDID_MODE_WORKSPACE_COUNT; ++index) {
+        EdidModeWorkspace* workspace = &edid_mode_workspaces[index];
+        uint32_t expected = 0u;
+        if (!__atomic_compare_exchange_n(&workspace->busy, &expected, 1u, 0,
+                                         __ATOMIC_ACQUIRE,
+                                         __ATOMIC_RELAXED))
+            continue;
+        edid_zero(&workspace->modes, sizeof(workspace->modes));
+        return workspace;
+    }
+    return NULL;
+}
+
+static void edid_mode_workspace_release(EdidModeWorkspace* workspace) {
+    if (!workspace) return;
+    edid_zero(&workspace->modes, sizeof(workspace->modes));
+    __atomic_store_n(&workspace->busy, 0u, __ATOMIC_RELEASE);
+}
+
 static void edid_zero(void* destination, uint32_t size) {
     uint8_t* output = (uint8_t*)destination;
     for (uint32_t index = 0u; index < size; ++index) output[index] = 0u;
@@ -588,7 +618,8 @@ RinDisplayEdidResult rin_display_edid_collect_modes(
     const uint8_t* bytes, uint32_t length, RinDisplayEdidModeListV1* modes) {
     uint8_t snapshot[RIN_DISPLAY_EDID_MAX_BYTES];
     RinDisplayEdidInfoV1 info;
-    RinDisplayEdidModeListV1 candidate;
+    EdidModeWorkspace* workspace;
+    RinDisplayEdidModeListV1* candidate;
     RinDisplayEdidResult result;
 
     if (!modes) return RIN_DISPLAY_EDID_INVALID_ARGUMENT;
@@ -603,14 +634,16 @@ RinDisplayEdidResult rin_display_edid_collect_modes(
      * when a caller uses storage that overlaps the EDID input. */
     edid_copy(snapshot, bytes, length);
     edid_zero(modes, sizeof(*modes));
+    workspace = edid_mode_workspace_acquire();
+    if (!workspace) return RIN_DISPLAY_EDID_BUSY;
+    candidate = &workspace->modes;
     edid_zero(&info, sizeof(info));
     result = rin_display_edid_admit(snapshot, length, &info);
-    if (result != RIN_DISPLAY_EDID_OK) return result;
+    if (result != RIN_DISPLAY_EDID_OK) goto cleanup;
 
-    edid_zero(&candidate, sizeof(candidate));
-    candidate.abi_version = RIN_DISPLAY_EDID_INFO_ABI_VERSION;
-    candidate.struct_size = sizeof(candidate);
-    candidate.preferred_mode_index = RIN_DISPLAY_EDID_NO_MODE_INDEX;
+    candidate->abi_version = RIN_DISPLAY_EDID_INFO_ABI_VERSION;
+    candidate->struct_size = sizeof(*candidate);
+    candidate->preferred_mode_index = RIN_DISPLAY_EDID_NO_MODE_INDEX;
 
     for (uint32_t index = 0u; index < EDID_BASE_DTD_COUNT; ++index) {
         const uint8_t* descriptor = snapshot + EDID_BASE_DTD_OFFSET +
@@ -619,14 +652,11 @@ RinDisplayEdidResult rin_display_edid_collect_modes(
         if (descriptor[0] == 0u && descriptor[1] == 0u) continue;
         result = edid_parse_detailed_timing(descriptor, &mode);
         if (result != RIN_DISPLAY_EDID_OK) {
-            edid_zero(modes, sizeof(*modes));
-            return RIN_DISPLAY_EDID_MALFORMED;
+            result = RIN_DISPLAY_EDID_MALFORMED;
+            goto cleanup;
         }
-        result = edid_mode_list_append(&candidate, &mode);
-        if (result != RIN_DISPLAY_EDID_OK) {
-            edid_zero(modes, sizeof(*modes));
-            return result;
-        }
+        result = edid_mode_list_append(candidate, &mode);
+        if (result != RIN_DISPLAY_EDID_OK) goto cleanup;
     }
 
     for (uint32_t block_index = 1u; block_index < info.block_count;
@@ -635,11 +665,8 @@ RinDisplayEdidResult rin_display_edid_collect_modes(
             block_index * RIN_DISPLAY_EDID_BLOCK_SIZE;
         uint32_t offset;
         if (block[0] != CTA_EXTENSION_TAG) continue;
-        result = edid_collect_cta_video_modes(block, &candidate);
-        if (result != RIN_DISPLAY_EDID_OK) {
-            edid_zero(modes, sizeof(*modes));
-            return result;
-        }
+        result = edid_collect_cta_video_modes(block, candidate);
+        if (result != RIN_DISPLAY_EDID_OK) goto cleanup;
         offset = block[2];
         while (offset + EDID_DTD_SIZE <= EDID_CHECKSUM_OFFSET) {
             RinDisplayEdidModeV1 mode;
@@ -649,48 +676,51 @@ RinDisplayEdidResult rin_display_edid_collect_modes(
             }
             result = edid_parse_detailed_timing(block + offset, &mode);
             if (result != RIN_DISPLAY_EDID_OK) {
-                edid_zero(modes, sizeof(*modes));
-                return RIN_DISPLAY_EDID_MALFORMED;
+                result = RIN_DISPLAY_EDID_MALFORMED;
+                goto cleanup;
             }
-            result = edid_mode_list_append(&candidate, &mode);
-            if (result != RIN_DISPLAY_EDID_OK) {
-                edid_zero(modes, sizeof(*modes));
-                return result;
-            }
+            result = edid_mode_list_append(candidate, &mode);
+            if (result != RIN_DISPLAY_EDID_OK) goto cleanup;
             offset += EDID_DTD_SIZE;
         }
     }
 
     if ((info.flags & RIN_DISPLAY_EDID_INFO_HAS_PREFERRED_MODE) != 0u) {
-        for (uint32_t index = 0u; index < candidate.mode_count; ++index) {
-            if (edid_modes_equal(&candidate.modes[index],
+        for (uint32_t index = 0u; index < candidate->mode_count; ++index) {
+            if (edid_modes_equal(&candidate->modes[index],
                                  &info.preferred_mode)) {
-                candidate.preferred_mode_index = index;
+                candidate->preferred_mode_index = index;
                 break;
             }
         }
-        if (candidate.preferred_mode_index == RIN_DISPLAY_EDID_NO_MODE_INDEX) {
-            edid_zero(modes, sizeof(*modes));
-            return RIN_DISPLAY_EDID_MALFORMED;
+        if (candidate->preferred_mode_index ==
+            RIN_DISPLAY_EDID_NO_MODE_INDEX) {
+            result = RIN_DISPLAY_EDID_MALFORMED;
+            goto cleanup;
         }
     } else if (info.native_vic != 0u) {
         RinDisplayEdidModeV1 native_mode;
         if (edid_mode_from_vic(info.native_vic, &native_mode)) {
-            for (uint32_t index = 0u; index < candidate.mode_count; ++index) {
-                if (edid_modes_equal(&candidate.modes[index], &native_mode)) {
-                    candidate.preferred_mode_index = index;
+            for (uint32_t index = 0u; index < candidate->mode_count; ++index) {
+                if (edid_modes_equal(&candidate->modes[index], &native_mode)) {
+                    candidate->preferred_mode_index = index;
                     break;
                 }
             }
-            if (candidate.preferred_mode_index ==
+            if (candidate->preferred_mode_index ==
                     RIN_DISPLAY_EDID_NO_MODE_INDEX) {
-                edid_zero(modes, sizeof(*modes));
-                return RIN_DISPLAY_EDID_MALFORMED;
+                result = RIN_DISPLAY_EDID_MALFORMED;
+                goto cleanup;
             }
         }
     }
 
-    edid_copy((uint8_t*)modes, (const uint8_t*)&candidate,
-              sizeof(candidate));
-    return RIN_DISPLAY_EDID_OK;
+    result = RIN_DISPLAY_EDID_OK;
+cleanup:
+    if (result == RIN_DISPLAY_EDID_OK) {
+        edid_copy((uint8_t*)modes, (const uint8_t*)candidate,
+                  sizeof(*candidate));
+    }
+    edid_mode_workspace_release(workspace);
+    return result;
 }

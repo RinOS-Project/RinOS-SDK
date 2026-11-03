@@ -28,7 +28,8 @@ typedef enum RinDisplayEdidResult {
     RIN_DISPLAY_EDID_OK = 0,
     RIN_DISPLAY_EDID_INVALID_ARGUMENT = -1,
     RIN_DISPLAY_EDID_MALFORMED = -2,
-    RIN_DISPLAY_EDID_UNSUPPORTED = -3
+    RIN_DISPLAY_EDID_UNSUPPORTED = -3,
+    RIN_DISPLAY_EDID_BUSY = -4
 } RinDisplayEdidResult;
 
 typedef struct RinDisplayEdidModeV1 {
