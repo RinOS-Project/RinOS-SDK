@@ -1235,6 +1235,11 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_EXECVEAT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_EXECVEAT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_CONDITIONAL
 #define RIN_SYS_EXECVEAT_CONDITION_X86_64_COMPAT32 "available when x86_64 compat32 execution is enabled"
+#define RIN_SYS_BPF                         284u
+/* BPF availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_BPF_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BPF_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_BPF_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* storage. */
 #define RIN_SYS_RINFS_FORMAT                300u
 /* RINFS_FORMAT availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
@@ -4093,6 +4098,13 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_EXECVEAT_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_EXECVEAT_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_EXECVEAT_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_BPF:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_BPF_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_BPF_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_BPF_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
     case RIN_SYS_RINFS_FORMAT:

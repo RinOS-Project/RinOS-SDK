@@ -43,6 +43,7 @@
 #include "fs/fcntl_lock_abi.h"
 #include "fs/namespace_abi.h"
 #include "fs/path_at_abi.h"
+#include "bpf_abi.h"
 #include "process/image_path_abi.h"
 #include "process/memory_abi.h"
 #include "process/namespace_abi.h"
