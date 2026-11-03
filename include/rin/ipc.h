@@ -6,6 +6,9 @@
 #include "ipc_limits.h"
 #include "posix_mqueue_abi.h"
 
+/* Stable SDK_CALL operation used to copy a checked userspace snapshot. */
+#define RIN_SDK_IPC_POSIX_MQ_USER_SNAPSHOT UINT32_C(28)
+
 #define RIN_EVENT_CREATE_FLAG_CLOSE_ON_EXEC UINT32_C(1)
 #define RIN_EVENT_CREATE_FLAGS_ALL RIN_EVENT_CREATE_FLAG_CLOSE_ON_EXEC
 /* Maximum per-process event object limit exposed by rin_event_capacity_*_v1().
