@@ -146,6 +146,7 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_PROGRAM_TEST_RUN (1ull << 6)
 #define RIN_BPF_FEATURE_TIME_CPU_HELPERS (1ull << 7)
 #define RIN_BPF_FEATURE_TASK_HELPERS (1ull << 8)
+#define RIN_BPF_FEATURE_MAP_FREEZE (1ull << 9)
 
 struct rin_bpf_insn {
     uint8_t code;
@@ -238,6 +239,10 @@ struct rin_bpf_object_info_attr {
     rin_bpf_aligned_u64 info;
 };
 
+struct rin_bpf_map_freeze_attr {
+    uint32_t map_fd;
+};
+
 struct rin_bpf_program_attach_attr {
     uint32_t target_fd;
     uint32_t program_fd;
@@ -313,6 +318,7 @@ union rin_bpf_attr {
     struct rin_bpf_map_element_attr map_element;
     struct rin_bpf_program_load_attr program_load;
     struct rin_bpf_object_info_attr object_info;
+    struct rin_bpf_map_freeze_attr map_freeze;
     struct rin_bpf_program_attach_attr program_attach;
     struct rin_bpf_program_test_run_attr program_test_run;
     struct rin_bpf_feature_query_attr feature_query;
