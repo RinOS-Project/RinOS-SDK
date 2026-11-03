@@ -1314,6 +1314,12 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* CPU ID and NUMA node ID are copied from one current-CPU snapshot. Each output pointer may be NULL; non-NULL outputs are pinned together before either is written. Unknown NUMA topology is returned as UINT32_MAX. */
+#define RIN_SYS_GETCPU_V1                   353u
+/* GETCPU_V1 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_GETCPU_V1_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETCPU_V1_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_GETCPU_V1_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 /* process. */
 /* Create a Landlock ruleset, query ABI version, or query errata. */
 #define RIN_SYS_LANDLOCK_CREATE_RULESET     444u
@@ -4160,6 +4166,13 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_GETCPU_ONLINE_COUNT_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_GETCPU_V1:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_GETCPU_V1_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_GETCPU_V1_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_GETCPU_V1_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
     case RIN_SYS_LANDLOCK_CREATE_RULESET:

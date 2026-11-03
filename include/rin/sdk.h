@@ -3,6 +3,7 @@
 #define RIN_SDK_H
 #include "abi.h"
 #include "base.h"
+#include "cpu.h"
 #include "process_capacity_abi_v1.h"
 #include "ipc.h"
 #include "fs.h"
