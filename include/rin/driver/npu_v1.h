@@ -12,6 +12,9 @@
  * are opaque and scoped to one kernel-created context. */
 #define RIN_DRIVER_V3_NPU_ABI_VERSION UINT32_C(0x00010000)
 #define RIN_DRIVER_V3_NPU_OPS_VERSION UINT32_C(0x00010000)
+#define RIN_DRIVER_V3_NPU_BUFFER_INFO_V1_VERSION UINT32_C(0x00010000)
+#define RIN_DRIVER_V3_NPU_BUFFER_INFO_DEVICE_ADDRESS_VERSION \
+    UINT32_C(0x00010001)
 #define RIN_DRIVER_V3_NPU_MAX_SUBMIT_BUFFERS UINT32_C(64)
 #define RIN_DRIVER_V3_NPU_MAX_EVENTS UINT32_C(128)
 
@@ -36,7 +39,8 @@
 #define RIN_DRIVER_V3_NPU_CAP_FAULT_EVENTS UINT64_C(0x0000000000000010)
 #define RIN_DRIVER_V3_NPU_CAP_RESET UINT64_C(0x0000000000000020)
 #define RIN_DRIVER_V3_NPU_CAP_POWER_CONTROL UINT64_C(0x0000000000000040)
-#define RIN_DRIVER_V3_NPU_CAPABILITY_MASK UINT64_C(0x000000000000007f)
+#define RIN_DRIVER_V3_NPU_CAP_DEVICE_ADDRESS UINT64_C(0x0000000000000080)
+#define RIN_DRIVER_V3_NPU_CAPABILITY_MASK UINT64_C(0x00000000000000ff)
 
 #define RIN_DRIVER_V3_NPU_BUFFER_READ UINT32_C(0x00000001)
 #define RIN_DRIVER_V3_NPU_BUFFER_WRITE UINT32_C(0x00000002)
@@ -170,7 +174,11 @@ typedef struct RinDriverV3NpuBufferInfoV1 {
     uint64_t size_bytes;
     uint32_t access;
     uint32_t memory_type;
-    uint64_t reserved[2];
+    /* Version 1.1 returns a per-context VPU virtual address. This is not a
+     * host pointer, physical address, or DMA IOVA. The address is safe to use
+     * in device command buffers only while the owning context is live. */
+    uint64_t device_address;
+    uint64_t reserved;
 } RinDriverV3NpuBufferInfoV1;
 
 typedef struct RinDriverV3NpuQueueCreateV1 {
@@ -448,14 +456,22 @@ static inline int rin_driver_v3_npu_buffer_create_valid(
 static inline int rin_driver_v3_npu_buffer_info_valid(
     const RinDriverV3NpuBufferInfoV1* buffer)
 {
-    return buffer && buffer->struct_size == sizeof(*buffer) &&
-           buffer->version == RIN_DRIVER_V3_NPU_ABI_VERSION &&
-           buffer->driver_handle != 0u && buffer->driver_generation != 0u &&
-           buffer->size_bytes != 0u && buffer->access != 0u &&
-           (buffer->access & ~RIN_DRIVER_V3_NPU_BUFFER_ACCESS_MASK) == 0u &&
-           (buffer->memory_type == RIN_DRIVER_V3_NPU_BUFFER_DEVICE_LOCAL ||
-            buffer->memory_type == RIN_DRIVER_V3_NPU_BUFFER_HOST_SHARED) &&
-           buffer->reserved[0] == 0u && buffer->reserved[1] == 0u;
+    if (!buffer || buffer->struct_size != sizeof(*buffer) ||
+        (buffer->version != RIN_DRIVER_V3_NPU_BUFFER_INFO_V1_VERSION &&
+         buffer->version !=
+             RIN_DRIVER_V3_NPU_BUFFER_INFO_DEVICE_ADDRESS_VERSION) ||
+        buffer->driver_handle == 0u || buffer->driver_generation == 0u ||
+        buffer->size_bytes == 0u || buffer->access == 0u ||
+        (buffer->access & ~RIN_DRIVER_V3_NPU_BUFFER_ACCESS_MASK) != 0u ||
+        (buffer->memory_type != RIN_DRIVER_V3_NPU_BUFFER_DEVICE_LOCAL &&
+         buffer->memory_type != RIN_DRIVER_V3_NPU_BUFFER_HOST_SHARED) ||
+        buffer->reserved != 0u)
+        return 0;
+    if (buffer->version == RIN_DRIVER_V3_NPU_BUFFER_INFO_V1_VERSION)
+        return buffer->device_address == 0u;
+    return buffer->device_address != 0u &&
+           (buffer->device_address & UINT64_C(0xfff)) == 0u &&
+           buffer->device_address <= UINT64_MAX - buffer->size_bytes;
 }
 
 static inline int rin_driver_v3_npu_queue_create_valid(

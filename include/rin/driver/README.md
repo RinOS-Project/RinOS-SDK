@@ -72,3 +72,5 @@ Drivers that need a processor wait hint should include
 of OS-Core's private architecture headers and link-time symbols.
 
 `services_v3.h` defines the public firmware and child-device records and checked calls. NDRV v3 packages may embed authenticated firmware with repeated `make_drv.py --firmware=NAME=PATH` options. The kernel verifies the signed resource catalog and payload digests, then returns bounded reads through a generation-bound lease. Child publication uses the kernel's bounded child catalog and returns a kernel-generated device identity. Neither capability is granted when its backing runtime service is unavailable.
+
+NPU buffer-info version 1.1 returns a context-scoped device virtual address in `device_address`. It is valid only for command construction while the owning context and buffer remain live; it is not a CPU pointer, physical address, or DMA IOVA. The kernel broker accepts the field only from devices advertising `RIN_DRIVER_V3_NPU_CAP_DEVICE_ADDRESS`, and rejects address ranges outside the device width or overlapping another buffer in the same context.
