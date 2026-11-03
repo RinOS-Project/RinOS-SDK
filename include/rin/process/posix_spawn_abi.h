@@ -16,6 +16,10 @@
 #define RIN_POSIX_SPAWN_ACTION_CLOSE 2u
 #define RIN_POSIX_SPAWN_ACTION_DUP2  3u
 #define RIN_POSIX_SPAWN_ACTION_ATTRIBUTES 4u
+/* V1 records reserve the action type namespace.  These operations extend the
+ * existing fixed-width record without changing its layout or syscall ABI. */
+#define RIN_POSIX_SPAWN_ACTION_CHDIR 5u
+#define RIN_POSIX_SPAWN_ACTION_FCHDIR 6u
 
 /* Optional pidfd result. The kernel registers the child handle and writes it
  * here before making the child runnable. */
