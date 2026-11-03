@@ -31,6 +31,8 @@ typedef enum RinUsbHidEventType {
 
 typedef struct RinUsbHidEvent {
     uint16_t type;
+    /* Keyboard KEY events use the original HID Keyboard/Keypad usage ID,
+     * including E0-E7 for modifiers. Mouse buttons use RIN_USB_HID_BTN_*. */
     uint16_t code;
     int32_t value;
 } RinUsbHidEvent;
