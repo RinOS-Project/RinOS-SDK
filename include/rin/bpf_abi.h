@@ -65,6 +65,10 @@ enum rin_bpf_attach_type {
     RIN_BPF_ATTACH_TYPE_TRACE_SYSCALL_ENTER = 0x52494e01u
 };
 
+enum rin_bpf_link_type {
+    RIN_BPF_LINK_TYPE_RAW_TRACEPOINT = 1
+};
+
 enum rin_bpf_map_update_flag {
     RIN_BPF_ANY = 0,
     RIN_BPF_NOEXIST = 1,
@@ -147,6 +151,8 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_TIME_CPU_HELPERS (1ull << 7)
 #define RIN_BPF_FEATURE_TASK_HELPERS (1ull << 8)
 #define RIN_BPF_FEATURE_MAP_FREEZE (1ull << 9)
+#define RIN_BPF_FEATURE_LINK_CREATE (1ull << 10)
+#define RIN_BPF_LINK_GLOBAL_TARGET UINT32_MAX
 
 struct rin_bpf_insn {
     uint8_t code;
@@ -243,6 +249,22 @@ struct rin_bpf_map_freeze_attr {
     uint32_t map_fd;
 };
 
+struct rin_bpf_link_create_attr {
+    uint32_t prog_fd;
+    uint32_t target_fd;
+    uint32_t attach_type;
+    uint32_t flags;
+    uint32_t reserved[4];
+};
+
+struct rin_bpf_link_info {
+    uint32_t type;
+    uint32_t id;
+    uint32_t program_id;
+    uint32_t attach_type;
+    uint32_t reserved[4];
+};
+
 struct rin_bpf_program_attach_attr {
     uint32_t target_fd;
     uint32_t program_fd;
@@ -321,6 +343,7 @@ union rin_bpf_attr {
     struct rin_bpf_map_freeze_attr map_freeze;
     struct rin_bpf_program_attach_attr program_attach;
     struct rin_bpf_program_test_run_attr program_test_run;
+    struct rin_bpf_link_create_attr link_create;
     struct rin_bpf_feature_query_attr feature_query;
     struct {
         uint32_t map_type;
@@ -424,6 +447,8 @@ static_assert(sizeof(struct rin_bpf_program_load_attr) == 144u,
               "eBPF program-load attribute layout mismatch");
 static_assert(sizeof(struct rin_bpf_program_test_run_attr) == 80u,
               "eBPF program-test-run attribute layout mismatch");
+static_assert(sizeof(struct rin_bpf_link_create_attr) == 32u,
+              "eBPF link-create attribute layout mismatch");
 static_assert(sizeof(struct rin_bpf_sys_enter_context) == 72u,
               "eBPF syscall-enter context layout mismatch");
 static_assert(sizeof(union rin_bpf_attr) == 256u,
@@ -443,6 +468,8 @@ _Static_assert(sizeof(struct rin_bpf_program_load_attr) == 144u,
                "eBPF program-load attribute layout mismatch");
 _Static_assert(sizeof(struct rin_bpf_program_test_run_attr) == 80u,
                "eBPF program-test-run attribute layout mismatch");
+_Static_assert(sizeof(struct rin_bpf_link_create_attr) == 32u,
+               "eBPF link-create attribute layout mismatch");
 _Static_assert(sizeof(struct rin_bpf_sys_enter_context) == 72u,
                "eBPF syscall-enter context layout mismatch");
 _Static_assert(sizeof(union rin_bpf_attr) == 256u,
