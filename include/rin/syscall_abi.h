@@ -5755,6 +5755,8 @@ static inline uint32_t rin_syscall_arch_support(
 #define RIN_QUOTACTL_FD_COMMAND_SET         1u
 #define RIN_QUOTACTL_FD_COMMAND_GET         2u
 #define RIN_QUOTACTL_FD_COMMAND_SET_PROJECT_ID 3u
+#define RIN_QUOTACTL_FD_COMMAND_WATCH       4u
+#define RIN_QUOTACTL_FD_COMMAND_UNWATCH     5u
 #define RIN_QUOTACTL_TYPE_UID               1u
 #define RIN_QUOTACTL_TYPE_GID               2u
 #define RIN_QUOTACTL_TYPE_PROJECT           3u

@@ -1806,7 +1806,7 @@ typedef struct RinPosixSpawnPidFdRequestV1 {
 
 #endif /* RIN_SDK_POSIX_SPAWN_PIDFD_ABI_DEFINED */
 
-/* Descriptor-bound quota control request. IDs are interpreted in the target mount's filesystem ID namespace; GET returns live usage and soft-limit warning state. */
+/* Descriptor-bound quota control request. IDs are interpreted in the target mount's filesystem ID namespace; GET returns live usage and soft-limit warning state. WATCH/UNWATCH use reserved[0] for a same-process eventfd descriptor; notifications wake the consumer, which then issues GET for current warning flags. */
 typedef struct RinQuotaCtlFdRequestV1 {
     uint32_t struct_size;
     uint16_t version;
