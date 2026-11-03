@@ -143,6 +143,7 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_TRACEPOINT_ATTACH (1ull << 3)
 #define RIN_BPF_FEATURE_MAP_HELPERS (1ull << 4)
 #define RIN_BPF_FEATURE_PID_UID_HELPERS (1ull << 5)
+#define RIN_BPF_FEATURE_PROGRAM_TEST_RUN (1ull << 6)
 
 struct rin_bpf_insn {
     uint8_t code;
@@ -244,6 +245,24 @@ struct rin_bpf_program_attach_attr {
     uint32_t reserved;
 };
 
+struct rin_bpf_program_test_run_attr {
+    uint32_t prog_fd;
+    uint32_t retval;
+    uint32_t data_size_in;
+    uint32_t data_size_out;
+    rin_bpf_aligned_u64 data_in;
+    rin_bpf_aligned_u64 data_out;
+    uint32_t repeat;
+    uint32_t duration;
+    uint32_t ctx_size_in;
+    uint32_t ctx_size_out;
+    rin_bpf_aligned_u64 ctx_in;
+    rin_bpf_aligned_u64 ctx_out;
+    uint32_t flags;
+    uint32_t cpu;
+    uint32_t batch_size;
+};
+
 struct rin_bpf_feature_query_attr {
     uint32_t version;
     uint32_t struct_size;
@@ -293,6 +312,7 @@ union rin_bpf_attr {
     struct rin_bpf_program_load_attr program_load;
     struct rin_bpf_object_info_attr object_info;
     struct rin_bpf_program_attach_attr program_attach;
+    struct rin_bpf_program_test_run_attr program_test_run;
     struct rin_bpf_feature_query_attr feature_query;
     struct {
         uint32_t map_type;
@@ -361,6 +381,23 @@ union rin_bpf_attr {
         uint32_t replace_bpf_fd;
         uint32_t attach_reserved;
     };
+    struct {
+        uint32_t prog_fd;
+        uint32_t retval;
+        uint32_t data_size_in;
+        uint32_t data_size_out;
+        rin_bpf_aligned_u64 data_in;
+        rin_bpf_aligned_u64 data_out;
+        uint32_t repeat;
+        uint32_t duration;
+        uint32_t ctx_size_in;
+        uint32_t ctx_size_out;
+        rin_bpf_aligned_u64 ctx_in;
+        rin_bpf_aligned_u64 ctx_out;
+        uint32_t flags;
+        uint32_t cpu;
+        uint32_t batch_size;
+    } test;
     uint8_t reserved[256];
 };
 
@@ -377,6 +414,10 @@ static_assert(offsetof(struct rin_bpf_program_load_attr, instructions) == 8u,
               "eBPF instruction pointer alignment mismatch");
 static_assert(sizeof(struct rin_bpf_program_load_attr) == 144u,
               "eBPF program-load attribute layout mismatch");
+static_assert(sizeof(struct rin_bpf_program_test_run_attr) == 80u,
+              "eBPF program-test-run attribute layout mismatch");
+static_assert(sizeof(struct rin_bpf_sys_enter_context) == 72u,
+              "eBPF syscall-enter context layout mismatch");
 static_assert(sizeof(union rin_bpf_attr) == 256u,
               "eBPF attribute envelope must be 256 bytes");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
@@ -392,6 +433,10 @@ _Static_assert(offsetof(struct rin_bpf_program_load_attr, instructions) == 8u,
                "eBPF instruction pointer alignment mismatch");
 _Static_assert(sizeof(struct rin_bpf_program_load_attr) == 144u,
                "eBPF program-load attribute layout mismatch");
+_Static_assert(sizeof(struct rin_bpf_program_test_run_attr) == 80u,
+               "eBPF program-test-run attribute layout mismatch");
+_Static_assert(sizeof(struct rin_bpf_sys_enter_context) == 72u,
+               "eBPF syscall-enter context layout mismatch");
 _Static_assert(sizeof(union rin_bpf_attr) == 256u,
                "eBPF attribute envelope must be 256 bytes");
 #endif
