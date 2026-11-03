@@ -16,12 +16,18 @@ typedef enum RinUsbHidBootResult {
 typedef enum RinUsbHidEventType {
     RIN_USB_HID_EVENT_KEY = 1,
     RIN_USB_HID_EVENT_RELATIVE = 2,
-    RIN_USB_HID_EVENT_SYNC = 3
+    RIN_USB_HID_EVENT_SYNC = 3,
+    RIN_USB_HID_EVENT_ABSOLUTE = 4
 } RinUsbHidEventType;
 
 #define RIN_USB_HID_REL_X     0u
 #define RIN_USB_HID_REL_Y     1u
 #define RIN_USB_HID_REL_WHEEL 8u
+
+/* Absolute pointer coordinates are normalized to the inclusive range
+ * [0, 65535] before publication. */
+#define RIN_USB_HID_ABS_X 0u
+#define RIN_USB_HID_ABS_Y 1u
 
 #define RIN_USB_HID_BTN_LEFT   0x110u
 #define RIN_USB_HID_BTN_RIGHT  0x111u
