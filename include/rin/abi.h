@@ -160,11 +160,12 @@ typedef uint64_t RinCapabilitySet;
 #define RIN_CAP_FIREWALL_PROMPT  (UINT64_C(1) << 31)
 #define RIN_CAP_BLUETOOTH_CONTROL (UINT64_C(1) << 32)
 #define RIN_CAP_PACKET_SOCKET    (UINT64_C(1) << 33)
+#define RIN_CAP_NPU_ACCESS       (UINT64_C(1) << 34)
 #define RIN_CAP_APP_RESOURCES    (RIN_CAP_NETWORK_ACCESS | \
                                   RIN_CAP_CLIPBOARD | RIN_CAP_NOTIFICATION | \
                                   RIN_CAP_GPU_ACCESS | RIN_CAP_MICROPHONE | \
                                   RIN_CAP_CAMERA | RIN_CAP_MIDI | \
-                                  RIN_CAP_LOCATION)
+                                  RIN_CAP_LOCATION | RIN_CAP_NPU_ACCESS)
 #define RIN_CAP_ALL              (RIN_CAP_DAC_OVERRIDE | RIN_CAP_CHOWN | \
                                   RIN_CAP_SYSTEM_ADMIN | RIN_CAP_DRIVER_BROKER | \
                                   RIN_CAP_SERVICE_CONTROL | RIN_CAP_GUI_CONTROL | \
@@ -180,7 +181,7 @@ typedef uint64_t RinCapabilitySet;
                                   RIN_CAP_PROFILING | \
                                   RIN_CAP_FIREWALL_PROMPT | \
                                   RIN_CAP_BLUETOOTH_CONTROL | \
-                                  RIN_CAP_PACKET_SOCKET)
+                                  RIN_CAP_PACKET_SOCKET | RIN_CAP_NPU_ACCESS)
 
 #if !defined(RIN_SDK_KERNEL_INTERNAL_ABI)
 typedef uint64_t RinObject;
