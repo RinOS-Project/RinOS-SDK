@@ -22,6 +22,7 @@ typedef enum RinUsbHidEventType {
 
 #define RIN_USB_HID_REL_X     0u
 #define RIN_USB_HID_REL_Y     1u
+#define RIN_USB_HID_REL_HWHEEL 6u
 #define RIN_USB_HID_REL_WHEEL 8u
 
 /* Absolute pointer coordinates are normalized to the inclusive range
