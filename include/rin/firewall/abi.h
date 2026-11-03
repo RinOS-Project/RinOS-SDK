@@ -7,8 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define RIN_FIREWALL_ABI_MAGIC UINT32_C(0x31574652) /* "RFW1" */
-#define RIN_FIREWALL_ABI_VERSION UINT16_C(1)
+#define RIN_FIREWALL_ABI_MAGIC UINT32_C(0x32574652) /* "RFW2" */
+#define RIN_FIREWALL_ABI_VERSION UINT16_C(3)
 #define RIN_FIREWALL_MAX_RULES UINT32_C(128)
 #define RIN_FIREWALL_RULE_NAME_MAX UINT32_C(32)
 #define RIN_FIREWALL_RULE_DESCRIPTION_MAX UINT32_C(96)
@@ -82,6 +82,13 @@ typedef enum RinFirewallNetworkProfileV1 {
 #define RIN_FIREWALL_RULE_FLAG_POLICY_BYPASS UINT16_C(0x0200)
 /* Record matching packets even when global allowed-traffic logging is off. */
 #define RIN_FIREWALL_RULE_FLAG_LOG UINT16_C(0x0400)
+/* Persist a selector for the stable sandbox owner identity. The rule stores
+ * the first 128 bits of the kernel-validated Pod UID digest in reserved[0..3]. */
+#define RIN_FIREWALL_RULE_FLAG_MATCH_NAMESPACE_IDENTITY UINT16_C(0x0800)
+/* A migrated runtime namespace selector has no durable owner identity. Keep
+ * it visible but disabled until an administrator rebinds or removes it. */
+#define RIN_FIREWALL_RULE_FLAG_UNRESOLVED_NAMESPACE UINT16_C(0x1000)
+#define RIN_FIREWALL_RULE_FLAG_MATCH_FWMARK UINT16_C(0x2000)
 #define RIN_FIREWALL_RULE_KNOWN_FLAGS \
     (RIN_FIREWALL_RULE_FLAG_ENABLED | RIN_FIREWALL_RULE_FLAG_MATCH_INTERFACE | \
      RIN_FIREWALL_RULE_FLAG_MATCH_NAMESPACE | \
@@ -92,15 +99,24 @@ typedef enum RinFirewallNetworkProfileV1 {
      RIN_FIREWALL_RULE_FLAG_ORPHANED | \
      RIN_FIREWALL_RULE_FLAG_POLICY_GUARD | \
      RIN_FIREWALL_RULE_FLAG_POLICY_BYPASS | \
-     RIN_FIREWALL_RULE_FLAG_LOG)
+     RIN_FIREWALL_RULE_FLAG_LOG | \
+     RIN_FIREWALL_RULE_FLAG_MATCH_NAMESPACE_IDENTITY | \
+     RIN_FIREWALL_RULE_FLAG_UNRESOLVED_NAMESPACE | \
+     RIN_FIREWALL_RULE_FLAG_MATCH_FWMARK)
 
 #define RIN_FIREWALL_PACKET_FLAG_FRAGMENT UINT16_C(0x0001)
 #define RIN_FIREWALL_PACKET_FLAG_PROCESS_IDENTITY UINT16_C(0x0002)
 #define RIN_FIREWALL_PACKET_FLAG_USER_IDENTITY UINT16_C(0x0004)
+#define RIN_FIREWALL_PACKET_FLAG_NAMESPACE_IDENTITY UINT16_C(0x0008)
+#define RIN_FIREWALL_PACKET_FLAG_FWMARK UINT16_C(0x0010)
 #define RIN_FIREWALL_PACKET_KNOWN_FLAGS \
     (RIN_FIREWALL_PACKET_FLAG_FRAGMENT | \
      RIN_FIREWALL_PACKET_FLAG_PROCESS_IDENTITY | \
-     RIN_FIREWALL_PACKET_FLAG_USER_IDENTITY)
+     RIN_FIREWALL_PACKET_FLAG_USER_IDENTITY | \
+     RIN_FIREWALL_PACKET_FLAG_NAMESPACE_IDENTITY | \
+     RIN_FIREWALL_PACKET_FLAG_FWMARK)
+
+#define RIN_FIREWALL_NAMESPACE_IDENTITY_SIZE UINT32_C(16)
 
 #define RIN_FIREWALL_STATE_UNTRACKED UINT32_C(0)
 #define RIN_FIREWALL_STATE_NEW UINT32_C(1)
@@ -158,6 +174,9 @@ typedef struct RinFirewallRuleV1 {
     uint64_t namespace_id;
     uint32_t network_profile;
     uint32_t connection_state_mask;
+    /* MATCH_FWMARK時は (packetのmark & fwmask) == fwmark で照合する。 */
+    uint32_t fwmark;
+    uint32_t fwmask;
     uint8_t source_address[16];
     uint8_t destination_address[16];
     uint8_t application_id[RIN_FIREWALL_APPLICATION_ID_SIZE];
@@ -167,7 +186,9 @@ typedef struct RinFirewallRuleV1 {
     uint64_t updated_at_ms;
     uint64_t packet_count;
     uint64_t byte_count;
-    /* With MATCH_PROCESS, reserved[0..1] carry process_id and
+    /* With MATCH_NAMESPACE_IDENTITY, reserved[0..3] carry the stable sandbox
+     * identity in little-endian byte order. With MATCH_PROCESS, reserved[0..1]
+     * carry process_id and
      * reserved[2..3] carry process_instance_cookie, little-endian words.
      * Without MATCH_PROCESS, container rules use reserved[0] for a stable
      * container owner ID and require reserved[1..3] to be zero. Other rule
@@ -210,10 +231,13 @@ typedef struct RinFirewallPacketV1 {
     uint8_t extension_header_count;
     uint8_t reserved0;
     uint8_t application_id[RIN_FIREWALL_APPLICATION_ID_SIZE];
-    /* With PROCESS_IDENTITY, reserved[0..1] are the process ID and instance
-     * cookie. With USER_IDENTITY, reserved[2] carries the authenticated
-     * non-zero owner UID; otherwise it remains zero. */
+    /* PROCESS_IDENTITY時のreserved[0..1]はprocess IDとinstance cookie。
+     * USER_IDENTITY時のreserved[2]下位wordは認証済みUID、FWMARK時の
+     * 上位wordはkernelが設定したsocket markを保持する。 */
     uint64_t reserved[3];
+    /* Kernel populated from the network namespace owner. User supplied
+     * identity bytes are discarded before policy evaluation. */
+    uint8_t namespace_identity[RIN_FIREWALL_NAMESPACE_IDENTITY_SIZE];
 } RinFirewallPacketV1;
 
 typedef struct RinFirewallDecisionV1 {
@@ -242,6 +266,42 @@ static inline uint32_t rin_firewall_container_rule_owner_id(
     return rule->reserved[0];
 }
 
+static inline int rin_firewall_rule_set_namespace_identity(
+    RinFirewallRuleV1* rule,
+    const uint8_t identity[RIN_FIREWALL_NAMESPACE_IDENTITY_SIZE])
+{
+    uint32_t index;
+    if (rule == NULL || identity == NULL ||
+        rule->rule_class == RIN_FIREWALL_RULE_CLASS_CONTAINER ||
+        (rule->flags & RIN_FIREWALL_RULE_FLAG_MATCH_PROCESS) != 0u)
+        return 0;
+    for (index = 0u; index < 4u; ++index) {
+        rule->reserved[index] = (uint32_t)identity[index * 4u] |
+            ((uint32_t)identity[index * 4u + 1u] << 8u) |
+            ((uint32_t)identity[index * 4u + 2u] << 16u) |
+            ((uint32_t)identity[index * 4u + 3u] << 24u);
+    }
+    return 1;
+}
+
+static inline int rin_firewall_rule_get_namespace_identity(
+    const RinFirewallRuleV1* rule,
+    uint8_t identity_out[RIN_FIREWALL_NAMESPACE_IDENTITY_SIZE])
+{
+    uint32_t index;
+    if (rule == NULL || identity_out == NULL ||
+        (rule->flags & RIN_FIREWALL_RULE_FLAG_MATCH_NAMESPACE_IDENTITY) == 0u)
+        return 0;
+    for (index = 0u; index < 4u; ++index) {
+        const uint32_t word = rule->reserved[index];
+        identity_out[index * 4u] = (uint8_t)word;
+        identity_out[index * 4u + 1u] = (uint8_t)(word >> 8u);
+        identity_out[index * 4u + 2u] = (uint8_t)(word >> 16u);
+        identity_out[index * 4u + 3u] = (uint8_t)(word >> 24u);
+    }
+    return 1;
+}
+
 static inline int rin_firewall_container_rule_set_owner_id(
     RinFirewallRuleV1* rule, uint32_t owner_id)
 {
@@ -255,17 +315,38 @@ static inline int rin_firewall_container_rule_set_owner_id(
     return 1;
 }
 
+static inline uint32_t rin_firewall_packet_fwmark(
+    const RinFirewallPacketV1* packet)
+{
+    return packet != NULL &&
+                   (packet->flags & RIN_FIREWALL_PACKET_FLAG_FWMARK) != 0u
+               ? (uint32_t)(packet->reserved[2] >> 32u) : 0u;
+}
+
+/* 固定長packet ABIを保ち、reserved[2]の未使用上位wordへ保存する。 */
+static inline void rin_firewall_packet_set_fwmark(
+    RinFirewallPacketV1* packet, uint32_t fwmark)
+{
+    if (packet == NULL) return;
+    packet->reserved[2] = (packet->reserved[2] & UINT64_C(0xffffffff)) |
+                          ((uint64_t)fwmark << 32u);
+    if (fwmark != 0u)
+        packet->flags |= RIN_FIREWALL_PACKET_FLAG_FWMARK;
+    else
+        packet->flags &= (uint16_t)~RIN_FIREWALL_PACKET_FLAG_FWMARK;
+}
+
 #if defined(__cplusplus)
-static_assert(sizeof(RinFirewallRuleV1) == 304u,
+static_assert(sizeof(RinFirewallRuleV1) == 312u,
               "RinFirewallRuleV1 ABI drift");
-static_assert(sizeof(RinFirewallPacketV1) == 128u,
+static_assert(sizeof(RinFirewallPacketV1) == 144u,
               "RinFirewallPacketV1 ABI drift");
 static_assert(sizeof(RinFirewallDecisionV1) == 48u,
               "RinFirewallDecisionV1 ABI drift");
 #else
-_Static_assert(sizeof(RinFirewallRuleV1) == 304u,
+_Static_assert(sizeof(RinFirewallRuleV1) == 312u,
                "RinFirewallRuleV1 ABI drift");
-_Static_assert(sizeof(RinFirewallPacketV1) == 128u,
+_Static_assert(sizeof(RinFirewallPacketV1) == 144u,
                "RinFirewallPacketV1 ABI drift");
 _Static_assert(sizeof(RinFirewallDecisionV1) == 48u,
                "RinFirewallDecisionV1 ABI drift");
