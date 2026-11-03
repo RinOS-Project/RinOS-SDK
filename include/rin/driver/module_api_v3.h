@@ -216,6 +216,39 @@ typedef struct RinDriverContextV3 {
     uint64_t reserved[8];
 } RinDriverContextV3;
 
+/* NDRV ABI minor 2 embeds a signed RIN executable in its authenticated RDFW
+ * resource catalog. Its RinDriverEntryV3 receives the same device API and
+ * context as the outer NDRV entry, with this phase record in reserved[]. For
+ * this kernel-module root only, RIN required_capabilities use the
+ * RIN_DRIVER_V3_CAP_* namespace and are bounded by the granted NDRV API. */
+#define RIN_DRIVER_V3_KERNEL_MODULE_PHASE_MAGIC UINT64_C(0x314D494E524B4452)
+#define RIN_DRIVER_V3_KERNEL_MODULE_PHASE_ABI UINT64_C(1)
+
+typedef enum RinDriverKernelModulePhaseV1 {
+    RIN_DRIVER_KERNEL_MODULE_PHASE_PROBE = 1,
+    RIN_DRIVER_KERNEL_MODULE_PHASE_BIND = 2,
+    RIN_DRIVER_KERNEL_MODULE_PHASE_START = 3,
+    RIN_DRIVER_KERNEL_MODULE_PHASE_STOP = 4,
+    RIN_DRIVER_KERNEL_MODULE_PHASE_UNBIND = 5,
+    RIN_DRIVER_KERNEL_MODULE_PHASE_POWER = 6
+} RinDriverKernelModulePhaseV1;
+
+/* STOP's phase argument distinguishes a deliberate unload from loss of the
+ * device. START_FAILURE is used only while unwinding a partial start. */
+typedef enum RinDriverKernelModuleStopReasonV1 {
+    RIN_DRIVER_KERNEL_MODULE_STOP_NORMAL = 0,
+    RIN_DRIVER_KERNEL_MODULE_STOP_DEVICE_REMOVED = 1,
+    RIN_DRIVER_KERNEL_MODULE_STOP_SURPRISE_REMOVAL = 2,
+    RIN_DRIVER_KERNEL_MODULE_STOP_START_FAILURE = 3
+} RinDriverKernelModuleStopReasonV1;
+
+/* context->reserved[0] = magic, [1] = phase, [2] = phase argument,
+ * [3] = phase ABI. The remaining words stay zero. POWER's argument is a
+ * RIN_DRIVER_POWER_STATE_* value; STOP's argument is a stop-reason enum. */
+#define RIN_DRIVER_V3_KERNEL_MODULE_RESOURCE_ROOT "kernel-module-v1/root.rin"
+#define RIN_DRIVER_V3_KERNEL_MODULE_RESOURCE_PREFIX "kernel-module-v1/"
+#define RIN_DRIVER_V3_KERNEL_MODULE_LIBRARY_PREFIX "kernel-module-v1/lib/"
+
 #define RIN_DRIVER_V3_DIAGNOSTIC_SNAPSHOT_VERSION UINT32_C(0x00010000)
 #define RIN_DRIVER_V3_DIAGNOSTIC_SNAPSHOT_MAX_BYTES 256u
 
