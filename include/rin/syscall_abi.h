@@ -2578,6 +2578,13 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_PKEY_FREE_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PKEY_FREE_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_PKEY_FREE_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* filesystem. */
+/* Configures or queries per-ID quotas through an open filesystem descriptor. Filesystems without quota support return EOPNOTSUPP. */
+#define RIN_SYS_QUOTACTL_FD                 0x80D2u
+/* QUOTACTL_FD availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_QUOTACTL_FD_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_QUOTACTL_FD_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_QUOTACTL_FD_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 
 /* Returns UNKNOWN for syscall numbers outside this declared availability table. */
 static inline uint32_t rin_syscall_arch_support(
@@ -5699,6 +5706,13 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_PKEY_FREE_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
+    case RIN_SYS_QUOTACTL_FD:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_QUOTACTL_FD_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_QUOTACTL_FD_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_QUOTACTL_FD_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
     default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
     }
 }
@@ -5724,5 +5738,20 @@ static inline uint32_t rin_syscall_arch_support(
 #define RIN_SYSCALL_BATCH_ABI_VERSION       1u
 #define RIN_SYSCALL_BATCH_MAX_ITEMS         16u
 #define RIN_SYSCALL_BATCH_ITEM_STRIDE       80u
+#define RIN_QUOTACTL_FD_ABI_VERSION         1u
+#define RIN_QUOTACTL_FD_COMMAND_SET         1u
+#define RIN_QUOTACTL_FD_COMMAND_GET         2u
+#define RIN_QUOTACTL_FD_COMMAND_SET_PROJECT_ID 3u
+#define RIN_QUOTACTL_TYPE_UID               1u
+#define RIN_QUOTACTL_TYPE_GID               2u
+#define RIN_QUOTACTL_TYPE_PROJECT           3u
+#define RIN_QUOTACTL_FLAG_BLOCK_HARD        1u
+#define RIN_QUOTACTL_FLAG_BLOCK_SOFT        2u
+#define RIN_QUOTACTL_FLAG_INODE_HARD        4u
+#define RIN_QUOTACTL_FLAG_INODE_SOFT        8u
+#define RIN_QUOTACTL_WARNING_BLOCK_SOFT     1u
+#define RIN_QUOTACTL_WARNING_INODE_SOFT     2u
+#define RIN_QUOTACTL_WARNING_BLOCK_GRACE_EXPIRED 4u
+#define RIN_QUOTACTL_WARNING_INODE_GRACE_EXPIRED 8u
 
 #endif /* RIN_SDK_SYSCALL_ABI_H */

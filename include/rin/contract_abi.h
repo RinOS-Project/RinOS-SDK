@@ -556,7 +556,6 @@ typedef int32_t RinResultCode;
 #define RIN_INPUT_EVENT_TEXT_COMMIT          5u
 #define RIN_INPUT_EVENT_POINTER_WHEEL        6u
 #define RIN_INPUT_EVENT_FOCUS                7u /* reserved */
-/* Consumers must clear held key, modifier, pointer-button, and repeat state. */
 #define RIN_INPUT_EVENT_DEVICE_RESET         8u
 
 /* Control IDs use group in bits 31..16 and operation in bits 15..0. */
@@ -1807,6 +1806,30 @@ typedef struct RinPosixSpawnPidFdRequestV1 {
 
 #endif /* RIN_SDK_POSIX_SPAWN_PIDFD_ABI_DEFINED */
 
+/* Descriptor-bound quota control request. IDs are interpreted in the target mount's filesystem ID namespace; GET returns live usage and soft-limit warning state. */
+typedef struct RinQuotaCtlFdRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t command;
+    int32_t fd;
+    uint32_t quota_type;
+    uint32_t id;
+    uint32_t flags;
+    uint64_t block_hard;
+    uint64_t block_soft;
+    uint64_t inode_hard;
+    uint64_t inode_soft;
+    uint64_t block_grace_seconds;
+    uint64_t inode_grace_seconds;
+    uint64_t blocks_used;
+    uint64_t inodes_used;
+    uint64_t block_grace_deadline;
+    uint64_t inode_grace_deadline;
+    uint32_t warning_flags;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinQuotaCtlFdRequestV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinDlAddrRllRecordV1) == 240, "RinDlAddrRllRecordV1 ABI drift");
 static_assert(offsetof(RinDlAddrRllRecordV1, abi_version) == 0, "RinDlAddrRllRecordV1.abi_version ABI drift");
@@ -2822,6 +2845,27 @@ static_assert(offsetof(RinPosixSpawnPidFdRequestV1, version) == 4, "RinPosixSpaw
 static_assert(offsetof(RinPosixSpawnPidFdRequestV1, reserved) == 6, "RinPosixSpawnPidFdRequestV1.reserved ABI drift");
 static_assert(offsetof(RinPosixSpawnPidFdRequestV1, spawn_flags) == 8, "RinPosixSpawnPidFdRequestV1.spawn_flags ABI drift");
 static_assert(offsetof(RinPosixSpawnPidFdRequestV1, pidfd) == 12, "RinPosixSpawnPidFdRequestV1.pidfd ABI drift");
+static_assert(sizeof(RinQuotaCtlFdRequestV1) == 128, "RinQuotaCtlFdRequestV1 ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, struct_size) == 0, "RinQuotaCtlFdRequestV1.struct_size ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, version) == 4, "RinQuotaCtlFdRequestV1.version ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, command) == 6, "RinQuotaCtlFdRequestV1.command ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, fd) == 8, "RinQuotaCtlFdRequestV1.fd ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, quota_type) == 12, "RinQuotaCtlFdRequestV1.quota_type ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, id) == 16, "RinQuotaCtlFdRequestV1.id ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, flags) == 20, "RinQuotaCtlFdRequestV1.flags ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, block_hard) == 24, "RinQuotaCtlFdRequestV1.block_hard ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, block_soft) == 32, "RinQuotaCtlFdRequestV1.block_soft ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, inode_hard) == 40, "RinQuotaCtlFdRequestV1.inode_hard ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, inode_soft) == 48, "RinQuotaCtlFdRequestV1.inode_soft ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, block_grace_seconds) == 56, "RinQuotaCtlFdRequestV1.block_grace_seconds ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, inode_grace_seconds) == 64, "RinQuotaCtlFdRequestV1.inode_grace_seconds ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, blocks_used) == 72, "RinQuotaCtlFdRequestV1.blocks_used ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, inodes_used) == 80, "RinQuotaCtlFdRequestV1.inodes_used ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, block_grace_deadline) == 88, "RinQuotaCtlFdRequestV1.block_grace_deadline ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, inode_grace_deadline) == 96, "RinQuotaCtlFdRequestV1.inode_grace_deadline ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, warning_flags) == 104, "RinQuotaCtlFdRequestV1.warning_flags ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, reserved0) == 108, "RinQuotaCtlFdRequestV1.reserved0 ABI drift");
+static_assert(offsetof(RinQuotaCtlFdRequestV1, reserved) == 112, "RinQuotaCtlFdRequestV1.reserved ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinDlAddrRllRecordV1) == 240, "RinDlAddrRllRecordV1 ABI drift");
 _Static_assert(offsetof(RinDlAddrRllRecordV1, abi_version) == 0, "RinDlAddrRllRecordV1.abi_version ABI drift");
@@ -3837,6 +3881,27 @@ _Static_assert(offsetof(RinPosixSpawnPidFdRequestV1, version) == 4, "RinPosixSpa
 _Static_assert(offsetof(RinPosixSpawnPidFdRequestV1, reserved) == 6, "RinPosixSpawnPidFdRequestV1.reserved ABI drift");
 _Static_assert(offsetof(RinPosixSpawnPidFdRequestV1, spawn_flags) == 8, "RinPosixSpawnPidFdRequestV1.spawn_flags ABI drift");
 _Static_assert(offsetof(RinPosixSpawnPidFdRequestV1, pidfd) == 12, "RinPosixSpawnPidFdRequestV1.pidfd ABI drift");
+_Static_assert(sizeof(RinQuotaCtlFdRequestV1) == 128, "RinQuotaCtlFdRequestV1 ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, struct_size) == 0, "RinQuotaCtlFdRequestV1.struct_size ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, version) == 4, "RinQuotaCtlFdRequestV1.version ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, command) == 6, "RinQuotaCtlFdRequestV1.command ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, fd) == 8, "RinQuotaCtlFdRequestV1.fd ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, quota_type) == 12, "RinQuotaCtlFdRequestV1.quota_type ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, id) == 16, "RinQuotaCtlFdRequestV1.id ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, flags) == 20, "RinQuotaCtlFdRequestV1.flags ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, block_hard) == 24, "RinQuotaCtlFdRequestV1.block_hard ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, block_soft) == 32, "RinQuotaCtlFdRequestV1.block_soft ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, inode_hard) == 40, "RinQuotaCtlFdRequestV1.inode_hard ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, inode_soft) == 48, "RinQuotaCtlFdRequestV1.inode_soft ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, block_grace_seconds) == 56, "RinQuotaCtlFdRequestV1.block_grace_seconds ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, inode_grace_seconds) == 64, "RinQuotaCtlFdRequestV1.inode_grace_seconds ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, blocks_used) == 72, "RinQuotaCtlFdRequestV1.blocks_used ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, inodes_used) == 80, "RinQuotaCtlFdRequestV1.inodes_used ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, block_grace_deadline) == 88, "RinQuotaCtlFdRequestV1.block_grace_deadline ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, inode_grace_deadline) == 96, "RinQuotaCtlFdRequestV1.inode_grace_deadline ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, warning_flags) == 104, "RinQuotaCtlFdRequestV1.warning_flags ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, reserved0) == 108, "RinQuotaCtlFdRequestV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinQuotaCtlFdRequestV1, reserved) == 112, "RinQuotaCtlFdRequestV1.reserved ABI drift");
 #endif
 
 #endif /* RIN_SDK_CONTRACT_ABI_H */
