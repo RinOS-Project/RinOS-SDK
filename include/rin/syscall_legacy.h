@@ -460,6 +460,10 @@
 #define SYS_PPOLL_TIMEOUT64_V1          RIN_SYS_PPOLL_TIMEOUT64_V1
 #define SYS_TIMES_V1                    RIN_SYS_TIMES_V1
 #define SYS_MSEAL                       RIN_SYS_MSEAL
+#define SYS_NPU_CALL                    RIN_SYS_NPU_CALL
+#define SYS_PKEY_MPROTECT               RIN_SYS_PKEY_MPROTECT
+#define SYS_PKEY_ALLOC                  RIN_SYS_PKEY_ALLOC
+#define SYS_PKEY_FREE                   RIN_SYS_PKEY_FREE
 
 #define SYS_CPU_TIME_ABI_VERSION        RIN_CPU_TIME_ABI_VERSION
 #define SYS_AUDIO_CTL_START             RIN_AUDIO_CTL_START
