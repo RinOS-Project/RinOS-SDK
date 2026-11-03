@@ -154,6 +154,7 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_MAP_FREEZE (1ull << 9)
 #define RIN_BPF_FEATURE_LINK_CREATE (1ull << 10)
 #define RIN_BPF_FEATURE_ATOMIC_LOOKUP_DELETE (1ull << 11)
+#define RIN_BPF_FEATURE_OBJECT_PIN_GET (1ull << 12)
 #define RIN_BPF_LINK_GLOBAL_TARGET UINT32_MAX
 
 struct rin_bpf_insn {
@@ -247,6 +248,13 @@ struct rin_bpf_object_info_attr {
     rin_bpf_aligned_u64 info;
 };
 
+/* BPF_OBJ_PIN and BPF_OBJ_GET share the Linux pathname attribute layout. */
+struct rin_bpf_object_path_attr {
+    rin_bpf_aligned_u64 pathname;
+    uint32_t bpf_fd;
+    uint32_t file_flags;
+};
+
 struct rin_bpf_map_freeze_attr {
     uint32_t map_fd;
 };
@@ -306,7 +314,8 @@ struct rin_bpf_feature_query_attr {
     uint32_t max_map_bytes;
     uint32_t max_map_count;
     uint32_t max_program_map_count;
-    uint32_t reserved[4];
+    uint32_t max_pinned_objects;
+    uint32_t reserved[3];
 };
 
 struct rin_bpf_program_info {
@@ -342,6 +351,7 @@ union rin_bpf_attr {
     struct rin_bpf_map_element_attr map_element;
     struct rin_bpf_program_load_attr program_load;
     struct rin_bpf_object_info_attr object_info;
+    struct rin_bpf_object_path_attr object_path;
     struct rin_bpf_map_freeze_attr map_freeze;
     struct rin_bpf_program_attach_attr program_attach;
     struct rin_bpf_program_test_run_attr program_test_run;
@@ -407,6 +417,11 @@ union rin_bpf_attr {
         rin_bpf_aligned_u64 info;
     };
     struct {
+        rin_bpf_aligned_u64 pathname;
+        uint32_t path_bpf_fd;
+        uint32_t path_file_flags;
+    };
+    struct {
         uint32_t target_fd;
         uint32_t prog_fd;
         uint32_t attach_type;
@@ -451,6 +466,10 @@ static_assert(sizeof(struct rin_bpf_program_test_run_attr) == 80u,
               "eBPF program-test-run attribute layout mismatch");
 static_assert(sizeof(struct rin_bpf_link_create_attr) == 32u,
               "eBPF link-create attribute layout mismatch");
+static_assert(sizeof(struct rin_bpf_object_path_attr) == 16u,
+              "eBPF object-path attribute layout mismatch");
+static_assert(offsetof(struct rin_bpf_object_path_attr, bpf_fd) == 8u,
+              "eBPF object-path descriptor offset mismatch");
 static_assert(sizeof(struct rin_bpf_sys_enter_context) == 72u,
               "eBPF syscall-enter context layout mismatch");
 static_assert(sizeof(union rin_bpf_attr) == 256u,
@@ -472,6 +491,10 @@ _Static_assert(sizeof(struct rin_bpf_program_test_run_attr) == 80u,
                "eBPF program-test-run attribute layout mismatch");
 _Static_assert(sizeof(struct rin_bpf_link_create_attr) == 32u,
                "eBPF link-create attribute layout mismatch");
+_Static_assert(sizeof(struct rin_bpf_object_path_attr) == 16u,
+               "eBPF object-path attribute layout mismatch");
+_Static_assert(offsetof(struct rin_bpf_object_path_attr, bpf_fd) == 8u,
+               "eBPF object-path descriptor offset mismatch");
 _Static_assert(sizeof(struct rin_bpf_sys_enter_context) == 72u,
                "eBPF syscall-enter context layout mismatch");
 _Static_assert(sizeof(union rin_bpf_attr) == 256u,
