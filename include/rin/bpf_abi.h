@@ -144,6 +144,7 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_MAP_HELPERS (1ull << 4)
 #define RIN_BPF_FEATURE_PID_UID_HELPERS (1ull << 5)
 #define RIN_BPF_FEATURE_PROGRAM_TEST_RUN (1ull << 6)
+#define RIN_BPF_FEATURE_TIME_CPU_HELPERS (1ull << 7)
 
 struct rin_bpf_insn {
     uint8_t code;
