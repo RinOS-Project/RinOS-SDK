@@ -28,6 +28,7 @@ enum rin_bpf_command {
     RIN_BPF_PROG_ATTACH = 8,
     RIN_BPF_PROG_DETACH = 9,
     RIN_BPF_PROG_TEST_RUN = 10,
+    RIN_BPF_MAP_LOOKUP_AND_DELETE_ELEM = 21,
     RIN_BPF_OBJ_GET_INFO_BY_FD = 15,
     RIN_BPF_BTF_GET_NEXT_ID = 23,
     RIN_BPF_MAP_LOOKUP_BATCH = 24,
@@ -152,6 +153,7 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_TASK_HELPERS (1ull << 8)
 #define RIN_BPF_FEATURE_MAP_FREEZE (1ull << 9)
 #define RIN_BPF_FEATURE_LINK_CREATE (1ull << 10)
+#define RIN_BPF_FEATURE_ATOMIC_LOOKUP_DELETE (1ull << 11)
 #define RIN_BPF_LINK_GLOBAL_TARGET UINT32_MAX
 
 struct rin_bpf_insn {
