@@ -64,11 +64,13 @@ enum rin_bpf_program_type {
 
 enum rin_bpf_attach_type {
     RIN_BPF_ATTACH_TYPE_TRACE_SYSCALL_ENTER = 0x52494e01u,
-    RIN_BPF_ATTACH_TYPE_TRACE_SYSCALL_EXIT = 0x52494e02u
+    RIN_BPF_ATTACH_TYPE_TRACE_SYSCALL_EXIT = 0x52494e02u,
+    RIN_BPF_ATTACH_TYPE_PACKET_INGRESS = 0x52494e03u
 };
 
 enum rin_bpf_link_type {
-    RIN_BPF_LINK_TYPE_RAW_TRACEPOINT = 1
+    RIN_BPF_LINK_TYPE_RAW_TRACEPOINT = 1,
+    RIN_BPF_LINK_TYPE_PACKET_FILTER = 2
 };
 
 enum rin_bpf_map_update_flag {
@@ -157,6 +159,7 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_ATOMIC_LOOKUP_DELETE (1ull << 11)
 #define RIN_BPF_FEATURE_OBJECT_PIN_GET (1ull << 12)
 #define RIN_BPF_FEATURE_TRACE_SYSCALL_EXIT (1ull << 13)
+#define RIN_BPF_FEATURE_SOCKET_FILTER (1ull << 14)
 #define RIN_BPF_LINK_GLOBAL_TARGET UINT32_MAX
 
 struct rin_bpf_insn {
@@ -195,6 +198,14 @@ struct rin_bpf_sys_exit_context {
     rin_bpf_aligned_u64 pid_tgid;
     rin_bpf_aligned_u64 uid_gid;
     rin_bpf_aligned_u64 return_value;
+};
+
+/* Packet-filter context. Packet bytes are read through skb_load_bytes. */
+struct rin_bpf_packet_context {
+    uint32_t ingress_interface_id;
+    uint32_t packet_length;
+    uint32_t protocol;
+    uint32_t reserved;
 };
 
 struct rin_bpf_map_create_attr {
@@ -488,6 +499,8 @@ static_assert(sizeof(struct rin_bpf_sys_exit_context) == 80u,
               "eBPF syscall-exit context layout mismatch");
 static_assert(offsetof(struct rin_bpf_sys_exit_context, return_value) == 72u,
               "eBPF syscall-exit return-value offset mismatch");
+static_assert(sizeof(struct rin_bpf_packet_context) == 16u,
+              "eBPF packet context layout mismatch");
 static_assert(sizeof(union rin_bpf_attr) == 256u,
               "eBPF attribute envelope must be 256 bytes");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
@@ -517,6 +530,8 @@ _Static_assert(sizeof(struct rin_bpf_sys_exit_context) == 80u,
                "eBPF syscall-exit context layout mismatch");
 _Static_assert(offsetof(struct rin_bpf_sys_exit_context, return_value) == 72u,
                "eBPF syscall-exit return-value offset mismatch");
+_Static_assert(sizeof(struct rin_bpf_packet_context) == 16u,
+               "eBPF packet context layout mismatch");
 _Static_assert(sizeof(union rin_bpf_attr) == 256u,
                "eBPF attribute envelope must be 256 bytes");
 #endif
