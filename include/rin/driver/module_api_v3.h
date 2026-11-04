@@ -95,6 +95,25 @@ typedef enum RinDriverV3Result {
 #define RIN_DRIVER_POWER_STATE_D3 UINT32_C(3)
 #define RIN_DRIVER_POWER_STATE_MAX RIN_DRIVER_POWER_STATE_D3
 
+/* A versioned Stop callback result. Device generation is the exact catalog
+ * generation bound to this driver instance. */
+#define RIN_DRIVER_V3_STOP_REASON_INFO_VERSION UINT32_C(0x00010000)
+typedef enum RinDriverV3StopReason {
+    RIN_DRIVER_V3_STOP_REASON_NORMAL = 0,
+    RIN_DRIVER_V3_STOP_REASON_DEVICE_REMOVED = 1,
+    RIN_DRIVER_V3_STOP_REASON_SURPRISE_REMOVAL = 2,
+    RIN_DRIVER_V3_STOP_REASON_START_FAILURE = 3
+} RinDriverV3StopReason;
+
+typedef struct RinDriverV3StopReasonInfo {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t reason;
+    uint32_t reserved0;
+    uint64_t device_generation;
+    uint64_t reserved[2];
+} RinDriverV3StopReasonInfo;
+
 /* A quarantined session must never be presented as healthy by a management
  * or recovery owner.  The health value is monotonic until the session is
  * closed and reopened; ACTIVE is the only state in which new leases may be
@@ -1789,6 +1808,12 @@ typedef RinDriverV3Result (*RinDriverV3DeviceDmaStartFn)(
     uint64_t api_context, uint64_t session);
 typedef RinDriverV3Result (*RinDriverV3DeviceDmaStopFn)(
     uint64_t api_context, uint64_t session);
+/* ABI minor 4: available only to NDRV images that opt into the stop-reason
+ * extension. The callback succeeds while Stop or Unbind is executing and
+ * reports the platform removal reason for this device instance. */
+typedef RinDriverV3Result (*RinDriverV3GetStopReasonFn)(
+    uint64_t api_context, uint64_t session,
+    RinDriverV3StopReasonInfo* info_out);
 /* Mixes a bounded sample from an active DMA lease into the kernel DRBG.
  * The sample is never credited as trusted entropy and is never returned as
  * random output. The runtime copies the bytes before mixing them. */
@@ -1884,8 +1909,39 @@ typedef struct RinDriverApiV3 {
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t dma_get_physical_address_padding;
 #endif
-    uint64_t reserved[1];
+    union {
+        RinDriverV3GetStopReasonFn get_stop_reason;
+        uint64_t reserved[1];
+    };
 } RinDriverApiV3;
+
+static inline RinDriverV3Result rin_driver_v3_get_stop_reason(
+    const RinDriverApiV3* api, const RinDriverContextV3* context,
+    RinDriverV3StopReasonInfo* info_out)
+{
+    RinDriverV3StopReasonInfo info = {0};
+    RinDriverV3Result result;
+    if (!api || !context || !info_out ||
+        context->struct_size < sizeof(*context) ||
+        api->struct_size < offsetof(RinDriverApiV3, get_stop_reason) +
+                               sizeof(api->get_stop_reason) ||
+        !api->get_stop_reason)
+        return RIN_DRIVER_V3_UNSUPPORTED;
+    info.struct_size = sizeof(info);
+    info.version = RIN_DRIVER_V3_STOP_REASON_INFO_VERSION;
+    result = api->get_stop_reason(api->api_context, context->session,
+                                  &info);
+    if (result != RIN_DRIVER_V3_OK) return result;
+    if (info.struct_size != sizeof(info) ||
+        info.version != RIN_DRIVER_V3_STOP_REASON_INFO_VERSION ||
+        info.reason > RIN_DRIVER_V3_STOP_REASON_START_FAILURE ||
+        info.reserved0 != 0u || info.reserved[0] != 0u ||
+        info.reserved[1] != 0u ||
+        info.device_generation != context->generation)
+        return RIN_DRIVER_V3_INVALID;
+    *info_out = info;
+    return RIN_DRIVER_V3_OK;
+}
 
 typedef RinDriverV3Result (*RinDriverEntryV3)(
     const RinDriverApiV3* api, RinDriverContextV3* context);
@@ -1901,8 +1957,10 @@ static_assert(offsetof(RinDriverApiV3, dma_allocate) == 24u &&
                   offsetof(RinDriverApiV3, entropy_mix) == 152u &&
                   offsetof(RinDriverApiV3, device_dma_stop) == 160u &&
                   offsetof(RinDriverApiV3, dma_get_physical_address) == 168u &&
-                  offsetof(RinDriverApiV3, reserved) == 176u,
+                  offsetof(RinDriverApiV3, get_stop_reason) == 176u,
               "NDRV v3 API callback slot ABI drift");
+static_assert(sizeof(RinDriverV3StopReasonInfo) == 40u,
+              "NDRV v3 Stop reason ABI drift");
 static_assert(sizeof(RinDriverV3DmaLeaseInfo) == 48u,
               "NDRV v3 DMA lease ABI drift");
 static_assert(sizeof(RinDriverV3TimerEvent) == 32u,
@@ -1997,8 +2055,10 @@ _Static_assert(offsetof(RinDriverApiV3, dma_allocate) == 24u &&
                    offsetof(RinDriverApiV3, entropy_mix) == 152u &&
                    offsetof(RinDriverApiV3, device_dma_stop) == 160u &&
                    offsetof(RinDriverApiV3, dma_get_physical_address) == 168u &&
-                   offsetof(RinDriverApiV3, reserved) == 176u,
+                  offsetof(RinDriverApiV3, get_stop_reason) == 176u,
                "NDRV v3 API callback slot ABI drift");
+_Static_assert(sizeof(RinDriverV3StopReasonInfo) == 40u,
+               "NDRV v3 Stop reason ABI drift");
 _Static_assert(sizeof(RinDriverV3DmaLeaseInfo) == 48u,
                "NDRV v3 DMA lease ABI drift");
 _Static_assert(sizeof(RinDriverV3TimerEvent) == 32u,
