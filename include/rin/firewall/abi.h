@@ -117,6 +117,9 @@ typedef enum RinFirewallNetworkProfileV1 {
      RIN_FIREWALL_PACKET_FLAG_FWMARK)
 
 #define RIN_FIREWALL_NAMESPACE_IDENTITY_SIZE UINT32_C(16)
+/* Namespace ID 1 is the host namespace; zero is reserved for an unspecified
+ * or machine-wide policy selector. */
+#define RIN_FIREWALL_NAMESPACE_POLICY_HOST_ID UINT64_C(1)
 
 #define RIN_FIREWALL_STATE_UNTRACKED UINT32_C(0)
 #define RIN_FIREWALL_STATE_NEW UINT32_C(1)
