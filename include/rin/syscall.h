@@ -5,10 +5,12 @@
 #ifndef RIN_SDK_SYSCALL_H
 #define RIN_SDK_SYSCALL_H
 
+#ifndef syscall
 #ifdef __cplusplus
 extern "C" long int syscall(long int syscall_number, ...) noexcept;
 #else
 long int syscall(long int syscall_number, ...);
+#endif
 #endif
 
 #endif /* RIN_SDK_SYSCALL_H */
