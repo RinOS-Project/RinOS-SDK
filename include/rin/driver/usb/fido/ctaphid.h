@@ -10,7 +10,10 @@
 #define RIN_CTAPHID_REPORT_SIZE UINT32_C(64)
 #define RIN_CTAPHID_INIT_DATA_SIZE UINT32_C(57)
 #define RIN_CTAPHID_CONT_DATA_SIZE UINT32_C(59)
-#define RIN_CTAPHID_MESSAGE_MAX UINT32_C(4096)
+#define RIN_CTAPHID_DEFAULT_MAX_MESSAGE_SIZE UINT32_C(1024)
+/* CTAPHID with 64-byte reports carries 57 initial bytes plus at most 128
+ * continuation reports of 59 bytes each. */
+#define RIN_CTAPHID_MESSAGE_MAX UINT32_C(7609)
 #define RIN_CTAPHID_BROADCAST_CID UINT32_C(0xFFFFFFFF)
 
 #define RIN_CTAPHID_PING UINT8_C(0x01)
@@ -80,6 +83,8 @@ typedef struct RinCtapHidClient {
     uint8_t keepalive_status;
     uint8_t expected_command;
     uint8_t reserved;
+    /* Effective peer limit, defaulting to CTAP's 1024-byte baseline. */
+    uint32_t max_message_size;
 } RinCtapHidClient;
 
 typedef RinResultCode (*RinCtapHidEmitReport)(
@@ -106,6 +111,8 @@ RinResultCode rin_ctaphid_client_begin_cbor(
     RinCtapHidClient* client, const uint8_t* payload, uint32_t payload_size,
     uint64_t now_ms, uint32_t timeout_ms, RinCtapHidEmitReport emit,
     void* emit_context);
+RinResultCode rin_ctaphid_client_set_message_limit(
+    RinCtapHidClient* client, uint32_t max_message_size);
 RinResultCode rin_ctaphid_client_cancel(RinCtapHidClient* client,
                                         RinCtapHidEmitReport emit,
                                         void* emit_context);

@@ -154,6 +154,7 @@ void rin_ctaphid_client_init(RinCtapHidClient* client)
     if (!client) return;
     hid_zero(client, sizeof(*client));
     client->state = RIN_CTAPHID_CLIENT_DISCONNECTED;
+    client->max_message_size = RIN_CTAPHID_DEFAULT_MAX_MESSAGE_SIZE;
 }
 
 void rin_ctaphid_client_disconnect(RinCtapHidClient* client)
@@ -214,6 +215,8 @@ RinResultCode rin_ctaphid_client_begin_cbor(
     if (client->channel == 0u ||
         (client->capabilities & RIN_CTAPHID_CAPABILITY_CBOR) == 0u)
         return RIN_RESULT_NOT_SUPPORTED;
+    if (payload_size > client->max_message_size)
+        return RIN_RESULT_LIMIT_EXCEEDED;
     result = set_deadline(client, now_ms, timeout_ms);
     if (result != RIN_RESULT_OK) return result;
     result = rin_ctaphid_fragment(client->channel, RIN_CTAPHID_CBOR, payload,
@@ -226,6 +229,19 @@ RinResultCode rin_ctaphid_client_begin_cbor(
     client->expected_command = RIN_CTAPHID_CBOR;
     client->keepalive_status = 0u;
     client->state = RIN_CTAPHID_CLIENT_WAITING;
+    return RIN_RESULT_OK;
+}
+
+RinResultCode rin_ctaphid_client_set_message_limit(
+    RinCtapHidClient* client, uint32_t max_message_size)
+{
+    if (!client || max_message_size == 0u ||
+        max_message_size > RIN_CTAPHID_MESSAGE_MAX)
+        return RIN_RESULT_INVALID_ARGUMENT;
+    if (client->state != RIN_CTAPHID_CLIENT_IDLE ||
+        client->assembler.active)
+        return RIN_RESULT_BUSY;
+    client->max_message_size = max_message_size;
     return RIN_RESULT_OK;
 }
 
@@ -301,6 +317,7 @@ static RinResultCode accept_init_response(RinCtapHidClient* client,
     client->device_minor = message->data[14u];
     client->device_build = message->data[15u];
     client->capabilities = message->data[16u];
+    client->max_message_size = RIN_CTAPHID_DEFAULT_MAX_MESSAGE_SIZE;
     client->deadline_ms = 0u;
     client->expected_command = 0u;
     client->state = RIN_CTAPHID_CLIENT_IDLE;
@@ -337,6 +354,11 @@ RinResultCode rin_ctaphid_client_feed(
         return result;
     }
     if (feed_state != RIN_CTAPHID_FEED_COMPLETE) return RIN_RESULT_OK;
+    if (message->command == RIN_CTAPHID_CBOR &&
+        message->size > client->max_message_size) {
+        rin_ctaphid_client_disconnect(client);
+        return RIN_RESULT_LIMIT_EXCEEDED;
+    }
     if (client->state == RIN_CTAPHID_CLIENT_ALLOCATING) {
         result = accept_init_response(client, message);
         if (result != RIN_RESULT_OK) {
