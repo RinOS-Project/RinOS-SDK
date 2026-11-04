@@ -18,6 +18,8 @@
 #define RIN_WEBCONTENT_TEXT_MAX 64
 #define RIN_WEBCONTENT_EXTENSION_ABI_VERSION 1u
 #define RIN_WEBCONTENT_WEBAUTHN_TIMEOUT_MAX_MS UINT32_C(120000)
+#define RIN_WEBCONTENT_WEBAUTHN_CHALLENGE_MAX UINT32_C(1024)
+#define RIN_WEBCONTENT_WEBAUTHN_CLIENT_DATA_MAX UINT32_C(2048)
 #define RIN_WEBCONTENT_WEBAUTHN_AUTHENTICATOR_DATA_MAX UINT32_C(4096)
 #define RIN_WEBCONTENT_WEBAUTHN_SIGNATURE_MAX UINT32_C(128)
 #define RIN_WEBCONTENT_FILE_PICKER_NAME_MAX UINT32_C(256)
@@ -880,12 +882,15 @@ typedef struct RinWebContentWebAuthnEventV1 {
     uint16_t version;
     uint16_t event;
     uint64_t request_id;
+    uint64_t cancel_request_id;
     uint32_t navigation_generation;
     uint32_t operation;
     uint32_t timeout_ms;
     uint32_t flags;
+    uint32_t challenge_size;
     char document_url[RIN_WEBCONTENT_URL_MAX];
     char rp_id[RIN_PASS_WEBAUTHN_RP_ID_STORAGE];
+    uint8_t challenge[RIN_WEBCONTENT_WEBAUTHN_CHALLENGE_MAX];
     RinPassWebAuthnRequestV1 request;
     uint64_t reserved[4];
 } RinWebContentWebAuthnEventV1;
@@ -902,7 +907,9 @@ typedef struct RinWebContentWebAuthnCompleteV1 {
     uint64_t request_id;
     uint32_t navigation_generation;
     uint32_t result_stream_size;
+    uint32_t client_data_json_size;
     uint8_t result_stream[RIN_PASS_WEBAUTHN_RESULT_STREAM_MAX];
+    uint8_t client_data_json[RIN_WEBCONTENT_WEBAUTHN_CLIENT_DATA_MAX];
     uint64_t reserved[2];
 } RinWebContentWebAuthnCompleteV1;
 
@@ -1206,9 +1213,9 @@ static_assert(sizeof(RinWebContentLocationRevokeV1) == 288u,
               "WebContent location revoke ABI drift");
 static_assert(sizeof(RinWebContentWebAuthnPollV1) == 32u,
               "WebContent WebAuthn poll ABI drift");
-static_assert(sizeof(RinWebContentWebAuthnEventV1) == 4608u,
+static_assert(sizeof(RinWebContentWebAuthnEventV1) == 5648u,
               "WebContent WebAuthn event ABI drift");
-static_assert(sizeof(RinWebContentWebAuthnCompleteV1) == 4512u,
+static_assert(sizeof(RinWebContentWebAuthnCompleteV1) == 6568u,
               "WebContent WebAuthn completion ABI drift");
 static_assert(sizeof(RinWebContentPermissionPollV1) == 32u,
               "WebContent permission poll ABI drift");
@@ -1277,9 +1284,9 @@ _Static_assert(sizeof(RinWebContentLocationRevokeV1) == 288u,
                "WebContent location revoke ABI drift");
 _Static_assert(sizeof(RinWebContentWebAuthnPollV1) == 32u,
                "WebContent WebAuthn poll ABI drift");
-_Static_assert(sizeof(RinWebContentWebAuthnEventV1) == 4608u,
+_Static_assert(sizeof(RinWebContentWebAuthnEventV1) == 5648u,
                "WebContent WebAuthn event ABI drift");
-_Static_assert(sizeof(RinWebContentWebAuthnCompleteV1) == 4512u,
+_Static_assert(sizeof(RinWebContentWebAuthnCompleteV1) == 6568u,
                "WebContent WebAuthn completion ABI drift");
 _Static_assert(sizeof(RinWebContentPermissionPollV1) == 32u,
                "WebContent permission poll ABI drift");
