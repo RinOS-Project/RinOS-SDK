@@ -1936,8 +1936,7 @@ static inline RinDriverV3Result rin_driver_v3_get_stop_reason(
         info.version != RIN_DRIVER_V3_STOP_REASON_INFO_VERSION ||
         info.reason > RIN_DRIVER_V3_STOP_REASON_START_FAILURE ||
         info.reserved0 != 0u || info.reserved[0] != 0u ||
-        info.reserved[1] != 0u ||
-        info.device_generation != context->generation)
+        info.reserved[1] != 0u || info.device_generation == 0u)
         return RIN_DRIVER_V3_INVALID;
     *info_out = info;
     return RIN_DRIVER_V3_OK;
