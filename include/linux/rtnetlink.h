@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <linux/netlink.h>
+#include <linux/if_addr.h>
 
 #define RTM_NEWLINK 16
 #define RTM_DELLINK 17
@@ -71,16 +72,6 @@
 #define IFF_RUNNING 0x40
 #define IFF_MULTICAST 0x1000
 
-#define IFA_UNSPEC 0
-#define IFA_ADDRESS 1
-#define IFA_LOCAL 2
-#define IFA_LABEL 3
-#define IFA_BROADCAST 4
-#define IFA_ANYCAST 5
-#define IFA_CACHEINFO 6
-#define IFA_FLAGS 8
-#define IFA_MAX 8
-
 #define RT_SCOPE_UNIVERSE 0
 #define RT_SCOPE_LINK 253
 #define RT_SCOPE_HOST 254
@@ -132,14 +123,6 @@ struct ifinfomsg {
     int32_t ifi_index;
     uint32_t ifi_flags;
     uint32_t ifi_change;
-};
-
-struct ifaddrmsg {
-    uint8_t ifa_family;
-    uint8_t ifa_prefixlen;
-    uint8_t ifa_flags;
-    uint8_t ifa_scope;
-    uint32_t ifa_index;
 };
 
 struct rtmsg {
