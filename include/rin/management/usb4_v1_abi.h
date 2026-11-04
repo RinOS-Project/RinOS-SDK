@@ -1,0 +1,151 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+#ifndef RIN_MANAGEMENT_USB4_V1_ABI_H
+#define RIN_MANAGEMENT_USB4_V1_ABI_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+#include <rin/contract_abi.h>
+
+#define RIN_MANAGEMENT_OPERATION_USB4_DEVICE_COUNT_GET 268u
+#define RIN_MANAGEMENT_OPERATION_USB4_DEVICE_GET 269u
+#define RIN_MANAGEMENT_OPERATION_USB4_TOPOLOGY_GET 270u
+#define RIN_MANAGEMENT_OPERATION_USB4_ROUTER_AUTHORIZE 271u
+#define RIN_MANAGEMENT_OPERATION_USB4_PATH_PAIR_CREATE 272u
+#define RIN_MANAGEMENT_OPERATION_USB4_PATH_PAIR_REMOVE 273u
+
+#define RIN_MANAGEMENT_USB4_V1_VERSION 1u
+#define RIN_MANAGEMENT_USB4_MAX_DEVICES 4u
+#define RIN_MANAGEMENT_USB4_MAX_ROUTERS 32u
+#define RIN_MANAGEMENT_USB4_MAX_PORTS 64u
+#define RIN_MANAGEMENT_USB4_MAX_PORTS_PER_PAGE 20u
+#define RIN_MANAGEMENT_USB4_ROUTER_FLAG_CONFIGURED UINT16_C(0x0001)
+#define RIN_MANAGEMENT_USB4_ROUTER_FLAG_AUTHORIZED UINT16_C(0x0002)
+#define RIN_MANAGEMENT_USB4_ROUTER_FLAG_UNIQUE_ID_VALID UINT16_C(0x0004)
+#define RIN_MANAGEMENT_USB4_TUNNEL_PCIE UINT8_C(0x01)
+#define RIN_MANAGEMENT_USB4_TUNNEL_USB3 UINT8_C(0x02)
+
+typedef struct RinManagementUsb4DeviceCountV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t device_count;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinManagementUsb4DeviceCountV1;
+
+/* device_generation pins the PCI catalog identity; topology_generation pins
+ * the successful router scan. Neither field is a kernel object cookie. */
+typedef struct RinManagementUsb4DeviceV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t device_index;
+    uint16_t segment;
+    uint8_t bus;
+    uint8_t device;
+    uint8_t function;
+    uint8_t reserved0;
+    uint16_t vendor_id;
+    uint16_t product_id;
+    uint16_t router_count;
+    uint16_t reserved1;
+    uint64_t device_generation;
+    uint64_t topology_generation;
+    uint64_t reserved[2];
+} RinManagementUsb4DeviceV1;
+
+typedef struct RinManagementUsb4PortV1 {
+    uint8_t port_number;
+    uint8_t type;
+    uint8_t scan_state;
+    uint8_t reserved0;
+    uint16_t child_router_index;
+    uint16_t adapter_capability;
+    uint16_t max_in_hop_id;
+    uint16_t max_out_hop_id;
+    uint32_t usb4_status;
+} RinManagementUsb4PortV1;
+
+/* Returns one router and a page of ports, keeping the operation within the
+ * fixed Management request payload. Port indices start at one; zero means the
+ * router exposes no ports. */
+typedef struct RinManagementUsb4TopologyV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t device_index;
+    uint16_t router_index;
+    uint16_t first_port;
+    uint16_t returned_port_count;
+    uint16_t total_port_count;
+    uint16_t router_count;
+    uint16_t reserved1;
+    uint64_t device_generation;
+    uint64_t topology_generation;
+    uint64_t route;
+    uint64_t unique_id;
+    uint16_t parent_router_index;
+    uint8_t parent_port_number;
+    uint8_t depth;
+    uint16_t vendor_id;
+    uint16_t product_id;
+    uint16_t maximum_port_number;
+    uint8_t revision;
+    uint8_t usb4_version;
+    uint8_t configuration_state;
+    uint8_t tunnel_flags;
+    uint8_t authorization_state;
+    uint8_t unique_id_valid;
+    uint16_t reserved0;
+    RinManagementUsb4PortV1 ports[
+        RIN_MANAGEMENT_USB4_MAX_PORTS_PER_PAGE];
+    uint64_t reserved[2];
+} RinManagementUsb4TopologyV1;
+
+/* The pair token is scoped to device_index and device_generation. Applications
+ * must preserve the complete record and return it when requesting teardown. */
+typedef struct RinManagementUsb4PathPairV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t device_index;
+    uint32_t reserved0;
+    uint64_t device_generation;
+    uint64_t topology_generation;
+    uint64_t forward_token;
+    uint64_t reverse_token;
+    uint16_t source_router;
+    uint16_t destination_router;
+    uint8_t source_port;
+    uint8_t destination_port;
+    uint8_t tunnel_type;
+    uint8_t state;
+    uint64_t reserved[2];
+} RinManagementUsb4PathPairV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
+              "RinManagementUsb4DeviceCountV1 ABI drift");
+static_assert(sizeof(RinManagementUsb4DeviceV1) == 64u,
+              "RinManagementUsb4DeviceV1 ABI drift");
+static_assert(sizeof(RinManagementUsb4PortV1) == 16u,
+              "RinManagementUsb4PortV1 ABI drift");
+static_assert(sizeof(RinManagementUsb4TopologyV1) == 416u,
+              "RinManagementUsb4TopologyV1 ABI drift");
+static_assert(sizeof(RinManagementUsb4PathPairV1) == 72u,
+              "RinManagementUsb4PathPairV1 ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
+               "RinManagementUsb4DeviceCountV1 ABI drift");
+_Static_assert(sizeof(RinManagementUsb4DeviceV1) == 64u,
+               "RinManagementUsb4DeviceV1 ABI drift");
+_Static_assert(sizeof(RinManagementUsb4PortV1) == 16u,
+               "RinManagementUsb4PortV1 ABI drift");
+_Static_assert(sizeof(RinManagementUsb4TopologyV1) == 416u,
+               "RinManagementUsb4TopologyV1 ABI drift");
+_Static_assert(sizeof(RinManagementUsb4PathPairV1) == 72u,
+               "RinManagementUsb4PathPairV1 ABI drift");
+#endif
+
+#endif /* RIN_MANAGEMENT_USB4_V1_ABI_H */
