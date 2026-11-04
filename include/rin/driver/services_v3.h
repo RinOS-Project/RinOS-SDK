@@ -93,6 +93,8 @@ typedef struct RinDriverV3IrqEvent {
     RinDriverV3Lease lease;
     /* Device generation captured when the interrupt was observed. */
     uint64_t generation;
+    /* Ready monotonic sample captured with the interrupt; epoch zero is
+     * valid. */
     uint64_t timestamp_ns;
     uint32_t vector;
     uint32_t occurrences;
@@ -637,7 +639,6 @@ static inline RinDriverV3Result rin_driver_v3_irq_poll(
             events[index].version != RIN_DRIVER_SERVICES_V3_VERSION ||
             events[index].lease != irq_lease ||
             events[index].generation == 0u ||
-            events[index].timestamp_ns == 0u ||
             events[index].occurrences == 0u ||
             events[index].vector < 32u || events[index].vector > 255u ||
             !rin_driver_services_v3_bytes_zero(

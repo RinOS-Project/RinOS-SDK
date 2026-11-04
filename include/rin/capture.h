@@ -36,6 +36,7 @@ typedef struct RinCaptureChunkV1 {
     uint32_t struct_size;
     uint32_t version;
     uint64_t sequence;
+    /* Ready monotonic sample captured with this chunk; epoch zero is valid. */
     uint64_t monotonic_time_ns;
     uint32_t total_size;
     uint32_t offset;
