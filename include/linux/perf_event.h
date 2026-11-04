@@ -2,6 +2,7 @@
 #ifndef RIN_SDK_LINUX_PERF_EVENT_H
 #define RIN_SDK_LINUX_PERF_EVENT_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #define PERF_TYPE_HARDWARE 0
@@ -70,12 +71,19 @@
 #define PERF_EVENT_IOC_RESET 0x2403UL
 #define PERF_EVENT_IOC_PERIOD 0x40082404UL
 #define PERF_EVENT_IOC_SET_OUTPUT 0x2405UL
+#if defined(__i386__) || defined(_M_IX86) || defined(RIN_ARCH_32)
+#define PERF_EVENT_IOC_SET_FILTER 0x40042406UL
+#define PERF_EVENT_IOC_ID 0x80042407UL
+#define PERF_EVENT_IOC_QUERY_BPF 0xc004240aUL
+#define PERF_EVENT_IOC_MODIFY_ATTRIBUTES 0x4004240bUL
+#else
 #define PERF_EVENT_IOC_SET_FILTER 0x40082406UL
 #define PERF_EVENT_IOC_ID 0x80082407UL
+#define PERF_EVENT_IOC_QUERY_BPF 0xc008240aUL
+#define PERF_EVENT_IOC_MODIFY_ATTRIBUTES 0x4008240bUL
+#endif
 #define PERF_EVENT_IOC_SET_BPF 0x40042408UL
 #define PERF_EVENT_IOC_PAUSE_OUTPUT 0x40042409UL
-#define PERF_EVENT_IOC_QUERY_BPF 0xc008240aUL
-#define PERF_EVENT_IOC_MODIFY_ATTRIBUTES 0x4080240bUL
 #define PERF_IOC_FLAG_GROUP 1UL
 
 #define PERF_RECORD_MMAP 1
@@ -87,6 +95,73 @@
 #define PERF_RECORD_FORK 7
 #define PERF_RECORD_READ 8
 #define PERF_RECORD_SAMPLE 9
+
+struct perf_event_header {
+    uint32_t type;
+    uint16_t misc;
+    uint16_t size;
+};
+
+struct perf_event_lost {
+    struct perf_event_header header;
+    uint64_t id;
+    uint64_t lost;
+};
+
+struct perf_event_query_bpf {
+    uint32_t ids_len;
+    uint32_t prog_cnt;
+    uint32_t ids[];
+};
+
+struct perf_event_mmap_page {
+    uint32_t version;
+    uint32_t compat_version;
+    uint32_t lock;
+    uint32_t index;
+    int64_t offset;
+    uint64_t time_enabled;
+    uint64_t time_running;
+    uint64_t capabilities;
+    uint16_t pmc_width;
+    uint16_t time_shift;
+    uint32_t time_mult;
+    uint64_t time_offset;
+    uint64_t time_zero;
+    uint32_t size;
+    uint32_t __reserved_1;
+    uint64_t time_cycles;
+    uint64_t time_mask;
+    uint8_t __reserved[116 * 8];
+    volatile uint64_t data_head;
+    volatile uint64_t data_tail;
+    uint64_t data_offset;
+    uint64_t data_size;
+    uint64_t aux_head;
+    uint64_t aux_tail;
+    uint64_t aux_offset;
+    uint64_t aux_size;
+};
+
+#if defined(__cplusplus)
+static_assert(sizeof(struct perf_event_header) == 8,
+              "Linux perf_event_header ABI drift");
+static_assert(offsetof(struct perf_event_mmap_page, data_head) == 1024,
+              "Linux perf data_head ABI drift");
+static_assert(offsetof(struct perf_event_mmap_page, data_tail) == 1032,
+              "Linux perf data_tail ABI drift");
+static_assert(sizeof(struct perf_event_mmap_page) == 1088,
+              "Linux perf metadata ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(struct perf_event_header) == 8,
+               "Linux perf_event_header ABI drift");
+_Static_assert(offsetof(struct perf_event_mmap_page, data_head) == 1024,
+               "Linux perf data_head ABI drift");
+_Static_assert(offsetof(struct perf_event_mmap_page, data_tail) == 1032,
+               "Linux perf data_tail ABI drift");
+_Static_assert(sizeof(struct perf_event_mmap_page) == 1088,
+               "Linux perf metadata ABI drift");
+#endif
 
 struct perf_event_attr {
     uint32_t type;
