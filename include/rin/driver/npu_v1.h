@@ -21,8 +21,12 @@
 #define RIN_DRIVER_V3_NPU_BUFFER_INFO_DEVICE_ADDRESS_VERSION \
     UINT32_C(0x00010001)
 #define RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_VERSION UINT32_C(0x00010000)
+#define RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_VERSION_1_1 UINT32_C(0x00010001)
 #define RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_PARTIAL_ELF UINT32_C(2)
+#define RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_DPU_CHAIN UINT32_C(3)
 #define RIN_DRIVER_V3_NPU_AMDXDNA_MAX_COMMAND_ARGUMENTS UINT32_C(26)
+#define RIN_DRIVER_V3_NPU_AMDXDNA_MAX_CHAIN_ENTRIES UINT32_C(16)
+#define RIN_DRIVER_V3_NPU_AMDXDNA_MAX_CHAIN_COMMAND_BYTES UINT32_C(2072)
 #define RIN_DRIVER_V3_NPU_AMDXDNA_HOST_BUFFER_CHUNK_BYTES UINT32_C(32768)
 #define RIN_DRIVER_V3_NPU_MAX_SUBMIT_BUFFERS UINT32_C(64)
 #define RIN_DRIVER_V3_NPU_MAX_EVENTS UINT32_C(128)
@@ -264,6 +268,28 @@ typedef struct RIN_DRIVER_NPU_PACKED RinDriverV3NpuAmdXdnaCommandV1 {
     uint32_t reserved1;
     uint32_t arguments[RIN_DRIVER_V3_NPU_AMDXDNA_MAX_COMMAND_ARGUMENTS];
 } RinDriverV3NpuAmdXdnaCommandV1;
+
+/* Chain command bytes are stored in the mapped host buffer. The header is
+ * followed by entry_count variable-size slots. Each slot consists of the
+ * fixed header below and argument_count little-endian uint32 arguments, in
+ * the same layout consumed by Phoenix MERT's CHAIN_EXEC_DPU request. */
+typedef struct RIN_DRIVER_NPU_PACKED RinDriverV3NpuAmdXdnaChainCommandV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t type;
+    uint32_t engine_id;
+    uint32_t entry_count;
+    uint32_t reserved0;
+} RinDriverV3NpuAmdXdnaChainCommandV1;
+
+typedef struct RIN_DRIVER_NPU_PACKED
+    RinDriverV3NpuAmdXdnaChainSlotHeaderV1 {
+    uint64_t instruction_buffer_address;
+    uint32_t instruction_size_bytes;
+    uint32_t instruction_property_count;
+    uint32_t engine_id;
+    uint32_t argument_count;
+} RinDriverV3NpuAmdXdnaChainSlotHeaderV1;
 #undef RIN_DRIVER_NPU_PACKED
 
 typedef struct RinDriverV3NpuFenceV1 {
@@ -679,17 +705,66 @@ static inline int rin_driver_v3_npu_amdxdna_command_valid(
     const RinDriverV3NpuAmdXdnaCommandV1* command,
     uint32_t command_length)
 {
-    if (!command || command_length != sizeof(*command) ||
-        command->struct_size != sizeof(*command) ||
-        command->version != RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_VERSION ||
-        command->type != RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_PARTIAL_ELF ||
-        command->engine_id >= 32u || command->argument_count >
-            RIN_DRIVER_V3_NPU_AMDXDNA_MAX_COMMAND_ARGUMENTS ||
-        command->instruction_size_bytes == 0u ||
-        command->instruction_property_count > command->argument_count ||
-        command->reserved0 != 0u || command->reserved1 != 0u)
+    if (!command || command_length < sizeof(uint32_t) * 3u)
         return 0;
-    return 1;
+    const uint8_t* bytes = (const uint8_t*)command;
+    const uint32_t type = (uint32_t)bytes[8] |
+        ((uint32_t)bytes[9] << 8u) | ((uint32_t)bytes[10] << 16u) |
+        ((uint32_t)bytes[11] << 24u);
+    if (type == RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_PARTIAL_ELF) {
+        return command_length == sizeof(*command) &&
+            command->struct_size == sizeof(*command) &&
+            command->version == RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_VERSION &&
+            command->engine_id < 32u && command->argument_count <=
+                RIN_DRIVER_V3_NPU_AMDXDNA_MAX_COMMAND_ARGUMENTS &&
+            command->instruction_size_bytes != 0u &&
+            command->instruction_property_count <= command->argument_count &&
+            command->instruction_offset_bytes <= UINT64_MAX -
+                command->instruction_size_bytes &&
+            command->reserved0 == 0u && command->reserved1 == 0u;
+    }
+    if (type == RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_DPU_CHAIN) {
+        if (command_length < sizeof(RinDriverV3NpuAmdXdnaChainCommandV1) ||
+            command_length >
+                RIN_DRIVER_V3_NPU_AMDXDNA_MAX_CHAIN_COMMAND_BYTES)
+            return 0;
+        const RinDriverV3NpuAmdXdnaChainCommandV1* chain =
+            (const RinDriverV3NpuAmdXdnaChainCommandV1*)command;
+        if (chain->struct_size != command_length ||
+            chain->version !=
+                RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_VERSION_1_1 ||
+            chain->engine_id >= 32u || chain->entry_count == 0u ||
+            chain->entry_count >
+                RIN_DRIVER_V3_NPU_AMDXDNA_MAX_CHAIN_ENTRIES ||
+            chain->reserved0 != 0u)
+            return 0;
+        uint32_t offset = sizeof(*chain);
+        for (uint32_t index = 0u; index < chain->entry_count; ++index) {
+            if (offset > command_length ||
+                sizeof(RinDriverV3NpuAmdXdnaChainSlotHeaderV1) >
+                    command_length - offset)
+                return 0;
+            const RinDriverV3NpuAmdXdnaChainSlotHeaderV1* slot =
+                (const RinDriverV3NpuAmdXdnaChainSlotHeaderV1*)(
+                    bytes + offset);
+            if (slot->instruction_buffer_address == 0u ||
+                slot->instruction_size_bytes == 0u ||
+                slot->instruction_buffer_address > UINT64_MAX -
+                    slot->instruction_size_bytes ||
+                slot->instruction_property_count > slot->argument_count ||
+                slot->argument_count >
+                    RIN_DRIVER_V3_NPU_AMDXDNA_MAX_COMMAND_ARGUMENTS ||
+                slot->engine_id != chain->engine_id)
+                return 0;
+            const uint32_t argument_bytes = slot->argument_count *
+                sizeof(uint32_t);
+            offset += sizeof(*slot);
+            if (argument_bytes > command_length - offset) return 0;
+            offset += argument_bytes;
+        }
+        return offset == command_length;
+    }
+    return 0;
 }
 
 static inline int rin_driver_v3_npu_ops_valid(
@@ -869,6 +944,10 @@ static_assert(sizeof(RinDriverV3NpuSubmitV1) == 72u,
               "NDRV v3 NPU submission ABI drift");
 static_assert(sizeof(RinDriverV3NpuAmdXdnaCommandV1) == 152u,
               "AMD XDNA NPU command ABI drift");
+static_assert(sizeof(RinDriverV3NpuAmdXdnaChainCommandV1) == 24u,
+              "AMD XDNA chain command header ABI drift");
+static_assert(sizeof(RinDriverV3NpuAmdXdnaChainSlotHeaderV1) == 24u,
+              "AMD XDNA chain slot header ABI drift");
 static_assert(sizeof(RinDriverV3NpuEventV1) == 96u,
               "NDRV v3 NPU event ABI drift");
 static_assert(sizeof(RinDriverV3NpuOps) == 152u,
@@ -894,6 +973,10 @@ _Static_assert(sizeof(RinDriverV3NpuSubmitV1) == 72u,
                "NDRV v3 NPU submission ABI drift");
 _Static_assert(sizeof(RinDriverV3NpuAmdXdnaCommandV1) == 152u,
                "AMD XDNA NPU command ABI drift");
+_Static_assert(sizeof(RinDriverV3NpuAmdXdnaChainCommandV1) == 24u,
+               "AMD XDNA chain command header ABI drift");
+_Static_assert(sizeof(RinDriverV3NpuAmdXdnaChainSlotHeaderV1) == 24u,
+               "AMD XDNA chain slot header ABI drift");
 _Static_assert(sizeof(RinDriverV3NpuEventV1) == 96u,
                "NDRV v3 NPU event ABI drift");
 _Static_assert(sizeof(RinDriverV3NpuOps) == 152u,
