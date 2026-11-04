@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include <rin/driver/display/edid.h>
+#include <stddef.h>
 
 #define EDID_BASE_DTD_OFFSET 54u
 #define EDID_DTD_SIZE 18u
