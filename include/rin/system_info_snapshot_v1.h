@@ -32,10 +32,12 @@ typedef struct RinSystemInfoSnapshotV1 {
     uint64_t reserved;
 } RinSystemInfoSnapshotV1;
 
-/* Linux sysinfo wire layouts used by the layout selector above. Unsupported
- * fields are zero. valid_metrics describes only fields represented by the
- * Rin V1 snapshot; Linux sysinfo loads are populated separately from the
- * scheduler and are not described by that snapshot's validity mask. */
+/* Linux sysinfo wire layouts used by the layout selector above. Uptime, RAM,
+ * process count, scheduler loads, and swap counts are populated. Shared/buffer
+ * RAM and high-memory fields are zero because RinOS does not currently expose
+ * those metrics. valid_metrics describes only fields represented by the Rin
+ * V1 snapshot; Linux loads and swap are populated separately and are not
+ * described by that snapshot's validity mask. */
 typedef struct RinLinuxSysinfo32V1 {
     int32_t uptime;
     uint32_t loads[3];
