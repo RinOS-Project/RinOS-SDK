@@ -11,7 +11,9 @@
  * separate from display/GPU drawing operations. All handles in this contract
  * are opaque and scoped to one kernel-created context. */
 #define RIN_DRIVER_V3_NPU_ABI_VERSION UINT32_C(0x00010000)
+#define RIN_DRIVER_V3_NPU_ABI_VERSION_1_1 UINT32_C(0x00010001)
 #define RIN_DRIVER_V3_NPU_OPS_VERSION UINT32_C(0x00010000)
+#define RIN_DRIVER_V3_NPU_OPS_VERSION_1_1 UINT32_C(0x00010001)
 #define RIN_DRIVER_V3_NPU_BUFFER_INFO_V1_VERSION UINT32_C(0x00010000)
 #define RIN_DRIVER_V3_NPU_BUFFER_INFO_DEVICE_ADDRESS_VERSION \
     UINT32_C(0x00010001)
@@ -43,6 +45,18 @@
 #define RIN_DRIVER_V3_NPU_CAP_PROCESS_PASID UINT64_C(0x0000000000000100)
 #define RIN_DRIVER_V3_NPU_CAPABILITY_MASK UINT64_C(0x00000000000001ff)
 #define RIN_DRIVER_V3_NPU_CONTEXT_OWNER_HAS_PASID UINT32_C(0x00000001)
+
+/* NPU ABI 1.1 uses capabilities.reserved[0] as an operation bitmap. The
+ * structure size and every existing field offset stay unchanged. ABI 1.0
+ * retains its original contract where every operation is mandatory. */
+#define RIN_DRIVER_V3_NPU_OP_CONTEXTS UINT64_C(0x0000000000000001)
+#define RIN_DRIVER_V3_NPU_OP_BUFFERS UINT64_C(0x0000000000000002)
+#define RIN_DRIVER_V3_NPU_OP_QUEUES UINT64_C(0x0000000000000004)
+#define RIN_DRIVER_V3_NPU_OP_SUBMIT UINT64_C(0x0000000000000008)
+#define RIN_DRIVER_V3_NPU_OP_CANCEL UINT64_C(0x0000000000000010)
+#define RIN_DRIVER_V3_NPU_OP_RESET UINT64_C(0x0000000000000020)
+#define RIN_DRIVER_V3_NPU_OP_SET_POWER UINT64_C(0x0000000000000040)
+#define RIN_DRIVER_V3_NPU_OP_MASK UINT64_C(0x000000000000007f)
 
 #define RIN_DRIVER_V3_NPU_BUFFER_READ UINT32_C(0x00000001)
 #define RIN_DRIVER_V3_NPU_BUFFER_WRITE UINT32_C(0x00000002)
@@ -381,7 +395,8 @@ static inline int rin_driver_v3_npu_identity_valid(
     const RinDriverV3NpuIdentityV1* identity)
 {
     if (!identity || identity->struct_size != sizeof(*identity) ||
-        identity->version != RIN_DRIVER_V3_NPU_ABI_VERSION ||
+        (identity->version != RIN_DRIVER_V3_NPU_ABI_VERSION &&
+         identity->version != RIN_DRIVER_V3_NPU_ABI_VERSION_1_1) ||
         identity->flags != 0u || identity->vendor_id == 0u ||
         identity->device_id == 0u ||
         identity->engine_count == 0u || identity->device_generation == 0u ||
@@ -394,26 +409,88 @@ static inline int rin_driver_v3_npu_identity_valid(
 static inline int rin_driver_v3_npu_capabilities_valid(
     const RinDriverV3NpuCapabilitiesV1* capabilities)
 {
-    return capabilities && capabilities->struct_size == sizeof(*capabilities) &&
-           capabilities->version == RIN_DRIVER_V3_NPU_ABI_VERSION &&
-           (capabilities->flags & ~RIN_DRIVER_V3_NPU_CAPABILITY_MASK) == 0u &&
-           capabilities->max_contexts != 0u &&
-           capabilities->max_queues_per_context != 0u &&
-           capabilities->max_buffers_per_context != 0u &&
-           capabilities->max_inflight_submissions != 0u &&
-           capabilities->max_fault_events <= RIN_DRIVER_V3_NPU_MAX_EVENTS &&
-           capabilities->max_dma_segments != 0u &&
-           capabilities->max_command_bytes != 0u &&
-           capabilities->address_bits >= 32u &&
-           capabilities->address_bits <= 64u &&
-           capabilities->max_buffer_bytes != 0u &&
-           capabilities->supported_data_types != 0u &&
-           (capabilities->supported_data_types &
-            ~RIN_DRIVER_V3_NPU_DATA_TYPE_MASK) == 0u &&
-           (((capabilities->flags & RIN_DRIVER_V3_NPU_CAP_FAULT_EVENTS) !=
-             0u) == (capabilities->max_fault_events != 0u)) &&
-           capabilities->reserved[0] == 0u &&
-           capabilities->reserved[1] == 0u;
+    if (!capabilities ||
+        capabilities->struct_size != sizeof(*capabilities) ||
+        (capabilities->version != RIN_DRIVER_V3_NPU_ABI_VERSION &&
+         capabilities->version != RIN_DRIVER_V3_NPU_ABI_VERSION_1_1) ||
+        (capabilities->flags & ~RIN_DRIVER_V3_NPU_CAPABILITY_MASK) != 0u ||
+        capabilities->max_fault_events > RIN_DRIVER_V3_NPU_MAX_EVENTS ||
+        capabilities->address_bits < 32u ||
+        capabilities->address_bits > 64u ||
+        (capabilities->supported_data_types &
+         ~RIN_DRIVER_V3_NPU_DATA_TYPE_MASK) != 0u ||
+        (((capabilities->flags & RIN_DRIVER_V3_NPU_CAP_FAULT_EVENTS) !=
+          0u) != (capabilities->max_fault_events != 0u)))
+        return 0;
+    if (capabilities->version == RIN_DRIVER_V3_NPU_ABI_VERSION)
+        return capabilities->max_contexts != 0u &&
+               capabilities->max_queues_per_context != 0u &&
+               capabilities->max_buffers_per_context != 0u &&
+               capabilities->max_inflight_submissions != 0u &&
+               capabilities->max_dma_segments != 0u &&
+               capabilities->max_command_bytes != 0u &&
+               capabilities->max_buffer_bytes != 0u &&
+               capabilities->supported_data_types != 0u &&
+               capabilities->reserved[0] == 0u &&
+               capabilities->reserved[1] == 0u;
+    if ((capabilities->reserved[0] &
+         ~RIN_DRIVER_V3_NPU_OP_MASK) != 0u ||
+        capabilities->reserved[1] != 0u)
+        return 0;
+    {
+        const uint64_t operations = capabilities->reserved[0];
+        return ((operations & RIN_DRIVER_V3_NPU_OP_CONTEXTS) != 0u) ==
+                   (capabilities->max_contexts != 0u) &&
+               ((operations & RIN_DRIVER_V3_NPU_OP_QUEUES) != 0u) ==
+                   (capabilities->max_queues_per_context != 0u) &&
+               ((operations & RIN_DRIVER_V3_NPU_OP_BUFFERS) != 0u) ==
+                   (capabilities->max_buffers_per_context != 0u) &&
+               ((operations & RIN_DRIVER_V3_NPU_OP_SUBMIT) != 0u) ==
+                   (capabilities->max_inflight_submissions != 0u) &&
+               ((operations & RIN_DRIVER_V3_NPU_OP_BUFFERS) != 0u) ==
+                   (capabilities->max_dma_segments != 0u) &&
+               ((operations & RIN_DRIVER_V3_NPU_OP_SUBMIT) != 0u) ==
+                   (capabilities->max_command_bytes != 0u) &&
+               ((operations & RIN_DRIVER_V3_NPU_OP_BUFFERS) != 0u) ==
+                   (capabilities->max_buffer_bytes != 0u) &&
+               ((operations & RIN_DRIVER_V3_NPU_OP_SUBMIT) != 0u) ==
+                   (capabilities->supported_data_types != 0u) &&
+               (((capabilities->flags & RIN_DRIVER_V3_NPU_CAP_CANCEL) !=
+                 0u) ==
+                ((operations & RIN_DRIVER_V3_NPU_OP_CANCEL) != 0u)) &&
+               (((capabilities->flags & RIN_DRIVER_V3_NPU_CAP_RESET) !=
+                 0u) ==
+                ((operations & RIN_DRIVER_V3_NPU_OP_RESET) != 0u)) &&
+               (((capabilities->flags &
+                  RIN_DRIVER_V3_NPU_CAP_POWER_CONTROL) != 0u) ==
+                ((operations & RIN_DRIVER_V3_NPU_OP_SET_POWER) != 0u)) &&
+               (((operations & RIN_DRIVER_V3_NPU_OP_BUFFERS) == 0u) ||
+                ((operations & RIN_DRIVER_V3_NPU_OP_CONTEXTS) != 0u)) &&
+               (((operations & RIN_DRIVER_V3_NPU_OP_QUEUES) == 0u) ||
+                ((operations & RIN_DRIVER_V3_NPU_OP_CONTEXTS) != 0u)) &&
+               (((operations & RIN_DRIVER_V3_NPU_OP_CONTEXTS) == 0u) ||
+                ((operations & RIN_DRIVER_V3_NPU_OP_QUEUES) != 0u)) &&
+               (((operations & RIN_DRIVER_V3_NPU_OP_SUBMIT) == 0u) ||
+                ((operations & (RIN_DRIVER_V3_NPU_OP_CONTEXTS |
+                                RIN_DRIVER_V3_NPU_OP_BUFFERS |
+                                RIN_DRIVER_V3_NPU_OP_QUEUES)) ==
+                 (RIN_DRIVER_V3_NPU_OP_CONTEXTS |
+                  RIN_DRIVER_V3_NPU_OP_BUFFERS |
+                  RIN_DRIVER_V3_NPU_OP_QUEUES))) &&
+               (((capabilities->flags &
+                  RIN_DRIVER_V3_NPU_CAP_PROCESS_PASID) == 0u) ||
+                ((operations & RIN_DRIVER_V3_NPU_OP_CONTEXTS) != 0u)) &&
+               (((capabilities->flags & RIN_DRIVER_V3_NPU_CAP_CANCEL) ==
+                 0u) ||
+                ((operations & RIN_DRIVER_V3_NPU_OP_SUBMIT) != 0u)) &&
+               (((capabilities->flags & RIN_DRIVER_V3_NPU_CAP_RESET) ==
+                 0u) ||
+                ((operations & RIN_DRIVER_V3_NPU_OP_CONTEXTS) != 0u)) &&
+               (((capabilities->flags &
+                  (RIN_DRIVER_V3_NPU_CAP_HOST_IMPORT |
+                   RIN_DRIVER_V3_NPU_CAP_DEVICE_ADDRESS)) == 0u) ||
+                ((operations & RIN_DRIVER_V3_NPU_OP_BUFFERS) != 0u));
+    }
 }
 
 static inline int rin_driver_v3_npu_context_owner_valid(
@@ -527,6 +604,46 @@ static inline int rin_driver_v3_npu_submit_valid(
     return 1;
 }
 
+static inline int rin_driver_v3_npu_ops_valid(
+    const RinDriverV3NpuOps* ops);
+
+static inline int rin_driver_v3_npu_ops_match_capabilities(
+    const RinDriverV3NpuOps* ops,
+    const RinDriverV3NpuCapabilitiesV1* capabilities)
+{
+    if (!rin_driver_v3_npu_ops_valid(ops) ||
+        !rin_driver_v3_npu_capabilities_valid(capabilities))
+        return 0;
+    if (capabilities->version == RIN_DRIVER_V3_NPU_ABI_VERSION)
+        return ops->version == RIN_DRIVER_V3_NPU_OPS_VERSION;
+    if (ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION_1_1 ||
+        (ops->version & UINT32_C(0xffff0000)) !=
+            (capabilities->version & UINT32_C(0xffff0000)))
+        return 0;
+    {
+        const uint64_t declared = capabilities->reserved[0];
+        const uint64_t present =
+            (ops->context_create && ops->context_destroy
+                 ? RIN_DRIVER_V3_NPU_OP_CONTEXTS : 0u) |
+            (ops->buffer_create && ops->buffer_destroy
+                 ? RIN_DRIVER_V3_NPU_OP_BUFFERS : 0u) |
+            (ops->queue_create && ops->queue_destroy
+                 ? RIN_DRIVER_V3_NPU_OP_QUEUES : 0u) |
+            (ops->submit && ops->poll_events
+                 ? RIN_DRIVER_V3_NPU_OP_SUBMIT : 0u) |
+            (ops->cancel ? RIN_DRIVER_V3_NPU_OP_CANCEL : 0u) |
+            (ops->reset ? RIN_DRIVER_V3_NPU_OP_RESET : 0u) |
+            (ops->set_power ? RIN_DRIVER_V3_NPU_OP_SET_POWER : 0u);
+        if (declared != present ||
+            ((ops->context_create == NULL) != (ops->context_destroy == NULL)) ||
+            ((ops->buffer_create == NULL) != (ops->buffer_destroy == NULL)) ||
+            ((ops->queue_create == NULL) != (ops->queue_destroy == NULL)) ||
+            ((ops->submit == NULL) != (ops->poll_events == NULL)))
+            return 0;
+        return 1;
+    }
+}
+
 static inline int rin_driver_v3_npu_fence_valid(
     const RinDriverV3NpuFenceV1* fence)
 {
@@ -588,13 +705,17 @@ static inline int rin_driver_v3_npu_ops_valid(
     const RinDriverV3NpuOps* ops)
 {
     if (!ops || ops->struct_size != sizeof(*ops) ||
-        ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION ||
-        !ops->get_identity || !ops->get_capabilities || !ops->context_create ||
-        !ops->context_destroy || !ops->buffer_create || !ops->buffer_destroy ||
-        !ops->queue_create || !ops->queue_destroy || !ops->submit ||
-        !ops->poll_events || !ops->cancel || !ops->reset || !ops->set_power ||
-        !ops->remove || ops->reserved[0] != 0u || ops->reserved[1] != 0u ||
+        (ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION &&
+         ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION_1_1) ||
+        !ops->get_identity || !ops->get_capabilities || !ops->remove ||
+        ops->reserved[0] != 0u || ops->reserved[1] != 0u ||
         ops->reserved[2] != 0u || ops->reserved[3] != 0u)
+        return 0;
+    if (ops->version == RIN_DRIVER_V3_NPU_OPS_VERSION &&
+        (!ops->context_create || !ops->context_destroy ||
+         !ops->buffer_create || !ops->buffer_destroy || !ops->queue_create ||
+         !ops->queue_destroy || !ops->submit || !ops->poll_events ||
+         !ops->cancel || !ops->reset || !ops->set_power))
         return 0;
 #if UINTPTR_MAX == UINT32_MAX
     if (ops->get_identity_padding != 0u ||
