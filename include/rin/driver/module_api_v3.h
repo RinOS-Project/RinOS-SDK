@@ -327,6 +327,7 @@ typedef struct RinDriverV3DisplayEvent {
 #define RIN_DRIVER_V3_DISPLAY_PIXEL_BGRA8888 UINT32_C(5)
 
 typedef struct RinDriverV3InputEvent {
+    /* Ready monotonic sample; epoch zero is valid. */
     uint64_t timestamp_ns;
     uint16_t type;
     uint16_t code;

@@ -24,7 +24,8 @@ typedef enum RinLocationSourceV1 {
 } RinLocationSourceV1;
 
 /* Coordinates use signed degrees times 10^7. Optional values and their
- * accuracy are zero when the corresponding validity flag is absent. */
+ * accuracy are zero when the corresponding validity flag is absent. The
+ * monotonic timestamp is a ready clock sample; epoch zero is valid. */
 typedef struct RinLocationFixV1 {
     uint32_t struct_size;
     uint32_t version;
@@ -44,7 +45,6 @@ static inline int rin_location_fix_v1_is_valid(const RinLocationFixV1* fix)
 {
     if (fix == 0 || fix->struct_size != sizeof(*fix) ||
         fix->version != RIN_LOCATION_FIX_VERSION ||
-        fix->monotonic_time_ns == 0u ||
         fix->latitude_e7 < INT64_C(-900000000) ||
         fix->latitude_e7 > INT64_C(900000000) ||
         fix->longitude_e7 < INT64_C(-1800000000) ||
