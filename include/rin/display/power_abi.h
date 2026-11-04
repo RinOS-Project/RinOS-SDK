@@ -158,6 +158,8 @@ typedef struct RinPowerStatusV2 {
 #define RIN_POWER_EVENT_POWER_BUTTON 16u
 /* ACPI thermal-zone _TMP reached or exceeded _CRT; shutdown is requested. */
 #define RIN_POWER_EVENT_THERMAL_CRITICAL 17u
+/* ACPI PNP0C0E sleep-button press (kernel applies sleep_button_action). */
+#define RIN_POWER_EVENT_SLEEP_BUTTON 18u
 typedef struct RinPowerEventPollV1 {
     uint32_t struct_size;
     uint32_t version;
