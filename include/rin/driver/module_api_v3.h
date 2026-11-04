@@ -1747,6 +1747,8 @@ typedef RinDriverV3Result (*RinDriverV3PciConfigWriteFn)(
 typedef void (*RinDriverV3LogFn)(
     uint64_t api_context, uint64_t session, uint32_t level,
     const char* message, uint32_t message_length);
+/* Returns monotonic nanoseconds. Zero is a valid timestamp; this callback
+ * has no separate error result. */
 typedef uint64_t (*RinDriverV3ClockFn)(uint64_t api_context);
 typedef RinDriverV3Result (*RinDriverV3DeviceDmaStartFn)(
     uint64_t api_context, uint64_t session);
