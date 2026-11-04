@@ -205,8 +205,10 @@ typedef struct RinManagementUsb4PathLinkBandwidthV1 {
  * Manager. Upstream/downstream are the link's system-oriented directions.
  * coverage_flags bits are the RIN_MANAGEMENT_USB4_PATH_BANDWIDTH_COVERAGE_*
  * values above. Managed-path scope excludes firmware or other-Connection-
- * Manager tunnels. USB3 allocations on non-host adapters are also not
- * accounted. available_* is not an admission ceiling while an
+ * Manager tunnels. Active managed DP video paths with readable common remote
+ * capability ceilings are subtracted in their actual link direction. USB3
+ * allocations on non-host adapters are also not accounted. available_* is
+ * not an admission ceiling while an
  * unaccounted-traffic bit is set. */
 typedef struct RinManagementUsb4PathBandwidthV1 {
     uint32_t struct_size;
