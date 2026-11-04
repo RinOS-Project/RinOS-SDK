@@ -17,6 +17,7 @@
 #define RIN_MANAGEMENT_OPERATION_USB4_PATH_LINK_BANDWIDTH 275u
 #define RIN_MANAGEMENT_OPERATION_USB4_PATH_BANDWIDTH 276u
 #define RIN_MANAGEMENT_OPERATION_USB4_DP_RESOURCE 277u
+#define RIN_MANAGEMENT_OPERATION_USB4_DP_TUNNEL 278u
 
 #define RIN_MANAGEMENT_USB4_V1_VERSION 1u
 #define RIN_MANAGEMENT_USB4_MAX_DEVICES 4u
@@ -32,6 +33,12 @@
 #define RIN_MANAGEMENT_USB4_DP_RESOURCE_QUERY UINT8_C(0)
 #define RIN_MANAGEMENT_USB4_DP_RESOURCE_ALLOCATE UINT8_C(1)
 #define RIN_MANAGEMENT_USB4_DP_RESOURCE_RELEASE UINT8_C(2)
+#define RIN_MANAGEMENT_USB4_DP_TUNNEL_CREATE UINT8_C(1)
+#define RIN_MANAGEMENT_USB4_DP_TUNNEL_REMOVE UINT8_C(2)
+#define RIN_MANAGEMENT_USB4_DP_TUNNEL_RESTORE_SOURCE_REMOTE_CAP \
+    UINT32_C(0x00000001)
+#define RIN_MANAGEMENT_USB4_DP_TUNNEL_RESTORE_DEST_REMOTE_CAP \
+    UINT32_C(0x00000002)
 #define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_QUERY UINT8_C(0)
 #define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_ALLOCATE UINT8_C(1)
 #define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_RELEASE UINT8_C(2)
@@ -242,6 +249,36 @@ typedef struct RinManagementUsb4DpResourceV1 {
     uint64_t reserved[2];
 } RinManagementUsb4DpResourceV1;
 
+/* A managed DisplayPort tunnel owns the video route, both AUX directions,
+ * and the source DP IN resource lease. Set action to REMOVE and return this
+ * complete record for teardown; state 2 means cleanup remains in progress.
+ * capability_restore_mask identifies original DP_REMOTE_CAP values that
+ * still need restoration after a partially failed capability exchange. */
+typedef struct RinManagementUsb4DpTunnelV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t device_index;
+    uint16_t source_router;
+    uint16_t destination_router;
+    uint8_t source_port;
+    uint8_t destination_port;
+    uint8_t action;
+    uint8_t state;
+    uint32_t reserved0;
+    uint64_t device_generation;
+    uint64_t topology_generation;
+    uint64_t video_token;
+    uint64_t aux_tx_token;
+    uint64_t aux_rx_token;
+    uint64_t allocation_token;
+    uint64_t router_unique_id;
+    uint32_t source_remote_cap_original;
+    uint32_t destination_remote_cap_original;
+    uint32_t capability_restore_mask;
+    uint32_t reserved1;
+} RinManagementUsb4DpTunnelV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
               "RinManagementUsb4DeviceCountV1 ABI drift");
@@ -265,6 +302,8 @@ static_assert(sizeof(RinManagementUsb4PathBandwidthV1) == 80u,
               "RinManagementUsb4PathBandwidthV1 ABI drift");
 static_assert(sizeof(RinManagementUsb4DpResourceV1) == 72u,
               "RinManagementUsb4DpResourceV1 ABI drift");
+static_assert(sizeof(RinManagementUsb4DpTunnelV1) == 96u,
+              "RinManagementUsb4DpTunnelV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
                "RinManagementUsb4DeviceCountV1 ABI drift");
@@ -288,6 +327,8 @@ _Static_assert(sizeof(RinManagementUsb4PathBandwidthV1) == 80u,
                "RinManagementUsb4PathBandwidthV1 ABI drift");
 _Static_assert(sizeof(RinManagementUsb4DpResourceV1) == 72u,
                "RinManagementUsb4DpResourceV1 ABI drift");
+_Static_assert(sizeof(RinManagementUsb4DpTunnelV1) == 96u,
+               "RinManagementUsb4DpTunnelV1 ABI drift");
 #endif
 
 #endif /* RIN_MANAGEMENT_USB4_V1_ABI_H */
