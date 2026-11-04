@@ -891,6 +891,7 @@ typedef struct RinWebContentWebAuthnEventV1 {
     char document_url[RIN_WEBCONTENT_URL_MAX];
     char rp_id[RIN_PASS_WEBAUTHN_RP_ID_STORAGE];
     uint8_t challenge[RIN_WEBCONTENT_WEBAUTHN_CHALLENGE_MAX];
+    uint32_t reserved0;
     RinPassWebAuthnRequestV1 request;
     uint64_t reserved[4];
 } RinWebContentWebAuthnEventV1;
@@ -910,6 +911,7 @@ typedef struct RinWebContentWebAuthnCompleteV1 {
     uint32_t client_data_json_size;
     uint8_t result_stream[RIN_PASS_WEBAUTHN_RESULT_STREAM_MAX];
     uint8_t client_data_json[RIN_WEBCONTENT_WEBAUTHN_CLIENT_DATA_MAX];
+    uint32_t reserved1;
     uint64_t reserved[2];
 } RinWebContentWebAuthnCompleteV1;
 
