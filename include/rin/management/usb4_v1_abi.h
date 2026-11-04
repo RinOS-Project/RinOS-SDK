@@ -255,7 +255,8 @@ typedef struct RinManagementUsb4DpResourceV1 {
  * and the source DP IN resource lease. Set action to REMOVE and return this
  * complete record for teardown; state 2 means cleanup remains in progress.
  * capability_restore_mask identifies original DP_REMOTE_CAP values that
- * still need restoration after a partially failed capability exchange. */
+ * still need restoration after a failed exchange or constrained-tunnel
+ * teardown. */
 typedef struct RinManagementUsb4DpTunnelV1 {
     uint32_t struct_size;
     uint16_t version;
