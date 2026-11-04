@@ -16,6 +16,7 @@
 #define RIN_MANAGEMENT_OPERATION_USB4_USB3_BANDWIDTH 274u
 #define RIN_MANAGEMENT_OPERATION_USB4_PATH_LINK_BANDWIDTH 275u
 #define RIN_MANAGEMENT_OPERATION_USB4_PATH_BANDWIDTH 276u
+#define RIN_MANAGEMENT_OPERATION_USB4_DP_RESOURCE 277u
 
 #define RIN_MANAGEMENT_USB4_V1_VERSION 1u
 #define RIN_MANAGEMENT_USB4_MAX_DEVICES 4u
@@ -27,6 +28,10 @@
 #define RIN_MANAGEMENT_USB4_ROUTER_FLAG_UNIQUE_ID_VALID UINT16_C(0x0004)
 #define RIN_MANAGEMENT_USB4_TUNNEL_PCIE UINT8_C(0x01)
 #define RIN_MANAGEMENT_USB4_TUNNEL_USB3 UINT8_C(0x02)
+#define RIN_MANAGEMENT_USB4_TUNNEL_DP UINT8_C(0x08)
+#define RIN_MANAGEMENT_USB4_DP_RESOURCE_QUERY UINT8_C(0)
+#define RIN_MANAGEMENT_USB4_DP_RESOURCE_ALLOCATE UINT8_C(1)
+#define RIN_MANAGEMENT_USB4_DP_RESOURCE_RELEASE UINT8_C(2)
 #define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_QUERY UINT8_C(0)
 #define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_ALLOCATE UINT8_C(1)
 #define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_RELEASE UINT8_C(2)
@@ -217,6 +222,26 @@ typedef struct RinManagementUsb4PathBandwidthV1 {
     uint64_t reserved[2];
 } RinManagementUsb4PathBandwidthV1;
 
+/* Administrator-controlled DP IN resource lease. Preserve the returned
+ * allocation_token, router_unique_id, and port_number for release. A query
+ * does not reserve the adapter. */
+typedef struct RinManagementUsb4DpResourceV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t device_index;
+    uint16_t router_index;
+    uint8_t port_number;
+    uint8_t action;
+    uint64_t device_generation;
+    uint64_t topology_generation;
+    uint64_t allocation_token;
+    uint64_t router_unique_id;
+    uint8_t available;
+    uint8_t reserved0[7];
+    uint64_t reserved[2];
+} RinManagementUsb4DpResourceV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
               "RinManagementUsb4DeviceCountV1 ABI drift");
@@ -238,6 +263,8 @@ static_assert(sizeof(RinManagementUsb4PathLinkBandwidthV1) == 64u,
               "RinManagementUsb4PathLinkBandwidthV1 ABI drift");
 static_assert(sizeof(RinManagementUsb4PathBandwidthV1) == 80u,
               "RinManagementUsb4PathBandwidthV1 ABI drift");
+static_assert(sizeof(RinManagementUsb4DpResourceV1) == 72u,
+              "RinManagementUsb4DpResourceV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
                "RinManagementUsb4DeviceCountV1 ABI drift");
@@ -259,6 +286,8 @@ _Static_assert(sizeof(RinManagementUsb4PathLinkBandwidthV1) == 64u,
                "RinManagementUsb4PathLinkBandwidthV1 ABI drift");
 _Static_assert(sizeof(RinManagementUsb4PathBandwidthV1) == 80u,
                "RinManagementUsb4PathBandwidthV1 ABI drift");
+_Static_assert(sizeof(RinManagementUsb4DpResourceV1) == 72u,
+               "RinManagementUsb4DpResourceV1 ABI drift");
 #endif
 
 #endif /* RIN_MANAGEMENT_USB4_V1_ABI_H */
