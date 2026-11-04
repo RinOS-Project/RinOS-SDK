@@ -12,7 +12,8 @@ typedef enum RinNetworkNamespaceNeighborSyscallOperationV1 {
     RIN_NETWORK_NAMESPACE_NEIGHBOR_OP_REMOVE = 2,
     RIN_NETWORK_NAMESPACE_NEIGHBOR_OP_QUERY = 3,
     RIN_NETWORK_NAMESPACE_NEIGHBOR_OP_LOOKUP = 4,
-    RIN_NETWORK_NAMESPACE_NEIGHBOR_OP_UPDATE = 5
+    RIN_NETWORK_NAMESPACE_NEIGHBOR_OP_UPDATE = 5,
+    RIN_NETWORK_NAMESPACE_NEIGHBOR_OP_REMOVE_V2 = 6
 } RinNetworkNamespaceNeighborSyscallOperationV1;
 
 typedef struct RinNetworkNamespaceNeighborSyscallRequestV1 {

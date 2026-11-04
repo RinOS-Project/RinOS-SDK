@@ -12,7 +12,8 @@ typedef enum RinNetworkNamespaceRouteSyscallOperationV1 {
     RIN_NETWORK_NAMESPACE_ROUTE_OP_ADD = 1,
     RIN_NETWORK_NAMESPACE_ROUTE_OP_REMOVE = 2,
     RIN_NETWORK_NAMESPACE_ROUTE_OP_QUERY = 3,
-    RIN_NETWORK_NAMESPACE_ROUTE_OP_LOOKUP = 4
+    RIN_NETWORK_NAMESPACE_ROUTE_OP_LOOKUP = 4,
+    RIN_NETWORK_NAMESPACE_ROUTE_OP_REMOVE_V2 = 5
 } RinNetworkNamespaceRouteSyscallOperationV1;
 
 typedef struct RinNetworkNamespaceRouteSyscallRequestV1 {
