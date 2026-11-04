@@ -267,7 +267,10 @@ typedef struct RinManagementUsb4DpTunnelV1 {
     uint8_t destination_port;
     uint8_t action;
     uint8_t state;
-    uint32_t reserved0;
+    /* Zero keeps the maximum common DP capability. A nonzero value asks the
+     * manager to select a standards-defined legacy rate/lane pair whose
+     * tunneled payload does not exceed this limit. */
+    uint32_t requested_bandwidth_mbps;
     uint64_t device_generation;
     uint64_t topology_generation;
     uint64_t video_token;
@@ -278,7 +281,8 @@ typedef struct RinManagementUsb4DpTunnelV1 {
     uint32_t source_remote_cap_original;
     uint32_t destination_remote_cap_original;
     uint32_t capability_restore_mask;
-    uint32_t reserved1;
+    /* Filled on successful constrained creation and returned for teardown. */
+    uint32_t negotiated_bandwidth_mbps;
 } RinManagementUsb4DpTunnelV1;
 
 #if defined(__cplusplus)
@@ -306,6 +310,12 @@ static_assert(sizeof(RinManagementUsb4DpResourceV1) == 72u,
               "RinManagementUsb4DpResourceV1 ABI drift");
 static_assert(sizeof(RinManagementUsb4DpTunnelV1) == 96u,
               "RinManagementUsb4DpTunnelV1 ABI drift");
+static_assert(offsetof(RinManagementUsb4DpTunnelV1,
+                        requested_bandwidth_mbps) == 20u,
+              "RinManagementUsb4DpTunnelV1 request offset drift");
+static_assert(offsetof(RinManagementUsb4DpTunnelV1,
+                        negotiated_bandwidth_mbps) == 92u,
+              "RinManagementUsb4DpTunnelV1 result offset drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
                "RinManagementUsb4DeviceCountV1 ABI drift");
@@ -331,6 +341,12 @@ _Static_assert(sizeof(RinManagementUsb4DpResourceV1) == 72u,
                "RinManagementUsb4DpResourceV1 ABI drift");
 _Static_assert(sizeof(RinManagementUsb4DpTunnelV1) == 96u,
                "RinManagementUsb4DpTunnelV1 ABI drift");
+_Static_assert(offsetof(RinManagementUsb4DpTunnelV1,
+                        requested_bandwidth_mbps) == 20u,
+               "RinManagementUsb4DpTunnelV1 request offset drift");
+_Static_assert(offsetof(RinManagementUsb4DpTunnelV1,
+                        negotiated_bandwidth_mbps) == 92u,
+               "RinManagementUsb4DpTunnelV1 result offset drift");
 #endif
 
 #endif /* RIN_MANAGEMENT_USB4_V1_ABI_H */
