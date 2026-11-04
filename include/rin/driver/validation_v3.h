@@ -5,6 +5,36 @@
 #include <stddef.h>
 #include <rin/driver/module_api_v3.h>
 
+static inline int rin_ndrv_v3_context_reserved_valid(
+    const RinDriverContextV3* context)
+{
+    int all_zero = 1;
+    if (!context) return 0;
+    for (uint32_t index = 0u; index < 8u; ++index)
+        if (context->reserved[index] != 0u) all_zero = 0;
+    if (all_zero) return 1;
+
+    /* ABI minor 2 deliberately transports the DMI phase through reserved[].
+     * Accept only the loader's versioned record so existing drivers retain
+     * the zero-reserved contract for every other context. */
+    if (context->reserved[0] != RIN_DRIVER_V3_KERNEL_MODULE_PHASE_MAGIC ||
+        context->reserved[3] != RIN_DRIVER_V3_KERNEL_MODULE_PHASE_ABI ||
+        context->reserved[1] < RIN_DRIVER_KERNEL_MODULE_PHASE_PROBE ||
+        context->reserved[1] > RIN_DRIVER_KERNEL_MODULE_PHASE_POWER ||
+        context->reserved[2] > UINT32_MAX)
+        return 0;
+    for (uint32_t index = 4u; index < 8u; ++index)
+        if (context->reserved[index] != 0u) return 0;
+
+    if (context->reserved[1] == RIN_DRIVER_KERNEL_MODULE_PHASE_STOP)
+        return context->reserved[2] <=
+            RIN_DRIVER_KERNEL_MODULE_STOP_START_FAILURE;
+    if (context->reserved[1] == RIN_DRIVER_KERNEL_MODULE_PHASE_POWER)
+        return context->reserved[2] == RIN_DRIVER_POWER_STATE_D0 ||
+               context->reserved[2] == RIN_DRIVER_POWER_STATE_D3;
+    return context->reserved[2] == 0u;
+}
+
 static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
                                         const RinDriverContextV3* context,
                                         uint64_t capabilities) {
@@ -34,9 +64,7 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
     for (uint32_t index = 0u; index < 2u; ++index) {
         if (api->reserved[index] != 0u) return 0;
     }
-    for (uint32_t index = 0u; index < 8u; ++index) {
-        if (context->reserved[index] != 0u) return 0;
-    }
+    if (!rin_ndrv_v3_context_reserved_valid(context)) return 0;
 #if UINTPTR_MAX == UINT32_MAX
     if (api->dma_allocate_padding != 0u ||
         api->dma_map_sg_padding != 0u || api->dma_sync_padding != 0u ||
