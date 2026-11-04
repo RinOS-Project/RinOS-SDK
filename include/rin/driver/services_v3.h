@@ -211,6 +211,10 @@ typedef RinDriverV3Result (*RinDriverV3IrqPollFn)(
 typedef RinDriverV3Result (*RinDriverV3IrqRouteFn)(
     uint64_t api_context, uint64_t session, RinDriverV3Lease irq_lease,
     RinDriverV3IrqRouteV1* route_out);
+/* Wait until an absolute monotonic deadline or an implementation-defined
+ * event. Callers must recheck the device condition after every wake. */
+typedef RinDriverV3Result (*RinDriverV3WaitUntilFn)(
+    uint64_t api_context, uint64_t session, uint64_t deadline_ns);
 typedef RinDriverV3Result (*RinDriverV3FirmwareOpenFn)(
     uint64_t api_context, uint64_t session, const char* name,
     uint32_t name_length, RinDriverV3FirmwareInfo* output);
@@ -286,7 +290,12 @@ typedef struct RinDriverServicesV3 {
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t irq_route_padding;
 #endif
-    uint64_t reserved[3];
+    /* Optional V1 extension occupying a former reserved pointer slot. */
+    RinDriverV3WaitUntilFn wait_until;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t wait_until_padding;
+#endif
+    uint64_t reserved[2];
 } RinDriverServicesV3;
 
 static inline const RinDriverServicesV3* rin_driver_services_v3_get(
@@ -315,7 +324,6 @@ static inline const RinDriverServicesV3* rin_driver_services_v3_get(
           (api->capabilities & RIN_DRIVER_V3_CAP_MSIX) == 0u ||
           !services->irq_route)) ||
         services->reserved[0] != 0u || services->reserved[1] != 0u ||
-        services->reserved[2] != 0u ||
         (((services->capabilities & RIN_DRIVER_V3_CAP_IOPORT) != 0u) &&
          (!services->ioport_acquire || !services->ioport_read ||
           !services->ioport_write || !services->ioport_release)) ||
@@ -342,7 +350,8 @@ static inline const RinDriverServicesV3* rin_driver_services_v3_get(
         services->firmware_release_padding != 0u ||
         services->child_publish_padding != 0u ||
         services->child_remove_padding != 0u ||
-        services->property_get_padding != 0u)
+        services->property_get_padding != 0u ||
+        services->wait_until_padding != 0u)
         return NULL;
 #endif
     return services;
@@ -389,6 +398,8 @@ static_assert(offsetof(RinDriverServicesV3, property_get) == 104u,
               "NDRV v3 property callback offset drift");
 static_assert(offsetof(RinDriverServicesV3, irq_route) == 112u,
               "NDRV v3 IRQ route extension offset drift");
+static_assert(offsetof(RinDriverServicesV3, wait_until) == 120u,
+              "NDRV v3 wait extension offset drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinDriverServicesV3) == 144u,
                "NDRV v3 services table ABI drift");
@@ -402,6 +413,8 @@ _Static_assert(offsetof(RinDriverServicesV3, property_get) == 104u,
                "NDRV v3 property callback offset drift");
 _Static_assert(offsetof(RinDriverServicesV3, irq_route) == 112u,
                "NDRV v3 IRQ route extension offset drift");
+_Static_assert(offsetof(RinDriverServicesV3, wait_until) == 120u,
+               "NDRV v3 wait extension offset drift");
 #endif
 
 static inline int rin_driver_v3_ioport_lease_valid(
@@ -650,6 +663,27 @@ static inline RinDriverV3Result rin_driver_v3_irq_poll(
         }
     }
     return RIN_DRIVER_V3_OK;
+}
+
+static inline int rin_driver_v3_wait_until_available(
+    const RinDriverApiV3* api, uint64_t session)
+{
+    const RinDriverServicesV3* services = rin_driver_services_v3_get(api);
+    return services && session != 0u && services->wait_until != NULL;
+}
+
+static inline RinDriverV3Result rin_driver_v3_wait_until(
+    const RinDriverApiV3* api, uint64_t session, uint64_t deadline_ns)
+{
+    const RinDriverServicesV3* services = rin_driver_services_v3_get(api);
+    RinDriverV3Result result;
+    if (!services || session == 0u || deadline_ns == 0u)
+        return RIN_DRIVER_V3_INVALID;
+    if (!services->wait_until) return RIN_DRIVER_V3_UNSUPPORTED;
+    result = services->wait_until(
+        services->api_context, session, deadline_ns);
+    return rin_driver_services_v3_result_valid(result)
+        ? result : RIN_DRIVER_V3_BACKEND_FAILED;
 }
 
 static inline int rin_driver_v3_irq_route_v1_valid(
