@@ -13,6 +13,7 @@
 #define RIN_MANAGEMENT_OPERATION_USB4_ROUTER_AUTHORIZE 271u
 #define RIN_MANAGEMENT_OPERATION_USB4_PATH_PAIR_CREATE 272u
 #define RIN_MANAGEMENT_OPERATION_USB4_PATH_PAIR_REMOVE 273u
+#define RIN_MANAGEMENT_OPERATION_USB4_USB3_BANDWIDTH 274u
 
 #define RIN_MANAGEMENT_USB4_V1_VERSION 1u
 #define RIN_MANAGEMENT_USB4_MAX_DEVICES 4u
@@ -24,6 +25,9 @@
 #define RIN_MANAGEMENT_USB4_ROUTER_FLAG_UNIQUE_ID_VALID UINT16_C(0x0004)
 #define RIN_MANAGEMENT_USB4_TUNNEL_PCIE UINT8_C(0x01)
 #define RIN_MANAGEMENT_USB4_TUNNEL_USB3 UINT8_C(0x02)
+#define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_QUERY UINT8_C(0)
+#define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_ALLOCATE UINT8_C(1)
+#define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_RELEASE UINT8_C(2)
 
 typedef struct RinManagementUsb4DeviceCountV1 {
     uint32_t struct_size;
@@ -124,6 +128,30 @@ typedef struct RinManagementUsb4PathPairV1 {
     uint64_t reserved[2];
 } RinManagementUsb4PathPairV1;
 
+/* Host USB3 adapter isochronous bandwidth, in Mb/s. Query fills allocation,
+ * consumption, and adapter link ceiling; allocation cannot undercut live
+ * consumption, and release retains 900 Mb/s in each direction for xHCI. */
+typedef struct RinManagementUsb4Usb3BandwidthV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t device_index;
+    uint16_t router_index;
+    uint8_t port_number;
+    uint8_t action;
+    uint64_t device_generation;
+    uint64_t topology_generation;
+    uint32_t requested_upstream_mbps;
+    uint32_t requested_downstream_mbps;
+    uint32_t allocated_upstream_mbps;
+    uint32_t allocated_downstream_mbps;
+    uint32_t consumed_upstream_mbps;
+    uint32_t consumed_downstream_mbps;
+    uint32_t maximum_link_rate_mbps;
+    uint32_t allocation_granularity_mbps;
+    uint32_t reserved[2];
+} RinManagementUsb4Usb3BandwidthV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
               "RinManagementUsb4DeviceCountV1 ABI drift");
@@ -135,6 +163,8 @@ static_assert(sizeof(RinManagementUsb4TopologyV1) == 416u,
               "RinManagementUsb4TopologyV1 ABI drift");
 static_assert(sizeof(RinManagementUsb4PathPairV1) == 72u,
               "RinManagementUsb4PathPairV1 ABI drift");
+static_assert(sizeof(RinManagementUsb4Usb3BandwidthV1) == 72u,
+              "RinManagementUsb4Usb3BandwidthV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
                "RinManagementUsb4DeviceCountV1 ABI drift");
@@ -146,6 +176,8 @@ _Static_assert(sizeof(RinManagementUsb4TopologyV1) == 416u,
                "RinManagementUsb4TopologyV1 ABI drift");
 _Static_assert(sizeof(RinManagementUsb4PathPairV1) == 72u,
                "RinManagementUsb4PathPairV1 ABI drift");
+_Static_assert(sizeof(RinManagementUsb4Usb3BandwidthV1) == 72u,
+               "RinManagementUsb4Usb3BandwidthV1 ABI drift");
 #endif
 
 #endif /* RIN_MANAGEMENT_USB4_V1_ABI_H */
