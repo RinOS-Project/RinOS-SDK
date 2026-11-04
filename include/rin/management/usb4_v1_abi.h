@@ -39,6 +39,7 @@
     UINT32_C(0x00000001)
 #define RIN_MANAGEMENT_USB4_DP_TUNNEL_RESTORE_DEST_REMOTE_CAP \
     UINT32_C(0x00000002)
+#define RIN_MANAGEMENT_USB4_DP_TUNNEL_RESTORE_BW_MODE UINT32_C(0x00000004)
 #define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_QUERY UINT8_C(0)
 #define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_ALLOCATE UINT8_C(1)
 #define RIN_MANAGEMENT_USB4_USB3_BANDWIDTH_RELEASE UINT8_C(2)
@@ -256,7 +257,8 @@ typedef struct RinManagementUsb4DpResourceV1 {
  * complete record for teardown; state 2 means cleanup remains in progress.
  * capability_restore_mask identifies original DP_REMOTE_CAP values that
  * still need restoration after a failed exchange or constrained-tunnel
- * teardown. */
+ * teardown. Bit 2 records CM bandwidth-allocation support that must be
+ * withdrawn before the DP IN resource lease is released. */
 typedef struct RinManagementUsb4DpTunnelV1 {
     uint32_t struct_size;
     uint16_t version;
