@@ -61,7 +61,7 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
          (api->device_dma_stop != NULL))) {
         return 0;
     }
-    for (uint32_t index = 0u; index < 2u; ++index) {
+    for (uint32_t index = 0u; index < 1u; ++index) {
         if (api->reserved[index] != 0u) return 0;
     }
     if (!rin_ndrv_v3_context_reserved_valid(context)) return 0;
@@ -78,6 +78,7 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
         api->monotonic_time_ns_padding != 0u ||
         api->device_dma_start_padding != 0u ||
         api->device_dma_stop_padding != 0u ||
+        api->dma_get_physical_address_padding != 0u ||
         api->entropy_mix_padding != 0u)
         return 0;
 #endif

@@ -1704,6 +1704,12 @@ typedef RinDriverV3Result (*RinDriverV3DmaMapSgFn)(
 typedef RinDriverV3Result (*RinDriverV3DmaSyncFn)(
     uint64_t api_context, uint64_t session, RinDriverV3Lease lease,
     uint32_t action, uint64_t offset, uint64_t length);
+/* Returns the host physical base of a live contiguous DMA allocation. This is
+ * restricted to signed kernel drivers that need a platform secure-loader
+ * interface; user processes never receive this address. */
+typedef RinDriverV3Result (*RinDriverV3DmaGetPhysicalAddressFn)(
+    uint64_t api_context, uint64_t session, RinDriverV3Lease lease,
+    uint64_t* physical_address_out);
 /* On success, output owns the BAR mapping. On any failure, the
  * implementation must zero the entire output and transfer no lease. */
 typedef RinDriverV3Result (*RinDriverV3BarMapFn)(
@@ -1849,7 +1855,13 @@ typedef struct RinDriverApiV3 {
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t device_dma_stop_padding;
 #endif
-    uint64_t reserved[2];
+    /* ABI v3 extension consumes one former reserved pointer slot. Only
+     * contiguous allocations with a backend physical-address provider work. */
+    RinDriverV3DmaGetPhysicalAddressFn dma_get_physical_address;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t dma_get_physical_address_padding;
+#endif
+    uint64_t reserved[1];
 } RinDriverApiV3;
 
 typedef RinDriverV3Result (*RinDriverEntryV3)(
@@ -1865,7 +1877,8 @@ static_assert(offsetof(RinDriverApiV3, dma_allocate) == 24u &&
                   offsetof(RinDriverApiV3, services_api_address) == 144u &&
                   offsetof(RinDriverApiV3, entropy_mix) == 152u &&
                   offsetof(RinDriverApiV3, device_dma_stop) == 160u &&
-                  offsetof(RinDriverApiV3, reserved) == 168u,
+                  offsetof(RinDriverApiV3, dma_get_physical_address) == 168u &&
+                  offsetof(RinDriverApiV3, reserved) == 176u,
               "NDRV v3 API callback slot ABI drift");
 static_assert(sizeof(RinDriverV3DmaLeaseInfo) == 48u,
               "NDRV v3 DMA lease ABI drift");
@@ -1960,7 +1973,8 @@ _Static_assert(offsetof(RinDriverApiV3, dma_allocate) == 24u &&
                    offsetof(RinDriverApiV3, services_api_address) == 144u &&
                    offsetof(RinDriverApiV3, entropy_mix) == 152u &&
                    offsetof(RinDriverApiV3, device_dma_stop) == 160u &&
-                   offsetof(RinDriverApiV3, reserved) == 168u,
+                   offsetof(RinDriverApiV3, dma_get_physical_address) == 168u &&
+                   offsetof(RinDriverApiV3, reserved) == 176u,
                "NDRV v3 API callback slot ABI drift");
 _Static_assert(sizeof(RinDriverV3DmaLeaseInfo) == 48u,
                "NDRV v3 DMA lease ABI drift");
