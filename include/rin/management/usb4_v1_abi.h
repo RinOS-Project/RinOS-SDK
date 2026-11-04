@@ -36,6 +36,8 @@
     UINT32_C(0x00000002)
 #define RIN_MANAGEMENT_USB4_PATH_BANDWIDTH_COVERAGE_EXTERNAL_UNACCOUNTED \
     UINT32_C(0x00000004)
+#define RIN_MANAGEMENT_USB4_PATH_BANDWIDTH_COVERAGE_MANAGED_USB3_UNACCOUNTED \
+    UINT32_C(0x00000008)
 
 typedef struct RinManagementUsb4DeviceCountV1 {
     uint32_t struct_size;
@@ -186,7 +188,8 @@ typedef struct RinManagementUsb4PathLinkBandwidthV1 {
  * Manager. Upstream/downstream are the link's system-oriented directions.
  * coverage_flags bits are the RIN_MANAGEMENT_USB4_PATH_BANDWIDTH_COVERAGE_*
  * values above. Managed-path scope excludes firmware or other-Connection-
- * Manager tunnels. available_* is not an admission ceiling while an
+ * Manager tunnels. USB3 allocations on non-host adapters are also not
+ * accounted. available_* is not an admission ceiling while an
  * unaccounted-traffic bit is set. */
 typedef struct RinManagementUsb4PathBandwidthV1 {
     uint32_t struct_size;
