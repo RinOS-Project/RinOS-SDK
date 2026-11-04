@@ -161,7 +161,7 @@ __attribute__((naked, noreturn)) void _start(void)
 #if defined(__x86_64__)
     __asm__ __volatile__(
         "mov %rsp, %rdi\n"
-        "and $-16, %rsp\n"
+        "andq $-16, %rsp\n"
         "call __rin_sdk_start_from_initial_stack\n"
         "ud2\n");
 #elif defined(__i386__)
