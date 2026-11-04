@@ -35,6 +35,46 @@ static inline int rin_ndrv_v3_context_reserved_valid(
     return context->reserved[2] == 0u;
 }
 
+static inline int rin_driver_kernel_module_context_v1_valid(
+    const RinDriverContextV3* context)
+{
+    const RinDriverDeviceIdentityV3* device;
+    if (!context) return 0;
+    if (context->kernel_module_context_version == 0u &&
+        context->kernel_module_matched_index == 0u &&
+        context->kernel_module_device.struct_size == 0u &&
+        context->kernel_module_device.version == 0u &&
+        context->kernel_module_device.device_cookie == 0u &&
+        context->kernel_module_device.bus_type == 0u &&
+        context->kernel_module_device.vendor_id == 0u &&
+        context->kernel_module_device.device_id == 0u &&
+        context->kernel_module_device.subsystem_vendor_id == 0u &&
+        context->kernel_module_device.subsystem_device_id == 0u &&
+        context->kernel_module_device.reserved0 == 0u &&
+        context->kernel_module_device.class_code == 0u &&
+        context->kernel_module_device.revision == 0u &&
+        context->kernel_module_device.reserved1 == 0u &&
+        context->kernel_module_device.available_resources == 0u &&
+        context->kernel_module_device.generation == 0u &&
+        context->kernel_module_device.reserved == 0u)
+        return context->reserved[0] == 0u;
+    if (context->kernel_module_context_version !=
+            RIN_DRIVER_KERNEL_MODULE_CONTEXT_V1_VERSION ||
+        context->reserved[0] != RIN_DRIVER_V3_KERNEL_MODULE_PHASE_MAGIC ||
+        context->kernel_module_matched_index >=
+            RIN_DRIVER_ADMISSION_V3_MAX_MATCHES)
+        return 0;
+    device = &context->kernel_module_device;
+    return device->struct_size == sizeof(*device) &&
+           device->version == RIN_DRIVER_ADMISSION_V3_VERSION &&
+           device->device_cookie != 0u &&
+           device->device_cookie == context->device &&
+           device->generation != 0u &&
+           device->generation == context->generation &&
+           device->reserved0 == 0u && device->reserved1 == 0u &&
+           device->reserved == 0u;
+}
+
 static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
                                         const RinDriverContextV3* context,
                                         uint64_t capabilities) {
@@ -64,7 +104,8 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
     for (uint32_t index = 0u; index < 1u; ++index) {
         if (api->reserved[index] != 0u) return 0;
     }
-    if (!rin_ndrv_v3_context_reserved_valid(context)) return 0;
+    if (!rin_ndrv_v3_context_reserved_valid(context) ||
+        !rin_driver_kernel_module_context_v1_valid(context)) return 0;
 #if UINTPTR_MAX == UINT32_MAX
     if (api->dma_allocate_padding != 0u ||
         api->dma_map_sg_padding != 0u || api->dma_sync_padding != 0u ||

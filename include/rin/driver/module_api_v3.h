@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include <rin/formats_v3.h>
+#include <rin/driver/admission_v3.h>
 
 #define RIN_DRIVER_V3_ABI_VERSION UINT32_C(0x00030000)
 #define RIN_DRIVER_V3_DMA_READ    UINT32_C(0x00000001)
@@ -216,7 +217,25 @@ typedef struct RinDriverContextV3 {
     uint32_t architecture;
     uint32_t flags;
     uint64_t reserved[8];
+    /* Append-only DMI extension. The NDRV loader leaves these fields zero
+     * for the legacy outer entry and fills them only for the embedded RIN
+     * kernel-module phase callback. This exposes the exact device identity
+     * selected by the signed NDRV match without changing the NDRV v3 entry
+     * signature or any existing field offsets. */
+    uint32_t kernel_module_context_version;
+    uint32_t kernel_module_matched_index;
+    RinDriverDeviceIdentityV3 kernel_module_device;
 } RinDriverContextV3;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinDriverContextV3) == 200u,
+              "RinDriverContextV3 ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinDriverContextV3) == 200u,
+               "RinDriverContextV3 ABI drift");
+#endif
+
+#define RIN_DRIVER_KERNEL_MODULE_CONTEXT_V1_VERSION UINT32_C(0x00010000)
 
 /* NDRV ABI minor 2 embeds a signed RIN executable in its authenticated RDFW
  * resource catalog. Its RinDriverEntryV3 receives the same device API and
@@ -245,8 +264,10 @@ typedef enum RinDriverKernelModuleStopReasonV1 {
 } RinDriverKernelModuleStopReasonV1;
 
 /* context->reserved[0] = magic, [1] = phase, [2] = phase argument,
- * [3] = phase ABI. The remaining words stay zero. POWER's argument is a
- * RIN_DRIVER_POWER_STATE_* value; STOP's argument is a stop-reason enum. */
+ * [3] = phase ABI. reserved[4..7] stay zero. The appended kernel-module
+ * context extension carries the matched device identity and match index.
+ * POWER's argument is a RIN_DRIVER_POWER_STATE_* value; STOP's argument is
+ * a stop-reason enum. */
 #define RIN_DRIVER_V3_KERNEL_MODULE_RESOURCE_ROOT "kernel-module-v1/root.rin"
 #define RIN_DRIVER_V3_KERNEL_MODULE_RESOURCE_PREFIX "kernel-module-v1/"
 #define RIN_DRIVER_V3_KERNEL_MODULE_LIBRARY_PREFIX "kernel-module-v1/lib/"
@@ -1898,7 +1919,7 @@ static_assert(sizeof(RinDriverV3MemorySlice) == 24u,
               "NDRV v3 memory slice ABI drift");
 static_assert(sizeof(RinDriverV3DmaSegment) == 16u,
               "NDRV v3 DMA segment ABI drift");
-static_assert(sizeof(RinDriverContextV3) == 128u,
+static_assert(sizeof(RinDriverContextV3) == 200u,
               "NDRV v3 context ABI drift");
 static_assert(sizeof(RinDriverV3DeviceRegistration) == 72u,
               "NDRV v3 registration ABI drift");
@@ -1994,7 +2015,7 @@ _Static_assert(sizeof(RinDriverV3MemorySlice) == 24u,
                "NDRV v3 memory slice ABI drift");
 _Static_assert(sizeof(RinDriverV3DmaSegment) == 16u,
                "NDRV v3 DMA segment ABI drift");
-_Static_assert(sizeof(RinDriverContextV3) == 128u,
+_Static_assert(sizeof(RinDriverContextV3) == 200u,
                "NDRV v3 context ABI drift");
 _Static_assert(sizeof(RinDriverV3DeviceRegistration) == 72u,
                "NDRV v3 registration ABI drift");
