@@ -22,6 +22,15 @@
     (RIN_DRIVER_V3_CHILD_HOTPLUGGABLE | RIN_DRIVER_V3_CHILD_REMOVABLE)
 #define RIN_DRIVER_V3_CHILD_HARDWARE_ID_MAX 64u
 #define RIN_DRIVER_V3_CHILD_NAME_MAX 32u
+#define RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_V1 \
+    RIN_DRIVER_SERVICES_V3_VERSION
+/* V1.1 is the same fixed-size descriptor with an OS-resolved PCI location in
+ * reserved[0]. The driver supplies a location hint only; the kernel resolves
+ * it against its live PCI catalog before granting any device resources. */
+#define RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_PCI_V1 UINT32_C(0x00010001)
+#define RIN_DRIVER_V3_CHILD_PCI_LOCATION(segment, bus, device, function) \
+    ((uint64_t)(segment) | ((uint64_t)(bus) << 16u) | \
+     ((uint64_t)(device) << 24u) | ((uint64_t)(function) << 29u))
 #define RIN_DRIVER_V3_FIRMWARE_NAME_MAX 128u
 #define RIN_DRIVER_V3_FIRMWARE_MAX_READ UINT32_C(65536)
 #define RIN_DRIVER_V3_IRQ_EVENT_MAX_BATCH 64u
@@ -231,6 +240,9 @@ typedef RinDriverV3Result (*RinDriverV3ChildPublishFn)(
 typedef RinDriverV3Result (*RinDriverV3ChildRemoveFn)(
     uint64_t api_context, uint64_t session, RinDriverV3Lease child,
     uint64_t generation);
+typedef RinDriverV3Result (*RinDriverV3ChildRemoveExFn)(
+    uint64_t api_context, uint64_t session, RinDriverV3Lease child,
+    uint64_t generation, RinDriverKernelModuleStopReasonV1 reason);
 typedef RinDriverV3Result (*RinDriverV3PropertyGetFn)(
     uint64_t api_context, uint64_t session, uint32_t key, uint32_t index,
     RinDriverV3Property* output);
@@ -296,6 +308,11 @@ typedef struct RinDriverServicesV3 {
     uint32_t wait_until_padding;
 #endif
     uint64_t reserved[2];
+    /* Optional, size-gated tail extension. */
+    RinDriverV3ChildRemoveExFn child_remove_ex;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t child_remove_ex_padding;
+#endif
 } RinDriverServicesV3;
 
 static inline const RinDriverServicesV3* rin_driver_services_v3_get(
@@ -314,7 +331,8 @@ static inline const RinDriverServicesV3* rin_driver_services_v3_get(
         (api->services_api_address & (sizeof(uint32_t) - 1u)) != 0u)
         return NULL;
     services = (const RinDriverServicesV3*)(uintptr_t)api->services_api_address;
-    if (services->struct_size < sizeof(*services) ||
+    if (services->struct_size <
+            offsetof(RinDriverServicesV3, child_remove_ex) ||
         services->version != RIN_DRIVER_SERVICES_V3_VERSION ||
         (services->capabilities != 0u && services->api_context == 0u) ||
         (services->capabilities & ~known) != 0u ||
@@ -353,6 +371,9 @@ static inline const RinDriverServicesV3* rin_driver_services_v3_get(
         services->property_get_padding != 0u ||
         services->wait_until_padding != 0u)
         return NULL;
+    if (services->struct_size >= sizeof(*services) &&
+        services->child_remove_ex_padding != 0u)
+        return NULL;
 #endif
     return services;
 }
@@ -386,8 +407,6 @@ static inline int rin_driver_services_v3_result_valid(
 }
 
 #if defined(__cplusplus)
-static_assert(sizeof(RinDriverServicesV3) == 144u,
-              "NDRV v3 services table ABI drift");
 static_assert(offsetof(RinDriverServicesV3, irq_poll) == 56u,
               "NDRV v3 IRQ callback offset drift");
 static_assert(offsetof(RinDriverServicesV3, firmware_open) == 64u,
@@ -400,8 +419,12 @@ static_assert(offsetof(RinDriverServicesV3, irq_route) == 112u,
               "NDRV v3 IRQ route extension offset drift");
 static_assert(offsetof(RinDriverServicesV3, wait_until) == 120u,
               "NDRV v3 wait extension offset drift");
+static_assert(offsetof(RinDriverServicesV3, child_remove_ex) == 144u,
+              "NDRV v3 child removal extension offset drift");
+static_assert(sizeof(RinDriverServicesV3) == 152u,
+              "NDRV v3 services tail extension drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinDriverServicesV3) == 144u,
+_Static_assert(sizeof(RinDriverServicesV3) == 152u,
                "NDRV v3 services table ABI drift");
 _Static_assert(offsetof(RinDriverServicesV3, irq_poll) == 56u,
                "NDRV v3 IRQ callback offset drift");
@@ -415,6 +438,8 @@ _Static_assert(offsetof(RinDriverServicesV3, irq_route) == 112u,
                "NDRV v3 IRQ route extension offset drift");
 _Static_assert(offsetof(RinDriverServicesV3, wait_until) == 120u,
                "NDRV v3 wait extension offset drift");
+_Static_assert(offsetof(RinDriverServicesV3, child_remove_ex) == 144u,
+               "NDRV v3 child removal extension offset drift");
 #endif
 
 static inline int rin_driver_v3_ioport_lease_valid(
@@ -458,8 +483,11 @@ static inline int rin_driver_v3_firmware_name_valid(
 
 static inline int rin_driver_v3_child_descriptor_valid(
     const RinDriverV3ChildDescriptor* descriptor) {
+    int pci_location;
     if (!descriptor || descriptor->struct_size < sizeof(*descriptor) ||
-        descriptor->version != RIN_DRIVER_SERVICES_V3_VERSION ||
+        (descriptor->version != RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_V1 &&
+         descriptor->version !=
+             RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_PCI_V1) ||
         descriptor->bus_type == 0u || descriptor->parent_device == 0u ||
         descriptor->hardware_id_length == 0u ||
         descriptor->hardware_id_length >=
@@ -477,8 +505,16 @@ static inline int rin_driver_v3_child_descriptor_valid(
         !rin_driver_services_v3_bytes_zero(
             descriptor->name + descriptor->name_length + 1u,
             RIN_DRIVER_V3_CHILD_NAME_MAX - descriptor->name_length - 1u) ||
-        !rin_driver_services_v3_bytes_zero(
-            descriptor->reserved, sizeof(descriptor->reserved)))
+        (descriptor->version == RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_V1 &&
+         !rin_driver_services_v3_bytes_zero(
+             descriptor->reserved, sizeof(descriptor->reserved))))
+        return 0;
+    pci_location = descriptor->version ==
+        RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_PCI_V1;
+    if (pci_location &&
+        (descriptor->bus_type != RIN_DRIVER_BUS_PCI ||
+         (descriptor->reserved[0] >> 32u) != 0u ||
+         descriptor->reserved[1] != 0u))
         return 0;
     for (uint32_t index = 0u; index < descriptor->hardware_id_length;
          ++index) {
@@ -918,6 +954,41 @@ static inline RinDriverV3Result rin_driver_v3_child_remove(
         return rin_driver_services_v3_result_valid(result)
             ? result : RIN_DRIVER_V3_BACKEND_FAILED;
     }
+}
+
+static inline RinDriverV3Result rin_driver_v3_child_remove_ex(
+    const RinDriverApiV3* api, uint64_t session,
+    const RinDriverV3ChildDevice* child,
+    RinDriverKernelModuleStopReasonV1 reason) {
+    const RinDriverServicesV3* services = rin_driver_services_v3_get(api);
+    if (!services || !child || session == 0u ||
+        (uint32_t)reason >
+            (uint32_t)RIN_DRIVER_KERNEL_MODULE_STOP_START_FAILURE ||
+        child->lease == 0u || child->generation == 0u ||
+        child->struct_size < sizeof(*child) ||
+        child->version != RIN_DRIVER_SERVICES_V3_VERSION ||
+        child->device == 0u || child->parent_device == 0u ||
+        child->bus_type == 0u ||
+        (child->flags & ~RIN_DRIVER_V3_CHILD_FLAG_MASK) != 0u ||
+        child->reserved0 != 0u ||
+        !rin_driver_services_v3_bytes_zero(
+            child->reserved, sizeof(child->reserved)) ||
+        !rin_driver_services_v3_has(
+            api, services, RIN_DRIVER_V3_CAP_CHILD_DEVICE))
+        return RIN_DRIVER_V3_INVALID;
+    if (services->struct_size <
+            offsetof(RinDriverServicesV3, child_remove_ex) +
+                sizeof(services->child_remove_ex) ||
+        !services->child_remove_ex) {
+        if (reason == RIN_DRIVER_KERNEL_MODULE_STOP_NORMAL)
+            return rin_driver_v3_child_remove(api, session, child);
+        return RIN_DRIVER_V3_UNSUPPORTED;
+    }
+    RinDriverV3Result result = services->child_remove_ex(
+        services->api_context, session, child->lease, child->generation,
+        reason);
+    return rin_driver_services_v3_result_valid(result)
+        ? result : RIN_DRIVER_V3_BACKEND_FAILED;
 }
 
 static inline RinDriverV3Result rin_driver_v3_property_get(
