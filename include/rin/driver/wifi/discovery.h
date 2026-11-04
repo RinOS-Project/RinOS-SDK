@@ -9,6 +9,9 @@
 
 #define RIN_WIFI_DISCOVERY_VERSION UINT32_C(0x00010001)
 #define RIN_WIFI_DISCOVERY_V2_VERSION UINT32_C(0x00020000)
+#define RIN_WIFI_DISCOVERY_SIGNAL_V1_VERSION UINT32_C(0x00010000)
+#define RIN_WIFI_DISCOVERY_SCAN_RESULT_V1_VERSION UINT32_C(0x00010000)
+#define RIN_WIFI_DISCOVERY_SIGNAL_RSSI_VALID UINT32_C(0x00000001)
 #define RIN_WIFI_DISCOVERY_MAX_FRAME_SIZE 2304u
 #define RIN_WIFI_DISCOVERY_MAX_INFORMATION_ELEMENTS 64u
 #define RIN_WIFI_DISCOVERY_MAX_SSID_SIZE 32u
@@ -91,6 +94,50 @@ typedef struct RinWifiDiscoveredNetworkV2 {
     uint8_t reserved[8];
 } RinWifiDiscoveredNetworkV2;
 
+/* Versioned RSSI metadata is separate from the stable V1 network record so
+ * older callers keep their layout.  Unknown RSSI has flags == 0 and a zero
+ * signal_dbm; it is never encoded as an estimated -127 dBm measurement. */
+typedef struct RinWifiDiscoverySignalV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t flags;
+    int32_t signal_dbm;
+    uint64_t reserved[2];
+} RinWifiDiscoverySignalV1;
+
+typedef struct RinWifiDiscoveryScanResultV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinWifiDiscoveredNetworkV1 network;
+    RinWifiDiscoverySignalV1 signal;
+} RinWifiDiscoveryScanResultV1;
+
+static inline int rin_wifi_discovery_signal_v1_valid(
+    const RinWifiDiscoverySignalV1* signal) {
+    if (!signal || signal->struct_size != sizeof(*signal) ||
+        signal->version != RIN_WIFI_DISCOVERY_SIGNAL_V1_VERSION ||
+        (signal->flags & ~RIN_WIFI_DISCOVERY_SIGNAL_RSSI_VALID) != 0u ||
+        signal->reserved[0] != 0u || signal->reserved[1] != 0u)
+        return 0;
+    if ((signal->flags & RIN_WIFI_DISCOVERY_SIGNAL_RSSI_VALID) == 0u)
+        return signal->signal_dbm == 0;
+    return signal->signal_dbm >= -127 && signal->signal_dbm <= 0;
+}
+
+static inline int rin_wifi_discovery_scan_result_v1_valid(
+    const RinWifiDiscoveryScanResultV1* result) {
+    if (!result || result->struct_size != sizeof(*result) ||
+        result->version != RIN_WIFI_DISCOVERY_SCAN_RESULT_V1_VERSION ||
+        !rin_wifi_discovery_signal_v1_valid(&result->signal) ||
+        result->network.struct_size != sizeof(result->network) ||
+        result->network.version != RIN_WIFI_DISCOVERY_VERSION ||
+        result->network.ssid_length > RIN_WIFI_DISCOVERY_MAX_SSID_SIZE ||
+        result->network.channel == 0u ||
+        result->network.signal_dbm != result->signal.signal_dbm)
+        return 0;
+    return 1;
+}
+
 /* The input must be one complete 802.11 management MPDU without an FCS.  The
  * output is zeroed on every parse/admission failure.  Aliasing input and output
  * is an invalid caller contract and is rejected without modifying either. */
@@ -103,12 +150,22 @@ RinWifiDiscoveryStatus rin_wifi_discovery_admit(
 RinWifiDiscoveryStatus rin_wifi_discovery_admit_v2(
     const uint8_t* frame, uint32_t frame_size, int32_t signal_dbm,
     RinWifiDiscoveredNetworkV2* network_out);
+/* Admit one management frame with explicit measured/unknown RSSI metadata.
+ * The signal value must already include the backend's validated calibration. */
+RinWifiDiscoveryStatus rin_wifi_discovery_admit_scan_result_v1(
+    const uint8_t* frame, uint32_t frame_size,
+    const RinWifiDiscoverySignalV1* signal,
+    RinWifiDiscoveryScanResultV1* result_out);
 
 #if defined(__cplusplus)
 static_assert(sizeof(RinWifiDiscoveredNetworkV1) == 96u,
               "Wi-Fi discovery ABI drift");
 static_assert(sizeof(RinWifiDiscoveredNetworkV2) == 128u,
               "Wi-Fi discovery V2 ABI drift");
+static_assert(sizeof(RinWifiDiscoverySignalV1) == 32u,
+              "Wi-Fi discovery signal ABI drift");
+static_assert(sizeof(RinWifiDiscoveryScanResultV1) == 136u,
+              "Wi-Fi discovery scan result ABI drift");
 static_assert(offsetof(RinWifiDiscoveredNetworkV1, band) == 72u,
               "Wi-Fi discovery band offset drift");
 static_assert(offsetof(RinWifiDiscoveredNetworkV1, sae_h2e) == 78u,
@@ -120,6 +177,10 @@ _Static_assert(sizeof(RinWifiDiscoveredNetworkV1) == 96u,
                "Wi-Fi discovery ABI drift");
 _Static_assert(sizeof(RinWifiDiscoveredNetworkV2) == 128u,
                "Wi-Fi discovery V2 ABI drift");
+_Static_assert(sizeof(RinWifiDiscoverySignalV1) == 32u,
+               "Wi-Fi discovery signal ABI drift");
+_Static_assert(sizeof(RinWifiDiscoveryScanResultV1) == 136u,
+               "Wi-Fi discovery scan result ABI drift");
 _Static_assert(offsetof(RinWifiDiscoveredNetworkV1, band) == 72u,
                "Wi-Fi discovery band offset drift");
 _Static_assert(offsetof(RinWifiDiscoveredNetworkV1, sae_h2e) == 78u,

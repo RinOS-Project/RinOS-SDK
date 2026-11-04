@@ -847,3 +847,40 @@ RinWifiDiscoveryStatus rin_wifi_discovery_admit_v2(
     wifi_zero(&evidence, sizeof(evidence));
     return status;
 }
+
+RinWifiDiscoveryStatus rin_wifi_discovery_admit_scan_result_v1(
+    const uint8_t* frame, uint32_t frame_size,
+    const RinWifiDiscoverySignalV1* signal,
+    RinWifiDiscoveryScanResultV1* result_out)
+{
+    RinWifiDiscoveredNetworkV1 network;
+    RinWifiDiscoveryStatus status;
+    int32_t signal_dbm;
+
+    if (result_out == NULL || signal == NULL ||
+        wifi_ranges_overlap(frame, frame_size, result_out,
+                            sizeof(*result_out)) ||
+        wifi_ranges_overlap(signal, sizeof(*signal), result_out,
+                            sizeof(*result_out)) ||
+        wifi_ranges_overlap(frame, frame_size, signal, sizeof(*signal)))
+        return RIN_WIFI_DISCOVERY_INVALID_ARGUMENT;
+    wifi_zero(result_out, sizeof(*result_out));
+    if (!rin_wifi_discovery_signal_v1_valid(signal))
+        return RIN_WIFI_DISCOVERY_INVALID_ARGUMENT;
+
+    signal_dbm = (signal->flags & RIN_WIFI_DISCOVERY_SIGNAL_RSSI_VALID) != 0u
+                     ? signal->signal_dbm
+                     : 0;
+    wifi_zero(&network, sizeof(network));
+    status = rin_wifi_discovery_admit(frame, frame_size, signal_dbm, &network);
+    if (status == RIN_WIFI_DISCOVERY_OK) {
+        result_out->struct_size = sizeof(*result_out);
+        result_out->version = RIN_WIFI_DISCOVERY_SCAN_RESULT_V1_VERSION;
+        result_out->network = network;
+        result_out->signal = *signal;
+    } else {
+        wifi_zero(result_out, sizeof(*result_out));
+    }
+    wifi_zero(&network, sizeof(network));
+    return status;
+}
