@@ -14,6 +14,7 @@
 #define RIN_MANAGEMENT_OPERATION_USB4_PATH_PAIR_CREATE 272u
 #define RIN_MANAGEMENT_OPERATION_USB4_PATH_PAIR_REMOVE 273u
 #define RIN_MANAGEMENT_OPERATION_USB4_USB3_BANDWIDTH 274u
+#define RIN_MANAGEMENT_OPERATION_USB4_PATH_LINK_BANDWIDTH 275u
 
 #define RIN_MANAGEMENT_USB4_V1_VERSION 1u
 #define RIN_MANAGEMENT_USB4_MAX_DEVICES 4u
@@ -152,6 +153,28 @@ typedef struct RinManagementUsb4Usb3BandwidthV1 {
     uint32_t reserved[2];
 } RinManagementUsb4Usb3BandwidthV1;
 
+/* Physical link ceiling for a router-to-router route. This reports the
+ * generation-pinned minimum of every live link on the route, including the
+ * USB4 connection-manager guard band. It does not represent unallocated
+ * bandwidth after tunneled traffic reservations. */
+typedef struct RinManagementUsb4PathLinkBandwidthV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t device_index;
+    uint16_t source_router;
+    uint16_t destination_router;
+    uint64_t device_generation;
+    uint64_t topology_generation;
+    uint32_t maximum_upstream_mbps;
+    uint32_t maximum_downstream_mbps;
+    uint32_t minimum_link_speed_mbps;
+    uint8_t link_count;
+    uint8_t minimum_link_width;
+    uint16_t reserved0;
+    uint64_t reserved[2];
+} RinManagementUsb4PathLinkBandwidthV1;
+
 #if defined(__cplusplus)
 static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
               "RinManagementUsb4DeviceCountV1 ABI drift");
@@ -165,6 +188,8 @@ static_assert(sizeof(RinManagementUsb4PathPairV1) == 72u,
               "RinManagementUsb4PathPairV1 ABI drift");
 static_assert(sizeof(RinManagementUsb4Usb3BandwidthV1) == 72u,
               "RinManagementUsb4Usb3BandwidthV1 ABI drift");
+static_assert(sizeof(RinManagementUsb4PathLinkBandwidthV1) == 64u,
+              "RinManagementUsb4PathLinkBandwidthV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
                "RinManagementUsb4DeviceCountV1 ABI drift");
@@ -178,6 +203,8 @@ _Static_assert(sizeof(RinManagementUsb4PathPairV1) == 72u,
                "RinManagementUsb4PathPairV1 ABI drift");
 _Static_assert(sizeof(RinManagementUsb4Usb3BandwidthV1) == 72u,
                "RinManagementUsb4Usb3BandwidthV1 ABI drift");
+_Static_assert(sizeof(RinManagementUsb4PathLinkBandwidthV1) == 64u,
+               "RinManagementUsb4PathLinkBandwidthV1 ABI drift");
 #endif
 
 #endif /* RIN_MANAGEMENT_USB4_V1_ABI_H */
