@@ -9,14 +9,21 @@
 
 /* NPU is an independent compute device class. Its command and buffer ABI is
  * separate from display/GPU drawing operations. All handles in this contract
- * are opaque and scoped to one kernel-created context. */
+ * are opaque and scoped to one kernel-created context. ABI 1.2 adds the
+ * bounded AMD XDNA command and process-SVA host-import callbacks. */
 #define RIN_DRIVER_V3_NPU_ABI_VERSION UINT32_C(0x00010000)
 #define RIN_DRIVER_V3_NPU_ABI_VERSION_1_1 UINT32_C(0x00010001)
+#define RIN_DRIVER_V3_NPU_ABI_VERSION_1_2 UINT32_C(0x00010002)
 #define RIN_DRIVER_V3_NPU_OPS_VERSION UINT32_C(0x00010000)
 #define RIN_DRIVER_V3_NPU_OPS_VERSION_1_1 UINT32_C(0x00010001)
+#define RIN_DRIVER_V3_NPU_OPS_VERSION_1_2 UINT32_C(0x00010002)
 #define RIN_DRIVER_V3_NPU_BUFFER_INFO_V1_VERSION UINT32_C(0x00010000)
 #define RIN_DRIVER_V3_NPU_BUFFER_INFO_DEVICE_ADDRESS_VERSION \
     UINT32_C(0x00010001)
+#define RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_VERSION UINT32_C(0x00010000)
+#define RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_PARTIAL_ELF UINT32_C(2)
+#define RIN_DRIVER_V3_NPU_AMDXDNA_MAX_COMMAND_ARGUMENTS UINT32_C(26)
+#define RIN_DRIVER_V3_NPU_AMDXDNA_HOST_BUFFER_CHUNK_BYTES UINT32_C(32768)
 #define RIN_DRIVER_V3_NPU_MAX_SUBMIT_BUFFERS UINT32_C(64)
 #define RIN_DRIVER_V3_NPU_MAX_EVENTS UINT32_C(128)
 
@@ -43,7 +50,8 @@
 #define RIN_DRIVER_V3_NPU_CAP_POWER_CONTROL UINT64_C(0x0000000000000040)
 #define RIN_DRIVER_V3_NPU_CAP_DEVICE_ADDRESS UINT64_C(0x0000000000000080)
 #define RIN_DRIVER_V3_NPU_CAP_PROCESS_PASID UINT64_C(0x0000000000000100)
-#define RIN_DRIVER_V3_NPU_CAPABILITY_MASK UINT64_C(0x00000000000001ff)
+#define RIN_DRIVER_V3_NPU_CAP_SVA_HOST_IMPORT UINT64_C(0x0000000000000200)
+#define RIN_DRIVER_V3_NPU_CAPABILITY_MASK UINT64_C(0x00000000000003ff)
 #define RIN_DRIVER_V3_NPU_CONTEXT_OWNER_HAS_PASID UINT32_C(0x00000001)
 
 /* NPU ABI 1.1 uses capabilities.reserved[0] as an operation bitmap. The
@@ -233,6 +241,31 @@ typedef struct RinDriverV3NpuSubmitV1 {
     uint64_t reserved[2];
 } RinDriverV3NpuSubmitV1;
 
+/* Kernel-copied AMD XDNA partial-ELF command payload. Buffer references stay
+ * opaque in the public submit call; instruction_resource_index selects one
+ * of that submit's checked references, and the driver resolves it to the
+ * kernel-issued SVA mapping before constructing the firmware request. */
+#if defined(__GNUC__) || defined(__clang__)
+#define RIN_DRIVER_NPU_PACKED __attribute__((packed))
+#else
+#define RIN_DRIVER_NPU_PACKED
+#endif
+typedef struct RIN_DRIVER_NPU_PACKED RinDriverV3NpuAmdXdnaCommandV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t type;
+    uint32_t engine_id;
+    uint32_t instruction_resource_index;
+    uint32_t instruction_property_count;
+    uint32_t argument_count;
+    uint32_t reserved0;
+    uint64_t instruction_offset_bytes;
+    uint32_t instruction_size_bytes;
+    uint32_t reserved1;
+    uint32_t arguments[RIN_DRIVER_V3_NPU_AMDXDNA_MAX_COMMAND_ARGUMENTS];
+} RinDriverV3NpuAmdXdnaCommandV1;
+#undef RIN_DRIVER_NPU_PACKED
+
 typedef struct RinDriverV3NpuFenceV1 {
     uint64_t value;
     uint64_t generation;
@@ -296,6 +329,13 @@ typedef RinDriverV3Result (*RinDriverV3NpuBufferCreateFn)(
     uint64_t context_generation,
     const RinDriverV3NpuBufferCreateV1* request,
     RinDriverV3NpuBufferInfoV1* buffer);
+/* SVA host import receives the registration base from the kernel memory
+ * broker, never from a user-supplied buffer-create request. */
+typedef RinDriverV3Result (*RinDriverV3NpuBufferCreateSvaFn)(
+    uint64_t driver_context, uint64_t context_handle,
+    uint64_t context_generation,
+    const RinDriverV3NpuBufferCreateV1* request,
+    uint64_t host_address, RinDriverV3NpuBufferInfoV1* buffer);
 typedef RinDriverV3Result (*RinDriverV3NpuBufferDestroyFn)(
     uint64_t driver_context, uint64_t context_handle,
     uint64_t context_generation, uint64_t buffer_handle,
@@ -313,6 +353,15 @@ typedef RinDriverV3Result (*RinDriverV3NpuSubmitFn)(
     uint64_t driver_context, uint64_t context_handle,
     uint64_t context_generation, uint64_t queue_handle,
     uint64_t queue_generation, const RinDriverV3NpuSubmitV1* request,
+    const RinDriverV3NpuBufferRefV1* resources, uint32_t resource_count,
+    RinDriverV3NpuFenceV1* fence);
+/* Version 1.2 operation for backends that translate a bounded, kernel-copied
+ * command payload before sending it to device firmware. */
+typedef RinDriverV3Result (*RinDriverV3NpuSubmitCommandFn)(
+    uint64_t driver_context, uint64_t context_handle,
+    uint64_t context_generation, uint64_t queue_handle,
+    uint64_t queue_generation, const RinDriverV3NpuSubmitV1* request,
+    const void* command_bytes, uint32_t command_length,
     const RinDriverV3NpuBufferRefV1* resources, uint32_t resource_count,
     RinDriverV3NpuFenceV1* fence);
 typedef RinDriverV3Result (*RinDriverV3NpuPollEventsFn)(
@@ -388,7 +437,15 @@ typedef struct RinDriverV3NpuOps {
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t remove_padding;
 #endif
-    uint64_t reserved[4];
+    RinDriverV3NpuBufferCreateSvaFn buffer_create_sva;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t buffer_create_sva_padding;
+#endif
+    RinDriverV3NpuSubmitCommandFn submit_command;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t submit_command_padding;
+#endif
+    uint64_t reserved[2];
 } RinDriverV3NpuOps;
 
 static inline int rin_driver_v3_npu_identity_valid(
@@ -396,7 +453,8 @@ static inline int rin_driver_v3_npu_identity_valid(
 {
     if (!identity || identity->struct_size != sizeof(*identity) ||
         (identity->version != RIN_DRIVER_V3_NPU_ABI_VERSION &&
-         identity->version != RIN_DRIVER_V3_NPU_ABI_VERSION_1_1) ||
+         identity->version != RIN_DRIVER_V3_NPU_ABI_VERSION_1_1 &&
+         identity->version != RIN_DRIVER_V3_NPU_ABI_VERSION_1_2) ||
         identity->flags != 0u || identity->vendor_id == 0u ||
         identity->device_id == 0u ||
         identity->engine_count == 0u || identity->device_generation == 0u ||
@@ -412,7 +470,8 @@ static inline int rin_driver_v3_npu_capabilities_valid(
     if (!capabilities ||
         capabilities->struct_size != sizeof(*capabilities) ||
         (capabilities->version != RIN_DRIVER_V3_NPU_ABI_VERSION &&
-         capabilities->version != RIN_DRIVER_V3_NPU_ABI_VERSION_1_1) ||
+         capabilities->version != RIN_DRIVER_V3_NPU_ABI_VERSION_1_1 &&
+         capabilities->version != RIN_DRIVER_V3_NPU_ABI_VERSION_1_2) ||
         (capabilities->flags & ~RIN_DRIVER_V3_NPU_CAPABILITY_MASK) != 0u ||
         capabilities->max_fault_events > RIN_DRIVER_V3_NPU_MAX_EVENTS ||
         capabilities->address_bits < 32u ||
@@ -433,6 +492,18 @@ static inline int rin_driver_v3_npu_capabilities_valid(
                capabilities->supported_data_types != 0u &&
                capabilities->reserved[0] == 0u &&
                capabilities->reserved[1] == 0u;
+    if ((capabilities->flags &
+         RIN_DRIVER_V3_NPU_CAP_SVA_HOST_IMPORT) != 0u &&
+        (capabilities->version !=
+             RIN_DRIVER_V3_NPU_ABI_VERSION_1_2 ||
+         (capabilities->flags &
+             (RIN_DRIVER_V3_NPU_CAP_HOST_IMPORT |
+              RIN_DRIVER_V3_NPU_CAP_PROCESS_PASID |
+              RIN_DRIVER_V3_NPU_CAP_DEVICE_ADDRESS)) !=
+             (RIN_DRIVER_V3_NPU_CAP_HOST_IMPORT |
+              RIN_DRIVER_V3_NPU_CAP_PROCESS_PASID |
+              RIN_DRIVER_V3_NPU_CAP_DEVICE_ADDRESS)))
+        return 0;
     if ((capabilities->reserved[0] &
          ~RIN_DRIVER_V3_NPU_OP_MASK) != 0u ||
         capabilities->reserved[1] != 0u)
@@ -604,6 +675,23 @@ static inline int rin_driver_v3_npu_submit_valid(
     return 1;
 }
 
+static inline int rin_driver_v3_npu_amdxdna_command_valid(
+    const RinDriverV3NpuAmdXdnaCommandV1* command,
+    uint32_t command_length)
+{
+    if (!command || command_length != sizeof(*command) ||
+        command->struct_size != sizeof(*command) ||
+        command->version != RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_VERSION ||
+        command->type != RIN_DRIVER_V3_NPU_AMDXDNA_COMMAND_PARTIAL_ELF ||
+        command->engine_id >= 32u || command->argument_count >
+            RIN_DRIVER_V3_NPU_AMDXDNA_MAX_COMMAND_ARGUMENTS ||
+        command->instruction_size_bytes == 0u ||
+        command->instruction_property_count > command->argument_count ||
+        command->reserved0 != 0u || command->reserved1 != 0u)
+        return 0;
+    return 1;
+}
+
 static inline int rin_driver_v3_npu_ops_valid(
     const RinDriverV3NpuOps* ops);
 
@@ -616,7 +704,9 @@ static inline int rin_driver_v3_npu_ops_match_capabilities(
         return 0;
     if (capabilities->version == RIN_DRIVER_V3_NPU_ABI_VERSION)
         return ops->version == RIN_DRIVER_V3_NPU_OPS_VERSION;
-    if (ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION_1_1 ||
+    if ((ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION_1_1 &&
+         ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION_1_2) ||
+        ops->version != capabilities->version ||
         (ops->version & UINT32_C(0xffff0000)) !=
             (capabilities->version & UINT32_C(0xffff0000)))
         return 0;
@@ -625,21 +715,40 @@ static inline int rin_driver_v3_npu_ops_match_capabilities(
         const uint64_t present =
             (ops->context_create && ops->context_destroy
                  ? RIN_DRIVER_V3_NPU_OP_CONTEXTS : 0u) |
-            (ops->buffer_create && ops->buffer_destroy
+            ((ops->buffer_create || ops->buffer_create_sva) &&
+             ops->buffer_destroy
                  ? RIN_DRIVER_V3_NPU_OP_BUFFERS : 0u) |
             (ops->queue_create && ops->queue_destroy
                  ? RIN_DRIVER_V3_NPU_OP_QUEUES : 0u) |
-            (ops->submit && ops->poll_events
+            ((ops->submit || ops->submit_command) && ops->poll_events
                  ? RIN_DRIVER_V3_NPU_OP_SUBMIT : 0u) |
             (ops->cancel ? RIN_DRIVER_V3_NPU_OP_CANCEL : 0u) |
             (ops->reset ? RIN_DRIVER_V3_NPU_OP_RESET : 0u) |
             (ops->set_power ? RIN_DRIVER_V3_NPU_OP_SET_POWER : 0u);
         if (declared != present ||
             ((ops->context_create == NULL) != (ops->context_destroy == NULL)) ||
-            ((ops->buffer_create == NULL) != (ops->buffer_destroy == NULL)) ||
+            (((ops->buffer_create == NULL) &&
+              (ops->buffer_create_sva == NULL)) !=
+             (ops->buffer_destroy == NULL)) ||
+            (ops->buffer_create != NULL &&
+             ops->buffer_create_sva != NULL) ||
             ((ops->queue_create == NULL) != (ops->queue_destroy == NULL)) ||
-            ((ops->submit == NULL) != (ops->poll_events == NULL)))
+            (((ops->submit == NULL) &&
+              (ops->submit_command == NULL)) !=
+             (ops->poll_events == NULL)) ||
+            (ops->submit != NULL && ops->submit_command != NULL))
             return 0;
+        if (ops->version == RIN_DRIVER_V3_NPU_OPS_VERSION_1_2) {
+            const int sva =
+                (capabilities->flags &
+                 RIN_DRIVER_V3_NPU_CAP_SVA_HOST_IMPORT) != 0u;
+            if ((ops->buffer_create_sva != NULL) != sva ||
+                (ops->submit_command != NULL) != sva)
+                return 0;
+        } else if (ops->buffer_create_sva != NULL ||
+                   ops->submit_command != NULL) {
+            return 0;
+        }
         return 1;
     }
 }
@@ -706,10 +815,13 @@ static inline int rin_driver_v3_npu_ops_valid(
 {
     if (!ops || ops->struct_size != sizeof(*ops) ||
         (ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION &&
-         ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION_1_1) ||
+         ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION_1_1 &&
+         ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION_1_2) ||
         !ops->get_identity || !ops->get_capabilities || !ops->remove ||
         ops->reserved[0] != 0u || ops->reserved[1] != 0u ||
-        ops->reserved[2] != 0u || ops->reserved[3] != 0u)
+        (ops->version != RIN_DRIVER_V3_NPU_OPS_VERSION_1_2 &&
+         (ops->buffer_create_sva != NULL ||
+          ops->submit_command != NULL)))
         return 0;
     if (ops->version == RIN_DRIVER_V3_NPU_OPS_VERSION &&
         (!ops->context_create || !ops->context_destroy ||
@@ -728,7 +840,9 @@ static inline int rin_driver_v3_npu_ops_valid(
         ops->queue_destroy_padding != 0u || ops->submit_padding != 0u ||
         ops->poll_events_padding != 0u || ops->cancel_padding != 0u ||
         ops->reset_padding != 0u || ops->set_power_padding != 0u ||
-        ops->remove_padding != 0u)
+        ops->remove_padding != 0u ||
+        ops->buffer_create_sva_padding != 0u ||
+        ops->submit_command_padding != 0u)
         return 0;
 #endif
     return 1;
@@ -753,6 +867,8 @@ static_assert(sizeof(RinDriverV3NpuBufferRefV1) == 40u,
               "NDRV v3 NPU buffer reference ABI drift");
 static_assert(sizeof(RinDriverV3NpuSubmitV1) == 72u,
               "NDRV v3 NPU submission ABI drift");
+static_assert(sizeof(RinDriverV3NpuAmdXdnaCommandV1) == 152u,
+              "AMD XDNA NPU command ABI drift");
 static_assert(sizeof(RinDriverV3NpuEventV1) == 96u,
               "NDRV v3 NPU event ABI drift");
 static_assert(sizeof(RinDriverV3NpuOps) == 152u,
@@ -776,6 +892,8 @@ _Static_assert(sizeof(RinDriverV3NpuBufferRefV1) == 40u,
                "NDRV v3 NPU buffer reference ABI drift");
 _Static_assert(sizeof(RinDriverV3NpuSubmitV1) == 72u,
                "NDRV v3 NPU submission ABI drift");
+_Static_assert(sizeof(RinDriverV3NpuAmdXdnaCommandV1) == 152u,
+               "AMD XDNA NPU command ABI drift");
 _Static_assert(sizeof(RinDriverV3NpuEventV1) == 96u,
                "NDRV v3 NPU event ABI drift");
 _Static_assert(sizeof(RinDriverV3NpuOps) == 152u,
