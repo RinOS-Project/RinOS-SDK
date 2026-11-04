@@ -47,6 +47,19 @@ _Static_assert(sizeof(RinSessionIdentityV1) == 40u,
 #endif
 #endif
 
+/* Linux-compatible read-only SOL_SOCKET identity queries.  The kernel
+ * returns these values from the socket object's lifetime-bound identity and
+ * resolved construction parameters. */
+#ifndef SO_PROTOCOL
+#define SO_PROTOCOL 38
+#endif
+#ifndef SO_DOMAIN
+#define SO_DOMAIN 39
+#endif
+#ifndef SO_COOKIE
+#define SO_COOKIE 57
+#endif
+
 #define SO_RIN_UNIX_PUBLISH_SERVICE  0x5001
 #define SO_RIN_UNIX_SERVICE_IDENTITY 0x5002
 #define SO_RIN_UNIX_PEER_IDENTITY    0x5004
