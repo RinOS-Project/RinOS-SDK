@@ -8,6 +8,7 @@
 #include <rin/driver/npu_model.hpp>
 #include <rin/driver/npu_model_quantized.hpp>
 #include <rin/driver/npu_model_onnx.hpp>
+#include <rin/driver/npu_model_quantized_onnx.hpp>
 #include <rin/driver/npu_user_v1.h>
 
 /* Header-only C++ facade for the NPU user-call ABI. It owns no allocations:
