@@ -40,7 +40,9 @@
 #define RIN_DRIVER_V3_NPU_CAP_RESET UINT64_C(0x0000000000000020)
 #define RIN_DRIVER_V3_NPU_CAP_POWER_CONTROL UINT64_C(0x0000000000000040)
 #define RIN_DRIVER_V3_NPU_CAP_DEVICE_ADDRESS UINT64_C(0x0000000000000080)
-#define RIN_DRIVER_V3_NPU_CAPABILITY_MASK UINT64_C(0x00000000000000ff)
+#define RIN_DRIVER_V3_NPU_CAP_PROCESS_PASID UINT64_C(0x0000000000000100)
+#define RIN_DRIVER_V3_NPU_CAPABILITY_MASK UINT64_C(0x00000000000001ff)
+#define RIN_DRIVER_V3_NPU_CONTEXT_OWNER_HAS_PASID UINT32_C(0x00000001)
 
 #define RIN_DRIVER_V3_NPU_BUFFER_READ UINT32_C(0x00000001)
 #define RIN_DRIVER_V3_NPU_BUFFER_WRITE UINT32_C(0x00000002)
@@ -129,14 +131,18 @@ typedef struct RinDriverV3NpuCapabilitiesV1 {
  * never copies it from user memory. process_token is an unforgeable broker
  * handle; process_generation prevents PID reuse and context_generation is
  * freshly minted for each context. Drivers associate all child objects and
- * fences with this owner and reject cross-context references. */
+ * fences with this owner and reject cross-context references. A driver that
+ * advertises PROCESS_PASID receives the kernel-issued PASID here; it must
+ * never allocate or accept a PASID from a caller. */
 typedef struct RinDriverV3NpuContextOwnerV1 {
     uint32_t struct_size;
     uint32_t version;
     uint64_t process_token;
     uint64_t process_generation;
     uint64_t context_generation;
-    uint64_t reserved[2];
+    uint32_t process_pasid;
+    uint32_t flags;
+    uint64_t reserved[1];
 } RinDriverV3NpuContextOwnerV1;
 
 typedef struct RinDriverV3NpuContextConfigV1 {
@@ -413,11 +419,16 @@ static inline int rin_driver_v3_npu_capabilities_valid(
 static inline int rin_driver_v3_npu_context_owner_valid(
     const RinDriverV3NpuContextOwnerV1* owner)
 {
-    return owner && owner->struct_size == sizeof(*owner) &&
-           owner->version == RIN_DRIVER_V3_NPU_ABI_VERSION &&
-           owner->process_token != 0u && owner->process_generation != 0u &&
-           owner->context_generation != 0u && owner->reserved[0] == 0u &&
-           owner->reserved[1] == 0u;
+    if (!owner || owner->struct_size != sizeof(*owner) ||
+        owner->version != RIN_DRIVER_V3_NPU_ABI_VERSION ||
+        owner->process_token == 0u || owner->process_generation == 0u ||
+        owner->context_generation == 0u ||
+        (owner->flags & ~RIN_DRIVER_V3_NPU_CONTEXT_OWNER_HAS_PASID) != 0u ||
+        owner->reserved[0] != 0u)
+        return 0;
+    if ((owner->flags & RIN_DRIVER_V3_NPU_CONTEXT_OWNER_HAS_PASID) != 0u)
+        return owner->process_pasid != 0u && owner->process_pasid <= 0xffffu;
+    return owner->process_pasid == 0u;
 }
 
 static inline int rin_driver_v3_npu_context_config_valid(
