@@ -31,7 +31,10 @@ extern "C" {
 #define RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_DOWN 0x0020u
 #define RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_UP 0x0040u
 #define RIN_GUI_NATIVE_EVENT_FLAG_KEY_CODE_REPEAT 0x0080u
-#define RIN_GUI_NATIVE_EVENT_FLAG_KNOWN_MASK 0x00ffu
+/* Set only by the authenticated compositor hotkey broker on a key-down that
+ * is already assigned to a registered background client. */
+#define RIN_GUI_NATIVE_EVENT_FLAG_BROKERED_HOTKEY 0x0100u
+#define RIN_GUI_NATIVE_EVENT_FLAG_KNOWN_MASK 0x01ffu
 #define RIN_GUI_NATIVE_LEGACY_KEY_REPEAT 0x20u
 
 #define RIN_GUI_NATIVE_KEY_SCANCODE_MASK 0x7fu

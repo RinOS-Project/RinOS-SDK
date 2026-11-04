@@ -52,6 +52,7 @@ extern "C" {
 #define RIN_COMPOSITOR_FEATURE_SURFACE_EFFECTS UINT64_C(0x00020000)
 #define RIN_COMPOSITOR_FEATURE_WORKSPACES UINT64_C(0x00040000)
 #define RIN_COMPOSITOR_FEATURE_PROTECTED_CONTENT UINT64_C(0x00080000)
+#define RIN_COMPOSITOR_FEATURE_GLOBAL_HOTKEYS UINT64_C(0x00100000)
 #define RIN_COMPOSITOR_MAX_WORKSPACES 32u
 
 #define RIN_COMPOSITOR_SURFACE_FLAG_CURSOR  UINT32_C(0x00000001)
@@ -154,7 +155,47 @@ enum RinCompositorMsgType {
     RIN_COMPOSITOR_SET_SURFACE_EFFECT = 44,
     RIN_COMPOSITOR_GET_SURFACE_GENERATION = 45,
     RIN_COMPOSITOR_UPDATE_CURSOR_SURFACE = 46,
+    RIN_COMPOSITOR_REGISTER_GLOBAL_HOTKEY = 47,
+    RIN_COMPOSITOR_UNREGISTER_GLOBAL_HOTKEY = 48,
 };
+
+#define RIN_COMPOSITOR_GLOBAL_HOTKEY_VERSION UINT16_C(1)
+#define RIN_COMPOSITOR_GLOBAL_HOTKEY_MOD_ALT UINT16_C(0x0001)
+#define RIN_COMPOSITOR_GLOBAL_HOTKEY_MOD_CONTROL UINT16_C(0x0002)
+#define RIN_COMPOSITOR_GLOBAL_HOTKEY_MOD_SHIFT UINT16_C(0x0004)
+#define RIN_COMPOSITOR_GLOBAL_HOTKEY_MOD_SUPER UINT16_C(0x0008)
+#define RIN_COMPOSITOR_GLOBAL_HOTKEY_MOD_NOREPEAT UINT16_C(0x0010)
+#define RIN_COMPOSITOR_GLOBAL_HOTKEY_MOD_KNOWN_MASK UINT16_C(0x001f)
+
+/* The Compositor owns cross-process chord arbitration. A zero target surface
+ * denotes a thread registration; delivery then uses any live surface owned
+ * by the registering client to wake its process-local User32 queue. */
+typedef struct RinCompositorRegisterGlobalHotkeyV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t id;
+    uint16_t modifiers;
+    uint16_t virtual_key;
+    uint8_t scan_code;
+    uint8_t reserved8[3];
+    uint32_t target_surface_id;
+    uint32_t reserved[2];
+} RinCompositorRegisterGlobalHotkeyV1;
+
+typedef struct RinCompositorGlobalHotkeyTokenV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved16;
+    uint64_t token;
+} RinCompositorGlobalHotkeyTokenV1;
+
+typedef struct RinCompositorUnregisterGlobalHotkeyV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t token;
+} RinCompositorUnregisterGlobalHotkeyV1;
 
 typedef struct RinCompositorHeader {
     uint32_t magic;
@@ -720,6 +761,12 @@ static_assert(sizeof(RinCompositorSetCursorV1) == 24u,
               "compositor semantic cursor size");
 static_assert(sizeof(RinCompositorUpdateCursorSurfaceV1) == 44u,
               "compositor cursor surface update size");
+static_assert(sizeof(RinCompositorRegisterGlobalHotkeyV1) == 32u,
+              "compositor global hotkey registration size");
+static_assert(sizeof(RinCompositorGlobalHotkeyTokenV1) == 16u,
+              "compositor global hotkey token size");
+static_assert(sizeof(RinCompositorUnregisterGlobalHotkeyV1) == 16u,
+              "compositor global hotkey unregistration size");
 static_assert(sizeof(RinCompositorGpuExportImageV1) == 32u,
               "compositor GPU export size");
 static_assert(sizeof(RinCompositorGpuImageV1) == 80u,
@@ -783,6 +830,12 @@ _Static_assert(sizeof(RinCompositorSetCursorV1) == 24u,
                "compositor semantic cursor size");
 _Static_assert(sizeof(RinCompositorUpdateCursorSurfaceV1) == 44u,
                "compositor cursor surface update size");
+_Static_assert(sizeof(RinCompositorRegisterGlobalHotkeyV1) == 32u,
+               "compositor global hotkey registration size");
+_Static_assert(sizeof(RinCompositorGlobalHotkeyTokenV1) == 16u,
+               "compositor global hotkey token size");
+_Static_assert(sizeof(RinCompositorUnregisterGlobalHotkeyV1) == 16u,
+               "compositor global hotkey unregistration size");
 _Static_assert(sizeof(RinCompositorGpuExportImageV1) == 32u,
                "compositor GPU export size");
 _Static_assert(sizeof(RinCompositorGpuImageV1) == 80u,
