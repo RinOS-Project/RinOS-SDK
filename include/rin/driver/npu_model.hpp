@@ -117,7 +117,7 @@ struct Executable {
 
 static inline uint64_t tensor_elements(const TensorDescription& tensor)
 {
-    if (tensor.data_type != DATA_TYPE_FLOAT32 || tensor.rank == 0u ||
+    if (tensor.data_type != DATA_TYPE_FLOAT32 ||
         tensor.rank > RIN_NPU_MODEL_MAX_RANK)
         return 0u;
     uint64_t elements = 1u;
@@ -155,9 +155,12 @@ static inline bool operation_shape_valid(const Model* model,
             same_shape(output, model->tensors[operation.inputs[0]]) &&
             same_shape(output, model->tensors[operation.inputs[1]]);
     }
-    if (operation.opcode == OPERATION_RELU_FLOAT32 ||
-        operation.opcode == OPERATION_SOFTMAX_FLOAT32) {
+    if (operation.opcode == OPERATION_RELU_FLOAT32) {
         return operation.input_count == 1u &&
+            same_shape(output, model->tensors[operation.inputs[0]]);
+    }
+    if (operation.opcode == OPERATION_SOFTMAX_FLOAT32) {
+        return operation.input_count == 1u && output.rank != 0u &&
             same_shape(output, model->tensors[operation.inputs[0]]);
     }
     if (operation.opcode == OPERATION_MATMUL_FLOAT32) {
