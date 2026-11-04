@@ -24,6 +24,9 @@
  * request ABI while making flush/reset accounting explicit. */
 #define RIN_RGROUP_IO_FLAG_FLUSH UINT16_C(0x0004)
 #define RIN_RGROUP_IO_FLAG_RESET UINT16_C(0x0008)
+/* Discard carries the affected byte count and is accounted independently
+ * from ordinary writes for cgroup2 io.stat. */
+#define RIN_RGROUP_IO_FLAG_DISCARD UINT16_C(0x0010)
 
 typedef uint64_t RinRgroupHandle;
 
@@ -40,7 +43,10 @@ typedef enum RinRgroupStatus {
     RIN_RGROUP_THROTTLED = -9,
     RIN_RGROUP_OVERFLOW = -10,
     RIN_RGROUP_MEMORY_LIMIT = -11,
-    RIN_RGROUP_UNDERFLOW = -12
+    RIN_RGROUP_UNDERFLOW = -12,
+    /* The requested controller or control operation is not implemented by
+     * this resource-group backend. Keep the value additive for ABI v1. */
+    RIN_RGROUP_NOT_SUPPORTED = -13
 } RinRgroupStatus;
 
 typedef struct RinRgroupCreateRequestV1 {
