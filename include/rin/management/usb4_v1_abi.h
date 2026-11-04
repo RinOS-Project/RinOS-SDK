@@ -64,6 +64,9 @@ typedef struct RinManagementUsb4DeviceV1 {
     uint16_t product_id;
     uint16_t router_count;
     uint16_t reserved1;
+    /* Keep generation fields at an 8-byte boundary in 32-bit and 64-bit
+     * callers; these bytes occupied implicit x64 padding. */
+    uint16_t reserved2[3];
     uint64_t device_generation;
     uint64_t topology_generation;
     uint64_t reserved[2];
@@ -114,6 +117,8 @@ typedef struct RinManagementUsb4TopologyV1 {
     uint16_t reserved0;
     RinManagementUsb4PortV1 ports[
         RIN_MANAGEMENT_USB4_MAX_PORTS_PER_PAGE];
+    /* Keep the trailing reservation at the same offset on 32-bit callers. */
+    uint16_t reserved2[2];
     uint64_t reserved[2];
 } RinManagementUsb4TopologyV1;
 
@@ -217,10 +222,14 @@ static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
               "RinManagementUsb4DeviceCountV1 ABI drift");
 static_assert(sizeof(RinManagementUsb4DeviceV1) == 64u,
               "RinManagementUsb4DeviceV1 ABI drift");
+static_assert(offsetof(RinManagementUsb4DeviceV1, device_generation) == 32u,
+              "RinManagementUsb4DeviceV1 generation offset drift");
 static_assert(sizeof(RinManagementUsb4PortV1) == 16u,
               "RinManagementUsb4PortV1 ABI drift");
 static_assert(sizeof(RinManagementUsb4TopologyV1) == 416u,
               "RinManagementUsb4TopologyV1 ABI drift");
+static_assert(offsetof(RinManagementUsb4TopologyV1, reserved) == 400u,
+              "RinManagementUsb4TopologyV1 reserved offset drift");
 static_assert(sizeof(RinManagementUsb4PathPairV1) == 72u,
               "RinManagementUsb4PathPairV1 ABI drift");
 static_assert(sizeof(RinManagementUsb4Usb3BandwidthV1) == 72u,
@@ -234,10 +243,14 @@ _Static_assert(sizeof(RinManagementUsb4DeviceCountV1) == 32u,
                "RinManagementUsb4DeviceCountV1 ABI drift");
 _Static_assert(sizeof(RinManagementUsb4DeviceV1) == 64u,
                "RinManagementUsb4DeviceV1 ABI drift");
+_Static_assert(offsetof(RinManagementUsb4DeviceV1, device_generation) == 32u,
+               "RinManagementUsb4DeviceV1 generation offset drift");
 _Static_assert(sizeof(RinManagementUsb4PortV1) == 16u,
                "RinManagementUsb4PortV1 ABI drift");
 _Static_assert(sizeof(RinManagementUsb4TopologyV1) == 416u,
                "RinManagementUsb4TopologyV1 ABI drift");
+_Static_assert(offsetof(RinManagementUsb4TopologyV1, reserved) == 400u,
+               "RinManagementUsb4TopologyV1 reserved offset drift");
 _Static_assert(sizeof(RinManagementUsb4PathPairV1) == 72u,
                "RinManagementUsb4PathPairV1 ABI drift");
 _Static_assert(sizeof(RinManagementUsb4Usb3BandwidthV1) == 72u,
