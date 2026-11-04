@@ -44,6 +44,8 @@
 #define NLMSG_LENGTH(length) ((uint32_t)(NLMSG_HDRLEN + (uint32_t)(length)))
 #define NLMSG_SPACE(length) ((uint32_t)NLMSG_ALIGN(NLMSG_LENGTH(length)))
 #define NLMSG_DATA(header) ((void*)((uint8_t*)(header) + NLMSG_HDRLEN))
+#define NLMSG_PAYLOAD(header, length) \
+    ((header)->nlmsg_len - NLMSG_SPACE((length)))
 #define NLMSG_OK(header, remaining) \
     ((remaining) >= (int)sizeof(struct nlmsghdr) && \
      (header)->nlmsg_len >= sizeof(struct nlmsghdr) && \
