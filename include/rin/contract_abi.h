@@ -354,6 +354,23 @@ typedef int32_t RinResultCode;
 #define RIN_MANAGEMENT_OPERATION_DEVICE_IDENTITY_GET 262u
 #define RIN_MANAGEMENT_OPERATION_DEVICE_FIRMWARE_GET 263u
 #define RIN_MANAGEMENT_OPERATION_DEVICE_FIRMWARE_GET_V2 264u
+#define RIN_MANAGEMENT_OPERATION_TYPEC_DEVICE_COUNT_GET 265u
+#define RIN_MANAGEMENT_OPERATION_TYPEC_CONNECTOR_GET 266u
+#define RIN_MANAGEMENT_TYPEC_ABI_VERSION    1u
+#define RIN_MANAGEMENT_TYPEC_MAX_DEVICES    8u
+#define RIN_MANAGEMENT_TYPEC_MAX_CONNECTORS 16u
+#define RIN_MANAGEMENT_TYPEC_DATA_ROLE_UNKNOWN 0u
+#define RIN_MANAGEMENT_TYPEC_DATA_ROLE_HOST 1u
+#define RIN_MANAGEMENT_TYPEC_DATA_ROLE_DEVICE 2u
+#define RIN_MANAGEMENT_TYPEC_POWER_ROLE_UNKNOWN 0u
+#define RIN_MANAGEMENT_TYPEC_POWER_ROLE_SOURCE 1u
+#define RIN_MANAGEMENT_TYPEC_POWER_ROLE_SINK 2u
+#define RIN_MANAGEMENT_TYPEC_POWER_MODE_NONE 0u
+#define RIN_MANAGEMENT_TYPEC_POWER_MODE_DEFAULT 1u
+#define RIN_MANAGEMENT_TYPEC_POWER_MODE_BC  2u
+#define RIN_MANAGEMENT_TYPEC_POWER_MODE_PD  3u
+#define RIN_MANAGEMENT_TYPEC_POWER_MODE_1_5A 4u
+#define RIN_MANAGEMENT_TYPEC_POWER_MODE_3_0A 5u
 #define RIN_MANAGEMENT_DEVICE_FIRMWARE_V2_VERSION 2u
 #define RIN_MANAGEMENT_DEVICE_FIRMWARE_FLAG_VERSION_VALID 1u
 #define RIN_MANAGEMENT_DEVICE_FIRMWARE_FLAG_DIGEST_VALID 2u
@@ -1376,6 +1393,48 @@ typedef struct RinManagementDeviceInfoV1 {
     uint8_t driver[64];
     uint8_t location[32];
 } RinManagementDeviceInfoV1;
+
+typedef struct RinManagementTypeCDeviceCountV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t device_count;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinManagementTypeCDeviceCountV1;
+
+typedef struct RinManagementTypeCConnectorV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t device_index;
+    uint32_t connector_count;
+    uint64_t device_generation;
+    uint16_t ucsi_version;
+    uint8_t connector;
+    uint8_t connected;
+    uint8_t data_role;
+    uint8_t power_role;
+    uint8_t power_operation_mode;
+    uint8_t partner_type;
+    uint8_t partner_supports_usb;
+    uint8_t partner_supports_alt_mode;
+    uint8_t orientation_reversed;
+    uint8_t active_alt_mode_index;
+    uint8_t alt_mode_active;
+    uint8_t battery_charging_status;
+    uint8_t power_reading_ready;
+    uint8_t current_scale;
+    uint8_t voltage_scale;
+    uint16_t change_bits;
+    uint32_t request_data_object;
+    uint32_t connector_capability;
+    uint32_t peak_current_ma;
+    uint32_t average_current_ma;
+    uint32_t vbus_voltage_mv;
+    uint64_t sequence;
+    uint64_t reserved[2];
+} RinManagementTypeCConnectorV1;
 
 /* V2 preserves the fixed V1 response and adds the authenticated firmware signer identity in a separately versioned record. */
 typedef struct RinManagementDeviceFirmwareV2 {
@@ -2488,6 +2547,44 @@ static_assert(offsetof(RinManagementDeviceInfoV1, bus) == 64, "RinManagementDevi
 static_assert(offsetof(RinManagementDeviceInfoV1, name) == 96, "RinManagementDeviceInfoV1.name ABI drift");
 static_assert(offsetof(RinManagementDeviceInfoV1, driver) == 160, "RinManagementDeviceInfoV1.driver ABI drift");
 static_assert(offsetof(RinManagementDeviceInfoV1, location) == 224, "RinManagementDeviceInfoV1.location ABI drift");
+static_assert(sizeof(RinManagementTypeCDeviceCountV1) == 32, "RinManagementTypeCDeviceCountV1 ABI drift");
+static_assert(offsetof(RinManagementTypeCDeviceCountV1, struct_size) == 0, "RinManagementTypeCDeviceCountV1.struct_size ABI drift");
+static_assert(offsetof(RinManagementTypeCDeviceCountV1, version) == 4, "RinManagementTypeCDeviceCountV1.version ABI drift");
+static_assert(offsetof(RinManagementTypeCDeviceCountV1, flags) == 6, "RinManagementTypeCDeviceCountV1.flags ABI drift");
+static_assert(offsetof(RinManagementTypeCDeviceCountV1, device_count) == 8, "RinManagementTypeCDeviceCountV1.device_count ABI drift");
+static_assert(offsetof(RinManagementTypeCDeviceCountV1, reserved0) == 12, "RinManagementTypeCDeviceCountV1.reserved0 ABI drift");
+static_assert(offsetof(RinManagementTypeCDeviceCountV1, reserved) == 16, "RinManagementTypeCDeviceCountV1.reserved ABI drift");
+static_assert(sizeof(RinManagementTypeCConnectorV1) == 88, "RinManagementTypeCConnectorV1 ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, struct_size) == 0, "RinManagementTypeCConnectorV1.struct_size ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, version) == 4, "RinManagementTypeCConnectorV1.version ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, flags) == 6, "RinManagementTypeCConnectorV1.flags ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, device_index) == 8, "RinManagementTypeCConnectorV1.device_index ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, connector_count) == 12, "RinManagementTypeCConnectorV1.connector_count ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, device_generation) == 16, "RinManagementTypeCConnectorV1.device_generation ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, ucsi_version) == 24, "RinManagementTypeCConnectorV1.ucsi_version ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, connector) == 26, "RinManagementTypeCConnectorV1.connector ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, connected) == 27, "RinManagementTypeCConnectorV1.connected ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, data_role) == 28, "RinManagementTypeCConnectorV1.data_role ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, power_role) == 29, "RinManagementTypeCConnectorV1.power_role ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, power_operation_mode) == 30, "RinManagementTypeCConnectorV1.power_operation_mode ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, partner_type) == 31, "RinManagementTypeCConnectorV1.partner_type ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, partner_supports_usb) == 32, "RinManagementTypeCConnectorV1.partner_supports_usb ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, partner_supports_alt_mode) == 33, "RinManagementTypeCConnectorV1.partner_supports_alt_mode ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, orientation_reversed) == 34, "RinManagementTypeCConnectorV1.orientation_reversed ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, active_alt_mode_index) == 35, "RinManagementTypeCConnectorV1.active_alt_mode_index ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, alt_mode_active) == 36, "RinManagementTypeCConnectorV1.alt_mode_active ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, battery_charging_status) == 37, "RinManagementTypeCConnectorV1.battery_charging_status ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, power_reading_ready) == 38, "RinManagementTypeCConnectorV1.power_reading_ready ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, current_scale) == 39, "RinManagementTypeCConnectorV1.current_scale ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, voltage_scale) == 40, "RinManagementTypeCConnectorV1.voltage_scale ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, change_bits) == 42, "RinManagementTypeCConnectorV1.change_bits ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, request_data_object) == 44, "RinManagementTypeCConnectorV1.request_data_object ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, connector_capability) == 48, "RinManagementTypeCConnectorV1.connector_capability ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, peak_current_ma) == 52, "RinManagementTypeCConnectorV1.peak_current_ma ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, average_current_ma) == 56, "RinManagementTypeCConnectorV1.average_current_ma ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, vbus_voltage_mv) == 60, "RinManagementTypeCConnectorV1.vbus_voltage_mv ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, sequence) == 64, "RinManagementTypeCConnectorV1.sequence ABI drift");
+static_assert(offsetof(RinManagementTypeCConnectorV1, reserved) == 72, "RinManagementTypeCConnectorV1.reserved ABI drift");
 static_assert(sizeof(RinManagementDeviceFirmwareV2) == 160, "RinManagementDeviceFirmwareV2 ABI drift");
 static_assert(sizeof(RinManagementDeviceFirmwareV2) <= sizeof(((RinManagementRequestV1*)0)->payload), "firmware V2 no longer fits management request");
 static_assert(offsetof(RinManagementDeviceFirmwareV2, struct_size) == 0, "RinManagementDeviceFirmwareV2.struct_size ABI drift");
@@ -3524,6 +3621,44 @@ _Static_assert(offsetof(RinManagementDeviceInfoV1, bus) == 64, "RinManagementDev
 _Static_assert(offsetof(RinManagementDeviceInfoV1, name) == 96, "RinManagementDeviceInfoV1.name ABI drift");
 _Static_assert(offsetof(RinManagementDeviceInfoV1, driver) == 160, "RinManagementDeviceInfoV1.driver ABI drift");
 _Static_assert(offsetof(RinManagementDeviceInfoV1, location) == 224, "RinManagementDeviceInfoV1.location ABI drift");
+_Static_assert(sizeof(RinManagementTypeCDeviceCountV1) == 32, "RinManagementTypeCDeviceCountV1 ABI drift");
+_Static_assert(offsetof(RinManagementTypeCDeviceCountV1, struct_size) == 0, "RinManagementTypeCDeviceCountV1.struct_size ABI drift");
+_Static_assert(offsetof(RinManagementTypeCDeviceCountV1, version) == 4, "RinManagementTypeCDeviceCountV1.version ABI drift");
+_Static_assert(offsetof(RinManagementTypeCDeviceCountV1, flags) == 6, "RinManagementTypeCDeviceCountV1.flags ABI drift");
+_Static_assert(offsetof(RinManagementTypeCDeviceCountV1, device_count) == 8, "RinManagementTypeCDeviceCountV1.device_count ABI drift");
+_Static_assert(offsetof(RinManagementTypeCDeviceCountV1, reserved0) == 12, "RinManagementTypeCDeviceCountV1.reserved0 ABI drift");
+_Static_assert(offsetof(RinManagementTypeCDeviceCountV1, reserved) == 16, "RinManagementTypeCDeviceCountV1.reserved ABI drift");
+_Static_assert(sizeof(RinManagementTypeCConnectorV1) == 88, "RinManagementTypeCConnectorV1 ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, struct_size) == 0, "RinManagementTypeCConnectorV1.struct_size ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, version) == 4, "RinManagementTypeCConnectorV1.version ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, flags) == 6, "RinManagementTypeCConnectorV1.flags ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, device_index) == 8, "RinManagementTypeCConnectorV1.device_index ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, connector_count) == 12, "RinManagementTypeCConnectorV1.connector_count ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, device_generation) == 16, "RinManagementTypeCConnectorV1.device_generation ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, ucsi_version) == 24, "RinManagementTypeCConnectorV1.ucsi_version ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, connector) == 26, "RinManagementTypeCConnectorV1.connector ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, connected) == 27, "RinManagementTypeCConnectorV1.connected ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, data_role) == 28, "RinManagementTypeCConnectorV1.data_role ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, power_role) == 29, "RinManagementTypeCConnectorV1.power_role ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, power_operation_mode) == 30, "RinManagementTypeCConnectorV1.power_operation_mode ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, partner_type) == 31, "RinManagementTypeCConnectorV1.partner_type ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, partner_supports_usb) == 32, "RinManagementTypeCConnectorV1.partner_supports_usb ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, partner_supports_alt_mode) == 33, "RinManagementTypeCConnectorV1.partner_supports_alt_mode ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, orientation_reversed) == 34, "RinManagementTypeCConnectorV1.orientation_reversed ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, active_alt_mode_index) == 35, "RinManagementTypeCConnectorV1.active_alt_mode_index ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, alt_mode_active) == 36, "RinManagementTypeCConnectorV1.alt_mode_active ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, battery_charging_status) == 37, "RinManagementTypeCConnectorV1.battery_charging_status ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, power_reading_ready) == 38, "RinManagementTypeCConnectorV1.power_reading_ready ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, current_scale) == 39, "RinManagementTypeCConnectorV1.current_scale ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, voltage_scale) == 40, "RinManagementTypeCConnectorV1.voltage_scale ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, change_bits) == 42, "RinManagementTypeCConnectorV1.change_bits ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, request_data_object) == 44, "RinManagementTypeCConnectorV1.request_data_object ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, connector_capability) == 48, "RinManagementTypeCConnectorV1.connector_capability ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, peak_current_ma) == 52, "RinManagementTypeCConnectorV1.peak_current_ma ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, average_current_ma) == 56, "RinManagementTypeCConnectorV1.average_current_ma ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, vbus_voltage_mv) == 60, "RinManagementTypeCConnectorV1.vbus_voltage_mv ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, sequence) == 64, "RinManagementTypeCConnectorV1.sequence ABI drift");
+_Static_assert(offsetof(RinManagementTypeCConnectorV1, reserved) == 72, "RinManagementTypeCConnectorV1.reserved ABI drift");
 _Static_assert(sizeof(RinManagementDeviceFirmwareV2) == 160, "RinManagementDeviceFirmwareV2 ABI drift");
 _Static_assert(sizeof(RinManagementDeviceFirmwareV2) <= sizeof(((RinManagementRequestV1*)0)->payload), "firmware V2 no longer fits management request");
 _Static_assert(offsetof(RinManagementDeviceFirmwareV2, struct_size) == 0, "RinManagementDeviceFirmwareV2.struct_size ABI drift");
