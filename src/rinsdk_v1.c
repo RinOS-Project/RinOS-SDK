@@ -1,11 +1,9 @@
+#include <sys/syscall.h>
+
 #include <rin/sdk.h>
 #include <rin/contract_abi.h>
 #include <rin/service_directory.h>
 #include <rin/service.h>
-
-#if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GUI)
-#include <sys/syscall.h>
-#endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_MEDIA)
 #include "rinmedia_sdk_client_v1.h"
@@ -14,7 +12,6 @@
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_BASE)
 #include <limits.h>
 #include <stddef.h>
-#include <sys/syscall.h>
 #define RIN_SDK_OBJECT_CLOSE_HOOK_CAPACITY_V1 8u
 #define RIN_SDK_OBJECT_CLOSE_HOOK_SLOT_BITS_V1 8u
 #define RIN_SDK_OBJECT_CLOSE_HOOK_SLOT_MASK_V1 UINT64_C(0xff)
