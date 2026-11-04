@@ -18,9 +18,10 @@
 #define RIN_DRIVER_IMAGE_MAGIC UINT32_C(0x5652444E) /* NDRV, little endian */
 #define RIN_DRIVER_IMAGE_VERSION_3 UINT32_C(0x00030000)
 #define RIN_DRIVER_ABI_MAJOR UINT16_C(0x0003)
-#define RIN_DRIVER_ABI_MINOR UINT16_C(0x0002)
+#define RIN_DRIVER_ABI_MINOR UINT16_C(0x0003)
 #define RIN_DRIVER_ABI_MINOR_DEVICE_DMA_STOP UINT16_C(0x0001)
 #define RIN_DRIVER_ABI_MINOR_KERNEL_MODULE_V1 UINT16_C(0x0002)
+#define RIN_DRIVER_ABI_MINOR_DEVICE_BIND UINT16_C(0x0003)
 #define RIN_RESOURCE_MAGIC UINT32_C(0x31535252) /* RRS1, little endian */
 #define RIN_RESOURCE_VERSION_1 UINT16_C(0x0001)
 #define RIN_RESOURCE_MAX_COUNT UINT32_C(0x00000080)
@@ -334,7 +335,13 @@ typedef struct RinDriverHeaderV3 {
     uint16_t signature_algorithm;
     uint16_t hash_algorithm;
     uint8_t content_hash[32];
-    uint64_t reserved[10];
+    /* ABI minor 3: optional per-device Bind callback RVA. Older ABI minors
+     * must keep this slot zero. RCC recognizes the optional code symbols
+     * rin_driver_{probe,bind,start,stop,unbind,power}_v3 and maps them to
+     * the lifecycle RVAs above; Start defaults to the module entry point.
+     * Entry callbacks use RinDriverEntryV3; power uses RinDriverPowerV3. */
+    uint64_t bind_rva;
+    uint64_t reserved[9];
 } RinDriverHeaderV3;
 
 typedef struct RinDriverMatchV3 {
@@ -372,6 +379,7 @@ static_assert(sizeof(RinDriverHeaderV3) == 256u, "RinDriverHeaderV3 ABI drift");
 static_assert(sizeof(RinDriverMatchV3) == 64u, "RinDriverMatchV3 ABI drift");
 static_assert(offsetof(RinHeaderV3, content_hash) == 116u, "RinHeaderV3.content_hash ABI drift");
 static_assert(offsetof(RinDriverHeaderV3, content_hash) == 144u, "RinDriverHeaderV3.content_hash ABI drift");
+static_assert(offsetof(RinDriverHeaderV3, bind_rva) == 176u, "RinDriverHeaderV3.bind_rva ABI drift");
 static_assert(offsetof(RinDriverMatchV3, required_resources) == 36u, "RinDriverMatchV3.required_resources ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(RinHeaderV3) == 256u, "RinHeaderV3 ABI drift");
@@ -388,6 +396,7 @@ _Static_assert(sizeof(RinDriverHeaderV3) == 256u, "RinDriverHeaderV3 ABI drift")
 _Static_assert(sizeof(RinDriverMatchV3) == 64u, "RinDriverMatchV3 ABI drift");
 _Static_assert(offsetof(RinHeaderV3, content_hash) == 116u, "RinHeaderV3.content_hash ABI drift");
 _Static_assert(offsetof(RinDriverHeaderV3, content_hash) == 144u, "RinDriverHeaderV3.content_hash ABI drift");
+_Static_assert(offsetof(RinDriverHeaderV3, bind_rva) == 176u, "RinDriverHeaderV3.bind_rva ABI drift");
 _Static_assert(offsetof(RinDriverMatchV3, required_resources) == 36u, "RinDriverMatchV3.required_resources ABI drift");
 #endif
 
