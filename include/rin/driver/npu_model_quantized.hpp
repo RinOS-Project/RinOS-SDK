@@ -816,7 +816,8 @@ static inline bool operation_shape_valid(const Model* model,
         return true;
     }
     if (operation.opcode == OPERATION_IDENTITY_FLOAT32)
-        return operation.input_count == 1u &&
+        return model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 &&
+            operation.input_count == 1u &&
             model->tensors[operation.inputs[0]].data_type == DATA_TYPE_FLOAT32 &&
             output.data_type == DATA_TYPE_FLOAT32 &&
             same_shape(output, model->tensors[operation.inputs[0]]);
