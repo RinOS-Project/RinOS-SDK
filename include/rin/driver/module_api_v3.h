@@ -1919,8 +1919,15 @@ static inline RinDriverV3Result rin_driver_v3_get_stop_reason(
     const RinDriverApiV3* api, const RinDriverContextV3* context,
     RinDriverV3StopReasonInfo* info_out)
 {
-    RinDriverV3StopReasonInfo info = {0};
+    RinDriverV3StopReasonInfo info;
     RinDriverV3Result result;
+    info.struct_size = 0u;
+    info.version = 0u;
+    info.reason = 0u;
+    info.reserved0 = 0u;
+    info.device_generation = 0u;
+    info.reserved[0] = 0u;
+    info.reserved[1] = 0u;
     if (!api || !context || !info_out ||
         context->struct_size < sizeof(*context) ||
         api->struct_size < offsetof(RinDriverApiV3, get_stop_reason) +
