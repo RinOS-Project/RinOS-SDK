@@ -66,6 +66,8 @@ struct Workspace {
   uint32_t convolution_bias_capacity;
   q::BatchQuantization *batch_quantizations;
   uint32_t batch_quantization_capacity;
+  q::IntegerMatMulParameters *integer_matmuls;
+  uint32_t integer_matmul_capacity;
 };
 struct Result {
   q::Model graph;
@@ -321,11 +323,13 @@ static inline RinResultCode value_info(Slice bytes, Name *name_out,
   }
   if (en < 0)
     return RIN_RESULT_CORRUPT_DATA;
-  if (!htype || !hshape || (type != 1u && type != 2u && type != 3u))
+  if (!htype || !hshape ||
+      (type != 1u && type != 2u && type != 3u && type != 6u))
     return RIN_RESULT_NOT_SUPPORTED;
   q::TensorDescription d = {};
   d.data_type = type == 1u ? q::DATA_TYPE_FLOAT32
-      : type == 3u ? q::DATA_TYPE_INT8 : q::DATA_TYPE_UINT8;
+      : type == 3u ? q::DATA_TYPE_INT8
+      : type == 6u ? q::DATA_TYPE_INT32 : q::DATA_TYPE_UINT8;
   d.scale = 1.0f;
   RinResultCode rc = parse_shape(shape, &d);
   if (rc != RIN_RESULT_OK)
@@ -339,7 +343,8 @@ static inline RinResultCode value_info(Slice bytes, Name *name_out,
 static inline q::TensorDescription make_description(const TensorHeader &h,
                                                     float scale, int32_t zero) {
   q::TensorDescription d = {};
-  d.data_type = h.onnx_data_type == 3u ? q::DATA_TYPE_INT8 : q::DATA_TYPE_UINT8;
+  d.data_type = h.onnx_data_type == 6u ? q::DATA_TYPE_INT32
+      : h.onnx_data_type == 3u ? q::DATA_TYPE_INT8 : q::DATA_TYPE_UINT8;
   d.rank = h.rank;
   d.scale = scale;
   d.zero_point = zero;
@@ -1073,6 +1078,14 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
       if (node.inputs[index].size == 0u)
         return RIN_RESULT_NOT_SUPPORTED;
     node.opcode = q::OPERATION_MATMUL_Q8;
+  } else if (slice_is(op, "MatMulInteger", 13u)) {
+    if (node.output_count != 1u || node.input_count < 2u ||
+        node.input_count > 4u || node.inputs[0].size == 0u ||
+        node.inputs[1].size == 0u || node.has_group || node.has_auto_pad ||
+        node.has_strides || node.has_dilations || node.has_pads ||
+        node.has_kernel_shape || node.has_axis || node.has_block_size)
+      return RIN_RESULT_NOT_SUPPORTED;
+    node.opcode = q::OPERATION_MATMUL_INTEGER;
   } else if (slice_is(op, "QLinearConv", 11u)) {
     if (node.output_count != 1u ||
         (node.input_count != 8u && node.input_count != 9u) ||
@@ -1397,6 +1410,63 @@ static inline RinResultCode ensure_data(Workspace *w, const GraphFields &g,
   *out = idx;
   return RIN_RESULT_OK;
 }
+
+/* Materialize an ONNX int8/uint8 value without assigning affine scale or
+ * zero-point metadata. MatMulInteger consumes these bytes directly and uses
+ * its separate optional zero-point tensor inputs. */
+static inline RinResultCode ensure_raw_q8_data(
+    Workspace *workspace, const GraphFields &graph, uint32_t *value_count,
+    uint32_t *constant_count, Name name, uint64_t *weight_bytes,
+    uint32_t *tensor_index_out)
+{
+  if (!workspace || !value_count || !constant_count || !weight_bytes ||
+      !tensor_index_out || !name.size)
+    return RIN_RESULT_INVALID_ARGUMENT;
+  const int existing = find_value(workspace, *value_count, name);
+  if (existing >= 0) {
+    const ValueBinding &value = workspace->values[existing];
+    if ((value.flags & VALUE_AVAILABLE) &&
+        (value.flags & VALUE_HAS_DESCRIPTION)) {
+      const uint32_t type = workspace->tensors[existing].data_type;
+      if (type != q::DATA_TYPE_INT8 && type != q::DATA_TYPE_UINT8)
+        return RIN_RESULT_NOT_SUPPORTED;
+      *tensor_index_out = (uint32_t)existing;
+      return RIN_RESULT_OK;
+    }
+  }
+  TensorHeader header = {};
+  const int initializer = find_initializer(graph, name, &header);
+  if (initializer == -2) return RIN_RESULT_CORRUPT_DATA;
+  if (initializer < 0 ||
+      (header.onnx_data_type != 2u && header.onnx_data_type != 3u))
+    return RIN_RESULT_NOT_SUPPORTED;
+  const q::TensorDescription description = make_description(header, 1.0f, 0);
+  const uint64_t count = q::tensor_elements(description);
+  if (!count || *weight_bytes > workspace->weight_capacity_bytes ||
+      *weight_bytes > RIN_NPU_QUANTIZED_ONNX_MAX_WEIGHT_BYTES ||
+      count > workspace->weight_capacity_bytes - *weight_bytes ||
+      count > RIN_NPU_QUANTIZED_ONNX_MAX_WEIGHT_BYTES - *weight_bytes ||
+      *constant_count >= workspace->constant_capacity ||
+      !workspace->weight_storage || !workspace->constants)
+    return RIN_RESULT_BUFFER_TOO_SMALL;
+  uint32_t tensor_index = 0u;
+  RinResultCode result = add_value(workspace, value_count, name, &description,
+      VALUE_HAS_DESCRIPTION | VALUE_INITIALIZER | VALUE_AVAILABLE,
+      &tensor_index);
+  if (result != RIN_RESULT_OK) return result;
+  result = q_payload(graph.initializers[initializer], header,
+      workspace->weight_storage + *weight_bytes, count);
+  if (result != RIN_RESULT_OK) return result;
+  ConstantBinding constant = {};
+  constant.tensor_index = tensor_index;
+  constant.byte_offset = *weight_bytes;
+  constant.element_count = count;
+  workspace->constants[(*constant_count)++] = constant;
+  *weight_bytes += count;
+  *tensor_index_out = tensor_index;
+  return RIN_RESULT_OK;
+}
+
 static inline RinResultCode ensure_float_data(
     Workspace *w, const GraphFields &g, uint32_t *values,
     uint32_t *constants, Name name, uint64_t *bytes, uint32_t *out) {
@@ -1500,14 +1570,15 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
        (!w->quantization_scales || !w->quantization_zero_points)) ||
       (w->convolution_capacity && !w->convolutions) ||
       (w->convolution_bias_capacity && !w->convolution_bias_storage) ||
-      (w->batch_quantization_capacity && !w->batch_quantizations))
+      (w->batch_quantization_capacity && !w->batch_quantizations) ||
+      (w->integer_matmul_capacity && !w->integer_matmuls))
     return RIN_RESULT_INVALID_ARGUMENT;
   const void *ptrs[] = {w->tensors, w->graph_inputs, w->external_inputs,
                         w->graph_outputs, w->operations, w->values,
                         w->constants, w->weight_storage, w->quantizations,
                         w->quantization_scales, w->quantization_zero_points,
                         w->convolutions, w->convolution_bias_storage,
-                        w->batch_quantizations};
+                        w->batch_quantizations, w->integer_matmuls};
   const uint64_t sizes[] = {
       (uint64_t)w->tensor_capacity * sizeof(*w->tensors),
       (uint64_t)w->graph_input_capacity * sizeof(*w->graph_inputs),
@@ -1526,8 +1597,9 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       (uint64_t)w->convolution_bias_capacity *
           sizeof(*w->convolution_bias_storage),
       (uint64_t)w->batch_quantization_capacity *
-          sizeof(*w->batch_quantizations)};
-  for (uint32_t i = 0; i < 14u; ++i) {
+          sizeof(*w->batch_quantizations),
+      (uint64_t)w->integer_matmul_capacity * sizeof(*w->integer_matmuls)};
+  for (uint32_t i = 0; i < 15u; ++i) {
     if (sizes[i] &&
         (memory_ranges_overlap(ptrs[i], sizes[i], blob, blob_bytes) ||
          memory_ranges_overlap(ptrs[i], sizes[i], out, sizeof(*out)) ||
@@ -1558,6 +1630,7 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
   uint32_t values = 0, externals = 0, constants = 0, operations = 0;
   uint32_t quantizations = 0u, quantization_parameters = 0u;
   uint32_t batch_quantizations = 0u;
+  uint32_t integer_matmuls = 0u;
   uint32_t has_blocked_quantization = 0u;
   uint32_t convolutions = 0u, convolution_bias_count = 0u;
   uint64_t weight_bytes = 0;
@@ -1613,6 +1686,69 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
     rc = parse_node(g.nodes[ni], &node);
     if (rc != RIN_RESULT_OK)
       return rc;
+    if (node.opcode == q::OPERATION_MATMUL_INTEGER) {
+      if (integer_matmuls >= w->integer_matmul_capacity ||
+          !w->integer_matmuls)
+        return RIN_RESULT_BUFFER_TOO_SMALL;
+      uint32_t inputs[2] = {};
+      for (uint32_t side = 0u; side < 2u; ++side) {
+        rc = ensure_raw_q8_data(w, g, &values, &constants, node.inputs[side],
+                                &weight_bytes, &inputs[side]);
+        if (rc != RIN_RESULT_OK)
+          return rc;
+      }
+      uint32_t zero_points[2] = {UINT32_MAX, UINT32_MAX};
+      for (uint32_t side = 0u; side < 2u; ++side) {
+        const uint32_t input_slot = side + 2u;
+        if (input_slot >= node.input_count ||
+            node.inputs[input_slot].size == 0u)
+          continue;
+        rc = ensure_raw_q8_data(w, g, &values, &constants,
+            node.inputs[input_slot], &weight_bytes, &zero_points[side]);
+        if (rc != RIN_RESULT_OK)
+          return rc;
+        const q::TensorDescription &operand = w->tensors[inputs[side]];
+        if (!q::integer_matmul_zero_point_shape_valid(
+                w->tensors[zero_points[side]], operand, side == 0u))
+          return RIN_RESULT_NOT_SUPPORTED;
+      }
+      uint32_t output_rank = 0u;
+      uint32_t output_dimensions[RIN_NPU_MODEL_MAX_RANK] = {};
+      if (!q::matmul_output_shape(w->tensors[inputs[0]],
+              w->tensors[inputs[1]], &output_rank, output_dimensions))
+        return RIN_RESULT_NOT_SUPPORTED;
+      q::TensorDescription output_description = {};
+      output_description.data_type = q::DATA_TYPE_INT32;
+      output_description.rank = output_rank;
+      output_description.scale = 1.0f;
+      for (uint32_t dimension = 0u; dimension < output_rank; ++dimension)
+        output_description.dimensions[dimension] = output_dimensions[dimension];
+      const int previous = find_value(w, values, node.outputs[0]);
+      if (previous >= 0 && (w->values[previous].flags & VALUE_AVAILABLE))
+        return RIN_RESULT_CORRUPT_DATA;
+      uint32_t output_index = 0u;
+      rc = add_value(w, &values, node.outputs[0], &output_description,
+          VALUE_HAS_DESCRIPTION | VALUE_PRODUCED | VALUE_AVAILABLE,
+          &output_index);
+      if (rc != RIN_RESULT_OK)
+        return rc;
+      if (operations >= w->operation_capacity)
+        return RIN_RESULT_BUFFER_TOO_SMALL;
+      q::Operation operation = {};
+      operation.opcode = q::OPERATION_MATMUL_INTEGER;
+      operation.input_count = 2u;
+      operation.inputs[0] = inputs[0];
+      operation.inputs[1] = inputs[1];
+      operation.output_tensor = output_index;
+      w->operations[operations] = operation;
+      q::IntegerMatMulParameters parameters = {};
+      parameters.operation_index = operations;
+      parameters.a_zero_point_tensor = zero_points[0];
+      parameters.b_zero_point_tensor = zero_points[1];
+      w->integer_matmuls[integer_matmuls++] = parameters;
+      ++operations;
+      continue;
+    }
     if (node.opcode == q::OPERATION_DYNAMIC_QUANTIZE_Q8) {
       if (opset < 11u)
         return RIN_RESULT_NOT_SUPPORTED;
@@ -2062,7 +2198,9 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
     else if (w->operations[operation].opcode ==
              q::OPERATION_DYNAMIC_QUANTIZE_Q8)
       has_dynamic_quantize = true;
-  model.version = has_blocked_quantization
+  model.version = integer_matmuls
+      ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7
+      : has_blocked_quantization
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V6
       : has_dynamic_quantize
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V5
@@ -2072,11 +2210,14 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3
       : quantizations ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION
                       : RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1;
-  model.struct_size = (model.version ==
+  model.struct_size = model.version ==
+          RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7
+      ? sizeof(model)
+      : (model.version ==
           RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4 ||
           model.version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V5 ||
           model.version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V6)
-      ? sizeof(model)
+      ? RIN_NPU_QUANTIZED_MODEL_V6_STRUCT_SIZE
       : model.version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3
           ? RIN_NPU_QUANTIZED_MODEL_V3_STRUCT_SIZE
       : model.version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION
@@ -2097,6 +2238,8 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
   model.batch_quantization_count = batch_quantizations;
   model.batch_quantizations = batch_quantizations
       ? w->batch_quantizations : 0;
+  model.integer_matmul_count = integer_matmuls;
+  model.integer_matmuls = integer_matmuls ? w->integer_matmuls : 0;
   if (!q::model_valid(&model))
     return RIN_RESULT_CORRUPT_DATA;
   Result result = {};
