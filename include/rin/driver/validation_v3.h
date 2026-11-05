@@ -39,7 +39,17 @@ static inline int rin_driver_kernel_module_context_v1_valid(
     const RinDriverContextV3* context)
 {
     const RinDriverDeviceIdentityV3* device;
+    const uint32_t legacy_size = (uint32_t)offsetof(
+        RinDriverContextV3, kernel_module_context_version);
     if (!context) return 0;
+    /* The NDRV loader preserves the original context prefix for ABI minor
+     * versions that predate the append-only kernel-module extension. Do not
+     * inspect extension fields unless the caller's declared size includes
+     * them. The phase record is carried in reserved[] only for DMI callbacks,
+     * so a legacy-sized context must remain an ordinary NDRV context. */
+    if (context->struct_size == legacy_size)
+        return context->reserved[0] == 0u;
+    if (context->struct_size != sizeof(*context)) return 0;
     if (context->kernel_module_context_version == 0u &&
         context->kernel_module_matched_index == 0u &&
         context->kernel_module_device.struct_size == 0u &&
@@ -81,7 +91,8 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
     if (!api || !context || api->version != RIN_DRIVER_V3_ABI_VERSION ||
         context->version != RIN_DRIVER_V3_ABI_VERSION ||
         api->struct_size < offsetof(RinDriverApiV3, reserved) ||
-        context->struct_size < sizeof(RinDriverContextV3) ||
+        context->struct_size < offsetof(
+            RinDriverContextV3, kernel_module_context_version) ||
         context->session == 0u || context->device == 0u ||
         (context->architecture != RIN_ARCH_X86 &&
          context->architecture != RIN_ARCH_X86_64) ||
