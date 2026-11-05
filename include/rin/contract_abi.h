@@ -121,6 +121,22 @@ typedef int32_t RinResultCode;
 #define RIN_ACCOUNT_QUERY_BY_NAME           2u
 #define RIN_ACCOUNT_QUERY_BY_INDEX          3u
 #define RIN_ACCOUNT_QUERY_BY_UID_AFTER      4u
+#define RIN_GROUP_QUERY_VERSION             1u
+#define RIN_GROUP_QUERY_BY_GID              1u
+#define RIN_GROUP_QUERY_BY_NAME             2u
+#define RIN_GROUP_QUERY_BY_INDEX            3u
+#define RIN_GROUP_QUERY_BY_GID_AFTER        4u
+#define RIN_GROUP_QUERY_BY_MEMBER_UID       5u
+#define RIN_GROUP_INFO_VERSION              1u
+#define RIN_GROUP_INFO_FLAG_MEMBERSHIP      1u
+#define RIN_GROUP_INFO_FLAG_SNAPSHOT        2u
+#define RIN_GROUP_NAME_MAX                  32u
+#define RIN_GROUP_MAX_MEMBERS               8u
+#define RIN_GROUP_MANAGE_VERSION            1u
+#define RIN_GROUP_MANAGE_CREATE             1u
+#define RIN_GROUP_MANAGE_DELETE             2u
+#define RIN_GROUP_MANAGE_ADD_MEMBER         3u
+#define RIN_GROUP_MANAGE_REMOVE_MEMBER      4u
 #define RIN_ACCOUNT_INFO_FLAG_ACTIVE        1u
 #define RIN_ACCOUNT_INFO_FLAG_ADMIN         2u
 #define RIN_STORAGE_FLAG_READ_ONLY          1u
@@ -867,6 +883,40 @@ typedef struct RinAccountInfoV1 {
     uint8_t shell[64];
     uint64_t reserved[4];
 } RinAccountInfoV1;
+
+/* A member-UID query uses gid as the exclusive GID cursor and reserved as an optional snapshot token returned in RinGroupInfoV1.reserved[0]. */
+typedef struct RinGroupQueryV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t kind;
+    uint32_t gid;
+    uint32_t member_uid;
+    uint8_t name[32];
+    uint64_t reserved;
+} RinGroupQueryV1;
+
+/* Member-UID query results set the membership and snapshot flags and return the snapshot token in reserved[0]. */
+typedef struct RinGroupInfoV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint32_t gid;
+    uint32_t member_count;
+    uint8_t name[32];
+    uint32_t member_ids[8];
+    uint64_t reserved[45];
+} RinGroupInfoV1;
+
+/* Administrative group database mutations. CREATE returns the allocated GID in gid. */
+typedef struct RinGroupManageV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t operation;
+    uint32_t gid;
+    uint32_t member_uid;
+    uint8_t name[32];
+    uint64_t reserved[2];
+} RinGroupManageV1;
 
 #ifndef RIN_SDK_OBJECT_INFO_ABI_DEFINED
 #define RIN_SDK_OBJECT_INFO_ABI_DEFINED
@@ -2106,6 +2156,31 @@ static_assert(offsetof(RinAccountInfoV1, display_name) == 56, "RinAccountInfoV1.
 static_assert(offsetof(RinAccountInfoV1, home_dir) == 88, "RinAccountInfoV1.home_dir ABI drift");
 static_assert(offsetof(RinAccountInfoV1, shell) == 344, "RinAccountInfoV1.shell ABI drift");
 static_assert(offsetof(RinAccountInfoV1, reserved) == 408, "RinAccountInfoV1.reserved ABI drift");
+static_assert(sizeof(RinGroupQueryV1) == 56, "RinGroupQueryV1 ABI drift");
+static_assert(offsetof(RinGroupQueryV1, struct_size) == 0, "RinGroupQueryV1.struct_size ABI drift");
+static_assert(offsetof(RinGroupQueryV1, version) == 4, "RinGroupQueryV1.version ABI drift");
+static_assert(offsetof(RinGroupQueryV1, kind) == 6, "RinGroupQueryV1.kind ABI drift");
+static_assert(offsetof(RinGroupQueryV1, gid) == 8, "RinGroupQueryV1.gid ABI drift");
+static_assert(offsetof(RinGroupQueryV1, member_uid) == 12, "RinGroupQueryV1.member_uid ABI drift");
+static_assert(offsetof(RinGroupQueryV1, name) == 16, "RinGroupQueryV1.name ABI drift");
+static_assert(offsetof(RinGroupQueryV1, reserved) == 48, "RinGroupQueryV1.reserved ABI drift");
+static_assert(sizeof(RinGroupInfoV1) == 440, "RinGroupInfoV1 ABI drift");
+static_assert(offsetof(RinGroupInfoV1, struct_size) == 0, "RinGroupInfoV1.struct_size ABI drift");
+static_assert(offsetof(RinGroupInfoV1, version) == 4, "RinGroupInfoV1.version ABI drift");
+static_assert(offsetof(RinGroupInfoV1, flags) == 6, "RinGroupInfoV1.flags ABI drift");
+static_assert(offsetof(RinGroupInfoV1, gid) == 8, "RinGroupInfoV1.gid ABI drift");
+static_assert(offsetof(RinGroupInfoV1, member_count) == 12, "RinGroupInfoV1.member_count ABI drift");
+static_assert(offsetof(RinGroupInfoV1, name) == 16, "RinGroupInfoV1.name ABI drift");
+static_assert(offsetof(RinGroupInfoV1, member_ids) == 48, "RinGroupInfoV1.member_ids ABI drift");
+static_assert(offsetof(RinGroupInfoV1, reserved) == 80, "RinGroupInfoV1.reserved ABI drift");
+static_assert(sizeof(RinGroupManageV1) == 64, "RinGroupManageV1 ABI drift");
+static_assert(offsetof(RinGroupManageV1, struct_size) == 0, "RinGroupManageV1.struct_size ABI drift");
+static_assert(offsetof(RinGroupManageV1, version) == 4, "RinGroupManageV1.version ABI drift");
+static_assert(offsetof(RinGroupManageV1, operation) == 6, "RinGroupManageV1.operation ABI drift");
+static_assert(offsetof(RinGroupManageV1, gid) == 8, "RinGroupManageV1.gid ABI drift");
+static_assert(offsetof(RinGroupManageV1, member_uid) == 12, "RinGroupManageV1.member_uid ABI drift");
+static_assert(offsetof(RinGroupManageV1, name) == 16, "RinGroupManageV1.name ABI drift");
+static_assert(offsetof(RinGroupManageV1, reserved) == 48, "RinGroupManageV1.reserved ABI drift");
 static_assert(sizeof(RinObjectInfoV1) == 40, "RinObjectInfoV1 ABI drift");
 static_assert(offsetof(RinObjectInfoV1, struct_size) == 0, "RinObjectInfoV1.struct_size ABI drift");
 static_assert(offsetof(RinObjectInfoV1, version) == 4, "RinObjectInfoV1.version ABI drift");
@@ -3180,6 +3255,31 @@ _Static_assert(offsetof(RinAccountInfoV1, display_name) == 56, "RinAccountInfoV1
 _Static_assert(offsetof(RinAccountInfoV1, home_dir) == 88, "RinAccountInfoV1.home_dir ABI drift");
 _Static_assert(offsetof(RinAccountInfoV1, shell) == 344, "RinAccountInfoV1.shell ABI drift");
 _Static_assert(offsetof(RinAccountInfoV1, reserved) == 408, "RinAccountInfoV1.reserved ABI drift");
+_Static_assert(sizeof(RinGroupQueryV1) == 56, "RinGroupQueryV1 ABI drift");
+_Static_assert(offsetof(RinGroupQueryV1, struct_size) == 0, "RinGroupQueryV1.struct_size ABI drift");
+_Static_assert(offsetof(RinGroupQueryV1, version) == 4, "RinGroupQueryV1.version ABI drift");
+_Static_assert(offsetof(RinGroupQueryV1, kind) == 6, "RinGroupQueryV1.kind ABI drift");
+_Static_assert(offsetof(RinGroupQueryV1, gid) == 8, "RinGroupQueryV1.gid ABI drift");
+_Static_assert(offsetof(RinGroupQueryV1, member_uid) == 12, "RinGroupQueryV1.member_uid ABI drift");
+_Static_assert(offsetof(RinGroupQueryV1, name) == 16, "RinGroupQueryV1.name ABI drift");
+_Static_assert(offsetof(RinGroupQueryV1, reserved) == 48, "RinGroupQueryV1.reserved ABI drift");
+_Static_assert(sizeof(RinGroupInfoV1) == 440, "RinGroupInfoV1 ABI drift");
+_Static_assert(offsetof(RinGroupInfoV1, struct_size) == 0, "RinGroupInfoV1.struct_size ABI drift");
+_Static_assert(offsetof(RinGroupInfoV1, version) == 4, "RinGroupInfoV1.version ABI drift");
+_Static_assert(offsetof(RinGroupInfoV1, flags) == 6, "RinGroupInfoV1.flags ABI drift");
+_Static_assert(offsetof(RinGroupInfoV1, gid) == 8, "RinGroupInfoV1.gid ABI drift");
+_Static_assert(offsetof(RinGroupInfoV1, member_count) == 12, "RinGroupInfoV1.member_count ABI drift");
+_Static_assert(offsetof(RinGroupInfoV1, name) == 16, "RinGroupInfoV1.name ABI drift");
+_Static_assert(offsetof(RinGroupInfoV1, member_ids) == 48, "RinGroupInfoV1.member_ids ABI drift");
+_Static_assert(offsetof(RinGroupInfoV1, reserved) == 80, "RinGroupInfoV1.reserved ABI drift");
+_Static_assert(sizeof(RinGroupManageV1) == 64, "RinGroupManageV1 ABI drift");
+_Static_assert(offsetof(RinGroupManageV1, struct_size) == 0, "RinGroupManageV1.struct_size ABI drift");
+_Static_assert(offsetof(RinGroupManageV1, version) == 4, "RinGroupManageV1.version ABI drift");
+_Static_assert(offsetof(RinGroupManageV1, operation) == 6, "RinGroupManageV1.operation ABI drift");
+_Static_assert(offsetof(RinGroupManageV1, gid) == 8, "RinGroupManageV1.gid ABI drift");
+_Static_assert(offsetof(RinGroupManageV1, member_uid) == 12, "RinGroupManageV1.member_uid ABI drift");
+_Static_assert(offsetof(RinGroupManageV1, name) == 16, "RinGroupManageV1.name ABI drift");
+_Static_assert(offsetof(RinGroupManageV1, reserved) == 48, "RinGroupManageV1.reserved ABI drift");
 _Static_assert(sizeof(RinObjectInfoV1) == 40, "RinObjectInfoV1 ABI drift");
 _Static_assert(offsetof(RinObjectInfoV1, struct_size) == 0, "RinObjectInfoV1.struct_size ABI drift");
 _Static_assert(offsetof(RinObjectInfoV1, version) == 4, "RinObjectInfoV1.version ABI drift");
