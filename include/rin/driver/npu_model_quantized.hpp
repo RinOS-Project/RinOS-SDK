@@ -14,7 +14,7 @@
  * versions add per-axis parameters, operation-specific sidecars, v5 runtime
  * outputs for ONNX DynamicQuantizeLinear, v6 blocked Q8 parameters, v7
  * integer matmul, v8 integer convolution parameters, v9 pooling geometry, and
- * v10 GlobalMaxPool. */
+ * v10 GlobalMaxPool/float32 graph-shape operators. */
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1 UINT32_C(0x00010000)
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION UINT32_C(0x00020000)
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3 UINT32_C(0x00030000)
@@ -54,7 +54,9 @@ enum OperationCode {
     OPERATION_MATMUL_INTEGER = 0x10a,
     OPERATION_CONV_INTEGER = 0x10b,
     OPERATION_AVERAGE_POOL_FLOAT32 = 0x10c,
-    OPERATION_GLOBAL_MAX_POOL_FLOAT32 = 0x10d
+    OPERATION_GLOBAL_MAX_POOL_FLOAT32 = 0x10d,
+    OPERATION_IDENTITY_FLOAT32 = 0x10e,
+    OPERATION_FLATTEN_FLOAT32 = 0x10f
 };
 
 #define RIN_NPU_QUANTIZED_MODEL_MAX_SPATIAL_DIMS \
@@ -515,6 +517,31 @@ static inline bool global_max_pool_output_shape(const TensorDescription& input,
     return true;
 }
 
+static inline bool flatten_output_shape(const TensorDescription& input,
+    uint32_t axis, uint32_t* rank_out, uint32_t* dimensions_out)
+{
+    if (rank_out) *rank_out = 0u;
+    if (dimensions_out)
+        for (uint32_t index = 0u; index < RIN_NPU_MODEL_MAX_RANK; ++index)
+            dimensions_out[index] = 0u;
+    if (!rank_out || !dimensions_out ||
+        input.rank > RIN_NPU_MODEL_MAX_RANK || axis > input.rank)
+        return false;
+    uint64_t flattened[2] = {1u, 1u};
+    for (uint32_t dimension = 0u; dimension < input.rank; ++dimension) {
+        const uint32_t side = dimension < axis ? 0u : 1u;
+        const uint32_t extent = input.dimensions[dimension];
+        if (!extent || flattened[side] >
+                           RIN_NPU_MODEL_MAX_TENSOR_ELEMENTS / extent)
+            return false;
+        flattened[side] *= extent;
+    }
+    dimensions_out[0] = (uint32_t)flattened[0];
+    dimensions_out[1] = (uint32_t)flattened[1];
+    *rank_out = 2u;
+    return true;
+}
+
 static inline uint32_t model_convolution_count(const Model* model)
 {
     return model && (model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3 ||
@@ -788,6 +815,28 @@ static inline bool operation_shape_valid(const Model* model,
                 return false;
         return true;
     }
+    if (operation.opcode == OPERATION_IDENTITY_FLOAT32)
+        return operation.input_count == 1u &&
+            model->tensors[operation.inputs[0]].data_type == DATA_TYPE_FLOAT32 &&
+            output.data_type == DATA_TYPE_FLOAT32 &&
+            same_shape(output, model->tensors[operation.inputs[0]]);
+    if (operation.opcode == OPERATION_FLATTEN_FLOAT32) {
+        if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
+            operation.input_count != 1u ||
+            model->tensors[operation.inputs[0]].data_type != DATA_TYPE_FLOAT32 ||
+            output.data_type != DATA_TYPE_FLOAT32)
+            return false;
+        uint32_t expected_rank = 0u;
+        uint32_t expected_dimensions[RIN_NPU_MODEL_MAX_RANK] = {};
+        if (!flatten_output_shape(model->tensors[operation.inputs[0]],
+                operation.reserved, &expected_rank, expected_dimensions) ||
+            output.rank != expected_rank)
+            return false;
+        for (uint32_t dimension = 0u; dimension < expected_rank; ++dimension)
+            if (output.dimensions[dimension] != expected_dimensions[dimension])
+                return false;
+        return true;
+    }
     return false;
 }
 
@@ -1021,7 +1070,9 @@ static inline bool model_valid(const Model* model)
         const bool dynamic_dequantize =
             operation.opcode == OPERATION_DEQUANTIZE_Q8 &&
             operation.input_count == 2u;
+        const bool flatten = operation.opcode == OPERATION_FLATTEN_FLOAT32;
         if ((operation.reserved != 0u && !dynamic_quantize &&
+             !flatten &&
              !dynamic_dequantize) ||
             operation.output_tensor >= model->tensor_count ||
             available[operation.output_tensor] != 0u ||
@@ -1195,7 +1246,9 @@ static inline bool model_valid(const Model* model)
                     return false;
             }
         } else if (operation.opcode == OPERATION_AVERAGE_POOL_FLOAT32 ||
-                   operation.opcode == OPERATION_GLOBAL_MAX_POOL_FLOAT32) {
+                   operation.opcode == OPERATION_GLOBAL_MAX_POOL_FLOAT32 ||
+                   operation.opcode == OPERATION_IDENTITY_FLOAT32 ||
+                   operation.opcode == OPERATION_FLATTEN_FLOAT32) {
             if (operation_input.data_type != DATA_TYPE_FLOAT32 ||
                 operation_output.data_type != DATA_TYPE_FLOAT32)
                 return false;
@@ -3387,6 +3440,13 @@ static inline RinResultCode evaluate_cpu(const CpuPlan* plan,
             const RinResultCode result = evaluate_global_max_pool_float32(
                 model, operation, tensors);
             if (result != RIN_RESULT_OK) return result;
+        } else if (operation.opcode == OPERATION_IDENTITY_FLOAT32 ||
+                   operation.opcode == OPERATION_FLATTEN_FLOAT32) {
+            const uint64_t elements = tensors[output_index].element_count;
+            if (elements > SIZE_MAX / sizeof(float))
+                return RIN_RESULT_CORRUPT_DATA;
+            memcpy(output, tensors[operation.inputs[0]].data,
+                   (size_t)elements * sizeof(float));
         } else if (operation.opcode == OPERATION_MATMUL_Q8) {
             const uint32_t left_index = operation.inputs[0];
             const uint32_t right_index = operation.inputs[1];

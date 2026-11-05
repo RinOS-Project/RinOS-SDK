@@ -1152,6 +1152,22 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
         node.has_ceil_mode || node.has_count_include_pad)
       return RIN_RESULT_NOT_SUPPORTED;
     node.opcode = q::OPERATION_GLOBAL_MAX_POOL_FLOAT32;
+  } else if (slice_is(op, "Identity", 8u)) {
+    if (node.output_count != 1u || node.input_count != 1u ||
+        node.inputs[0].size == 0u || node.has_axis || node.has_block_size ||
+        node.has_group || node.has_auto_pad || node.has_strides ||
+        node.has_dilations || node.has_pads || node.has_kernel_shape ||
+        node.has_ceil_mode || node.has_count_include_pad)
+      return RIN_RESULT_NOT_SUPPORTED;
+    node.opcode = q::OPERATION_IDENTITY_FLOAT32;
+  } else if (slice_is(op, "Flatten", 7u)) {
+    if (node.output_count != 1u || node.input_count != 1u ||
+        node.inputs[0].size == 0u || node.has_block_size || node.has_group ||
+        node.has_auto_pad || node.has_strides || node.has_dilations ||
+        node.has_pads || node.has_kernel_shape || node.has_ceil_mode ||
+        node.has_count_include_pad)
+      return RIN_RESULT_NOT_SUPPORTED;
+    node.opcode = q::OPERATION_FLATTEN_FLOAT32;
   } else if (slice_is(op, "QuantizeLinear", 14u) ||
              slice_is(op, "DequantizeLinear", 16u)) {
     if (node.output_count != 1u || node.input_count != 3u ||
@@ -2040,6 +2056,64 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       ++operations;
       continue;
     }
+    if (node.opcode == q::OPERATION_IDENTITY_FLOAT32 ||
+        node.opcode == q::OPERATION_FLATTEN_FLOAT32) {
+      uint32_t input_index = 0u;
+      const int source_index = find_value(w, values, node.inputs[0]);
+      if (source_index < 0 ||
+          !(w->values[source_index].flags & VALUE_AVAILABLE)) {
+        rc = ensure_float_data(w, g, &values, &constants, node.inputs[0],
+                               &weight_bytes, &input_index);
+        if (rc != RIN_RESULT_OK)
+          return rc;
+      } else {
+        input_index = (uint32_t)source_index;
+      }
+      const q::TensorDescription &input_description = w->tensors[input_index];
+      if (!(w->values[input_index].flags & VALUE_HAS_DESCRIPTION) ||
+          input_description.data_type != q::DATA_TYPE_FLOAT32)
+        return RIN_RESULT_NOT_SUPPORTED;
+      q::TensorDescription output_description = input_description;
+      uint32_t flatten_axis = 0u;
+      if (node.opcode == q::OPERATION_FLATTEN_FLOAT32) {
+        const int64_t axis = node.has_axis ? node.axis : 1;
+        const int64_t rank = input_description.rank;
+        const int64_t normalized_axis = axis < 0 ? axis + rank : axis;
+        uint32_t output_rank = 0u;
+        uint32_t output_dimensions[RIN_NPU_MODEL_MAX_RANK] = {};
+        if (normalized_axis < 0 || normalized_axis > rank ||
+            normalized_axis > UINT32_MAX ||
+            !q::flatten_output_shape(input_description,
+                (uint32_t)normalized_axis, &output_rank, output_dimensions))
+          return RIN_RESULT_NOT_SUPPORTED;
+        flatten_axis = (uint32_t)normalized_axis;
+        output_description = {};
+        output_description.data_type = q::DATA_TYPE_FLOAT32;
+        output_description.scale = 1.0f;
+        output_description.rank = output_rank;
+        for (uint32_t dimension = 0u; dimension < output_rank; ++dimension)
+          output_description.dimensions[dimension] = output_dimensions[dimension];
+      }
+      const int previous = find_value(w, values, node.outputs[0]);
+      if (previous >= 0 && (w->values[previous].flags & VALUE_AVAILABLE))
+        return RIN_RESULT_CORRUPT_DATA;
+      uint32_t output_index = 0u;
+      rc = add_value(w, &values, node.outputs[0], &output_description,
+          VALUE_HAS_DESCRIPTION | VALUE_PRODUCED | VALUE_AVAILABLE,
+          &output_index);
+      if (rc != RIN_RESULT_OK)
+        return rc;
+      if (operations >= w->operation_capacity)
+        return RIN_RESULT_BUFFER_TOO_SMALL;
+      q::Operation operation = {};
+      operation.opcode = node.opcode;
+      operation.input_count = 1u;
+      operation.inputs[0] = input_index;
+      operation.output_tensor = output_index;
+      operation.reserved = flatten_axis;
+      w->operations[operations++] = operation;
+      continue;
+    }
     if (node.opcode == q::OPERATION_GLOBAL_MAX_POOL_FLOAT32) {
       uint32_t input_index = 0u;
       const int source_index = find_value(w, values, node.inputs[0]);
@@ -2528,7 +2602,7 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
   q::Model model = {};
   bool has_quantize_dequantize = false;
   bool has_dynamic_quantize = false;
-  bool has_global_max_pool = false;
+  bool has_v10_operation = false;
   for (uint32_t operation = 0u; operation < operations; ++operation)
     if (w->operations[operation].opcode == q::OPERATION_QUANTIZE_Q8 ||
         w->operations[operation].opcode == q::OPERATION_DEQUANTIZE_Q8)
@@ -2538,8 +2612,12 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       has_dynamic_quantize = true;
     else if (w->operations[operation].opcode ==
              q::OPERATION_GLOBAL_MAX_POOL_FLOAT32)
-      has_global_max_pool = true;
-  model.version = has_global_max_pool
+      has_v10_operation = true;
+    else if (w->operations[operation].opcode ==
+                 q::OPERATION_IDENTITY_FLOAT32 ||
+             w->operations[operation].opcode == q::OPERATION_FLATTEN_FLOAT32)
+      has_v10_operation = true;
+  model.version = has_v10_operation
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10
       : average_pools
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9
