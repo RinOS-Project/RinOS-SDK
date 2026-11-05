@@ -1134,6 +1134,14 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
         node.has_group || node.has_axis || node.has_block_size)
       return RIN_RESULT_NOT_SUPPORTED;
     node.opcode = q::OPERATION_AVERAGE_POOL_FLOAT32;
+  } else if (slice_is(op, "GlobalMaxPool", 13u)) {
+    if (node.output_count != 1u || node.input_count != 1u ||
+        node.inputs[0].size == 0u || node.has_group || node.has_auto_pad ||
+        node.has_strides || node.has_dilations || node.has_pads ||
+        node.has_kernel_shape || node.has_axis || node.has_block_size ||
+        node.has_ceil_mode || node.has_count_include_pad)
+      return RIN_RESULT_NOT_SUPPORTED;
+    node.opcode = q::OPERATION_GLOBAL_MAX_POOL_FLOAT32;
   } else if (slice_is(op, "QuantizeLinear", 14u) ||
              slice_is(op, "DequantizeLinear", 16u)) {
     if (node.output_count != 1u || node.input_count != 3u ||
@@ -2020,6 +2028,52 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       ++operations;
       continue;
     }
+    if (node.opcode == q::OPERATION_GLOBAL_MAX_POOL_FLOAT32) {
+      uint32_t input_index = 0u;
+      const int source_index = find_value(w, values, node.inputs[0]);
+      if (source_index < 0 ||
+          !(w->values[source_index].flags & VALUE_AVAILABLE)) {
+        rc = ensure_float_data(w, g, &values, &constants, node.inputs[0],
+                               &weight_bytes, &input_index);
+        if (rc != RIN_RESULT_OK)
+          return rc;
+      } else {
+        input_index = (uint32_t)source_index;
+      }
+      const q::TensorDescription &input_description = w->tensors[input_index];
+      if (!(w->values[input_index].flags & VALUE_HAS_DESCRIPTION) ||
+          input_description.data_type != q::DATA_TYPE_FLOAT32)
+        return RIN_RESULT_NOT_SUPPORTED;
+      uint32_t output_rank = 0u;
+      uint32_t output_dimensions[RIN_NPU_MODEL_MAX_RANK] = {};
+      if (!q::global_max_pool_output_shape(input_description, &output_rank,
+                                            output_dimensions))
+        return RIN_RESULT_NOT_SUPPORTED;
+      q::TensorDescription output_description = {};
+      output_description.data_type = q::DATA_TYPE_FLOAT32;
+      output_description.rank = output_rank;
+      output_description.scale = 1.0f;
+      for (uint32_t dimension = 0u; dimension < output_rank; ++dimension)
+        output_description.dimensions[dimension] = output_dimensions[dimension];
+      const int previous = find_value(w, values, node.outputs[0]);
+      if (previous >= 0 && (w->values[previous].flags & VALUE_AVAILABLE))
+        return RIN_RESULT_CORRUPT_DATA;
+      uint32_t output_index = 0u;
+      rc = add_value(w, &values, node.outputs[0], &output_description,
+          VALUE_HAS_DESCRIPTION | VALUE_PRODUCED | VALUE_AVAILABLE,
+          &output_index);
+      if (rc != RIN_RESULT_OK)
+        return rc;
+      if (operations >= w->operation_capacity)
+        return RIN_RESULT_BUFFER_TOO_SMALL;
+      q::Operation operation = {};
+      operation.opcode = q::OPERATION_GLOBAL_MAX_POOL_FLOAT32;
+      operation.input_count = 1u;
+      operation.inputs[0] = input_index;
+      operation.output_tensor = output_index;
+      w->operations[operations++] = operation;
+      continue;
+    }
     if (node.opcode == q::OPERATION_DYNAMIC_QUANTIZE_Q8) {
       if (opset < 11u)
         return RIN_RESULT_NOT_SUPPORTED;
@@ -2462,6 +2516,7 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
   q::Model model = {};
   bool has_quantize_dequantize = false;
   bool has_dynamic_quantize = false;
+  bool has_global_max_pool = false;
   for (uint32_t operation = 0u; operation < operations; ++operation)
     if (w->operations[operation].opcode == q::OPERATION_QUANTIZE_Q8 ||
         w->operations[operation].opcode == q::OPERATION_DEQUANTIZE_Q8)
@@ -2469,7 +2524,12 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
     else if (w->operations[operation].opcode ==
              q::OPERATION_DYNAMIC_QUANTIZE_Q8)
       has_dynamic_quantize = true;
-  model.version = average_pools
+    else if (w->operations[operation].opcode ==
+             q::OPERATION_GLOBAL_MAX_POOL_FLOAT32)
+      has_global_max_pool = true;
+  model.version = has_global_max_pool
+      ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10
+      : average_pools
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9
       : integer_convolutions
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8
@@ -2486,6 +2546,7 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       : quantizations ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION
                       : RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1;
   model.struct_size = model.version ==
+          RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 || model.version ==
           RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9
       ? sizeof(model)
       : model.version ==
