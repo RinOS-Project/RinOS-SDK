@@ -8,6 +8,7 @@
  * operation numbers intentionally match the traditional SysV command values. */
 #define RIN_SYSV_IPC_COMMAND_MESSAGE UINT32_C(1)
 #define RIN_SYSV_IPC_COMMAND_SEMAPHORE UINT32_C(2)
+#define RIN_SYSV_IPC_COMMAND_SHARED_MEMORY UINT32_C(3)
 
 #define RIN_SYSV_MSGGET UINT32_C(1)
 #define RIN_SYSV_MSGSND UINT32_C(2)
@@ -17,6 +18,10 @@
 #define RIN_SYSV_SEMOP UINT32_C(2)
 #define RIN_SYSV_SEMTIMEDOP UINT32_C(3)
 #define RIN_SYSV_SEMCTL UINT32_C(4)
+#define RIN_SYSV_SHMGET UINT32_C(1)
+#define RIN_SYSV_SHMAT UINT32_C(2)
+#define RIN_SYSV_SHMDT UINT32_C(3)
+#define RIN_SYSV_SHMCTL UINT32_C(4)
 
 #define RIN_SYSV_IPC_PRIVATE INT32_C(0)
 #define RIN_SYSV_IPC_CREAT UINT32_C(01000)
@@ -25,6 +30,11 @@
 #define RIN_SYSV_IPC_RMID UINT32_C(0)
 #define RIN_SYSV_IPC_SET UINT32_C(1)
 #define RIN_SYSV_IPC_STAT UINT32_C(2)
+
+#define RIN_SYSV_SHM_RDONLY UINT32_C(010000)
+#define RIN_SYSV_SHM_RND UINT32_C(020000)
+#define RIN_SYSV_SHM_REMAP UINT32_C(040000)
+#define RIN_SYSV_SHM_EXEC UINT32_C(0100000)
 
 #define RIN_SYSV_MSG_NOERROR UINT32_C(010000)
 #define RIN_SYSV_MSG_EXCEPT UINT32_C(020000)
@@ -44,6 +54,8 @@
 #define RIN_SYSV_SEM_MAX_SETS 64u
 #define RIN_SYSV_SEM_MAX_PER_SET 256u
 #define RIN_SYSV_SEM_MAX_OPS 64u
+#define RIN_SYSV_SHM_MAX_SEGMENTS 64u
+#define RIN_SYSV_SHM_MAX_BYTES UINT64_C(268435456)
 
 typedef struct RinSysvIpcPerm {
     int32_t key;
@@ -77,6 +89,18 @@ typedef struct RinSysvSemidDs {
     uint64_t semaphore_count;
     uint64_t reserved[2];
 } RinSysvSemidDs;
+
+typedef struct RinSysvShmidDs {
+    RinSysvIpcPerm perm;
+    uint64_t size;
+    uint64_t attach_time;
+    uint64_t detach_time;
+    uint64_t change_time;
+    uint64_t attach_count;
+    int32_t creator_pid;
+    int32_t last_pid;
+    uint64_t reserved[2];
+} RinSysvShmidDs;
 
 typedef struct RinSysvSembuf {
     uint16_t sem_num;
