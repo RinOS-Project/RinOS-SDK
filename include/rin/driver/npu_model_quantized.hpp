@@ -15,6 +15,7 @@
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1 UINT32_C(0x00010000)
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION UINT32_C(0x00020000)
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3 UINT32_C(0x00030000)
+#define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4 UINT32_C(0x00040000)
 #define RIN_NPU_QUANTIZED_MODEL_BLOB_MAGIC UINT32_C(0x514e4952)
 #define RIN_NPU_QUANTIZED_MODEL_MAX_BLOB_BYTES UINT32_C(16384)
 #define RIN_NPU_QUANTIZED_MODEL_MAX_BACKENDS RIN_NPU_MODEL_MAX_BACKENDS
@@ -67,6 +68,19 @@ struct AxisQuantization {
     const int32_t* zero_points;
 };
 
+/* Broadcast-shaped QLinearMatMul parameters retain quantization values that
+ * vary by both batch and row/column. Dimensions are right-aligned to the
+ * operand and must broadcast to its fixed shape. */
+struct BatchQuantization {
+    uint32_t tensor_index;
+    uint32_t rank;
+    uint32_t count;
+    uint32_t reserved;
+    uint32_t dimensions[RIN_NPU_MODEL_MAX_RANK];
+    const float* scales;
+    const int32_t* zero_points;
+};
+
 #define RIN_NPU_QUANTIZED_MODEL_MAX_SPATIAL_DIMS \
     (RIN_NPU_MODEL_MAX_RANK - 2u)
 
@@ -104,12 +118,18 @@ struct Model {
     uint32_t convolution_count;
     uint32_t reserved2;
     const ConvolutionParameters* convolutions;
+    /* Appended in ABI v4. */
+    uint32_t batch_quantization_count;
+    uint32_t reserved3;
+    const BatchQuantization* batch_quantizations;
 };
 
 #define RIN_NPU_QUANTIZED_MODEL_V1_STRUCT_SIZE \
     ((uint32_t)offsetof(::rin::npu::model::quantized::Model, quantization_count))
 #define RIN_NPU_QUANTIZED_MODEL_V2_STRUCT_SIZE \
     ((uint32_t)offsetof(::rin::npu::model::quantized::Model, convolution_count))
+#define RIN_NPU_QUANTIZED_MODEL_V3_STRUCT_SIZE \
+    ((uint32_t)offsetof(::rin::npu::model::quantized::Model, batch_quantization_count))
 
 struct TensorView {
     void* data;
@@ -307,8 +327,26 @@ static inline bool convolution_output_shape(const TensorDescription& input,
 
 static inline uint32_t model_convolution_count(const Model* model)
 {
-    return model && model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3
+    return model && (model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3 ||
+                     model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4)
         ? model->convolution_count : 0u;
+}
+
+static inline uint32_t model_batch_quantization_count(const Model* model)
+{
+    return model && model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4
+        ? model->batch_quantization_count : 0u;
+}
+
+static inline const BatchQuantization* batch_quantization_for_tensor(
+    const Model* model, uint32_t tensor_index)
+{
+    const uint32_t count = model_batch_quantization_count(model);
+    if (!model || (count && !model->batch_quantizations)) return 0;
+    for (uint32_t index = 0u; index < count; ++index)
+        if (model->batch_quantizations[index].tensor_index == tensor_index)
+            return &model->batch_quantizations[index];
+    return 0;
 }
 
 static inline const ConvolutionParameters* model_convolution_for_operation(
@@ -382,8 +420,8 @@ static inline bool operation_shape_valid(const Model* model,
 static inline uint32_t model_quantization_count(const Model* model)
 {
     return model && (model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION ||
-                     model->version ==
-                         RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3)
+                     model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3 ||
+                     model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4)
         ? model->quantization_count : 0u;
 }
 
@@ -401,8 +439,12 @@ static inline const AxisQuantization* axis_quantization_for_tensor(
 static inline bool model_valid(const Model* model)
 {
     if (!model ||
-        (model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3
+        (model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4
             ? model->struct_size != sizeof(*model) || model->reserved != 0u ||
+                  model->reserved2 != 0u || model->reserved3 != 0u
+            : model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3
+            ? model->struct_size != RIN_NPU_QUANTIZED_MODEL_V3_STRUCT_SIZE ||
+                  model->reserved != 0u ||
                   model->reserved2 != 0u
             : model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION
                 ? model->struct_size != RIN_NPU_QUANTIZED_MODEL_V2_STRUCT_SIZE ||
@@ -422,10 +464,14 @@ static inline bool model_valid(const Model* model)
 
     const uint32_t quantization_count = model_quantization_count(model);
     const uint32_t convolution_count = model_convolution_count(model);
+    const uint32_t batch_quantization_count =
+        model_batch_quantization_count(model);
     if (quantization_count > model->tensor_count ||
         (quantization_count != 0u && !model->quantizations) ||
         convolution_count > model->operation_count ||
-        (convolution_count != 0u && !model->convolutions))
+        (convolution_count != 0u && !model->convolutions) ||
+        batch_quantization_count > model->tensor_count ||
+        (batch_quantization_count != 0u && !model->batch_quantizations))
         return false;
 
     uint8_t available[RIN_NPU_MODEL_MAX_TENSORS] = {};
@@ -455,6 +501,44 @@ static inline bool model_valid(const Model* model)
             if (model->quantizations[prior].tensor_index == axis.tensor_index)
                 return false;
     }
+    for (uint32_t index = 0u; index < batch_quantization_count; ++index) {
+        const BatchQuantization& batch = model->batch_quantizations[index];
+        if (batch.reserved != 0u || batch.tensor_index >= model->tensor_count ||
+            batch.rank < 3u ||
+            batch.rank != model->tensors[batch.tensor_index].rank ||
+            batch.count < 2u || !batch.scales || !batch.zero_points ||
+            batch_quantization_for_tensor(model, batch.tensor_index) != &batch ||
+            axis_quantization_for_tensor(model, batch.tensor_index))
+            return false;
+        uint64_t parameter_count = 1u;
+        const TensorDescription& tensor = model->tensors[batch.tensor_index];
+        for (uint32_t dimension = 0u; dimension < batch.rank; ++dimension) {
+            const uint32_t extent = batch.dimensions[dimension];
+            if (!extent || (extent != 1u &&
+                            extent != tensor.dimensions[dimension]) ||
+                parameter_count > UINT32_MAX / extent)
+                return false;
+            parameter_count *= extent;
+        }
+        for (uint32_t dimension = batch.rank;
+             dimension < RIN_NPU_MODEL_MAX_RANK; ++dimension)
+            if (batch.dimensions[dimension] != 0u) return false;
+        if (parameter_count != batch.count) return false;
+        int32_t minimum = 0;
+        int32_t maximum = 0;
+        if (!data_type_bounds(tensor.data_type, &minimum, &maximum))
+            return false;
+        for (uint32_t parameter = 0u; parameter < batch.count; ++parameter)
+            if (!(batch.scales[parameter] > 0.0f) ||
+                !(batch.scales[parameter] <= FLT_MAX) ||
+                batch.zero_points[parameter] < minimum ||
+                batch.zero_points[parameter] > maximum)
+                return false;
+        for (uint32_t prior = 0u; prior < index; ++prior)
+            if (model->batch_quantizations[prior].tensor_index ==
+                    batch.tensor_index)
+                return false;
+    }
     for (uint32_t index = 0u; index < model->input_count; ++index) {
         const uint32_t tensor = model->inputs[index];
         if (tensor >= model->tensor_count || available[tensor] != 0u)
@@ -479,6 +563,10 @@ static inline bool model_valid(const Model* model)
             axis_quantization_for_tensor(model, operation.inputs[0]);
         const AxisQuantization* right_axis = operation.input_count == 2u
             ? axis_quantization_for_tensor(model, operation.inputs[1]) : 0;
+        const BatchQuantization* left_batch =
+            batch_quantization_for_tensor(model, operation.inputs[0]);
+        const BatchQuantization* right_batch = operation.input_count == 2u
+            ? batch_quantization_for_tensor(model, operation.inputs[1]) : 0;
         const bool left_axis_valid = !left_axis ||
             (operation.opcode == OPERATION_MATMUL_Q8 &&
              model->tensors[operation.inputs[0]].rank >= 2u &&
@@ -491,8 +579,24 @@ static inline bool model_valid(const Model* model)
                  model->tensors[operation.inputs[1]].rank - 1u) ||
             (operation.opcode == OPERATION_CONV_Q8 &&
              right_axis->axis == 0u);
-        if (!left_axis_valid || !right_axis_valid ||
-            axis_quantization_for_tensor(model, operation.output_tensor))
+        const TensorDescription& left_tensor =
+            model->tensors[operation.inputs[0]];
+        const TensorDescription* right_tensor = operation.input_count == 2u
+            ? &model->tensors[operation.inputs[1]] : 0;
+        const bool left_batch_valid = !left_batch ||
+            (operation.opcode == OPERATION_MATMUL_Q8 &&
+             left_batch->dimensions[left_tensor.rank - 2u] ==
+                 left_tensor.dimensions[left_tensor.rank - 2u] &&
+             left_batch->dimensions[left_tensor.rank - 1u] == 1u);
+        const bool right_batch_valid = !right_batch ||
+            (operation.opcode == OPERATION_MATMUL_Q8 && right_tensor &&
+             right_batch->dimensions[right_tensor->rank - 2u] == 1u &&
+             right_batch->dimensions[right_tensor->rank - 1u] ==
+                 right_tensor->dimensions[right_tensor->rank - 1u]);
+        if (!left_axis_valid || !right_axis_valid || !left_batch_valid ||
+            !right_batch_valid ||
+            axis_quantization_for_tensor(model, operation.output_tensor) ||
+            batch_quantization_for_tensor(model, operation.output_tensor))
             return false;
         available[operation.output_tensor] = 1u;
     }
@@ -514,6 +618,33 @@ static inline bool model_valid(const Model* model)
             if (candidate.opcode == OPERATION_CONV_Q8 &&
                 candidate.input_count == 2u &&
                 candidate.inputs[1] == axis.tensor_index && axis.axis == 0u)
+                used = 1u;
+        }
+        if (!used) return false;
+    }
+    for (uint32_t quantization = 0u;
+         quantization < batch_quantization_count; ++quantization) {
+        const BatchQuantization& batch =
+            model->batch_quantizations[quantization];
+        uint32_t used = 0u;
+        for (uint32_t operation = 0u;
+             operation < model->operation_count; ++operation) {
+            const Operation& candidate = model->operations[operation];
+            if (candidate.opcode != OPERATION_MATMUL_Q8 ||
+                candidate.input_count != 2u)
+                continue;
+            const TensorDescription& left =
+                model->tensors[candidate.inputs[0]];
+            const TensorDescription& right =
+                model->tensors[candidate.inputs[1]];
+            if ((candidate.inputs[0] == batch.tensor_index && left.rank >= 3u &&
+                 batch.dimensions[left.rank - 2u] ==
+                     left.dimensions[left.rank - 2u] &&
+                 batch.dimensions[left.rank - 1u] == 1u) ||
+                (candidate.inputs[1] == batch.tensor_index && right.rank >= 3u &&
+                 batch.dimensions[right.rank - 2u] == 1u &&
+                 batch.dimensions[right.rank - 1u] ==
+                     right.dimensions[right.rank - 1u]))
                 used = 1u;
         }
         if (!used) return false;
@@ -588,6 +719,19 @@ static inline bool model_storage_overlaps(const Model* model,
                 (uint64_t)parameters.bias_count * sizeof(*parameters.bias)))
             return true;
     }
+    const uint32_t batch_count = model_batch_quantization_count(model);
+    if (batch_count && memory_ranges_overlap(memory, memory_bytes,
+            model->batch_quantizations,
+            (uint64_t)batch_count * sizeof(*model->batch_quantizations)))
+        return true;
+    for (uint32_t index = 0u; index < batch_count; ++index) {
+        const BatchQuantization& batch = model->batch_quantizations[index];
+        if (memory_ranges_overlap(memory, memory_bytes, batch.scales,
+                (uint64_t)batch.count * sizeof(*batch.scales)) ||
+            memory_ranges_overlap(memory, memory_bytes, batch.zero_points,
+                (uint64_t)batch.count * sizeof(*batch.zero_points)))
+            return true;
+    }
     return false;
 }
 
@@ -656,6 +800,23 @@ static inline uint64_t model_hash(const Model* model)
         for (uint32_t channel = 0u; channel < parameters.bias_count; ++channel)
             hash = hash_u32(hash, (uint32_t)parameters.bias[channel]);
     }
+    const uint32_t batch_count = model_batch_quantization_count(model);
+    if (batch_count != 0u) hash = hash_u32(hash, batch_count);
+    for (uint32_t index = 0u; index < batch_count; ++index) {
+        const BatchQuantization& batch = model->batch_quantizations[index];
+        hash = hash_u32(hash, batch.tensor_index);
+        hash = hash_u32(hash, batch.rank);
+        hash = hash_u32(hash, batch.count);
+        for (uint32_t dimension = 0u;
+             dimension < RIN_NPU_MODEL_MAX_RANK; ++dimension)
+            hash = hash_u32(hash, batch.dimensions[dimension]);
+        for (uint32_t parameter = 0u; parameter < batch.count; ++parameter) {
+            uint32_t scale_bits = 0u;
+            memcpy(&scale_bits, &batch.scales[parameter], sizeof(scale_bits));
+            hash = hash_u32(hash, scale_bits);
+            hash = hash_u32(hash, (uint32_t)batch.zero_points[parameter]);
+        }
+    }
     return hash;
 }
 
@@ -663,7 +824,10 @@ static inline uint64_t serialized_size(const Model* model)
 {
     const uint32_t quantization_count = model_quantization_count(model);
     const uint32_t convolution_count = model_convolution_count(model);
-    uint64_t size = (convolution_count != 0u ? UINT64_C(48)
+    const uint32_t batch_quantization_count =
+        model_batch_quantization_count(model);
+    uint64_t size = (batch_quantization_count != 0u ? UINT64_C(56)
+        : convolution_count != 0u ? UINT64_C(48)
         : quantization_count != 0u ? UINT64_C(40) : UINT64_C(32)) +
         (uint64_t)model->tensor_count * 48u +
         (uint64_t)model->input_count * 4u +
@@ -679,6 +843,13 @@ static inline uint64_t serialized_size(const Model* model)
         const uint64_t record = 16u +
             (uint64_t)parameters.spatial_rank * 16u +
             (uint64_t)parameters.bias_count * 4u;
+        if (record > UINT64_MAX - size) return 0u;
+        size += record;
+    }
+    for (uint32_t index = 0u; index < batch_quantization_count; ++index) {
+        const BatchQuantization& batch = model->batch_quantizations[index];
+        const uint64_t record = 16u +
+            (uint64_t)batch.rank * 4u + (uint64_t)batch.count * 8u;
         if (record > UINT64_MAX - size) return 0u;
         size += record;
     }
@@ -708,14 +879,19 @@ static inline RinResultCode serialize(const Model* model, void* blob,
     uint8_t* output = static_cast<uint8_t*>(blob);
     const uint32_t quantization_count = model_quantization_count(model);
     const uint32_t convolution_count = model_convolution_count(model);
-    const uint32_t serialized_version = convolution_count != 0u
+    const uint32_t batch_quantization_count =
+        model_batch_quantization_count(model);
+    const uint32_t serialized_version = batch_quantization_count != 0u
+        ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4
+        : convolution_count != 0u
         ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3
         : quantization_count != 0u
             ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION
             : RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1;
     write_u32_le(output, RIN_NPU_QUANTIZED_MODEL_BLOB_MAGIC);
     write_u32_le(output + 4u, serialized_version);
-    const uint32_t header_bytes = convolution_count != 0u ? 48u
+    const uint32_t header_bytes = batch_quantization_count != 0u ? 56u
+        : convolution_count != 0u ? 48u
         : quantization_count != 0u ? 40u : 32u;
     write_u32_le(output + 8u, header_bytes);
     write_u32_le(output + 12u, (uint32_t)required);
@@ -727,9 +903,13 @@ static inline RinResultCode serialize(const Model* model, void* blob,
         write_u32_le(output + 32u, model->quantization_count);
         write_u32_le(output + 36u, 0u);
     }
-    if (header_bytes == 48u) {
+    if (header_bytes >= 48u) {
         write_u32_le(output + 40u, convolution_count);
         write_u32_le(output + 44u, 0u);
+    }
+    if (header_bytes == 56u) {
+        write_u32_le(output + 48u, batch_quantization_count);
+        write_u32_le(output + 52u, 0u);
     }
     uint32_t offset = header_bytes;
     for (uint32_t index = 0u; index < model->tensor_count; ++index) {
@@ -807,6 +987,29 @@ static inline RinResultCode serialize(const Model* model, void* blob,
             offset += 4u;
         }
     }
+    for (uint32_t index = 0u; index < batch_quantization_count; ++index) {
+        const BatchQuantization& batch = model->batch_quantizations[index];
+        write_u32_le(output + offset, batch.tensor_index);
+        write_u32_le(output + offset + 4u, batch.rank);
+        write_u32_le(output + offset + 8u, batch.count);
+        write_u32_le(output + offset + 12u, 0u);
+        offset += 16u;
+        for (uint32_t dimension = 0u; dimension < batch.rank; ++dimension) {
+            write_u32_le(output + offset, batch.dimensions[dimension]);
+            offset += 4u;
+        }
+        for (uint32_t parameter = 0u; parameter < batch.count; ++parameter) {
+            uint32_t scale_bits = 0u;
+            memcpy(&scale_bits, &batch.scales[parameter], sizeof(scale_bits));
+            write_u32_le(output + offset, scale_bits);
+            offset += 4u;
+        }
+        for (uint32_t parameter = 0u; parameter < batch.count; ++parameter) {
+            write_u32_le(output + offset,
+                         (uint32_t)batch.zero_points[parameter]);
+            offset += 4u;
+        }
+    }
     return RIN_RESULT_OK;
 }
 
@@ -820,7 +1023,9 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
     int32_t* zero_point_storage = 0, uint32_t parameter_capacity = 0u,
     ConvolutionParameters* convolution_storage = 0,
     uint32_t convolution_capacity = 0u, int32_t* convolution_bias_storage = 0,
-    uint32_t convolution_bias_capacity = 0u)
+    uint32_t convolution_bias_capacity = 0u,
+    BatchQuantization* batch_quantization_storage = 0,
+    uint32_t batch_quantization_capacity = 0u)
 {
     if (!model_out) return RIN_RESULT_INVALID_ARGUMENT;
     if (!blob || blob_bytes < 32u ||
@@ -836,11 +1041,14 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
     const bool version1 = version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1;
     const bool version2 = version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION;
     const bool version3 = version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3;
-    if ((!version1 && !version2 && !version3) ||
-        ((version2 || version3) && blob_bytes < 40u) ||
-        (version3 && blob_bytes < 48u))
+    const bool version4 = version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4;
+    if ((!version1 && !version2 && !version3 && !version4) ||
+        ((version2 || version3 || version4) && blob_bytes < 40u) ||
+        ((version3 || version4) && blob_bytes < 48u) ||
+        (version4 && blob_bytes < 56u))
         return RIN_RESULT_CORRUPT_DATA;
-    const uint32_t header_bytes = version1 ? 32u : version2 ? 40u : 48u;
+    const uint32_t header_bytes = version1 ? 32u : version2 ? 40u
+        : version3 ? 48u : 56u;
     if (read_u32_le(input) != RIN_NPU_QUANTIZED_MODEL_BLOB_MAGIC ||
         read_u32_le(input + 8u) != header_bytes ||
         read_u32_le(input + 12u) != blob_bytes || tensor_count == 0u ||
@@ -850,11 +1058,16 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
         operation_count > RIN_NPU_MODEL_MAX_OPERATIONS)
         return RIN_RESULT_CORRUPT_DATA;
     const uint32_t axis_count = version1 ? 0u : read_u32_le(input + 32u);
-    const uint32_t convolution_count = version3
+    const uint32_t convolution_count = version3 || version4
         ? read_u32_le(input + 40u) : 0u;
-    if (((version2 || version3) && read_u32_le(input + 36u) != 0u) ||
-        (version3 && read_u32_le(input + 44u) != 0u) ||
-        axis_count > tensor_count || convolution_count > operation_count)
+    const uint32_t batch_quantization_count = version4
+        ? read_u32_le(input + 48u) : 0u;
+    if (((version2 || version3 || version4) &&
+         read_u32_le(input + 36u) != 0u) ||
+        ((version3 || version4) && read_u32_le(input + 44u) != 0u) ||
+        (version4 && read_u32_le(input + 52u) != 0u) ||
+        axis_count > tensor_count || convolution_count > operation_count ||
+        batch_quantization_count > tensor_count)
         return RIN_RESULT_CORRUPT_DATA;
     uint64_t expected = (uint64_t)header_bytes +
         (uint64_t)tensor_count * 48u + (uint64_t)input_count * 4u +
@@ -892,6 +1105,20 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
         convolution_bias_count += bias_count;
         scan_offset += (uint32_t)record_bytes;
     }
+    for (uint32_t index = 0u; index < batch_quantization_count; ++index) {
+        if (scan_offset > blob_bytes || blob_bytes - scan_offset < 16u)
+            return RIN_RESULT_CORRUPT_DATA;
+        const uint32_t rank = read_u32_le(input + scan_offset + 4u);
+        const uint32_t count = read_u32_le(input + scan_offset + 8u);
+        if (read_u32_le(input + scan_offset + 12u) != 0u || rank < 3u ||
+            rank > RIN_NPU_MODEL_MAX_RANK || count < 2u ||
+            (uint64_t)rank * 4u + 16u > blob_bytes - scan_offset ||
+            count > (blob_bytes - scan_offset - 16u - rank * 4u) / 8u ||
+            parameter_count > UINT32_MAX - count)
+            return RIN_RESULT_CORRUPT_DATA;
+        parameter_count += count;
+        scan_offset += 16u + rank * 4u + count * 8u;
+    }
     if (scan_offset != blob_bytes) return RIN_RESULT_CORRUPT_DATA;
     if (tensor_capacity < tensor_count || input_capacity < input_count ||
         output_capacity < output_count ||
@@ -902,10 +1129,12 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
         parameter_capacity < parameter_count ||
         convolution_capacity < convolution_count ||
         convolution_bias_capacity < convolution_bias_count ||
+        batch_quantization_capacity < batch_quantization_count ||
         (axis_count && !quantization_storage) ||
         (parameter_count && (!scale_storage || !zero_point_storage)) ||
         (convolution_count && !convolution_storage) ||
-        (convolution_bias_count && !convolution_bias_storage))
+        (convolution_bias_count && !convolution_bias_storage) ||
+        (batch_quantization_count && !batch_quantization_storage))
         return RIN_RESULT_BUFFER_TOO_SMALL;
     const uint64_t tensor_bytes =
         (uint64_t)tensor_count * sizeof(*tensor_storage);
@@ -921,6 +1150,8 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
         (uint64_t)convolution_count * sizeof(*convolution_storage);
     const uint64_t convolution_bias_bytes =
         convolution_bias_count * sizeof(*convolution_bias_storage);
+    const uint64_t batch_quantization_bytes = (uint64_t)batch_quantization_count *
+        sizeof(*batch_quantization_storage);
     if (memory_ranges_overlap(blob, blob_bytes, tensor_storage, tensor_bytes) ||
         memory_ranges_overlap(blob, blob_bytes, input_storage, input_bytes) ||
         memory_ranges_overlap(blob, blob_bytes, output_storage, output_bytes) ||
@@ -982,6 +1213,22 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
                               zero_point_storage, parameter_bytes) ||
         memory_ranges_overlap(scale_storage, parameter_bytes,
                               zero_point_storage, parameter_bytes))
+        return RIN_RESULT_INVALID_ARGUMENT;
+    const void* batch_prior_buffers[] = {
+        blob, model_out, tensor_storage, input_storage, output_storage,
+        operation_storage, quantization_storage, scale_storage,
+        zero_point_storage, convolution_storage, convolution_bias_storage};
+    const uint64_t batch_prior_sizes[] = {
+        blob_bytes, sizeof(*model_out), tensor_bytes, input_bytes, output_bytes,
+        operation_bytes, quantization_bytes, parameter_bytes, parameter_bytes,
+        convolution_bytes, convolution_bias_bytes};
+    for (uint32_t prior = 0u; prior < 11u; ++prior)
+        if (memory_ranges_overlap(batch_quantization_storage,
+                batch_quantization_bytes, batch_prior_buffers[prior],
+                batch_prior_sizes[prior]))
+            return RIN_RESULT_INVALID_ARGUMENT;
+    if (memory_ranges_overlap(model_out, sizeof(*model_out),
+            batch_quantization_storage, batch_quantization_bytes))
         return RIN_RESULT_INVALID_ARGUMENT;
     const void* prior_buffers[] = {
         blob, model_out, tensor_storage, input_storage, output_storage,
@@ -1097,10 +1344,37 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
             convolution_bias_offset += parameters.bias_count;
         }
     }
+    for (uint32_t index = 0u; index < batch_quantization_count; ++index) {
+        BatchQuantization& batch = batch_quantization_storage[index];
+        batch = {};
+        batch.tensor_index = read_u32_le(input + offset);
+        batch.rank = read_u32_le(input + offset + 4u);
+        batch.count = read_u32_le(input + offset + 8u);
+        offset += 16u;
+        for (uint32_t dimension = 0u; dimension < batch.rank; ++dimension) {
+            batch.dimensions[dimension] = read_u32_le(input + offset);
+            offset += 4u;
+        }
+        batch.scales = scale_storage + parameter_offset;
+        batch.zero_points = zero_point_storage + parameter_offset;
+        for (uint32_t parameter = 0u; parameter < batch.count; ++parameter) {
+            const uint32_t bits = read_u32_le(input + offset);
+            memcpy(&scale_storage[parameter_offset + parameter], &bits,
+                   sizeof(bits));
+            offset += 4u;
+        }
+        for (uint32_t parameter = 0u; parameter < batch.count; ++parameter) {
+            zero_point_storage[parameter_offset + parameter] =
+                (int32_t)read_u32_le(input + offset);
+            offset += 4u;
+        }
+        parameter_offset += batch.count;
+    }
     Model candidate = {};
     candidate.struct_size = version1
         ? RIN_NPU_QUANTIZED_MODEL_V1_STRUCT_SIZE
         : version2 ? RIN_NPU_QUANTIZED_MODEL_V2_STRUCT_SIZE
+        : version3 ? RIN_NPU_QUANTIZED_MODEL_V3_STRUCT_SIZE
                    : sizeof(candidate);
     candidate.version = version;
     candidate.tensor_count = tensor_count;
@@ -1111,13 +1385,17 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
     candidate.inputs = input_storage;
     candidate.outputs = output_storage;
     candidate.operations = operation_storage;
-    if (version2 || version3) {
+    if (version2 || version3 || version4) {
         candidate.quantization_count = axis_count;
         candidate.quantizations = quantization_storage;
     }
-    if (version3) {
+    if (version3 || version4) {
         candidate.convolution_count = convolution_count;
         candidate.convolutions = convolution_storage;
+    }
+    if (version4) {
+        candidate.batch_quantization_count = batch_quantization_count;
+        candidate.batch_quantizations = batch_quantization_storage;
     }
     if (!model_valid(&candidate)) return RIN_RESULT_CORRUPT_DATA;
     *model_out = candidate;
@@ -1173,6 +1451,29 @@ static inline void model_quantization_at(const Model* model,
     const TensorDescription& description = model->tensors[tensor_index];
     *scale_out = description.scale;
     *zero_point_out = description.zero_point;
+    const BatchQuantization* batch =
+        batch_quantization_for_tensor(model, tensor_index);
+    if (batch) {
+        uint64_t tensor_stride = 1u;
+        uint64_t parameter_stride = 1u;
+        uint64_t parameter_index = 0u;
+        for (uint32_t reverse = 0u; reverse < description.rank; ++reverse) {
+            const uint32_t dimension = description.rank - reverse - 1u;
+            const uint32_t extent = description.dimensions[dimension];
+            const uint32_t parameter_extent = batch->dimensions[dimension];
+            const uint64_t coordinate =
+                (element_index / tensor_stride) % extent;
+            if (parameter_extent != 1u)
+                parameter_index += coordinate * parameter_stride;
+            tensor_stride *= extent;
+            parameter_stride *= parameter_extent;
+        }
+        if (parameter_index < batch->count) {
+            *scale_out = batch->scales[parameter_index];
+            *zero_point_out = batch->zero_points[parameter_index];
+        }
+        return;
+    }
     const AxisQuantization* axis =
         axis_quantization_for_tensor(model, tensor_index);
     if (!axis) return;
