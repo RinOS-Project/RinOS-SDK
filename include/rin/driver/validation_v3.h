@@ -41,6 +41,10 @@ static inline int rin_driver_kernel_module_context_v1_valid(
     const RinDriverDeviceIdentityV3* device;
     const uint32_t legacy_size = (uint32_t)offsetof(
         RinDriverContextV3, kernel_module_context_version);
+    const uint32_t context_v1_size = (uint32_t)offsetof(
+        RinDriverContextV3, kernel_module_id);
+    const uint32_t context_v2_size = (uint32_t)sizeof(*context);
+    uint32_t version;
     if (!context) return 0;
     /* The NDRV loader preserves the original context prefix for ABI minor
      * versions that predate the append-only kernel-module extension. Do not
@@ -49,7 +53,9 @@ static inline int rin_driver_kernel_module_context_v1_valid(
      * so a legacy-sized context must remain an ordinary NDRV context. */
     if (context->struct_size == legacy_size)
         return context->reserved[0] == 0u;
-    if (context->struct_size != sizeof(*context)) return 0;
+    if (context->struct_size != context_v1_size &&
+        context->struct_size != context_v2_size)
+        return 0;
     if (context->kernel_module_context_version == 0u &&
         context->kernel_module_matched_index == 0u &&
         context->kernel_module_device.struct_size == 0u &&
@@ -66,13 +72,33 @@ static inline int rin_driver_kernel_module_context_v1_valid(
         context->kernel_module_device.reserved1 == 0u &&
         context->kernel_module_device.available_resources == 0u &&
         context->kernel_module_device.generation == 0u &&
-        context->kernel_module_device.reserved == 0u)
+        context->kernel_module_device.reserved == 0u &&
+        (context->struct_size == context_v1_size ||
+         (context->kernel_module_id == 0u &&
+          context->kernel_module_handle == 0u &&
+          context->kernel_module_image_generation == 0u &&
+          context->kernel_module_signer_id == 0u &&
+          context->kernel_module_required_capabilities == 0u &&
+          context->kernel_module_capabilities == 0u)))
         return context->reserved[0] == 0u;
-    if (context->kernel_module_context_version !=
-            RIN_DRIVER_KERNEL_MODULE_CONTEXT_V1_VERSION ||
+    version = context->kernel_module_context_version;
+    if ((version == RIN_DRIVER_KERNEL_MODULE_CONTEXT_V1_VERSION &&
+         context->struct_size != context_v1_size) ||
+        (version == RIN_DRIVER_KERNEL_MODULE_CONTEXT_V2_VERSION &&
+         context->struct_size != context_v2_size) ||
+        (version != RIN_DRIVER_KERNEL_MODULE_CONTEXT_V1_VERSION &&
+         version != RIN_DRIVER_KERNEL_MODULE_CONTEXT_V2_VERSION) ||
         context->reserved[0] != RIN_DRIVER_V3_KERNEL_MODULE_PHASE_MAGIC ||
         context->kernel_module_matched_index >=
             RIN_DRIVER_ADMISSION_V3_MAX_MATCHES)
+        return 0;
+    if (version == RIN_DRIVER_KERNEL_MODULE_CONTEXT_V2_VERSION &&
+        (context->kernel_module_id == 0u ||
+         context->kernel_module_handle == 0u ||
+         context->kernel_module_image_generation == 0u ||
+         context->kernel_module_signer_id == 0u ||
+         (context->kernel_module_required_capabilities &
+          ~context->kernel_module_capabilities) != 0u))
         return 0;
     device = &context->kernel_module_device;
     return device->struct_size == sizeof(*device) &&
@@ -112,6 +138,10 @@ static inline int rin_ndrv_v3_api_valid(const RinDriverApiV3* api,
          (api->device_dma_stop != NULL))) {
         return 0;
     }
+    if (context->kernel_module_context_version ==
+            RIN_DRIVER_KERNEL_MODULE_CONTEXT_V2_VERSION &&
+        context->kernel_module_capabilities != api->capabilities)
+        return 0;
     for (uint32_t index = 0u; index < 1u; ++index) {
         if (api->reserved[index] != 0u) return 0;
     }

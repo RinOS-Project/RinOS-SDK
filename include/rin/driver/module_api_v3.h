@@ -244,17 +244,32 @@ typedef struct RinDriverContextV3 {
     uint32_t kernel_module_context_version;
     uint32_t kernel_module_matched_index;
     RinDriverDeviceIdentityV3 kernel_module_device;
+    /* V2 exposes the DMI3 image-graph identity, signed requirements, and the
+     * capabilities actually granted by the parent NDRV session. These values
+     * are valid only during an embedded kernel-module phase callback; V1
+     * images keep the 200-byte prefix above. */
+    uint64_t kernel_module_id;
+    uint64_t kernel_module_handle;
+    uint64_t kernel_module_image_generation;
+    uint64_t kernel_module_signer_id;
+    uint64_t kernel_module_required_capabilities;
+    uint64_t kernel_module_capabilities;
 } RinDriverContextV3;
 
 #if defined(__cplusplus)
-static_assert(sizeof(RinDriverContextV3) == 200u,
+static_assert(offsetof(RinDriverContextV3, kernel_module_id) == 200u,
+              "RinDriverContextV3 V1 prefix ABI drift");
+static_assert(sizeof(RinDriverContextV3) == 248u,
               "RinDriverContextV3 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinDriverContextV3) == 200u,
+_Static_assert(offsetof(RinDriverContextV3, kernel_module_id) == 200u,
+               "RinDriverContextV3 V1 prefix ABI drift");
+_Static_assert(sizeof(RinDriverContextV3) == 248u,
                "RinDriverContextV3 ABI drift");
 #endif
 
 #define RIN_DRIVER_KERNEL_MODULE_CONTEXT_V1_VERSION UINT32_C(0x00010000)
+#define RIN_DRIVER_KERNEL_MODULE_CONTEXT_V2_VERSION UINT32_C(0x00020000)
 
 /* NDRV ABI minor 2 embeds a signed RIN executable in its authenticated RDFW
  * resource catalog. Its RinDriverEntryV3 receives the same device API and
@@ -1983,7 +1998,7 @@ static_assert(sizeof(RinDriverV3MemorySlice) == 24u,
               "NDRV v3 memory slice ABI drift");
 static_assert(sizeof(RinDriverV3DmaSegment) == 16u,
               "NDRV v3 DMA segment ABI drift");
-static_assert(sizeof(RinDriverContextV3) == 200u,
+static_assert(sizeof(RinDriverContextV3) == 248u,
               "NDRV v3 context ABI drift");
 static_assert(sizeof(RinDriverV3DeviceRegistration) == 72u,
               "NDRV v3 registration ABI drift");
@@ -2081,7 +2096,7 @@ _Static_assert(sizeof(RinDriverV3MemorySlice) == 24u,
                "NDRV v3 memory slice ABI drift");
 _Static_assert(sizeof(RinDriverV3DmaSegment) == 16u,
                "NDRV v3 DMA segment ABI drift");
-_Static_assert(sizeof(RinDriverContextV3) == 200u,
+_Static_assert(sizeof(RinDriverContextV3) == 248u,
                "NDRV v3 context ABI drift");
 _Static_assert(sizeof(RinDriverV3DeviceRegistration) == 72u,
                "NDRV v3 registration ABI drift");
