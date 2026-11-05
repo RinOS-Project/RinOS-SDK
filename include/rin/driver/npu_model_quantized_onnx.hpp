@@ -118,6 +118,7 @@ struct QNode {
   uint32_t has_ceil_mode;
   uint32_t count_include_pad;
   uint32_t has_count_include_pad;
+  uint32_t global_average_pool;
 };
 struct QuantizationValues {
   float *scales;
@@ -1134,6 +1135,15 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
         node.has_group || node.has_axis || node.has_block_size)
       return RIN_RESULT_NOT_SUPPORTED;
     node.opcode = q::OPERATION_AVERAGE_POOL_FLOAT32;
+  } else if (slice_is(op, "GlobalAveragePool", 17u)) {
+    if (node.output_count != 1u || node.input_count != 1u ||
+        node.inputs[0].size == 0u || node.has_group || node.has_auto_pad ||
+        node.has_strides || node.has_dilations || node.has_pads ||
+        node.has_kernel_shape || node.has_axis || node.has_block_size ||
+        node.has_ceil_mode || node.has_count_include_pad)
+      return RIN_RESULT_NOT_SUPPORTED;
+    node.opcode = q::OPERATION_AVERAGE_POOL_FLOAT32;
+    node.global_average_pool = 1u;
   } else if (slice_is(op, "GlobalMaxPool", 13u)) {
     if (node.output_count != 1u || node.input_count != 1u ||
         node.inputs[0].size == 0u || node.has_group || node.has_auto_pad ||
@@ -1947,7 +1957,8 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
           input_description.rank > RIN_NPU_MODEL_MAX_RANK)
         return RIN_RESULT_NOT_SUPPORTED;
       const uint32_t spatial_rank = input_description.rank - 2u;
-      if (node.kernel_shape_count != spatial_rank ||
+      if ((!node.global_average_pool &&
+           node.kernel_shape_count != spatial_rank) ||
           (node.has_strides && node.stride_count != spatial_rank) ||
           (node.has_dilations && node.dilation_count != spatial_rank) ||
           (node.has_pads && node.pad_count != spatial_rank * 2u) ||
@@ -1961,7 +1972,8 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
           ? node.count_include_pad : 0u;
       for (uint32_t axis = 0u; axis < spatial_rank; ++axis) {
         const uint32_t input_extent = input_description.dimensions[axis + 2u];
-        const uint32_t kernel = node.kernel_shape[axis];
+        const uint32_t kernel = node.global_average_pool
+            ? input_extent : node.kernel_shape[axis];
         const uint32_t stride = node.has_strides ? node.strides[axis] : 1u;
         const uint32_t dilation = node.has_dilations
             ? node.dilations[axis] : 1u;
