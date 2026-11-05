@@ -27,7 +27,8 @@ namespace quantized {
 
 enum DataType {
     DATA_TYPE_INT8 = 2,
-    DATA_TYPE_UINT8 = 3
+    DATA_TYPE_UINT8 = 3,
+    DATA_TYPE_FLOAT32 = 1
 };
 
 enum OperationCode {
@@ -36,7 +37,9 @@ enum OperationCode {
     OPERATION_RELU_Q8 = 0x103,
     OPERATION_MATMUL_Q8 = 0x104,
     OPERATION_SOFTMAX_Q8 = 0x105,
-    OPERATION_CONV_Q8 = 0x106
+    OPERATION_CONV_Q8 = 0x106,
+    OPERATION_QUANTIZE_Q8 = 0x107,
+    OPERATION_DEQUANTIZE_Q8 = 0x108
 };
 
 struct TensorDescription {
@@ -200,9 +203,12 @@ static inline uint64_t tensor_elements(const TensorDescription& tensor)
 {
     int32_t minimum = 0;
     int32_t maximum = 0;
-    if (!data_type_bounds(tensor.data_type, &minimum, &maximum) ||
-        tensor.zero_point < minimum || tensor.zero_point > maximum ||
-        !(tensor.scale > 0.0f) || !(tensor.scale <= FLT_MAX) ||
+    const bool float_tensor = tensor.data_type == DATA_TYPE_FLOAT32;
+    if ((!float_tensor &&
+         (!data_type_bounds(tensor.data_type, &minimum, &maximum) ||
+          tensor.zero_point < minimum || tensor.zero_point > maximum ||
+          !(tensor.scale > 0.0f) || !(tensor.scale <= FLT_MAX))) ||
+        (float_tensor && (tensor.zero_point != 0 || tensor.scale != 1.0f)) ||
         tensor.rank > RIN_NPU_MODEL_MAX_RANK)
         return 0u;
     uint64_t elements = 1u;
@@ -217,6 +223,15 @@ static inline uint64_t tensor_elements(const TensorDescription& tensor)
          dimension < RIN_NPU_MODEL_MAX_RANK; ++dimension)
         if (tensor.dimensions[dimension] != 0u) return 0u;
     return elements;
+}
+
+static inline uint64_t tensor_storage_bytes(const TensorDescription& tensor)
+{
+    const uint64_t elements = tensor_elements(tensor);
+    const uint64_t element_bytes = tensor.data_type == DATA_TYPE_FLOAT32
+        ? sizeof(float) : 1u;
+    return elements && elements <= UINT64_MAX / element_bytes
+        ? elements * element_bytes : 0u;
 }
 
 static inline bool same_shape(const TensorDescription& left,
@@ -378,6 +393,10 @@ static inline bool operation_shape_valid(const Model* model,
         return operation.input_count == 1u && output.rank != 0u &&
             same_shape(output, model->tensors[operation.inputs[0]]);
     }
+    if (operation.opcode == OPERATION_QUANTIZE_Q8 ||
+        operation.opcode == OPERATION_DEQUANTIZE_Q8)
+        return operation.input_count == 1u &&
+            same_shape(output, model->tensors[operation.inputs[0]]);
     if (operation.opcode == OPERATION_MATMUL_Q8) {
         if (operation.input_count != 2u) return false;
         const TensorDescription& left = model->tensors[operation.inputs[0]];
@@ -483,7 +502,7 @@ static inline bool model_valid(const Model* model)
             axis.axis >= model->tensors[axis.tensor_index].rank ||
             axis.count != model->tensors[axis.tensor_index].dimensions[axis.axis] ||
             axis.count < 2u || !axis.scales || !axis.zero_points ||
-            model->tensors[axis.tensor_index].rank < 2u ||
+            model->tensors[axis.tensor_index].rank == 0u ||
             axis_quantization_for_tensor(model, axis.tensor_index) != &axis)
             return false;
         int32_t minimum = 0;
@@ -559,6 +578,28 @@ static inline bool model_valid(const Model* model)
         if (operation.input_count == 1u && operation.inputs[1] != 0u)
             return false;
         if (!operation_shape_valid(model, operation)) return false;
+        const TensorDescription& operation_output =
+            model->tensors[operation.output_tensor];
+        const TensorDescription& operation_input =
+            model->tensors[operation.inputs[0]];
+        if (operation.opcode == OPERATION_QUANTIZE_Q8) {
+            if (operation_input.data_type != DATA_TYPE_FLOAT32 ||
+                (operation_output.data_type != DATA_TYPE_INT8 &&
+                 operation_output.data_type != DATA_TYPE_UINT8))
+                return false;
+        } else if (operation.opcode == OPERATION_DEQUANTIZE_Q8) {
+            if ((operation_input.data_type != DATA_TYPE_INT8 &&
+                 operation_input.data_type != DATA_TYPE_UINT8) ||
+                operation_output.data_type != DATA_TYPE_FLOAT32)
+                return false;
+        } else {
+            if (operation_output.data_type == DATA_TYPE_FLOAT32)
+                return false;
+            for (uint32_t input = 0u; input < operation.input_count; ++input)
+                if (model->tensors[operation.inputs[input]].data_type ==
+                    DATA_TYPE_FLOAT32)
+                    return false;
+        }
         const AxisQuantization* left_axis =
             axis_quantization_for_tensor(model, operation.inputs[0]);
         const AxisQuantization* right_axis = operation.input_count == 2u
@@ -568,6 +609,8 @@ static inline bool model_valid(const Model* model)
         const BatchQuantization* right_batch = operation.input_count == 2u
             ? batch_quantization_for_tensor(model, operation.inputs[1]) : 0;
         const bool left_axis_valid = !left_axis ||
+            (operation.opcode == OPERATION_DEQUANTIZE_Q8 &&
+             operation.inputs[0] == left_axis->tensor_index) ||
             (operation.opcode == OPERATION_MATMUL_Q8 &&
              model->tensors[operation.inputs[0]].rank >= 2u &&
              left_axis->axis ==
@@ -595,7 +638,8 @@ static inline bool model_valid(const Model* model)
                  right_tensor->dimensions[right_tensor->rank - 1u]);
         if (!left_axis_valid || !right_axis_valid || !left_batch_valid ||
             !right_batch_valid ||
-            axis_quantization_for_tensor(model, operation.output_tensor) ||
+            (axis_quantization_for_tensor(model, operation.output_tensor) &&
+             operation.opcode != OPERATION_QUANTIZE_Q8) ||
             batch_quantization_for_tensor(model, operation.output_tensor))
             return false;
         available[operation.output_tensor] = 1u;
@@ -618,6 +662,13 @@ static inline bool model_valid(const Model* model)
             if (candidate.opcode == OPERATION_CONV_Q8 &&
                 candidate.input_count == 2u &&
                 candidate.inputs[1] == axis.tensor_index && axis.axis == 0u)
+                used = 1u;
+            if (candidate.opcode == OPERATION_QUANTIZE_Q8 &&
+                candidate.output_tensor == axis.tensor_index)
+                used = 1u;
+            if (candidate.opcode == OPERATION_DEQUANTIZE_Q8 &&
+                candidate.input_count == 1u &&
+                candidate.inputs[0] == axis.tensor_index)
                 used = 1u;
         }
         if (!used) return false;
@@ -826,7 +877,10 @@ static inline uint64_t serialized_size(const Model* model)
     const uint32_t convolution_count = model_convolution_count(model);
     const uint32_t batch_quantization_count =
         model_batch_quantization_count(model);
-    uint64_t size = (batch_quantization_count != 0u ? UINT64_C(56)
+    const bool version4 = model->version ==
+        RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4;
+    uint64_t size = (version4 || batch_quantization_count != 0u
+        ? UINT64_C(56)
         : convolution_count != 0u ? UINT64_C(48)
         : quantization_count != 0u ? UINT64_C(40) : UINT64_C(32)) +
         (uint64_t)model->tensor_count * 48u +
@@ -881,7 +935,9 @@ static inline RinResultCode serialize(const Model* model, void* blob,
     const uint32_t convolution_count = model_convolution_count(model);
     const uint32_t batch_quantization_count =
         model_batch_quantization_count(model);
-    const uint32_t serialized_version = batch_quantization_count != 0u
+    const uint32_t serialized_version = model->version ==
+            RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4 ||
+            batch_quantization_count != 0u
         ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4
         : convolution_count != 0u
         ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3
@@ -890,7 +946,8 @@ static inline RinResultCode serialize(const Model* model, void* blob,
             : RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1;
     write_u32_le(output, RIN_NPU_QUANTIZED_MODEL_BLOB_MAGIC);
     write_u32_le(output + 4u, serialized_version);
-    const uint32_t header_bytes = batch_quantization_count != 0u ? 56u
+    const uint32_t header_bytes = serialized_version ==
+            RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4 ? 56u
         : convolution_count != 0u ? 48u
         : quantization_count != 0u ? 40u : 32u;
     write_u32_le(output + 8u, header_bytes);
@@ -1411,12 +1468,13 @@ static inline RinResultCode validate_views(const Model* model,
     uintptr_t starts[RIN_NPU_MODEL_MAX_TENSORS] = {};
     uint64_t byte_counts[RIN_NPU_MODEL_MAX_TENSORS] = {};
     for (uint32_t index = 0u; index < tensor_count; ++index) {
-        const uint64_t elements = tensor_elements(model->tensors[index]);
+        const TensorDescription& description = model->tensors[index];
+        const uint64_t elements = tensor_elements(description);
+        const uint64_t bytes = tensor_storage_bytes(description);
         if (!tensors[index].data || tensors[index].element_count != elements ||
-            elements > UINTPTR_MAX)
+            !bytes || bytes > UINTPTR_MAX)
             return RIN_RESULT_INVALID_ARGUMENT;
         const uintptr_t start = (uintptr_t)tensors[index].data;
-        const uint64_t bytes = elements;
         if (bytes > UINTPTR_MAX - start) return RIN_RESULT_INVALID_ARGUMENT;
         if (memory_ranges_overlap(tensors[index].data, bytes, tensors,
                                   (uint64_t)tensor_count * sizeof(*tensors)) ||
@@ -1442,6 +1500,20 @@ static inline int32_t load_q8(const TensorDescription& description,
     if (description.data_type == DATA_TYPE_INT8)
         return static_cast<const int8_t*>(static_cast<const void*>(bytes))[index];
     return bytes[index];
+}
+
+static inline float load_float32(const void* data, uint64_t index)
+{
+    float value = 0.0f;
+    memcpy(&value, static_cast<const uint8_t*>(data) + index * sizeof(value),
+           sizeof(value));
+    return value;
+}
+
+static inline void store_float32(void* data, uint64_t index, float value)
+{
+    memcpy(static_cast<uint8_t*>(data) + index * sizeof(value), &value,
+           sizeof(value));
 }
 
 static inline void model_quantization_at(const Model* model,
@@ -1542,6 +1614,37 @@ static inline void store_quantized(const TensorDescription& description,
         static_cast<uint8_t*>(data)[index] = (uint8_t)quantized;
 }
 
+static inline bool store_model_quantized(const Model* model,
+    uint32_t tensor_index, void* data, uint64_t index, double real_value)
+{
+    const TensorDescription& description = model->tensors[tensor_index];
+    float scale = 0.0f;
+    int32_t zero_point = 0;
+    model_quantization_at(model, tensor_index, index, &scale, &zero_point);
+    int32_t minimum = 0;
+    int32_t maximum = 0;
+    if (!data_type_bounds(description.data_type, &minimum, &maximum) ||
+        !(scale > 0.0f) || !(scale <= FLT_MAX) || !isfinite(real_value))
+        return false;
+    const double scaled = real_value / (double)scale + (double)zero_point;
+    int64_t quantized;
+    if (scaled <= (double)minimum - 1.0)
+        quantized = minimum;
+    else if (scaled >= (double)maximum + 1.0)
+        quantized = maximum;
+    else {
+        if (!isfinite(scaled)) return false;
+        quantized = round_ties_to_even(scaled);
+    }
+    if (quantized < minimum) quantized = minimum;
+    if (quantized > maximum) quantized = maximum;
+    if (description.data_type == DATA_TYPE_INT8)
+        static_cast<int8_t*>(data)[index] = (int8_t)quantized;
+    else
+        static_cast<uint8_t*>(data)[index] = (uint8_t)quantized;
+    return true;
+}
+
 static inline RinResultCode compile_cpu(const Model* model,
                                         CpuPlan* plan_out)
 {
@@ -1569,7 +1672,8 @@ static inline RinResultCode evaluate_cpu(const CpuPlan* plan,
     if (view_status != RIN_RESULT_OK) return view_status;
     for (uint32_t index = 0u; index < tensor_count; ++index)
         if (memory_ranges_overlap(tensors[index].data,
-                tensors[index].element_count, plan, sizeof(*plan)))
+                tensor_storage_bytes(plan->model->tensors[index]),
+                plan, sizeof(*plan)))
             return RIN_RESULT_INVALID_ARGUMENT;
     const Model* model = plan->model;
     for (uint32_t index = 0u; index < model->operation_count; ++index) {
@@ -1578,7 +1682,27 @@ static inline RinResultCode evaluate_cpu(const CpuPlan* plan,
         const TensorDescription& output_description =
             model->tensors[output_index];
         void* output = tensors[output_index].data;
-        if (operation.opcode == OPERATION_ADD_Q8 ||
+        if (operation.opcode == OPERATION_QUANTIZE_Q8) {
+            const uint32_t input_index = operation.inputs[0];
+            const uint64_t elements = tensors[output_index].element_count;
+            for (uint64_t element = 0u; element < elements; ++element) {
+                const float value = load_float32(
+                    tensors[input_index].data, element);
+                if (!store_model_quantized(model, output_index, output,
+                                            element, value))
+                    return RIN_RESULT_INVALID_ARGUMENT;
+            }
+        } else if (operation.opcode == OPERATION_DEQUANTIZE_Q8) {
+            const uint32_t input_index = operation.inputs[0];
+            const uint64_t elements = tensors[output_index].element_count;
+            for (uint64_t element = 0u; element < elements; ++element) {
+                const double value = dequantize_model_value(
+                    model, input_index, tensors[input_index].data, element);
+                if (!isfinite(value) || value > FLT_MAX || value < -FLT_MAX)
+                    return RIN_RESULT_INVALID_ARGUMENT;
+                store_float32(output, element, (float)value);
+            }
+        } else if (operation.opcode == OPERATION_ADD_Q8 ||
             operation.opcode == OPERATION_MULTIPLY_Q8) {
             const uint32_t left_index = operation.inputs[0];
             const uint32_t right_index = operation.inputs[1];
@@ -1991,7 +2115,8 @@ static inline RinResultCode execute(Executable* executable,
     if (view_status != RIN_RESULT_OK) return view_status;
     for (uint32_t index = 0u; index < tensor_count; ++index)
         if (memory_ranges_overlap(tensors[index].data,
-                tensors[index].element_count, executable,
+                tensor_storage_bytes(
+                    executable->model->tensors[index]), executable,
                 sizeof(*executable)))
             return RIN_RESULT_INVALID_ARGUMENT;
     if (executable->backend_kind == BACKEND_CPU) {
@@ -2010,7 +2135,8 @@ static inline RinResultCode execute(Executable* executable,
         return RIN_RESULT_CORRUPT_DATA;
     for (uint32_t index = 0u; index < tensor_count; ++index)
         if (memory_ranges_overlap(tensors[index].data,
-                tensors[index].element_count, executable->provider,
+                tensor_storage_bytes(
+                    executable->model->tensors[index]), executable->provider,
                 sizeof(*executable->provider)))
             return RIN_RESULT_INVALID_ARGUMENT;
     const RinResultCode status = executable->provider->execute(
