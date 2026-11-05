@@ -182,7 +182,9 @@ typedef enum RinDriverV3PropertyKey {
     RIN_DRIVER_V3_PROPERTY_REVISION = 7,
     RIN_DRIVER_V3_PROPERTY_AVAILABLE_RESOURCES = 8,
     RIN_DRIVER_V3_PROPERTY_GENERATION = 9,
-    RIN_DRIVER_V3_PROPERTY_BAR_LENGTH = 10
+    RIN_DRIVER_V3_PROPERTY_BAR_LENGTH = 10,
+    /* ACPI _WOV result for the device's exact PCI companion. */
+    RIN_DRIVER_V3_PROPERTY_ACPI_WOV = 11
 } RinDriverV3PropertyKey;
 
 typedef enum RinDriverV3PropertyType {
@@ -1002,7 +1004,7 @@ static inline RinDriverV3Result rin_driver_v3_property_get(
     }
     if (!services || !output || session == 0u ||
         (key < RIN_DRIVER_V3_PROPERTY_BUS_TYPE ||
-         key > RIN_DRIVER_V3_PROPERTY_BAR_LENGTH) ||
+         key > RIN_DRIVER_V3_PROPERTY_ACPI_WOV) ||
         (key == RIN_DRIVER_V3_PROPERTY_BAR_LENGTH ? index >= 6u : index != 0u) ||
         !rin_driver_services_v3_has(
             api, services, RIN_DRIVER_V3_CAP_DEVICE_PROPERTIES) ||
@@ -1053,6 +1055,13 @@ static inline RinDriverV3Result rin_driver_v3_property_get(
          key == RIN_DRIVER_V3_PROPERTY_GENERATION ||
          key == RIN_DRIVER_V3_PROPERTY_BAR_LENGTH) &&
         output->type != RIN_DRIVER_V3_PROPERTY_U64) {
+        rin_driver_services_v3_zero(output, sizeof(*output));
+        output->struct_size = sizeof(*output);
+        output->version = RIN_DRIVER_SERVICES_V3_VERSION;
+        return RIN_DRIVER_V3_BACKEND_FAILED;
+    }
+    if (key == RIN_DRIVER_V3_PROPERTY_ACPI_WOV &&
+        (output->type != RIN_DRIVER_V3_PROPERTY_U32 || output->value > 1u)) {
         rin_driver_services_v3_zero(output, sizeof(*output));
         output->struct_size = sizeof(*output);
         output->version = RIN_DRIVER_SERVICES_V3_VERSION;
