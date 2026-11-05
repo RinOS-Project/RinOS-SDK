@@ -7,9 +7,9 @@
 
 #define RIN_NPU_QUANTIZED_ONNX_MAX_WEIGHT_BYTES UINT64_C(16777216)
 
-/* Allocation-free QLinearMatMul importer for rank-two, per-tensor Q8 graphs.
- * Scale and zero-point values must be scalar initializers. Unsupported ONNX
- * layouts/operators are rejected; all caller storage outlives the model. */
+/* Allocation-free QLinearMatMul importer for fixed-shape, batched Q8 graphs.
+ * Unsupported ONNX layouts/operators are rejected; all caller storage
+ * outlives the model. */
 namespace rin {
 namespace npu {
 namespace model {
@@ -711,7 +711,7 @@ static inline RinResultCode apply_quantization(
       (!parameters.zero_points && parameters.count != 1u))
     return RIN_RESULT_NOT_SUPPORTED;
   if (parameters.count > 1u &&
-      (description.rank != 2u || axis >= description.rank ||
+      (description.rank < 2u || axis >= description.rank ||
        parameters.count != description.dimensions[axis]))
     return RIN_RESULT_NOT_SUPPORTED;
   if (value.flags & VALUE_QUANTIZATION_SET) {
@@ -758,13 +758,17 @@ static inline RinResultCode ensure_data(Workspace *w, const GraphFields &g,
                                         uint32_t *values, uint32_t *constants,
                                         uint32_t *quantizations, Name name,
                                         const QuantizationValues &parameters,
-                                        uint32_t axis, uint64_t *bytes,
+                                        uint32_t axis_from_end, uint64_t *bytes,
                                         uint32_t *out) {
   int index = find_value(w, *values, name);
   if (index >= 0) {
     ValueBinding &v = w->values[index];
     if (!(v.flags & VALUE_AVAILABLE) || !(v.flags & VALUE_HAS_DESCRIPTION))
       return RIN_RESULT_CORRUPT_DATA;
+    if (w->tensors[index].rank < 2u || !axis_from_end ||
+        axis_from_end > w->tensors[index].rank)
+      return RIN_RESULT_NOT_SUPPORTED;
+    const uint32_t axis = w->tensors[index].rank - axis_from_end;
     RinResultCode rc = apply_quantization(
         w, quantizations, (uint32_t)index, axis, parameters);
     if (rc != RIN_RESULT_OK) return rc;
@@ -785,11 +789,11 @@ static inline RinResultCode ensure_data(Workspace *w, const GraphFields &g,
       make_description(h, quantization_scale(parameters, 0u),
                        quantization_zero_point(parameters, 0u));
   uint64_t count = q::tensor_elements(d);
-  if (!count)
+  if (!count || d.rank < 2u || !axis_from_end || axis_from_end > d.rank)
     return RIN_RESULT_NOT_SUPPORTED;
+  const uint32_t axis = d.rank - axis_from_end;
   if (parameters.count > 1u &&
-      (d.rank != 2u || axis >= d.rank ||
-       parameters.count != d.dimensions[axis]))
+      (axis >= d.rank || parameters.count != d.dimensions[axis]))
     return RIN_RESULT_NOT_SUPPORTED;
   if (*bytes > w->weight_capacity_bytes ||
       *bytes > RIN_NPU_QUANTIZED_ONNX_MAX_WEIGHT_BYTES ||
@@ -960,10 +964,13 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
                                &parameters[side]);
       if (rc != RIN_RESULT_OK)
         return rc;
-      const uint32_t axis = side == 0u ? 0u : 1u;
+      /* A is quantized by rows and B by columns; both axes are relative to
+       * the trailing matrix dimensions and repeat across broadcast batches. */
+      const uint32_t axis_from_end = side == 0u ? 2u : 1u;
       rc = ensure_data(w, g, &values, &constants, &quantizations,
                        node.inputs[di[side]],
-                       parameters[side], axis, &weight_bytes, &inputs[side]);
+                       parameters[side], axis_from_end, &weight_bytes,
+                       &inputs[side]);
       if (rc != RIN_RESULT_OK)
         return rc;
     }
@@ -975,13 +982,15 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       return rc;
     const q::TensorDescription &a = w->tensors[inputs[0]];
     const q::TensorDescription &b = w->tensors[inputs[1]];
-    if (a.rank != 2u || b.rank != 2u || a.dimensions[1] != b.dimensions[0])
+    uint32_t output_rank = 0u;
+    uint32_t output_dimensions[RIN_NPU_MODEL_MAX_RANK] = {};
+    if (!q::matmul_output_shape(a, b, &output_rank, output_dimensions))
       return RIN_RESULT_NOT_SUPPORTED;
     TensorHeader oh = {};
     oh.onnx_data_type = yt == q::DATA_TYPE_INT8 ? 3u : 2u;
-    oh.rank = 2u;
-    oh.dimensions[0] = a.dimensions[0];
-    oh.dimensions[1] = b.dimensions[1];
+    oh.rank = output_rank;
+    for (uint32_t dimension = 0u; dimension < output_rank; ++dimension)
+      oh.dimensions[dimension] = output_dimensions[dimension];
     q::TensorDescription od = make_description(oh, ys, yz);
     int old = find_value(w, values, node.output);
     if (old >= 0 && (w->values[old].flags & VALUE_AVAILABLE))

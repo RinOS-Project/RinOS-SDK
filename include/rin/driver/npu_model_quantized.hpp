@@ -183,6 +183,45 @@ static inline bool same_shape(const TensorDescription& left,
     return true;
 }
 
+static inline bool matmul_output_shape(const TensorDescription& left,
+                                       const TensorDescription& right,
+                                       uint32_t* rank_out,
+                                       uint32_t* dimensions_out)
+{
+    if (rank_out) *rank_out = 0u;
+    if (dimensions_out)
+        for (uint32_t i = 0u; i < RIN_NPU_MODEL_MAX_RANK; ++i)
+            dimensions_out[i] = 0u;
+    if (!rank_out || !dimensions_out || left.rank < 2u || right.rank < 2u ||
+        left.rank > RIN_NPU_MODEL_MAX_RANK ||
+        right.rank > RIN_NPU_MODEL_MAX_RANK ||
+        left.dimensions[left.rank - 1u] !=
+            right.dimensions[right.rank - 2u])
+        return false;
+    const uint32_t left_batch_rank = left.rank - 2u;
+    const uint32_t right_batch_rank = right.rank - 2u;
+    const uint32_t batch_rank = left_batch_rank > right_batch_rank
+        ? left_batch_rank : right_batch_rank;
+    if (batch_rank > RIN_NPU_MODEL_MAX_RANK - 2u) return false;
+    for (uint32_t dimension = 0u; dimension < batch_rank; ++dimension) {
+        const uint32_t left_leading = batch_rank - left_batch_rank;
+        const uint32_t right_leading = batch_rank - right_batch_rank;
+        const uint32_t left_extent = dimension < left_leading
+            ? 1u : left.dimensions[dimension - left_leading];
+        const uint32_t right_extent = dimension < right_leading
+            ? 1u : right.dimensions[dimension - right_leading];
+        if (left_extent != right_extent && left_extent != 1u &&
+            right_extent != 1u)
+            return false;
+        dimensions_out[dimension] = left_extent > right_extent
+            ? left_extent : right_extent;
+    }
+    dimensions_out[batch_rank] = left.dimensions[left.rank - 2u];
+    dimensions_out[batch_rank + 1u] = right.dimensions[right.rank - 1u];
+    *rank_out = batch_rank + 2u;
+    return true;
+}
+
 static inline bool operation_shape_valid(const Model* model,
                                          const Operation& operation)
 {
@@ -202,13 +241,19 @@ static inline bool operation_shape_valid(const Model* model,
             same_shape(output, model->tensors[operation.inputs[0]]);
     }
     if (operation.opcode == OPERATION_MATMUL_Q8) {
-        if (operation.input_count != 2u || output.rank != 2u) return false;
+        if (operation.input_count != 2u) return false;
         const TensorDescription& left = model->tensors[operation.inputs[0]];
         const TensorDescription& right = model->tensors[operation.inputs[1]];
-        return left.rank == 2u && right.rank == 2u &&
-            left.dimensions[1] == right.dimensions[0] &&
-            output.dimensions[0] == left.dimensions[0] &&
-            output.dimensions[1] == right.dimensions[1];
+        uint32_t expected_rank = 0u;
+        uint32_t expected_dimensions[RIN_NPU_MODEL_MAX_RANK] = {};
+        if (!matmul_output_shape(left, right, &expected_rank,
+                                 expected_dimensions) ||
+            output.rank != expected_rank)
+            return false;
+        for (uint32_t dimension = 0u; dimension < expected_rank; ++dimension)
+            if (output.dimensions[dimension] != expected_dimensions[dimension])
+                return false;
+        return true;
     }
     return false;
 }
@@ -262,8 +307,7 @@ static inline bool model_valid(const Model* model)
             axis.axis >= model->tensors[axis.tensor_index].rank ||
             axis.count != model->tensors[axis.tensor_index].dimensions[axis.axis] ||
             axis.count < 2u || !axis.scales || !axis.zero_points ||
-            (axis.axis != 0u && axis.axis != 1u) ||
-            model->tensors[axis.tensor_index].rank != 2u ||
+            model->tensors[axis.tensor_index].rank < 2u ||
             axis_quantization_for_tensor(model, axis.tensor_index) != &axis)
             return false;
         int32_t minimum = 0;
@@ -306,9 +350,13 @@ static inline bool model_valid(const Model* model)
         const AxisQuantization* right_axis = operation.input_count == 2u
             ? axis_quantization_for_tensor(model, operation.inputs[1]) : 0;
         if ((left_axis && (operation.opcode != OPERATION_MATMUL_Q8 ||
-                           left_axis->axis != 0u)) ||
+                           model->tensors[operation.inputs[0]].rank < 2u ||
+                           left_axis->axis !=
+                               model->tensors[operation.inputs[0]].rank - 2u)) ||
             (right_axis && (operation.opcode != OPERATION_MATMUL_Q8 ||
-                            right_axis->axis != 1u)) ||
+                            model->tensors[operation.inputs[1]].rank < 2u ||
+                            right_axis->axis !=
+                                model->tensors[operation.inputs[1]].rank - 1u)) ||
             axis_quantization_for_tensor(model, operation.output_tensor))
             return false;
         available[operation.output_tensor] = 1u;
@@ -321,8 +369,12 @@ static inline bool model_valid(const Model* model)
              operation < model->operation_count; ++operation) {
             const Operation& candidate = model->operations[operation];
             if (candidate.opcode == OPERATION_MATMUL_Q8 &&
-                ((candidate.inputs[0] == axis.tensor_index && axis.axis == 0u) ||
-                 (candidate.inputs[1] == axis.tensor_index && axis.axis == 1u)))
+                ((candidate.inputs[0] == axis.tensor_index &&
+                  model->tensors[axis.tensor_index].rank >= 2u &&
+                  axis.axis == model->tensors[axis.tensor_index].rank - 2u) ||
+                 (candidate.inputs[1] == axis.tensor_index &&
+                  model->tensors[axis.tensor_index].rank >= 2u &&
+                  axis.axis == model->tensors[axis.tensor_index].rank - 1u)))
                 used = 1u;
         }
         if (!used) return false;
@@ -939,43 +991,93 @@ static inline RinResultCode evaluate_cpu(const CpuPlan* plan,
                 model->tensors[right_index];
             const void* left = tensors[left_index].data;
             const void* right = tensors[right_index].data;
-            const uint32_t rows = left_description.dimensions[0];
-            const uint32_t inner = left_description.dimensions[1];
-            const uint32_t columns = right_description.dimensions[1];
-            for (uint32_t row = 0u; row < rows; ++row)
-                for (uint32_t column = 0u; column < columns; ++column) {
-                    float left_scale = 0.0f;
-                    int32_t left_zero_point = 0;
-                    float right_scale = 0.0f;
-                    int32_t right_zero_point = 0;
-                    model_quantization_at(model, left_index,
-                        (uint64_t)row * inner, &left_scale,
-                        &left_zero_point);
-                    model_quantization_at(model, right_index, column,
-                        &right_scale, &right_zero_point);
-                    const double output_scale =
-                        (double)left_scale * (double)right_scale;
-                    int64_t accumulator = 0;
-                    for (uint32_t element = 0u; element < inner; ++element) {
-                        const uint64_t left_offset =
-                            (uint64_t)row * inner + element;
-                        const uint64_t right_offset =
-                            (uint64_t)element * columns + column;
-                        const int64_t left_value =
-                            load_q8(left_description, left, left_offset) -
-                            left_zero_point;
-                        const int64_t right_value =
-                            load_q8(right_description, right, right_offset) -
-                            right_zero_point;
-                        accumulator += left_value * right_value;
-                    }
-                    const double real_value =
-                        (double)accumulator * output_scale;
-                    const uint64_t output_offset =
-                        (uint64_t)row * columns + column;
-                    store_quantized(output_description, output,
-                                    output_offset, real_value);
+            const uint32_t left_batch_rank = left_description.rank - 2u;
+            const uint32_t right_batch_rank = right_description.rank - 2u;
+            const uint32_t batch_rank = output_description.rank - 2u;
+            const uint32_t left_leading = batch_rank - left_batch_rank;
+            const uint32_t right_leading = batch_rank - right_batch_rank;
+            const uint32_t rows =
+                left_description.dimensions[left_description.rank - 2u];
+            const uint32_t inner =
+                left_description.dimensions[left_description.rank - 1u];
+            const uint32_t columns =
+                right_description.dimensions[right_description.rank - 1u];
+            uint64_t batch_count = 1u;
+            for (uint32_t dimension = 0u; dimension < batch_rank; ++dimension)
+                batch_count *= output_description.dimensions[dimension];
+            for (uint64_t batch = 0u; batch < batch_count; ++batch) {
+                uint64_t remaining = batch;
+                uint64_t left_batch = 0u;
+                uint64_t right_batch = 0u;
+                uint32_t batch_coordinates[RIN_NPU_MODEL_MAX_RANK] = {};
+                for (uint32_t reverse = batch_rank; reverse > 0u; --reverse) {
+                    const uint32_t dimension = reverse - 1u;
+                    const uint32_t extent =
+                        output_description.dimensions[dimension];
+                    batch_coordinates[dimension] =
+                        (uint32_t)(remaining % extent);
+                    remaining /= extent;
                 }
+                for (uint32_t dimension = 0u; dimension < batch_rank;
+                     ++dimension) {
+                    const uint32_t coordinate = batch_coordinates[dimension];
+                    if (dimension >= left_leading) {
+                        const uint32_t source_dimension =
+                            dimension - left_leading;
+                        const uint32_t source_extent =
+                            left_description.dimensions[source_dimension];
+                        left_batch = left_batch * source_extent +
+                            (source_extent == 1u ? 0u : coordinate);
+                    }
+                    if (dimension >= right_leading) {
+                        const uint32_t source_dimension =
+                            dimension - right_leading;
+                        const uint32_t source_extent =
+                            right_description.dimensions[source_dimension];
+                        right_batch = right_batch * source_extent +
+                            (source_extent == 1u ? 0u : coordinate);
+                    }
+                }
+                const uint64_t left_batch_offset =
+                    left_batch * (uint64_t)rows * inner;
+                const uint64_t right_batch_offset =
+                    right_batch * (uint64_t)inner * columns;
+                for (uint32_t row = 0u; row < rows; ++row)
+                    for (uint32_t column = 0u; column < columns; ++column) {
+                        float left_scale = 0.0f;
+                        int32_t left_zero_point = 0;
+                        float right_scale = 0.0f;
+                        int32_t right_zero_point = 0;
+                        model_quantization_at(model, left_index,
+                            left_batch_offset + (uint64_t)row * inner,
+                            &left_scale, &left_zero_point);
+                        model_quantization_at(model, right_index,
+                            right_batch_offset + column, &right_scale,
+                            &right_zero_point);
+                        const double output_scale =
+                            (double)left_scale * (double)right_scale;
+                        int64_t accumulator = 0;
+                        for (uint32_t element = 0u; element < inner; ++element) {
+                            const uint64_t left_offset = left_batch_offset +
+                                (uint64_t)row * inner + element;
+                            const uint64_t right_offset = right_batch_offset +
+                                (uint64_t)element * columns + column;
+                            const int64_t left_value =
+                                load_q8(left_description, left, left_offset) -
+                                left_zero_point;
+                            const int64_t right_value =
+                                load_q8(right_description, right, right_offset) -
+                                right_zero_point;
+                            accumulator += left_value * right_value;
+                        }
+                        const double real_value =
+                            (double)accumulator * output_scale;
+                        const uint64_t output_offset =
+                            (batch * rows + row) * columns + column;
+                        store_quantized(output_description, output,
+                                        output_offset, real_value);
+                    }
+            }
         } else if (operation.opcode == OPERATION_SOFTMAX_Q8) {
             const uint32_t input_index = operation.inputs[0];
             const TensorDescription& input_description =
