@@ -72,6 +72,102 @@
  * request's buffer points to a size-versioned RinOpenHowV1 record and its
  * buffer_size carries the caller-supplied structure size. */
 #define RIN_PATH_AT_OPENAT2 30u
+/* Linux statx.  mode carries the requested STATX_* mask, flags carry the
+ * AT_* lookup/sync flags, and buffer points to a fixed 256-byte result. */
+#define RIN_PATH_AT_STATX 31u
+
+#define RIN_STATX_TYPE       UINT32_C(0x00000001)
+#define RIN_STATX_MODE       UINT32_C(0x00000002)
+#define RIN_STATX_NLINK      UINT32_C(0x00000004)
+#define RIN_STATX_UID        UINT32_C(0x00000008)
+#define RIN_STATX_GID        UINT32_C(0x00000010)
+#define RIN_STATX_ATIME      UINT32_C(0x00000020)
+#define RIN_STATX_MTIME      UINT32_C(0x00000040)
+#define RIN_STATX_CTIME      UINT32_C(0x00000080)
+#define RIN_STATX_INO        UINT32_C(0x00000100)
+#define RIN_STATX_SIZE       UINT32_C(0x00000200)
+#define RIN_STATX_BLOCKS     UINT32_C(0x00000400)
+#define RIN_STATX_BASIC_STATS UINT32_C(0x000007ff)
+#define RIN_STATX_BTIME      UINT32_C(0x00000800)
+#define RIN_STATX_MNT_ID     UINT32_C(0x00001000)
+#define RIN_STATX_DIOALIGN   UINT32_C(0x00002000)
+#define RIN_STATX_MNT_ID_UNIQUE UINT32_C(0x00004000)
+#define RIN_STATX_SUBVOL     UINT32_C(0x00008000)
+#define RIN_STATX_WRITE_ATOMIC UINT32_C(0x00010000)
+#define RIN_STATX_DIO_READ_ALIGN UINT32_C(0x00020000)
+#define RIN_STATX_RESERVED   UINT32_C(0x80000000)
+#define RIN_STATX_ALL        UINT32_C(0x00000fff)
+#define RIN_STATX_V1_SIZE 256u
+#define RIN_STATX_SUPPORTED_REQUEST_MASK \
+    (RIN_STATX_BASIC_STATS | RIN_STATX_BTIME | RIN_STATX_MNT_ID)
+
+#define RIN_AT_STATX_SYNC_TYPE UINT32_C(0x6000)
+#define RIN_AT_STATX_FORCE_SYNC UINT32_C(0x2000)
+#define RIN_AT_STATX_DONT_SYNC UINT32_C(0x4000)
+
+typedef struct RinStatxTimestampV1 {
+    int64_t tv_sec;
+    uint32_t tv_nsec;
+    int32_t reserved;
+} RinStatxTimestampV1;
+
+/* Fixed Linux-compatible 256-byte statx record.  Unsupported optional fields
+ * remain zero and their STATX_* bit is clear in stx_mask. */
+typedef struct RinStatxV1 {
+    uint32_t stx_mask;
+    uint32_t stx_blksize;
+    uint64_t stx_attributes;
+    uint32_t stx_nlink;
+    uint32_t stx_uid;
+    uint32_t stx_gid;
+    uint16_t stx_mode;
+    uint16_t spare0;
+    uint64_t stx_ino;
+    uint64_t stx_size;
+    uint64_t stx_blocks;
+    uint64_t stx_attributes_mask;
+    RinStatxTimestampV1 stx_atime;
+    RinStatxTimestampV1 stx_btime;
+    RinStatxTimestampV1 stx_ctime;
+    RinStatxTimestampV1 stx_mtime;
+    uint32_t stx_rdev_major;
+    uint32_t stx_rdev_minor;
+    uint32_t stx_dev_major;
+    uint32_t stx_dev_minor;
+    uint64_t stx_mnt_id;
+    uint32_t stx_dio_mem_align;
+    uint32_t stx_dio_offset_align;
+    uint64_t stx_subvol;
+    uint32_t stx_atomic_write_unit_min;
+    uint32_t stx_atomic_write_unit_max;
+    uint32_t stx_atomic_write_segments_max;
+    uint32_t stx_dio_read_offset_align;
+    uint32_t stx_atomic_write_unit_max_opt;
+    uint32_t spare1;
+    uint64_t spare2[8];
+} RinStatxV1;
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinStatxTimestampV1) == 16u,
+              "RinStatxTimestampV1 ABI size");
+static_assert(sizeof(RinStatxV1) == 256u, "RinStatxV1 ABI size");
+static_assert(offsetof(RinStatxV1, stx_ino) == 32u,
+              "RinStatxV1 inode offset");
+static_assert(offsetof(RinStatxV1, stx_atime) == 64u,
+              "RinStatxV1 timestamps offset");
+static_assert(offsetof(RinStatxV1, stx_mnt_id) == 144u,
+              "RinStatxV1 mount offset");
+#elif !defined(MIDL_PASS)
+_Static_assert(sizeof(RinStatxTimestampV1) == 16u,
+               "RinStatxTimestampV1 ABI size");
+_Static_assert(sizeof(RinStatxV1) == 256u, "RinStatxV1 ABI size");
+_Static_assert(offsetof(RinStatxV1, stx_ino) == 32u,
+               "RinStatxV1 inode offset");
+_Static_assert(offsetof(RinStatxV1, stx_atime) == 64u,
+               "RinStatxV1 timestamps offset");
+_Static_assert(offsetof(RinStatxV1, stx_mnt_id) == 144u,
+               "RinStatxV1 mount offset");
+#endif
 
 #define RIN_OPEN_HOW_V1_SIZE 24u
 #define RIN_OPEN_HOW_MAX_SIZE 4096u
