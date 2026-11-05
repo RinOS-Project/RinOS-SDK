@@ -493,6 +493,16 @@ static inline bool model_valid(const Model* model)
         (batch_quantization_count != 0u && !model->batch_quantizations))
         return false;
 
+    if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4) {
+        for (uint32_t index = 0u; index < model->tensor_count; ++index)
+            if (model->tensors[index].data_type == DATA_TYPE_FLOAT32)
+                return false;
+        for (uint32_t index = 0u; index < model->operation_count; ++index)
+            if (model->operations[index].opcode == OPERATION_QUANTIZE_Q8 ||
+                model->operations[index].opcode == OPERATION_DEQUANTIZE_Q8)
+                return false;
+    }
+
     uint8_t available[RIN_NPU_MODEL_MAX_TENSORS] = {};
     for (uint32_t index = 0u; index < model->tensor_count; ++index)
         if (tensor_elements(model->tensors[index]) == 0u) return false;
