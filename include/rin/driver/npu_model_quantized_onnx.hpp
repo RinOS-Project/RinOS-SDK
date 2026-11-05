@@ -84,8 +84,9 @@ struct TensorHeader {
 };
 struct QNode {
   Name inputs[9];
-  Name output;
+  Name outputs[3];
   uint32_t input_count;
+  uint32_t output_count;
   uint32_t opcode;
   int32_t axis;
   uint32_t has_axis;
@@ -1010,7 +1011,7 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
     return RIN_RESULT_INVALID_ARGUMENT;
   QNode node = {};
   Slice op = {}, domain = {};
-  uint32_t hop = 0, hd = 0, outputs = 0;
+  uint32_t hop = 0, hd = 0;
   Reader r = make_reader(bytes);
   Field f;
   int n = 0;
@@ -1025,9 +1026,10 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
       }
       ++node.input_count;
     } else if (f.number == 2u) {
-      if (outputs || !field_name(f, &node.output))
+      if (node.output_count >= 3u || !field_name(f,
+              &node.outputs[node.output_count]))
         return RIN_RESULT_CORRUPT_DATA;
-      ++outputs;
+      ++node.output_count;
     } else if (f.number == 4u) {
       if (f.wire_type != 2u || hop)
         return RIN_RESULT_CORRUPT_DATA;
@@ -1046,11 +1048,12 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
       hd = 1;
     }
   }
-  if (n < 0 || !hop || outputs != 1u ||
+  if (n < 0 || !hop || node.output_count == 0u ||
       (hd && domain.size && !slice_is(domain, "ai.onnx", 7u)))
     return RIN_RESULT_CORRUPT_DATA;
   if (slice_is(op, "QLinearMatMul", 13u)) {
-    if (node.input_count != 8u || node.has_group || node.has_auto_pad ||
+    if (node.output_count != 1u || node.input_count != 8u ||
+        node.has_group || node.has_auto_pad ||
         node.has_strides || node.has_dilations || node.has_pads ||
         node.has_kernel_shape || node.has_axis)
       return RIN_RESULT_NOT_SUPPORTED;
@@ -1059,7 +1062,8 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
         return RIN_RESULT_NOT_SUPPORTED;
     node.opcode = q::OPERATION_MATMUL_Q8;
   } else if (slice_is(op, "QLinearConv", 11u)) {
-    if ((node.input_count != 8u && node.input_count != 9u) ||
+    if (node.output_count != 1u ||
+        (node.input_count != 8u && node.input_count != 9u) ||
         node.has_axis)
       return RIN_RESULT_NOT_SUPPORTED;
     for (uint32_t index = 0u; index < 8u; ++index)
@@ -1068,13 +1072,21 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
     node.opcode = q::OPERATION_CONV_Q8;
   } else if (slice_is(op, "QuantizeLinear", 14u) ||
              slice_is(op, "DequantizeLinear", 16u)) {
-    if (node.input_count != 3u || node.has_group || node.has_auto_pad ||
+    if (node.output_count != 1u || node.input_count != 3u ||
+        node.has_group || node.has_auto_pad ||
         node.has_strides || node.has_dilations || node.has_pads ||
         node.has_kernel_shape || node.inputs[0].size == 0u ||
         node.inputs[1].size == 0u)
       return RIN_RESULT_NOT_SUPPORTED;
     node.opcode = slice_is(op, "QuantizeLinear", 14u)
         ? q::OPERATION_QUANTIZE_Q8 : q::OPERATION_DEQUANTIZE_Q8;
+  } else if (slice_is(op, "DynamicQuantizeLinear", 21u)) {
+    if (node.input_count != 1u || node.output_count != 3u ||
+        node.inputs[0].size == 0u || node.has_group || node.has_auto_pad ||
+        node.has_strides || node.has_dilations || node.has_pads ||
+        node.has_kernel_shape || node.has_axis)
+      return RIN_RESULT_NOT_SUPPORTED;
+    node.opcode = q::OPERATION_DYNAMIC_QUANTIZE_Q8;
   } else {
     return RIN_RESULT_NOT_SUPPORTED;
   }
@@ -1097,6 +1109,32 @@ static inline int find_value(const Workspace *w, uint32_t count, Name name) {
   }
   return -1;
 }
+
+static inline bool dynamic_quantization_values(const Workspace *workspace,
+    uint32_t value_count, uint32_t operation_count, Name scale_name,
+    Name zero_point_name, uint32_t *quantized_tensor_out,
+    uint32_t *scale_tensor_out, uint32_t *zero_point_tensor_out) {
+  if (!workspace || !quantized_tensor_out || !scale_tensor_out ||
+      !zero_point_tensor_out)
+    return false;
+  const int scale_index = find_value(workspace, value_count, scale_name);
+  const int zero_index = find_value(workspace, value_count, zero_point_name);
+  if (scale_index < 0 || zero_index < 0)
+    return false;
+  for (uint32_t index = 0u; index < operation_count; ++index) {
+    const q::Operation &operation = workspace->operations[index];
+    if (operation.opcode == q::OPERATION_DYNAMIC_QUANTIZE_Q8 &&
+        operation.inputs[1] == (uint32_t)scale_index &&
+        operation.reserved == (uint32_t)zero_index) {
+      *quantized_tensor_out = operation.output_tensor;
+      *scale_tensor_out = (uint32_t)scale_index;
+      *zero_point_tensor_out = (uint32_t)zero_index;
+      return true;
+    }
+  }
+  return false;
+}
+
 static inline RinResultCode add_value(Workspace *w, uint32_t *count, Name name,
                                       const q::TensorDescription *d,
                                       uint32_t flags, uint32_t *out) {
@@ -1537,6 +1575,98 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
     rc = parse_node(g.nodes[ni], &node);
     if (rc != RIN_RESULT_OK)
       return rc;
+    if (node.opcode == q::OPERATION_DYNAMIC_QUANTIZE_Q8) {
+      if (opset < 11u)
+        return RIN_RESULT_NOT_SUPPORTED;
+      uint32_t input_index = 0u;
+      int source_index = find_value(w, values, node.inputs[0]);
+      if (source_index < 0 ||
+          !(w->values[source_index].flags & VALUE_AVAILABLE)) {
+        rc = ensure_float_data(w, g, &values, &constants, node.inputs[0],
+                               &weight_bytes, &input_index);
+        if (rc != RIN_RESULT_OK)
+          return rc;
+      } else {
+        input_index = (uint32_t)source_index;
+      }
+      if (!(w->values[input_index].flags & VALUE_HAS_DESCRIPTION) ||
+          w->tensors[input_index].data_type != q::DATA_TYPE_FLOAT32)
+        return RIN_RESULT_NOT_SUPPORTED;
+      q::TensorDescription output_descriptions[3] = {};
+      output_descriptions[0] = w->tensors[input_index];
+      output_descriptions[0].data_type = q::DATA_TYPE_UINT8;
+      output_descriptions[0].scale = 1.0f;
+      output_descriptions[0].zero_point = 0;
+      output_descriptions[1].data_type = q::DATA_TYPE_FLOAT32;
+      output_descriptions[1].scale = 1.0f;
+      output_descriptions[2].data_type = q::DATA_TYPE_UINT8;
+      output_descriptions[2].scale = 1.0f;
+      uint32_t output_indices[3] = {};
+      for (uint32_t output = 0u; output < 3u; ++output) {
+        const int previous = find_value(w, values, node.outputs[output]);
+        if (previous >= 0 &&
+            (w->values[previous].flags & VALUE_AVAILABLE))
+          return RIN_RESULT_CORRUPT_DATA;
+        rc = add_value(w, &values, node.outputs[output],
+            &output_descriptions[output],
+            VALUE_HAS_DESCRIPTION | VALUE_PRODUCED | VALUE_AVAILABLE,
+            &output_indices[output]);
+        if (rc != RIN_RESULT_OK)
+          return rc;
+      }
+      if (operations >= w->operation_capacity)
+        return RIN_RESULT_BUFFER_TOO_SMALL;
+      q::Operation operation = {};
+      operation.opcode = q::OPERATION_DYNAMIC_QUANTIZE_Q8;
+      operation.input_count = 1u;
+      operation.inputs[0] = input_index;
+      operation.inputs[1] = output_indices[1];
+      operation.output_tensor = output_indices[0];
+      operation.reserved = output_indices[2];
+      w->operations[operations++] = operation;
+      continue;
+    }
+    if (node.opcode == q::OPERATION_DEQUANTIZE_Q8) {
+      uint32_t quantized_index = 0u;
+      uint32_t scale_index = 0u;
+      uint32_t zero_point_index = 0u;
+      if (dynamic_quantization_values(w, values, operations, node.inputs[1],
+              node.inputs[2], &quantized_index, &scale_index,
+              &zero_point_index)) {
+        if (opset < 11u)
+          return RIN_RESULT_NOT_SUPPORTED;
+        const int source = find_value(w, values, node.inputs[0]);
+        if (source < 0 || !(w->values[source].flags & VALUE_AVAILABLE) ||
+            (uint32_t)source != quantized_index ||
+            w->tensors[source].data_type != q::DATA_TYPE_UINT8)
+          return RIN_RESULT_NOT_SUPPORTED;
+        q::TensorDescription output_description = w->tensors[source];
+        output_description.data_type = q::DATA_TYPE_FLOAT32;
+        output_description.scale = 1.0f;
+        output_description.zero_point = 0;
+        const int previous = find_value(w, values, node.outputs[0]);
+        if (previous >= 0 &&
+            (w->values[previous].flags & VALUE_AVAILABLE))
+          return RIN_RESULT_CORRUPT_DATA;
+        uint32_t output_index = 0u;
+        rc = add_value(w, &values, node.outputs[0], &output_description,
+            VALUE_HAS_DESCRIPTION | VALUE_PRODUCED | VALUE_AVAILABLE,
+            &output_index);
+        if (rc != RIN_RESULT_OK)
+          return rc;
+        if (operations >= w->operation_capacity)
+          return RIN_RESULT_BUFFER_TOO_SMALL;
+        q::Operation operation = {};
+        operation.opcode = q::OPERATION_DEQUANTIZE_Q8;
+        operation.input_count = 2u;
+        operation.inputs[0] = quantized_index;
+        operation.inputs[1] = scale_index;
+        operation.output_tensor = output_index;
+        operation.reserved = zero_point_index;
+        w->operations[operations++] = operation;
+        continue;
+      }
+    }
     if (node.opcode == q::OPERATION_QUANTIZE_Q8 ||
         node.opcode == q::OPERATION_DEQUANTIZE_Q8) {
       if (node.has_axis && opset < 13u)
@@ -1584,11 +1714,11 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
         const q::TensorDescription output_description = make_description(
             output_header, quantization_scale(parameters, 0u),
             quantization_zero_point(parameters, 0u));
-        const int previous_output = find_value(w, values, node.output);
+        const int previous_output = find_value(w, values, node.outputs[0]);
         if (previous_output >= 0 &&
             (w->values[previous_output].flags & VALUE_AVAILABLE))
           return RIN_RESULT_CORRUPT_DATA;
-        rc = add_value(w, &values, node.output, &output_description,
+        rc = add_value(w, &values, node.outputs[0], &output_description,
             VALUE_HAS_DESCRIPTION | VALUE_PRODUCED | VALUE_AVAILABLE,
             &output_index);
         if (rc != RIN_RESULT_OK)
@@ -1629,11 +1759,11 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
         output_description.data_type = q::DATA_TYPE_FLOAT32;
         output_description.scale = 1.0f;
         output_description.zero_point = 0;
-        const int previous_output = find_value(w, values, node.output);
+        const int previous_output = find_value(w, values, node.outputs[0]);
         if (previous_output >= 0 &&
             (w->values[previous_output].flags & VALUE_AVAILABLE))
           return RIN_RESULT_CORRUPT_DATA;
-        rc = add_value(w, &values, node.output, &output_description,
+        rc = add_value(w, &values, node.outputs[0], &output_description,
             VALUE_HAS_DESCRIPTION | VALUE_PRODUCED | VALUE_AVAILABLE,
             &output_index);
         if (rc != RIN_RESULT_OK)
@@ -1688,11 +1818,11 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       for (uint32_t dimension = 0u; dimension < output_rank; ++dimension)
         oh.dimensions[dimension] = output_dimensions[dimension];
       q::TensorDescription od = make_description(oh, ys, yz);
-      int old = find_value(w, values, node.output);
+      int old = find_value(w, values, node.outputs[0]);
       if (old >= 0 && (w->values[old].flags & VALUE_AVAILABLE))
         return RIN_RESULT_CORRUPT_DATA;
       uint32_t oi = 0;
-      rc = add_value(w, &values, node.output, &od,
+      rc = add_value(w, &values, node.outputs[0], &od,
                      VALUE_HAS_DESCRIPTION | VALUE_QUANTIZATION_SET |
                          VALUE_PRODUCED | VALUE_AVAILABLE,
                      &oi);
@@ -1831,12 +1961,12 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       output_header.dimensions[axis] = output_dimensions[axis];
     const q::TensorDescription output_description =
         make_description(output_header, output_scale, output_zero);
-    int existing_output = find_value(w, values, node.output);
+    int existing_output = find_value(w, values, node.outputs[0]);
     if (existing_output >= 0 &&
         (w->values[existing_output].flags & VALUE_AVAILABLE))
       return RIN_RESULT_CORRUPT_DATA;
     uint32_t output_index = 0u;
-    rc = add_value(w, &values, node.output, &output_description,
+    rc = add_value(w, &values, node.outputs[0], &output_description,
         VALUE_HAS_DESCRIPTION | VALUE_QUANTIZATION_SET | VALUE_PRODUCED |
             VALUE_AVAILABLE, &output_index);
     if (rc != RIN_RESULT_OK)
@@ -1877,18 +2007,25 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
   }
   q::Model model = {};
   bool has_quantize_dequantize = false;
+  bool has_dynamic_quantize = false;
   for (uint32_t operation = 0u; operation < operations; ++operation)
     if (w->operations[operation].opcode == q::OPERATION_QUANTIZE_Q8 ||
         w->operations[operation].opcode == q::OPERATION_DEQUANTIZE_Q8)
       has_quantize_dequantize = true;
-  model.version = batch_quantizations || has_quantize_dequantize
+    else if (w->operations[operation].opcode ==
+             q::OPERATION_DYNAMIC_QUANTIZE_Q8)
+      has_dynamic_quantize = true;
+  model.version = has_dynamic_quantize
+      ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V5
+      : batch_quantizations || has_quantize_dequantize
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4
       : convolutions
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3
       : quantizations ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION
                       : RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1;
-  model.struct_size = model.version ==
-          RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4
+  model.struct_size = (model.version ==
+          RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4 ||
+          model.version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V5)
       ? sizeof(model)
       : model.version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3
           ? RIN_NPU_QUANTIZED_MODEL_V3_STRUCT_SIZE
