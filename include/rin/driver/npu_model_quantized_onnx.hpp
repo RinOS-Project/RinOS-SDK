@@ -90,6 +90,8 @@ struct QNode {
   uint32_t opcode;
   int32_t axis;
   uint32_t has_axis;
+  uint32_t block_size;
+  uint32_t has_block_size;
   uint32_t group;
   uint32_t has_group;
   uint32_t auto_pad;
@@ -964,6 +966,16 @@ static inline RinResultCode parse_qconv_attribute(Slice bytes, QNode *node) {
     node->has_axis = 1u;
     return RIN_RESULT_OK;
   }
+  if (name_is(attribute.name, "block_size", 10u)) {
+    if (node->has_block_size || attribute.type != 2u ||
+        !attribute.has_integer || attribute.signed_integer_value < 0 ||
+        (uint64_t)attribute.signed_integer_value > UINT32_MAX ||
+        has_string || attribute.value_count)
+      return RIN_RESULT_NOT_SUPPORTED;
+    node->block_size = (uint32_t)attribute.signed_integer_value;
+    node->has_block_size = 1u;
+    return RIN_RESULT_OK;
+  }
   uint32_t *values = 0;
   uint32_t *value_count = 0;
   uint32_t *has_values = 0;
@@ -1055,7 +1067,7 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
     if (node.output_count != 1u || node.input_count != 8u ||
         node.has_group || node.has_auto_pad ||
         node.has_strides || node.has_dilations || node.has_pads ||
-        node.has_kernel_shape || node.has_axis)
+        node.has_kernel_shape || node.has_axis || node.has_block_size)
       return RIN_RESULT_NOT_SUPPORTED;
     for (uint32_t index = 0u; index < 8u; ++index)
       if (node.inputs[index].size == 0u)
@@ -1064,7 +1076,7 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
   } else if (slice_is(op, "QLinearConv", 11u)) {
     if (node.output_count != 1u ||
         (node.input_count != 8u && node.input_count != 9u) ||
-        node.has_axis)
+        node.has_axis || node.has_block_size)
       return RIN_RESULT_NOT_SUPPORTED;
     for (uint32_t index = 0u; index < 8u; ++index)
       if (node.inputs[index].size == 0u)
@@ -1084,7 +1096,7 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
     if (node.input_count != 1u || node.output_count != 3u ||
         node.inputs[0].size == 0u || node.has_group || node.has_auto_pad ||
         node.has_strides || node.has_dilations || node.has_pads ||
-        node.has_kernel_shape || node.has_axis)
+        node.has_kernel_shape || node.has_axis || node.has_block_size)
       return RIN_RESULT_NOT_SUPPORTED;
     node.opcode = q::OPERATION_DYNAMIC_QUANTIZE_Q8;
   } else {
@@ -1175,20 +1187,42 @@ static inline RinResultCode add_value(Workspace *w, uint32_t *count, Name name,
 static inline RinResultCode apply_quantization(
     Workspace *w, uint32_t *quantizations, uint32_t *batch_quantizations,
     uint32_t tensor_index,
-    uint32_t axis, const QuantizationValues &parameters) {
+    uint32_t axis, const QuantizationValues &parameters,
+    uint32_t block_size = 0u) {
   ValueBinding &value = w->values[tensor_index];
   q::TensorDescription &description = w->tensors[tensor_index];
   if (description.data_type != parameters.data_type || !parameters.count ||
       (!parameters.scales && parameters.count != 1u) ||
       (!parameters.zero_points && parameters.count != 1u))
     return RIN_RESULT_NOT_SUPPORTED;
-  if (parameters.rank > description.rank ||
+  const bool blocked = block_size != 0u;
+  if (blocked) {
+    if (description.rank < 2u || parameters.rank != description.rank ||
+        parameters.rank == 0u || axis >= description.rank ||
+        !parameters.scales || !parameters.zero_points)
+      return RIN_RESULT_NOT_SUPPORTED;
+    uint64_t expected_count = 1u;
+    for (uint32_t dimension = 0u; dimension < description.rank; ++dimension) {
+      uint32_t expected_extent = description.dimensions[dimension];
+      if (dimension == axis) {
+        expected_extent = expected_extent / block_size +
+            (expected_extent % block_size != 0u ? 1u : 0u);
+      }
+      if (parameters.dimensions[dimension] != expected_extent ||
+          !expected_extent || expected_count > UINT32_MAX / expected_extent)
+        return RIN_RESULT_NOT_SUPPORTED;
+      expected_count *= expected_extent;
+    }
+    if (expected_count != parameters.count)
+      return RIN_RESULT_NOT_SUPPORTED;
+  } else if (parameters.rank > description.rank ||
       (parameters.rank > 1u && parameters.count > 1u &&
        (parameters.rank != description.rank || parameters.rank < 3u ||
         axis >= description.rank)))
     return RIN_RESULT_NOT_SUPPORTED;
-  const bool batch_parameters = parameters.count > 1u && parameters.rank > 1u;
-  if (parameters.count > 1u && !batch_parameters &&
+  const bool batch_parameters = !blocked && parameters.count > 1u &&
+      parameters.rank > 1u;
+  if (!blocked && parameters.count > 1u && !batch_parameters &&
       (parameters.rank != 1u || description.rank == 0u ||
        axis >= description.rank ||
        parameters.count != description.dimensions[axis]))
@@ -1213,7 +1247,7 @@ static inline RinResultCode apply_quantization(
     if (description.scale != quantization_scale(parameters, 0u) ||
         description.zero_point != quantization_zero_point(parameters, 0u))
       return RIN_RESULT_NOT_SUPPORTED;
-    if (parameters.count == 1u)
+    if (parameters.count == 1u && !blocked)
       return value.reserved == 0u ? RIN_RESULT_OK : RIN_RESULT_NOT_SUPPORTED;
     if (batch_parameters) {
       const q::BatchQuantization *existing = 0;
@@ -1240,7 +1274,8 @@ static inline RinResultCode apply_quantization(
     const q::AxisQuantization &existing =
         w->quantizations[value.reserved - 1u];
     if (existing.tensor_index != tensor_index || existing.axis != axis ||
-        existing.count != parameters.count)
+        existing.count != parameters.count ||
+        existing.reserved != block_size)
       return RIN_RESULT_NOT_SUPPORTED;
     for (uint32_t index = 0u; index < parameters.count; ++index)
       if (existing.scales[index] != quantization_scale(parameters, index) ||
@@ -1254,7 +1289,7 @@ static inline RinResultCode apply_quantization(
   if (!q::tensor_elements(description)) return RIN_RESULT_NOT_SUPPORTED;
   value.flags |= VALUE_QUANTIZATION_SET;
   value.reserved = 0u;
-  if (parameters.count > 1u) {
+  if (parameters.count > 1u || blocked) {
     if (batch_parameters) {
       if (*batch_quantizations >= w->batch_quantization_capacity ||
           !w->batch_quantizations)
@@ -1275,6 +1310,7 @@ static inline RinResultCode apply_quantization(
       quantization.tensor_index = tensor_index;
       quantization.axis = axis;
       quantization.count = parameters.count;
+      quantization.reserved = block_size;
       quantization.scales = parameters.scales;
       quantization.zero_points = parameters.zero_points;
       w->quantizations[*quantizations] = quantization;
@@ -1290,7 +1326,8 @@ static inline RinResultCode ensure_data(Workspace *w, const GraphFields &g,
                                         uint32_t *batch_quantizations, Name name,
                                         const QuantizationValues &parameters,
                                         uint32_t axis_from_end, uint64_t *bytes,
-                                        uint32_t *out) {
+                                        uint32_t *out,
+                                        uint32_t block_size = 0u) {
   int index = find_value(w, *values, name);
   if (index >= 0) {
     ValueBinding &v = w->values[index];
@@ -1303,7 +1340,7 @@ static inline RinResultCode ensure_data(Workspace *w, const GraphFields &g,
         ? 0u : w->tensors[index].rank - axis_from_end;
     RinResultCode rc = apply_quantization(
         w, quantizations, batch_quantizations, (uint32_t)index, axis,
-        parameters);
+        parameters, block_size);
     if (rc != RIN_RESULT_OK) return rc;
     *out = (uint32_t)index;
     return RIN_RESULT_OK;
@@ -1345,7 +1382,7 @@ static inline RinResultCode ensure_data(Workspace *w, const GraphFields &g,
   if (rc != RIN_RESULT_OK)
     return rc;
   rc = apply_quantization(w, quantizations, batch_quantizations, idx, axis,
-                          parameters);
+                          parameters, block_size);
   if (rc != RIN_RESULT_OK)
     return rc;
   rc = q_payload(g.initializers[init], h, w->weight_storage + *bytes, count);
@@ -1521,6 +1558,7 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
   uint32_t values = 0, externals = 0, constants = 0, operations = 0;
   uint32_t quantizations = 0u, quantization_parameters = 0u;
   uint32_t batch_quantizations = 0u;
+  uint32_t has_blocked_quantization = 0u;
   uint32_t convolutions = 0u, convolution_bias_count = 0u;
   uint64_t weight_bytes = 0;
   for (uint32_t i = 0; i < g.input_count; ++i) {
@@ -1669,6 +1707,11 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
     }
     if (node.opcode == q::OPERATION_QUANTIZE_Q8 ||
         node.opcode == q::OPERATION_DEQUANTIZE_Q8) {
+      if (node.has_block_size && opset < 21u)
+        return RIN_RESULT_NOT_SUPPORTED;
+      const uint32_t block_size = node.block_size;
+      const bool blocked = block_size != 0u;
+      if (blocked) has_blocked_quantization = 1u;
       if (node.has_axis && opset < 13u)
         return RIN_RESULT_NOT_SUPPORTED;
       QuantizationValues parameters = {};
@@ -1676,8 +1719,8 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
           node.inputs[2], w, &quantization_parameters, &parameters);
       if (rc != RIN_RESULT_OK)
         return rc;
-      if (parameters.rank > 1u ||
-          (parameters.count > 1u && parameters.rank != 1u))
+      if (!blocked && (parameters.rank > 1u ||
+          (parameters.count > 1u && parameters.rank != 1u)))
         return RIN_RESULT_NOT_SUPPORTED;
       uint32_t input_index = 0u;
       uint32_t output_index = 0u;
@@ -1700,6 +1743,8 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
           return RIN_RESULT_NOT_SUPPORTED;
         const q::TensorDescription &input_description =
             w->tensors[input_index];
+        if (blocked && parameters.rank != input_description.rank)
+          return RIN_RESULT_NOT_SUPPORTED;
         if (!normalize_quantization_axis(requested_axis,
                 input_description.rank, &quantization_axis))
           return RIN_RESULT_NOT_SUPPORTED;
@@ -1724,7 +1769,7 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
         if (rc != RIN_RESULT_OK)
           return rc;
         rc = apply_quantization(w, &quantizations, &batch_quantizations,
-            output_index, quantization_axis, parameters);
+            output_index, quantization_axis, parameters, block_size);
         if (rc != RIN_RESULT_OK)
           return rc;
       } else {
@@ -1745,11 +1790,13 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
         if (!normalize_quantization_axis(requested_axis, input_rank,
                                         &quantization_axis))
           return RIN_RESULT_NOT_SUPPORTED;
+        if (blocked && parameters.rank != input_rank)
+          return RIN_RESULT_NOT_SUPPORTED;
         const uint32_t axis_from_end = input_rank
             ? input_rank - quantization_axis : UINT32_MAX;
         rc = ensure_data(w, g, &values, &constants, &quantizations,
             &batch_quantizations, node.inputs[0], parameters, axis_from_end,
-            &weight_bytes, &input_index);
+            &weight_bytes, &input_index, block_size);
         if (rc != RIN_RESULT_OK)
           return rc;
         if (w->tensors[input_index].data_type != q::DATA_TYPE_INT8 &&
@@ -2015,7 +2062,9 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
     else if (w->operations[operation].opcode ==
              q::OPERATION_DYNAMIC_QUANTIZE_Q8)
       has_dynamic_quantize = true;
-  model.version = has_dynamic_quantize
+  model.version = has_blocked_quantization
+      ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V6
+      : has_dynamic_quantize
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V5
       : batch_quantizations || has_quantize_dequantize
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4
@@ -2025,7 +2074,8 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
                       : RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1;
   model.struct_size = (model.version ==
           RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V4 ||
-          model.version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V5)
+          model.version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V5 ||
+          model.version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V6)
       ? sizeof(model)
       : model.version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3
           ? RIN_NPU_QUANTIZED_MODEL_V3_STRUCT_SIZE
