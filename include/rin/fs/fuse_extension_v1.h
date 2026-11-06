@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 
-/* RinOS FUSE拡張要求。Linux FUSE opcodeとは別のprivate rangeを使う。
+/* RinOS FUSE拡張要求。Linux FUSE標準opcodeと衝突しない番号を使う。
  * daemonは照合と変更を同一transactionで行うこと。拡張未対応時は
  * ENOSYSを返し、kernelは通常のRENAME/UNLINKへ置き換えてはならない。 */
 #define RIN_FUSE_EXPECTED_RENAME_OPCODE UINT32_C(0x52494e52)
