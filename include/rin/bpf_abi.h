@@ -53,7 +53,8 @@ enum rin_bpf_command {
 enum rin_bpf_map_type {
     RIN_BPF_MAP_TYPE_UNSPEC = 0,
     RIN_BPF_MAP_TYPE_HASH = 1,
-    RIN_BPF_MAP_TYPE_ARRAY = 2
+    RIN_BPF_MAP_TYPE_ARRAY = 2,
+    RIN_BPF_MAP_TYPE_PERCPU_ARRAY = 6
 };
 
 enum rin_bpf_program_type {
@@ -162,6 +163,7 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_SOCKET_FILTER (1ull << 14)
 #define RIN_BPF_FEATURE_VERIFIER_LOG (1ull << 15)
 #define RIN_BPF_FEATURE_RANDOM_HELPER (1ull << 16)
+#define RIN_BPF_FEATURE_PERCPU_ARRAY_MAP (1ull << 17)
 #define RIN_BPF_HELPER_GET_PRANDOM_U32 7u
 #define RIN_BPF_LOG_LEVEL_BASIC 1u
 #define RIN_BPF_LOG_LEVEL_VERBOSE 2u
