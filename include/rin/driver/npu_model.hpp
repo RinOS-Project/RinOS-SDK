@@ -145,87 +145,15 @@ static inline bool same_shape(const TensorDescription& left,
     return true;
 }
 
-/* Computes ONNX-style multidirectional broadcasting for fixed tensor shapes.
- * The result is right-aligned; every aligned dimension must match or be 1. */
-static inline bool broadcast_shape(const TensorDescription& left,
-                                   const TensorDescription& right,
-                                   TensorDescription* output_out)
-{
-    if (output_out) *output_out = {};
-    if (!output_out || left.data_type != right.data_type ||
-        left.rank > RIN_NPU_MODEL_MAX_RANK ||
-        right.rank > RIN_NPU_MODEL_MAX_RANK)
-        return false;
-    TensorDescription output = {};
-    output.data_type = left.data_type;
-    output.rank = left.rank > right.rank ? left.rank : right.rank;
-    const uint32_t left_leading = output.rank - left.rank;
-    const uint32_t right_leading = output.rank - right.rank;
-    for (uint32_t dimension = 0u; dimension < output.rank; ++dimension) {
-        const uint32_t left_extent = dimension < left_leading
-            ? 1u : left.dimensions[dimension - left_leading];
-        const uint32_t right_extent = dimension < right_leading
-            ? 1u : right.dimensions[dimension - right_leading];
-        if (left_extent != right_extent && left_extent != 1u &&
-            right_extent != 1u)
-            return false;
-        output.dimensions[dimension] = left_extent == 1u
-            ? right_extent : left_extent;
-    }
-    if (tensor_elements(output) == 0u) return false;
-    *output_out = output;
-    return true;
-}
-
-static inline uint64_t broadcast_input_index(
-    const TensorDescription& output, const TensorDescription& input,
-    uint64_t output_index)
-{
-    if (output.rank > RIN_NPU_MODEL_MAX_RANK ||
-        input.rank > output.rank || input.data_type != output.data_type)
-        return UINT64_MAX;
-    uint64_t input_index = 0u;
-    uint64_t input_stride = 1u;
-    const uint32_t leading = output.rank - input.rank;
-    for (uint32_t reverse = output.rank; reverse > 0u; --reverse) {
-        const uint32_t dimension = reverse - 1u;
-        const uint32_t output_extent = output.dimensions[dimension];
-        if (output_extent == 0u) return UINT64_MAX;
-        const uint32_t coordinate =
-            (uint32_t)(output_index % output_extent);
-        output_index /= output_extent;
-        if (dimension >= leading) {
-            const uint32_t input_dimension = dimension - leading;
-            const uint32_t input_extent = input.dimensions[input_dimension];
-            if (input_extent == 0u ||
-                (input_extent != 1u && input_extent != output_extent))
-                return UINT64_MAX;
-            if (input_extent != 1u) {
-                const uint64_t contribution =
-                    (uint64_t)coordinate * input_stride;
-                if (contribution > UINT64_MAX - input_index)
-                    return UINT64_MAX;
-                input_index += contribution;
-            }
-            if (input_stride > UINT64_MAX / input_extent)
-                return UINT64_MAX;
-            input_stride *= input_extent;
-        }
-    }
-    return input_index;
-}
-
 static inline bool operation_shape_valid(const Model* model,
                                          const Operation& operation)
 {
     const TensorDescription& output = model->tensors[operation.output_tensor];
     if (operation.opcode == OPERATION_ADD_FLOAT32 ||
         operation.opcode == OPERATION_MULTIPLY_FLOAT32) {
-        TensorDescription broadcast = {};
         return operation.input_count == 2u &&
-            broadcast_shape(model->tensors[operation.inputs[0]],
-                            model->tensors[operation.inputs[1]], &broadcast) &&
-            same_shape(output, broadcast);
+            same_shape(output, model->tensors[operation.inputs[0]]) &&
+            same_shape(output, model->tensors[operation.inputs[1]]);
     }
     if (operation.opcode == OPERATION_RELU_FLOAT32) {
         return operation.input_count == 1u &&
@@ -644,30 +572,16 @@ static inline RinResultCode evaluate_cpu(const CpuPlan* plan,
     for (uint32_t index = 0u; index < model->operation_count; ++index) {
         const Operation& operation = model->operations[index];
         const uint32_t output_index = operation.output_tensor;
-        const TensorDescription& output_description =
-            model->tensors[output_index];
         float* output = tensors[output_index].data;
         if (operation.opcode == OPERATION_ADD_FLOAT32 ||
             operation.opcode == OPERATION_MULTIPLY_FLOAT32) {
             const float* left = tensors[operation.inputs[0]].data;
             const float* right = tensors[operation.inputs[1]].data;
             const uint64_t elements = tensors[output_index].element_count;
-            const TensorDescription& left_description =
-                model->tensors[operation.inputs[0]];
-            const TensorDescription& right_description =
-                model->tensors[operation.inputs[1]];
-            for (uint64_t element = 0u; element < elements; ++element) {
-                const uint64_t left_element = broadcast_input_index(
-                    output_description, left_description, element);
-                const uint64_t right_element = broadcast_input_index(
-                    output_description, right_description, element);
-                if (left_element == UINT64_MAX ||
-                    right_element == UINT64_MAX)
-                    return RIN_RESULT_CORRUPT_DATA;
+            for (uint64_t element = 0u; element < elements; ++element)
                 output[element] = operation.opcode == OPERATION_ADD_FLOAT32
-                    ? left[left_element] + right[right_element]
-                    : left[left_element] * right[right_element];
-            }
+                    ? left[element] + right[element]
+                    : left[element] * right[element];
         } else if (operation.opcode == OPERATION_RELU_FLOAT32) {
             const float* input = tensors[operation.inputs[0]].data;
             const uint64_t elements = tensors[output_index].element_count;

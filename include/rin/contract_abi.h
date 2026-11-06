@@ -344,10 +344,6 @@ typedef int32_t RinResultCode;
 #define RIN_PASS_WEBAUTHN_TRANSPORT_USB     1u
 #define RIN_PASS_WEBAUTHN_TRANSPORT_INTERNAL 2u
 #define RIN_PASS_WEBAUTHN_MAX_CREDENTIALS   8u
-#define RIN_PASS_WEBAUTHN_MAX_ALGORITHMS    8u
-#define RIN_PASS_WEBAUTHN_COSE_ALGORITHM_ES256 (-7)
-#define RIN_PASS_WEBAUTHN_COSE_ALGORITHM_EDDSA (-8)
-#define RIN_PASS_WEBAUTHN_COSE_ALGORITHM_RS256 (-257)
 #define RIN_PASS_WEBAUTHN_MAX_CREDENTIAL_ID 128u
 #define RIN_PASS_WEBAUTHN_ORIGIN_MAX        320u
 #define RIN_PASS_WEBAUTHN_RP_ID_STORAGE     256u
@@ -1367,7 +1363,7 @@ typedef struct RinPassWebAuthnRequestV1 {
     uint8_t user_display_name[128];
     uint16_t credential_sizes[8];
     uint16_t credential_transports[8];
-    int32_t algorithms[RIN_PASS_WEBAUTHN_MAX_ALGORITHMS];
+    int32_t algorithms[8];
     uint8_t credential_ids[1024];
     uint64_t reserved[4];
 } RinPassWebAuthnRequestV1;

@@ -168,8 +168,7 @@ RinResultCode rin_driver_usb_hid_v3_submit_sensor_power(
     uint32_t port_generation, uint32_t sensor_type, uint32_t power_state);
 RinResultCode rin_driver_usb_hid_v3_sensor_power_status(
     RinDriverUsbHidV3* adapter, uint64_t device_id,
-    uint32_t port_generation, uint32_t sensor_type,
-    uint32_t* status_out,
+    uint32_t port_generation, uint32_t* status_out,
     uint32_t* power_state_out, RinResultCode* result_out);
 RinResultCode rin_driver_usb_hid_v3_detach(
     RinDriverUsbHidV3* adapter, uint64_t deadline_ns);

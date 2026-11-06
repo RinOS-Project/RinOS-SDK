@@ -1166,6 +1166,26 @@ static inline int rin_driver_v3_firmware_catalog_lease_v1_valid(
     return digest_nonzero != 0u && key_nonzero != 0u;
 }
 
+static inline RinDriverV3Result
+rin_driver_v3_firmware_catalog_open_cleanup_v1(
+    const RinDriverServicesV3* services, uint64_t session,
+    RinDriverV3FirmwareCatalogLeaseV1* output,
+    RinDriverV3Result open_result) {
+    RinDriverV3Result release_result = RIN_DRIVER_V3_OK;
+    if (output->lease != 0u) {
+        release_result = services->firmware_catalog_release(
+            services->api_context, session, output);
+        if (!rin_driver_services_v3_result_valid(release_result))
+            release_result = RIN_DRIVER_V3_BACKEND_FAILED;
+        if (release_result != RIN_DRIVER_V3_OK)
+            return release_result;
+    }
+    rin_driver_services_v3_zero(output, sizeof(*output));
+    output->struct_size = sizeof(*output);
+    output->version = RIN_DRIVER_V3_FIRMWARE_CATALOG_LEASE_V1_VERSION;
+    return open_result;
+}
+
 static inline RinDriverV3Result rin_driver_v3_firmware_catalog_open_v1(
     const RinDriverApiV3* api, uint64_t session, const char* name,
     uint32_t name_length, RinDriverV3FirmwareCatalogLeaseV1* output) {
@@ -1194,20 +1214,15 @@ static inline RinDriverV3Result rin_driver_v3_firmware_catalog_open_v1(
         services->api_context, session, name, name_length, output);
     if (!rin_driver_services_v3_result_valid(result))
         result = RIN_DRIVER_V3_BACKEND_FAILED;
-    if (result != RIN_DRIVER_V3_OK) {
-        rin_driver_services_v3_zero(output, sizeof(*output));
-        output->struct_size = sizeof(*output);
-        output->version = RIN_DRIVER_V3_FIRMWARE_CATALOG_LEASE_V1_VERSION;
-        return result;
-    }
+    if (result != RIN_DRIVER_V3_OK)
+        return rin_driver_v3_firmware_catalog_open_cleanup_v1(
+            services, session, output, result);
     if (!rin_driver_v3_firmware_catalog_lease_v1_valid(output)) {
-        if (output->lease != 0u)
-            (void)services->firmware_catalog_release(
-                services->api_context, session, output);
-        rin_driver_services_v3_zero(output, sizeof(*output));
-        output->struct_size = sizeof(*output);
-        output->version = RIN_DRIVER_V3_FIRMWARE_CATALOG_LEASE_V1_VERSION;
-        return RIN_DRIVER_V3_BACKEND_FAILED;
+        /* Keep a failed cleanup token in caller storage. The caller can retry
+         * firmware_catalog_release during its normal unwind path; discarding
+         * it here would pin the signed image until runtime teardown. */
+        return rin_driver_v3_firmware_catalog_open_cleanup_v1(
+            services, session, output, RIN_DRIVER_V3_BACKEND_FAILED);
     }
     return RIN_DRIVER_V3_OK;
 }
