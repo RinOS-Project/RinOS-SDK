@@ -799,7 +799,6 @@ static inline bool operation_shape_valid(const Model* model,
                 return false;
         return true;
     }
-    if (operation.opcode == OPERATION_GLOBAL_MAX_POOL_FLOAT32) {
     if (operation.opcode == OPERATION_MAX_POOL_Q8) {
         if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
             operation.input_count != 1u ||
@@ -824,6 +823,7 @@ static inline bool operation_shape_valid(const Model* model,
                 return false;
         return true;
     }
+    if (operation.opcode == OPERATION_GLOBAL_MAX_POOL_FLOAT32) {
         if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
             operation.input_count != 1u ||
             model->tensors[operation.inputs[0]].data_type != DATA_TYPE_FLOAT32 ||
@@ -889,6 +889,55 @@ static inline const AxisQuantization* axis_quantization_for_tensor(
         if (model->quantizations[index].tensor_index == tensor_index)
             return &model->quantizations[index];
     return 0;
+}
+
+static inline bool max_pool_q8_quantization_passthrough_valid(
+    const Model* model, uint32_t input_index, uint32_t output_index)
+{
+    const AxisQuantization* input_axis =
+        axis_quantization_for_tensor(model, input_index);
+    const AxisQuantization* output_axis =
+        axis_quantization_for_tensor(model, output_index);
+    if ((input_axis == 0) != (output_axis == 0)) return false;
+    if (input_axis) {
+        if (input_axis->axis >= 2u ||
+            input_axis->axis != output_axis->axis ||
+            input_axis->count != output_axis->count ||
+            input_axis->reserved != output_axis->reserved)
+            return false;
+        for (uint32_t index = 0u; index < input_axis->count; ++index)
+            if (input_axis->scales[index] != output_axis->scales[index] ||
+                input_axis->zero_points[index] !=
+                    output_axis->zero_points[index])
+                return false;
+    }
+
+    const BatchQuantization* input_batch =
+        batch_quantization_for_tensor(model, input_index);
+    const BatchQuantization* output_batch =
+        batch_quantization_for_tensor(model, output_index);
+    if ((input_batch == 0) != (output_batch == 0)) return false;
+    if (input_batch) {
+        if (input_batch->rank != output_batch->rank ||
+            input_batch->count != output_batch->count ||
+            input_batch->reserved != output_batch->reserved)
+            return false;
+        for (uint32_t dimension = 0u;
+             dimension < RIN_NPU_MODEL_MAX_RANK; ++dimension) {
+            if (input_batch->dimensions[dimension] !=
+                output_batch->dimensions[dimension])
+                return false;
+            if (dimension >= 2u && dimension < input_batch->rank &&
+                input_batch->dimensions[dimension] != 1u)
+                return false;
+        }
+        for (uint32_t index = 0u; index < input_batch->count; ++index)
+            if (input_batch->scales[index] != output_batch->scales[index] ||
+                input_batch->zero_points[index] !=
+                    output_batch->zero_points[index])
+                return false;
+    }
+    return true;
 }
 
 static inline bool model_valid(const Model* model)
@@ -1278,6 +1327,15 @@ static inline bool model_valid(const Model* model)
             if (operation_input.data_type != DATA_TYPE_FLOAT32 ||
                 operation_output.data_type != DATA_TYPE_FLOAT32)
                 return false;
+        } else if (operation.opcode == OPERATION_MAX_POOL_Q8) {
+            if ((operation_input.data_type != DATA_TYPE_INT8 &&
+                 operation_input.data_type != DATA_TYPE_UINT8) ||
+                operation_output.data_type != operation_input.data_type ||
+                operation_output.scale != operation_input.scale ||
+                operation_output.zero_point != operation_input.zero_point ||
+                !max_pool_q8_quantization_passthrough_valid(
+                    model, operation.inputs[0], operation.output_tensor))
+                return false;
         } else {
             if (operation_output.data_type == DATA_TYPE_FLOAT32)
                 return false;
@@ -1290,17 +1348,6 @@ static inline bool model_valid(const Model* model)
             axis_quantization_for_tensor(model, operation.inputs[0]);
         const AxisQuantization* right_axis = operation.input_count == 2u
             ? axis_quantization_for_tensor(model, operation.inputs[1]) : 0;
-        } else if (operation.opcode == OPERATION_MAX_POOL_Q8) {
-            if ((operation_input.data_type != DATA_TYPE_INT8 &&
-                 operation_input.data_type != DATA_TYPE_UINT8) ||
-                operation_output.data_type != operation_input.data_type ||
-                operation_output.scale != operation_input.scale ||
-                operation_output.zero_point != operation_input.zero_point ||
-                axis_quantization_for_tensor(model, operation.inputs[0]) ||
-                axis_quantization_for_tensor(model, operation.output_tensor) ||
-                batch_quantization_for_tensor(model, operation.inputs[0]) ||
-                batch_quantization_for_tensor(model, operation.output_tensor))
-                return false;
         const BatchQuantization* left_batch =
             batch_quantization_for_tensor(model, operation.inputs[0]);
         const BatchQuantization* right_batch = operation.input_count == 2u
@@ -1308,6 +1355,8 @@ static inline bool model_valid(const Model* model)
         const bool left_axis_valid = !left_axis ||
             operation.opcode == OPERATION_MATMUL_INTEGER ||
             operation.opcode == OPERATION_CONV_INTEGER ||
+            (operation.opcode == OPERATION_MAX_POOL_Q8 &&
+             left_axis->axis < 2u) ||
             (operation.opcode == OPERATION_DEQUANTIZE_Q8 &&
              operation.inputs[0] == left_axis->tensor_index) ||
             (operation.opcode == OPERATION_MATMUL_Q8 &&
@@ -1329,6 +1378,9 @@ static inline bool model_valid(const Model* model)
             ? &model->tensors[operation.inputs[1]] : 0;
         const bool left_batch_valid = !left_batch ||
             operation.opcode == OPERATION_MATMUL_INTEGER ||
+            (operation.opcode == OPERATION_MAX_POOL_Q8 &&
+             max_pool_q8_quantization_passthrough_valid(
+                 model, operation.inputs[0], operation.output_tensor)) ||
             (operation.opcode == OPERATION_MATMUL_Q8 &&
              left_batch->dimensions[left_tensor.rank - 2u] ==
                  left_tensor.dimensions[left_tensor.rank - 2u] &&
@@ -1342,8 +1394,10 @@ static inline bool model_valid(const Model* model)
         if (!left_axis_valid || !right_axis_valid || !left_batch_valid ||
             !right_batch_valid ||
             (axis_quantization_for_tensor(model, operation.output_tensor) &&
-             operation.opcode != OPERATION_QUANTIZE_Q8) ||
-            batch_quantization_for_tensor(model, operation.output_tensor))
+             operation.opcode != OPERATION_QUANTIZE_Q8 &&
+             operation.opcode != OPERATION_MAX_POOL_Q8) ||
+            (batch_quantization_for_tensor(model, operation.output_tensor) &&
+             operation.opcode != OPERATION_MAX_POOL_Q8))
             return false;
         available[operation.output_tensor] = 1u;
         if (dynamic_quantize) {
@@ -1409,6 +1463,10 @@ static inline bool model_valid(const Model* model)
             average_pool_for_operation(model, parameters.operation_index) !=
                 &parameters)
             return false;
+        if (model->operations[parameters.operation_index].opcode ==
+                OPERATION_MAX_POOL_Q8 &&
+            parameters.count_include_pad != 0u)
+            return false;
         for (uint32_t prior = 0u; prior < index; ++prior)
             if (model->average_pools[prior].operation_index ==
                 parameters.operation_index)
@@ -1421,10 +1479,6 @@ static inline bool model_valid(const Model* model)
              consumer_index < model->operation_count; ++consumer_index) {
             const Operation& consumer = model->operations[consumer_index];
             for (uint32_t input = 0u; input < consumer.input_count; ++input) {
-        if (model->operations[parameters.operation_index].opcode ==
-                OPERATION_MAX_POOL_Q8 &&
-            parameters.count_include_pad != 0u)
-            return false;
                 const bool matched_dequantize =
                     consumer.opcode == OPERATION_DEQUANTIZE_Q8 &&
                     consumer.input_count == 2u &&
@@ -1483,6 +1537,11 @@ static inline bool model_valid(const Model* model)
                 candidate.input_count == 1u &&
                 candidate.inputs[0] == axis.tensor_index)
                 used = 1u;
+            if (candidate.opcode == OPERATION_MAX_POOL_Q8 &&
+                (candidate.inputs[0] == axis.tensor_index ||
+                 candidate.output_tensor == axis.tensor_index) &&
+                axis.axis < 2u)
+                used = 1u;
         }
         if (!used) return false;
     }
@@ -1494,6 +1553,12 @@ static inline bool model_valid(const Model* model)
         for (uint32_t operation = 0u;
              operation < model->operation_count; ++operation) {
             const Operation& candidate = model->operations[operation];
+            if (candidate.opcode == OPERATION_MAX_POOL_Q8 &&
+                (candidate.inputs[0] == batch.tensor_index ||
+                 candidate.output_tensor == batch.tensor_index) &&
+                max_pool_q8_quantization_passthrough_valid(
+                    model, candidate.inputs[0], candidate.output_tensor))
+                used = 1u;
             if (candidate.opcode != OPERATION_MATMUL_Q8 ||
                 candidate.input_count != 2u)
                 continue;
@@ -3320,6 +3385,101 @@ static inline RinResultCode evaluate_average_pool_float32(
     return RIN_RESULT_OK;
 }
 
+static inline RinResultCode evaluate_max_pool_q8(
+    const Model* model, const Operation& operation, uint32_t operation_index,
+    TensorView* tensors)
+{
+    const AveragePoolParameters* parameters =
+        average_pool_for_operation(model, operation_index);
+    if (!parameters || operation.input_count != 1u ||
+        parameters->count_include_pad != 0u)
+        return RIN_RESULT_CORRUPT_DATA;
+    const TensorDescription& input_description =
+        model->tensors[operation.inputs[0]];
+    const TensorDescription& output_description =
+        model->tensors[operation.output_tensor];
+    uint64_t input_spatial_elements = 1u;
+    uint64_t output_spatial_elements = 1u;
+    uint64_t kernel_elements = 1u;
+    for (uint32_t axis = 0u; axis < parameters->spatial_rank; ++axis) {
+        const uint32_t input_extent = input_description.dimensions[axis + 2u];
+        const uint32_t output_extent = output_description.dimensions[axis + 2u];
+        const uint32_t kernel_extent = parameters->kernel_shape[axis];
+        if (!input_extent || !output_extent || !kernel_extent ||
+            input_spatial_elements > UINT64_MAX / input_extent ||
+            output_spatial_elements > UINT64_MAX / output_extent ||
+            kernel_elements > UINT64_MAX / kernel_extent)
+            return RIN_RESULT_CORRUPT_DATA;
+        input_spatial_elements *= input_extent;
+        output_spatial_elements *= output_extent;
+        kernel_elements *= kernel_extent;
+    }
+    const void* input = tensors[operation.inputs[0]].data;
+    void* output = tensors[operation.output_tensor].data;
+    const uint64_t output_elements =
+        tensors[operation.output_tensor].element_count;
+    const int32_t lowest = input_description.data_type == DATA_TYPE_INT8
+        ? INT8_MIN : 0;
+    for (uint64_t output_element = 0u;
+         output_element < output_elements; ++output_element) {
+        const uint64_t outer_index =
+            output_element / output_spatial_elements;
+        uint64_t output_spatial = output_element % output_spatial_elements;
+        uint32_t output_coordinates[
+            RIN_NPU_QUANTIZED_MODEL_MAX_SPATIAL_DIMS] = {};
+        for (uint32_t reverse = parameters->spatial_rank; reverse > 0u;
+             --reverse) {
+            const uint32_t axis = reverse - 1u;
+            const uint32_t extent = output_description.dimensions[axis + 2u];
+            output_coordinates[axis] = (uint32_t)(output_spatial % extent);
+            output_spatial /= extent;
+        }
+
+        int32_t maximum = lowest;
+        for (uint64_t kernel_index = 0u;
+             kernel_index < kernel_elements; ++kernel_index) {
+            uint64_t remaining = kernel_index;
+            uint64_t input_spatial = 0u;
+            uint32_t kernel_coordinates[
+                RIN_NPU_QUANTIZED_MODEL_MAX_SPATIAL_DIMS] = {};
+            for (uint32_t reverse = parameters->spatial_rank; reverse > 0u;
+                 --reverse) {
+                const uint32_t axis = reverse - 1u;
+                const uint32_t extent = parameters->kernel_shape[axis];
+                kernel_coordinates[axis] = (uint32_t)(remaining % extent);
+                remaining /= extent;
+            }
+            bool in_bounds = true;
+            for (uint32_t axis = 0u; axis < parameters->spatial_rank; ++axis) {
+                const int64_t coordinate =
+                    (int64_t)output_coordinates[axis] *
+                        (int64_t)parameters->strides[axis] -
+                    (int64_t)parameters->pads_begin[axis] +
+                    (int64_t)kernel_coordinates[axis] *
+                        (int64_t)parameters->dilations[axis];
+                const uint32_t extent = input_description.dimensions[axis + 2u];
+                if (coordinate < 0 || coordinate >= (int64_t)extent) {
+                    in_bounds = false;
+                    break;
+                }
+                input_spatial = input_spatial * extent +
+                    (uint64_t)coordinate;
+            }
+            if (!in_bounds) continue;
+            const uint64_t input_element =
+                outer_index * input_spatial_elements + input_spatial;
+            const int32_t value = load_q8(input_description, input,
+                                          input_element);
+            if (value > maximum) maximum = value;
+        }
+        if (input_description.data_type == DATA_TYPE_INT8)
+            static_cast<int8_t*>(output)[output_element] = (int8_t)maximum;
+        else
+            static_cast<uint8_t*>(output)[output_element] = (uint8_t)maximum;
+    }
+    return RIN_RESULT_OK;
+}
+
 static inline RinResultCode evaluate_global_max_pool_float32(
     const Model* model, const Operation& operation, TensorView* tensors)
 {
@@ -3476,6 +3636,10 @@ static inline RinResultCode evaluate_cpu(const CpuPlan* plan,
             result = evaluate_convolution_integer(model, operation, index,
                                                   tensors, true);
             if (result != RIN_RESULT_OK) return result;
+        } else if (operation.opcode == OPERATION_MAX_POOL_Q8) {
+            const RinResultCode result = evaluate_max_pool_q8(
+                model, operation, index, tensors);
+            if (result != RIN_RESULT_OK) return result;
         } else if (operation.opcode == OPERATION_AVERAGE_POOL_FLOAT32) {
             const RinResultCode result = evaluate_average_pool_float32(
                 model, operation, index, tensors);
@@ -3583,10 +3747,6 @@ static inline RinResultCode evaluate_cpu(const CpuPlan* plan,
                             (double)accumulator * output_scale;
                         const uint64_t output_offset =
                             (batch * rows + row) * columns + column;
-        } else if (operation.opcode == OPERATION_MAX_POOL_Q8) {
-            const RinResultCode result = evaluate_max_pool_q8(
-                model, operation, index, tensors);
-            if (result != RIN_RESULT_OK) return result;
                         store_quantized(output_description, output,
                                         output_offset, real_value);
                     }

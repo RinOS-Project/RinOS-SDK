@@ -1982,12 +1982,33 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
           !(input_description.scale > 0.0f) ||
           !(input_description.scale <= FLT_MAX))
         return RIN_RESULT_NOT_SUPPORTED;
+      const q::AxisQuantization *input_axis_quantization = 0;
       for (uint32_t index = 0u; index < quantizations; ++index)
-        if (w->quantizations[index].tensor_index == input_index)
-          return RIN_RESULT_NOT_SUPPORTED;
+        if (w->quantizations[index].tensor_index == input_index) {
+          input_axis_quantization = &w->quantizations[index];
+          break;
+        }
+      if (input_axis_quantization && input_axis_quantization->axis >= 2u)
+        return RIN_RESULT_NOT_SUPPORTED;
+      const q::BatchQuantization *input_batch_quantization = 0;
       for (uint32_t index = 0u; index < batch_quantizations; ++index)
-        if (w->batch_quantizations[index].tensor_index == input_index)
+        if (w->batch_quantizations[index].tensor_index == input_index) {
+          input_batch_quantization = &w->batch_quantizations[index];
+          break;
+        }
+      if (input_batch_quantization) {
+        if (input_batch_quantization->rank != input_description.rank)
           return RIN_RESULT_NOT_SUPPORTED;
+        for (uint32_t axis = 2u; axis < input_batch_quantization->rank; ++axis)
+          if (input_batch_quantization->dimensions[axis] != 1u)
+            return RIN_RESULT_NOT_SUPPORTED;
+      }
+      if ((input_axis_quantization &&
+           (quantizations >= w->quantization_capacity || !w->quantizations)) ||
+          (input_batch_quantization &&
+           (batch_quantizations >= w->batch_quantization_capacity ||
+            !w->batch_quantizations)))
+        return RIN_RESULT_BUFFER_TOO_SMALL;
 
       const uint32_t spatial_rank = input_description.rank - 2u;
       if (node.kernel_shape_count != spatial_rank ||
@@ -2057,6 +2078,16 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
           &output_index);
       if (rc != RIN_RESULT_OK)
         return rc;
+      if (input_axis_quantization) {
+        q::AxisQuantization output_quantization = *input_axis_quantization;
+        output_quantization.tensor_index = output_index;
+        w->quantizations[quantizations++] = output_quantization;
+      }
+      if (input_batch_quantization) {
+        q::BatchQuantization output_quantization = *input_batch_quantization;
+        output_quantization.tensor_index = output_index;
+        w->batch_quantizations[batch_quantizations++] = output_quantization;
+      }
       if (operations >= w->operation_capacity)
         return RIN_RESULT_BUFFER_TOO_SMALL;
       q::Operation operation = {};
