@@ -2655,6 +2655,13 @@ static inline uint32_t rin_syscall_arch_combine_support(
 #define RIN_SYS_GET_ROBUST_LIST_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GET_ROBUST_LIST_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 #define RIN_SYS_GET_ROBUST_LIST_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+/* memory. */
+/* flags=0はMLOCKと同じ動作。MLOCK_ONFAULTは未常駐ページをfault-inせず、範囲のVMAをlockする。 */
+#define RIN_SYS_MLOCK2                      0x80DBu
+/* MLOCK2 availability by kernel execution mode: 0=unsupported, 1=supported, 2=configuration-dependent. */
+#define RIN_SYS_MLOCK2_SUPPORT_X86_NATIVE           RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MLOCK2_SUPPORT_X86_64_NATIVE        RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
+#define RIN_SYS_MLOCK2_SUPPORT_X86_64_COMPAT32      RIN_SYSCALL_ARCH_SUPPORT_SUPPORTED
 
 /* Returns UNKNOWN for syscall numbers outside this declared availability table. */
 static inline uint32_t rin_syscall_arch_support(
@@ -5858,6 +5865,13 @@ static inline uint32_t rin_syscall_arch_support(
         case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_GET_ROBUST_LIST_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_GET_ROBUST_LIST_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
         case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_GET_ROBUST_LIST_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
+        default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
+        }
+    case RIN_SYS_MLOCK2:
+        switch (mode) {
+        case RIN_SYSCALL_ARCH_MODE_X86_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_MLOCK2_SUPPORT_X86_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_NATIVE: return rin_syscall_arch_combine_support(RIN_SYS_MLOCK2_SUPPORT_X86_64_NATIVE, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_NATIVE);
+        case RIN_SYSCALL_ARCH_MODE_X86_64_COMPAT32: return rin_syscall_arch_combine_support(RIN_SYS_MLOCK2_SUPPORT_X86_64_COMPAT32, RIN_SYSCALL_ARCH_MODE_SUPPORT_X86_64_COMPAT32);
         default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
         }
     default: return RIN_SYSCALL_ARCH_SUPPORT_UNKNOWN;
