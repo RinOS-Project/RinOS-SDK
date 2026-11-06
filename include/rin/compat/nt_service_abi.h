@@ -117,8 +117,13 @@ typedef enum RinNTServiceRawInputEventTypeV1 {
     RINNT_SERVICE_RAW_INPUT_EVENT_MOUSE_ABSOLUTE = 7,
     RINNT_SERVICE_RAW_INPUT_EVENT_HID_REPORT = 8,
     RINNT_SERVICE_RAW_INPUT_EVENT_HID_SENSOR_SAMPLE = 9,
-    RINNT_SERVICE_RAW_INPUT_EVENT_DEVICE_RESET = 10
+    RINNT_SERVICE_RAW_INPUT_EVENT_DEVICE_RESET = 10,
+    RINNT_SERVICE_RAW_INPUT_EVENT_HID_USAGE = 11
 } RinNTServiceRawInputEventTypeV1;
+
+/* Generic decoded HID usage event. data[0] is the HID Usage Page, data[1]
+ * is the 16-bit Usage ID, and data[2] is 1 for asserted or 0 for released.
+ * This keeps Consumer Control usages distinct from keyboard scan codes. */
 
 #define RINNT_SERVICE_RAW_INPUT_RESET_REASON_REMOVED UINT32_C(1)
 #define RINNT_SERVICE_RAW_INPUT_RESET_REASON_OVERFLOW UINT32_C(2)
@@ -531,6 +536,9 @@ typedef struct RinNTServiceRawInputReadRequestV1 {
  * ABSOLUTE: x, y, minimum x, maximum x, minimum y, maximum y.
  * HID_REPORT: byte length 1..20, then five little-endian packed report
  * words. Bytes after the declared length must be zero.
+ * HID_USAGE: data[0] is the HID Usage Page, data[1] is the 16-bit Usage ID,
+ * and data[2] is 1 when asserted or 0 when released; remaining words are
+ * zero. Generic usage events require the raw-input permission.
  * DEVICE_RESET: flags is a nonzero raw input class mask and data[0] is a
  * RINNT_SERVICE_RAW_INPUT_RESET_REASON_* value; data[1..5] are zero. A
  * removal/revocation carries the removed device handle and generation. An

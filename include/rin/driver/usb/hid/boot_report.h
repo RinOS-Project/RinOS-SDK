@@ -17,7 +17,10 @@ typedef enum RinUsbHidEventType {
     RIN_USB_HID_EVENT_KEY = 1,
     RIN_USB_HID_EVENT_RELATIVE = 2,
     RIN_USB_HID_EVENT_SYNC = 3,
-    RIN_USB_HID_EVENT_ABSOLUTE = 4
+    RIN_USB_HID_EVENT_ABSOLUTE = 4,
+    /* Consumer Control events carry the Consumer Usage ID in code and a
+     * pressed/released value. */
+    RIN_USB_HID_EVENT_CONSUMER = 5
 } RinUsbHidEventType;
 
 #define RIN_USB_HID_REL_X     0u
