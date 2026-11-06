@@ -157,6 +157,31 @@ typedef struct RinDriverV3FirmwareInfo {
     uint64_t reserved[2];
 } RinDriverV3FirmwareInfo;
 
+/* A pinned entry from the signed firmware catalog embedded in this NDRV
+ * image. The NDRV signature authenticates the entry digest and signer. */
+typedef struct RinDriverV3FirmwareCatalogLeaseV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    RinDriverV3Lease lease;
+    uint64_t length;
+    uint32_t flags;
+    uint32_t reserved0;
+    uint8_t sha256[32];
+    uint8_t trusted_key_id[32];
+    uint64_t reserved[2];
+} RinDriverV3FirmwareCatalogLeaseV1;
+
+#define RIN_DRIVER_V3_FIRMWARE_CATALOG_LEASE_V1_VERSION \
+    UINT32_C(0x00010000)
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinDriverV3FirmwareCatalogLeaseV1) == 112u,
+              "NDRV signed firmware catalog lease ABI drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinDriverV3FirmwareCatalogLeaseV1) == 112u,
+               "NDRV signed firmware catalog lease ABI drift");
+#endif
+
 typedef struct RinDriverV3ChildDescriptor {
     uint32_t struct_size;
     uint32_t version;
@@ -364,6 +389,16 @@ typedef RinDriverV3Result (*RinDriverV3FirmwareReadFn)(
 typedef RinDriverV3Result (*RinDriverV3FirmwareReleaseFn)(
     uint64_t api_context, uint64_t session, RinDriverV3Lease firmware,
     uint64_t generation);
+typedef RinDriverV3Result (*RinDriverV3FirmwareCatalogOpenFn)(
+    uint64_t api_context, uint64_t session, const char* name,
+    uint32_t name_length, RinDriverV3FirmwareCatalogLeaseV1* output);
+typedef RinDriverV3Result (*RinDriverV3FirmwareCatalogReadFn)(
+    uint64_t api_context, uint64_t session,
+    const RinDriverV3FirmwareCatalogLeaseV1* lease, uint64_t offset,
+    void* output, uint32_t capacity, uint32_t* bytes_read);
+typedef RinDriverV3Result (*RinDriverV3FirmwareCatalogReleaseFn)(
+    uint64_t api_context, uint64_t session,
+    RinDriverV3FirmwareCatalogLeaseV1* lease);
 typedef RinDriverV3Result (*RinDriverV3ChildPublishFn)(
     uint64_t api_context, uint64_t session,
     const RinDriverV3ChildDescriptor* descriptor,
@@ -444,6 +479,19 @@ typedef struct RinDriverServicesV3 {
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t child_remove_ex_padding;
 #endif
+    /* Optional V1 extension, guarded by struct_size for older modules. */
+    RinDriverV3FirmwareCatalogOpenFn firmware_catalog_open;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t firmware_catalog_open_padding;
+#endif
+    RinDriverV3FirmwareCatalogReadFn firmware_catalog_read;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t firmware_catalog_read_padding;
+#endif
+    RinDriverV3FirmwareCatalogReleaseFn firmware_catalog_release;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t firmware_catalog_release_padding;
+#endif
 } RinDriverServicesV3;
 
 static inline const RinDriverServicesV3* rin_driver_services_v3_get(
@@ -464,6 +512,11 @@ static inline const RinDriverServicesV3* rin_driver_services_v3_get(
     services = (const RinDriverServicesV3*)(uintptr_t)api->services_api_address;
     if (services->struct_size <
             offsetof(RinDriverServicesV3, child_remove_ex) ||
+        (services->struct_size >
+             offsetof(RinDriverServicesV3, firmware_catalog_open) &&
+         services->struct_size <
+             offsetof(RinDriverServicesV3, firmware_catalog_release) +
+                 sizeof(services->firmware_catalog_release)) ||
         services->version != RIN_DRIVER_SERVICES_V3_VERSION ||
         (services->capabilities != 0u && services->api_context == 0u) ||
         (services->capabilities & ~known) != 0u ||
@@ -485,7 +538,17 @@ static inline const RinDriverServicesV3* rin_driver_services_v3_get(
          (!services->child_publish || !services->child_remove)) ||
         (((services->capabilities &
            RIN_DRIVER_V3_CAP_DEVICE_PROPERTIES) != 0u) &&
-         !services->property_get))
+         !services->property_get) ||
+        (services->struct_size >=
+             offsetof(RinDriverServicesV3, firmware_catalog_release) +
+                 sizeof(services->firmware_catalog_release) &&
+         (services->firmware_catalog_open ||
+          services->firmware_catalog_read ||
+          services->firmware_catalog_release) &&
+         ((services->capabilities & RIN_DRIVER_V3_CAP_FIRMWARE) == 0u ||
+          !services->firmware_catalog_open ||
+          !services->firmware_catalog_read ||
+          !services->firmware_catalog_release)))
         return NULL;
 #if UINTPTR_MAX == UINT32_MAX
     if (services->ioport_acquire_padding != 0u ||
@@ -502,8 +565,25 @@ static inline const RinDriverServicesV3* rin_driver_services_v3_get(
         services->property_get_padding != 0u ||
         services->wait_until_padding != 0u)
         return NULL;
-    if (services->struct_size >= sizeof(*services) &&
+    if (services->struct_size >=
+            offsetof(RinDriverServicesV3, child_remove_ex_padding) +
+                sizeof(services->child_remove_ex_padding) &&
         services->child_remove_ex_padding != 0u)
+        return NULL;
+    if (services->struct_size >=
+            offsetof(RinDriverServicesV3, firmware_catalog_open_padding) +
+                sizeof(services->firmware_catalog_open_padding) &&
+        services->firmware_catalog_open_padding != 0u)
+        return NULL;
+    if (services->struct_size >=
+            offsetof(RinDriverServicesV3, firmware_catalog_read_padding) +
+                sizeof(services->firmware_catalog_read_padding) &&
+        services->firmware_catalog_read_padding != 0u)
+        return NULL;
+    if (services->struct_size >=
+            offsetof(RinDriverServicesV3, firmware_catalog_release_padding) +
+                sizeof(services->firmware_catalog_release_padding) &&
+        services->firmware_catalog_release_padding != 0u)
         return NULL;
 #endif
     return services;
@@ -517,6 +597,19 @@ static inline int rin_driver_services_v3_has(
            (services->capabilities & capability) == capability;
 }
 
+static inline int rin_driver_services_v3_has_firmware_catalog(
+    const RinDriverApiV3* api, const RinDriverServicesV3* services) {
+    const uint32_t required_size = (uint32_t)(
+        offsetof(RinDriverServicesV3, firmware_catalog_release) +
+        sizeof(services->firmware_catalog_release));
+    return api && services && services->struct_size >= required_size &&
+           (api->capabilities & RIN_DRIVER_V3_CAP_FIRMWARE) != 0u &&
+           (services->capabilities & RIN_DRIVER_V3_CAP_FIRMWARE) != 0u &&
+           services->firmware_catalog_open &&
+           services->firmware_catalog_read &&
+           services->firmware_catalog_release;
+}
+
 static inline int rin_driver_services_v3_bytes_zero(
     const void* memory, uint32_t size) {
     const uint8_t* bytes = (const uint8_t*)memory;
@@ -524,6 +617,22 @@ static inline int rin_driver_services_v3_bytes_zero(
         if (bytes[index] != 0u) return 0;
     }
     return 1;
+}
+
+static inline int rin_driver_services_v3_ranges_overlap(
+    const void* first, size_t first_size,
+    const void* second, size_t second_size) {
+    uintptr_t first_begin;
+    uintptr_t second_begin;
+    if (!first || !second || first_size == 0u || second_size == 0u)
+        return 0;
+    first_begin = (uintptr_t)first;
+    second_begin = (uintptr_t)second;
+    if (first_begin > UINTPTR_MAX - first_size ||
+        second_begin > UINTPTR_MAX - second_size)
+        return 1;
+    return first_begin < second_begin + second_size &&
+           second_begin < first_begin + first_size;
 }
 
 static inline void rin_driver_services_v3_zero(void* memory, uint32_t size) {
@@ -552,10 +661,16 @@ static_assert(offsetof(RinDriverServicesV3, wait_until) == 120u,
               "NDRV v3 wait extension offset drift");
 static_assert(offsetof(RinDriverServicesV3, child_remove_ex) == 144u,
               "NDRV v3 child removal extension offset drift");
-static_assert(sizeof(RinDriverServicesV3) == 152u,
+static_assert(offsetof(RinDriverServicesV3, firmware_catalog_open) == 152u,
+              "NDRV v3 firmware catalog open extension offset drift");
+static_assert(offsetof(RinDriverServicesV3, firmware_catalog_read) == 160u,
+              "NDRV v3 firmware catalog read extension offset drift");
+static_assert(offsetof(RinDriverServicesV3, firmware_catalog_release) == 168u,
+              "NDRV v3 firmware catalog release extension offset drift");
+static_assert(sizeof(RinDriverServicesV3) == 176u,
               "NDRV v3 services tail extension drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinDriverServicesV3) == 152u,
+_Static_assert(sizeof(RinDriverServicesV3) == 176u,
                "NDRV v3 services table ABI drift");
 _Static_assert(offsetof(RinDriverServicesV3, irq_poll) == 56u,
                "NDRV v3 IRQ callback offset drift");
@@ -571,6 +686,12 @@ _Static_assert(offsetof(RinDriverServicesV3, wait_until) == 120u,
                "NDRV v3 wait extension offset drift");
 _Static_assert(offsetof(RinDriverServicesV3, child_remove_ex) == 144u,
                "NDRV v3 child removal extension offset drift");
+_Static_assert(offsetof(RinDriverServicesV3, firmware_catalog_open) == 152u,
+               "NDRV v3 firmware catalog open extension offset drift");
+_Static_assert(offsetof(RinDriverServicesV3, firmware_catalog_read) == 160u,
+               "NDRV v3 firmware catalog read extension offset drift");
+_Static_assert(offsetof(RinDriverServicesV3, firmware_catalog_release) == 168u,
+               "NDRV v3 firmware catalog release extension offset drift");
 #endif
 
 static inline int rin_driver_v3_ioport_lease_valid(
@@ -1021,6 +1142,150 @@ static inline RinDriverV3Result rin_driver_v3_firmware_release(
         return rin_driver_services_v3_result_valid(result)
             ? result : RIN_DRIVER_V3_BACKEND_FAILED;
     }
+}
+
+static inline int rin_driver_v3_firmware_catalog_lease_v1_valid(
+    const RinDriverV3FirmwareCatalogLeaseV1* lease) {
+    uint8_t digest_nonzero = 0u;
+    uint8_t key_nonzero = 0u;
+    if (!lease || lease->struct_size != sizeof(*lease) ||
+        lease->version !=
+            RIN_DRIVER_V3_FIRMWARE_CATALOG_LEASE_V1_VERSION ||
+        lease->lease == 0u || lease->length == 0u ||
+        lease->length > RIN_DRIVER_V3_FIRMWARE_CATALOG_MAX_SIZE ||
+        lease->flags != (RIN_DRIVER_V3_FIRMWARE_AUTHENTICATED |
+                         RIN_DRIVER_V3_FIRMWARE_EMBEDDED) ||
+        lease->reserved0 != 0u ||
+        !rin_driver_services_v3_bytes_zero(
+            lease->reserved, sizeof(lease->reserved)))
+        return 0;
+    for (uint32_t index = 0u; index < sizeof(lease->sha256); ++index)
+        digest_nonzero |= lease->sha256[index];
+    for (uint32_t index = 0u; index < sizeof(lease->trusted_key_id); ++index)
+        key_nonzero |= lease->trusted_key_id[index];
+    return digest_nonzero != 0u && key_nonzero != 0u;
+}
+
+static inline RinDriverV3Result rin_driver_v3_firmware_catalog_open_v1(
+    const RinDriverApiV3* api, uint64_t session, const char* name,
+    uint32_t name_length, RinDriverV3FirmwareCatalogLeaseV1* output) {
+    const RinDriverServicesV3* services = rin_driver_services_v3_get(api);
+    RinDriverV3Result result;
+    int output_disjoint = output &&
+        !rin_driver_services_v3_ranges_overlap(
+            output, sizeof(*output), name, name_length) &&
+        !rin_driver_services_v3_ranges_overlap(
+            output, sizeof(*output), api, api ? sizeof(*api) : 0u) &&
+        !rin_driver_services_v3_ranges_overlap(
+            output, sizeof(*output), services,
+            services ? services->struct_size : 0u);
+    if (output_disjoint) {
+        rin_driver_services_v3_zero(output, sizeof(*output));
+        output->struct_size = sizeof(*output);
+        output->version = RIN_DRIVER_V3_FIRMWARE_CATALOG_LEASE_V1_VERSION;
+    }
+    if (!services || !name || !output || session == 0u ||
+        !output_disjoint ||
+        !rin_driver_v3_firmware_name_valid(name, name_length))
+        return RIN_DRIVER_V3_INVALID;
+    if (!rin_driver_services_v3_has_firmware_catalog(api, services))
+        return RIN_DRIVER_V3_UNSUPPORTED;
+    result = services->firmware_catalog_open(
+        services->api_context, session, name, name_length, output);
+    if (!rin_driver_services_v3_result_valid(result))
+        result = RIN_DRIVER_V3_BACKEND_FAILED;
+    if (result != RIN_DRIVER_V3_OK) {
+        rin_driver_services_v3_zero(output, sizeof(*output));
+        output->struct_size = sizeof(*output);
+        output->version = RIN_DRIVER_V3_FIRMWARE_CATALOG_LEASE_V1_VERSION;
+        return result;
+    }
+    if (!rin_driver_v3_firmware_catalog_lease_v1_valid(output)) {
+        if (output->lease != 0u)
+            (void)services->firmware_catalog_release(
+                services->api_context, session, output);
+        rin_driver_services_v3_zero(output, sizeof(*output));
+        output->struct_size = sizeof(*output);
+        output->version = RIN_DRIVER_V3_FIRMWARE_CATALOG_LEASE_V1_VERSION;
+        return RIN_DRIVER_V3_BACKEND_FAILED;
+    }
+    return RIN_DRIVER_V3_OK;
+}
+
+static inline RinDriverV3Result rin_driver_v3_firmware_catalog_read_v1(
+    const RinDriverApiV3* api, uint64_t session,
+    const RinDriverV3FirmwareCatalogLeaseV1* lease, uint64_t offset,
+    void* output, uint32_t capacity, uint32_t* bytes_read) {
+    const RinDriverServicesV3* services = rin_driver_services_v3_get(api);
+    RinDriverV3Result result;
+    int output_disjoint = output && lease && bytes_read &&
+        !rin_driver_services_v3_ranges_overlap(
+            output, capacity, lease, sizeof(*lease)) &&
+        !rin_driver_services_v3_ranges_overlap(
+            output, capacity, bytes_read, sizeof(*bytes_read)) &&
+        !rin_driver_services_v3_ranges_overlap(
+            output, capacity, api, api ? sizeof(*api) : 0u) &&
+        !rin_driver_services_v3_ranges_overlap(
+            output, capacity, services,
+            services ? services->struct_size : 0u);
+    int count_disjoint = bytes_read &&
+        !rin_driver_services_v3_ranges_overlap(
+            bytes_read, sizeof(*bytes_read), lease,
+            lease ? sizeof(*lease) : 0u) &&
+        !rin_driver_services_v3_ranges_overlap(
+            bytes_read, sizeof(*bytes_read), output, output ? capacity : 0u) &&
+        !rin_driver_services_v3_ranges_overlap(
+            bytes_read, sizeof(*bytes_read), api, api ? sizeof(*api) : 0u) &&
+        !rin_driver_services_v3_ranges_overlap(
+            bytes_read, sizeof(*bytes_read), services,
+            services ? services->struct_size : 0u);
+    if (count_disjoint) *bytes_read = 0u;
+    if (output_disjoint && capacity <= RIN_DRIVER_V3_FIRMWARE_MAX_READ)
+        rin_driver_services_v3_zero(output, capacity);
+    if (!services || !lease || !output || !bytes_read || !output_disjoint ||
+        !count_disjoint || session == 0u ||
+        !rin_driver_v3_firmware_catalog_lease_v1_valid(lease) ||
+        capacity == 0u || capacity > RIN_DRIVER_V3_FIRMWARE_MAX_READ ||
+        offset >= lease->length || capacity > lease->length - offset)
+        return RIN_DRIVER_V3_INVALID;
+    if (!rin_driver_services_v3_has_firmware_catalog(api, services))
+        return RIN_DRIVER_V3_UNSUPPORTED;
+    result = services->firmware_catalog_read(
+        services->api_context, session, lease, offset, output, capacity,
+        bytes_read);
+    if (!rin_driver_services_v3_result_valid(result))
+        result = RIN_DRIVER_V3_BACKEND_FAILED;
+    if (result != RIN_DRIVER_V3_OK || *bytes_read != capacity) {
+        if (capacity <= RIN_DRIVER_V3_FIRMWARE_MAX_READ)
+            rin_driver_services_v3_zero(output, capacity);
+        *bytes_read = 0u;
+        return result == RIN_DRIVER_V3_OK ? RIN_DRIVER_V3_BACKEND_FAILED
+                                          : result;
+    }
+    return RIN_DRIVER_V3_OK;
+}
+
+static inline RinDriverV3Result rin_driver_v3_firmware_catalog_release_v1(
+    const RinDriverApiV3* api, uint64_t session,
+    RinDriverV3FirmwareCatalogLeaseV1* lease) {
+    const RinDriverServicesV3* services = rin_driver_services_v3_get(api);
+    RinDriverV3Result result;
+    if (!services || !lease || session == 0u || lease->lease == 0u ||
+        rin_driver_services_v3_ranges_overlap(
+            lease, sizeof(*lease), api, api ? sizeof(*api) : 0u) ||
+        rin_driver_services_v3_ranges_overlap(
+            lease, sizeof(*lease), services,
+            services ? services->struct_size : 0u))
+        return RIN_DRIVER_V3_INVALID;
+    if (!rin_driver_services_v3_has_firmware_catalog(api, services))
+        return RIN_DRIVER_V3_UNSUPPORTED;
+    result = services->firmware_catalog_release(
+        services->api_context, session, lease);
+    if (!rin_driver_services_v3_result_valid(result))
+        result = RIN_DRIVER_V3_BACKEND_FAILED;
+    if (result == RIN_DRIVER_V3_OK)
+        rin_driver_services_v3_zero(lease, sizeof(*lease));
+    return result;
 }
 
 static inline RinDriverV3Result rin_driver_v3_child_publish(
