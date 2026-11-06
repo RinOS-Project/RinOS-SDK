@@ -28,6 +28,25 @@
  * reserved[0]. The driver supplies a location hint only; the kernel resolves
  * it against its live PCI catalog before granting any device resources. */
 #define RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_PCI_V1 UINT32_C(0x00010001)
+/* V1.2 logical children may delegate resources to a signed, parent-owned
+ * transport provider. reserved[0] carries a pointer to a static provider
+ * table in the signed parent image during publish; the kernel snapshots the
+ * table and clears the pointer before publishing the child descriptor. Keep
+ * its callback and context alive until the child is removed. The published
+ * descriptor stores the provider's capability grant in reserved[1]. */
+#define RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_RESOURCE_V1 UINT32_C(0x00010002)
+#define RIN_DRIVER_V3_CHILD_RESOURCE_BROKER_V1_VERSION UINT32_C(0x00010000)
+#define RIN_DRIVER_V3_CHILD_RESOURCE_BROKER_V1_FLAG_POWER_MANAGEMENT \
+    UINT64_C(0x0000000000000001)
+#define RIN_DRIVER_V3_CHILD_RESOURCE_BROKER_V1_FLAG_MASK \
+    RIN_DRIVER_V3_CHILD_RESOURCE_BROKER_V1_FLAG_POWER_MANAGEMENT
+#define RIN_DRIVER_V3_CHILD_RESOURCE_BROKER_V1_CAPABILITIES \
+    (RIN_DRIVER_V3_CAP_DMA_ISOLATED | RIN_DRIVER_V3_CAP_BAR | \
+     RIN_DRIVER_V3_CAP_MSI | RIN_DRIVER_V3_CAP_MSIX | \
+     RIN_DRIVER_V3_CAP_TIMER | RIN_DRIVER_V3_CAP_REGISTER | \
+     RIN_DRIVER_V3_CAP_DMA_START | RIN_DRIVER_V3_CAP_DMA_CONTIGUOUS | \
+     RIN_DRIVER_V3_CAP_DMA_STOP)
+#define RIN_DRIVER_V3_CHILD_RESOURCE_REQUEST_V1_VERSION UINT32_C(0x00010000)
 #define RIN_DRIVER_V3_CHILD_PCI_LOCATION(segment, bus, device, function) \
     ((uint64_t)(segment) | ((uint64_t)(bus) << 16u) | \
      ((uint64_t)(device) << 24u) | ((uint64_t)(function) << 29u))
@@ -158,6 +177,116 @@ typedef struct RinDriverV3ChildDescriptor {
     char name[RIN_DRIVER_V3_CHILD_NAME_MAX];
     uint64_t reserved[2];
 } RinDriverV3ChildDescriptor;
+
+typedef enum RinDriverV3ChildResourceOperationV1 {
+    RIN_DRIVER_V3_CHILD_RESOURCE_DOMAIN_CREATE = 1,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DOMAIN_DESTROY = 2,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DMA_ALLOCATE = 3,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DMA_RELEASE = 4,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DMA_MAP_SG = 5,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DMA_SYNC = 6,
+    RIN_DRIVER_V3_CHILD_RESOURCE_BAR_MAP = 7,
+    RIN_DRIVER_V3_CHILD_RESOURCE_BAR_UNMAP = 8,
+    RIN_DRIVER_V3_CHILD_RESOURCE_IRQ_ACQUIRE = 9,
+    RIN_DRIVER_V3_CHILD_RESOURCE_IRQ_RELEASE = 10,
+    RIN_DRIVER_V3_CHILD_RESOURCE_TIMER_ARM = 11,
+    RIN_DRIVER_V3_CHILD_RESOURCE_TIMER_CANCEL = 12,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DEVICE_REGISTER = 13,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DEVICE_UNREGISTER = 14,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DEVICE_RESET = 15,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DMA_START = 16,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DMA_STOP = 17,
+    RIN_DRIVER_V3_CHILD_RESOURCE_IRQ_ACQUIRE_INDEX = 18,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DEVICE_SUSPEND = 19,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DEVICE_RESUME = 20,
+    RIN_DRIVER_V3_CHILD_RESOURCE_DMA_PHYSICAL_ADDRESS = 21
+} RinDriverV3ChildResourceOperationV1;
+
+/* The dispatch request is synchronous. Pointer-valued input/output fields
+ * name kernel mappings supplied by the child runtime and are valid only for
+ * the duration of the call. A provider must bind every lease to both child
+ * identity fields and must finish or roll back before returning.
+ * If dispatch fails after returning a nonzero domain/backend cookie, the
+ * runtime invokes the corresponding destroy/release operation. Failed
+ * operations without a cookie must leave no resource behind.
+ *
+ * Operation payloads use values[] as follows:
+ * DOMAIN_CREATE returns domain_cookie; DOMAIN_DESTROY consumes it.
+ * DMA_ALLOCATE: length, alignment in values[0..1]; returns driver address and
+ * IOVA in values[2..3] plus backend_cookie. DMA_MAP_SG uses input/output for
+ * slice/segment arrays, count/capacity, and returns count plus backend_cookie.
+ * DMA_SYNC uses flags for action and values[0..1] for offset/length.
+ * BAR_MAP uses values[0..2] for index/offset/length and returns mapped address
+ * in values[3] plus backend_cookie. IRQ_ACQUIRE returns vector in values[0];
+ * IRQ_ACQUIRE_INDEX consumes values[0] as table index and returns vector in
+ * values[1]; both return backend_cookie.
+ * TIMER_ARM uses values[0..1] for deadline/period and returns backend_cookie.
+ * DEVICE_REGISTER uses input for RinDriverV3DeviceRegistration and returns
+ * backend_cookie. DEVICE_RESET uses values[0] for timeout milliseconds.
+ * DMA_PHYSICAL_ADDRESS consumes backend_cookie and returns values[0]. The
+ * remaining release, DMA_START/STOP, and power operations use their named
+ * cookie, child identity, and flags fields. */
+typedef struct RinDriverV3ChildResourceRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t operation;
+    uint32_t flags;
+    uint64_t child_device;
+    uint64_t child_generation;
+    uint64_t domain_cookie;
+    uint64_t backend_cookie;
+    uint64_t values[4];
+    uint64_t input;
+    uint64_t output;
+    uint32_t count;
+    uint32_t capacity;
+    uint32_t width;
+    uint32_t reserved0;
+    uint64_t reserved[2];
+} RinDriverV3ChildResourceRequestV1;
+
+typedef int (*RinDriverV3ChildResourceDispatchV1)(
+    uint64_t context, RinDriverV3ChildResourceRequestV1* request);
+
+typedef struct RinDriverV3ChildResourceBrokerV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint64_t flags;
+    uint64_t capabilities;
+    uint64_t context;
+    RinDriverV3ChildResourceDispatchV1 dispatch;
+    uint64_t reserved[2];
+} RinDriverV3ChildResourceBrokerV1;
+
+/* V1.2 kernel validation requires dispatch and any nonzero context to point
+ * into the signed parent image graph. Static module state is the supported
+ * context storage for this broker. */
+
+#if defined(__cplusplus)
+static_assert(sizeof(RinDriverV3ChildResourceRequestV1) == 128u,
+              "NDRV child-resource request ABI drift");
+static_assert(offsetof(RinDriverV3ChildResourceRequestV1, reserved) == 112u,
+              "NDRV child-resource request offset drift");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(RinDriverV3ChildResourceRequestV1) == 128u,
+               "NDRV child-resource request ABI drift");
+_Static_assert(offsetof(RinDriverV3ChildResourceRequestV1, reserved) == 112u,
+               "NDRV child-resource request offset drift");
+#endif
+
+static inline uint64_t rin_driver_v3_child_resources_from_capabilities(
+    uint64_t capabilities)
+{
+    uint64_t resources = 0u;
+    if ((capabilities & RIN_DRIVER_V3_CAP_BAR) != 0u)
+        resources |= RIN_DRIVER_RESOURCE_MMIO;
+    if ((capabilities & RIN_DRIVER_V3_CAP_DMA_ISOLATED) != 0u)
+        resources |= RIN_DRIVER_RESOURCE_DMA;
+    if ((capabilities &
+         (RIN_DRIVER_V3_CAP_MSI | RIN_DRIVER_V3_CAP_MSIX)) != 0u)
+        resources |= RIN_DRIVER_RESOURCE_IRQ;
+    return resources;
+}
 
 typedef struct RinDriverV3ChildDevice {
     uint32_t struct_size;
@@ -489,7 +618,9 @@ static inline int rin_driver_v3_child_descriptor_valid(
     if (!descriptor || descriptor->struct_size < sizeof(*descriptor) ||
         (descriptor->version != RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_V1 &&
          descriptor->version !=
-             RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_PCI_V1) ||
+             RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_PCI_V1 &&
+         descriptor->version !=
+             RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_RESOURCE_V1) ||
         descriptor->bus_type == 0u || descriptor->parent_device == 0u ||
         descriptor->hardware_id_length == 0u ||
         descriptor->hardware_id_length >=
@@ -509,7 +640,10 @@ static inline int rin_driver_v3_child_descriptor_valid(
             RIN_DRIVER_V3_CHILD_NAME_MAX - descriptor->name_length - 1u) ||
         (descriptor->version == RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_V1 &&
          !rin_driver_services_v3_bytes_zero(
-             descriptor->reserved, sizeof(descriptor->reserved))))
+             descriptor->reserved, sizeof(descriptor->reserved))) ||
+        (descriptor->version ==
+             RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_RESOURCE_V1 &&
+         descriptor->bus_type == RIN_DRIVER_BUS_PCI))
         return 0;
     pci_location = descriptor->version ==
         RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_PCI_V1;
@@ -517,6 +651,11 @@ static inline int rin_driver_v3_child_descriptor_valid(
         (descriptor->bus_type != RIN_DRIVER_BUS_PCI ||
          (descriptor->reserved[0] >> 32u) != 0u ||
          descriptor->reserved[1] != 0u))
+        return 0;
+    if (descriptor->version ==
+            RIN_DRIVER_V3_CHILD_DESCRIPTOR_VERSION_RESOURCE_V1 &&
+        (descriptor->reserved[1] &
+             ~RIN_DRIVER_V3_CHILD_RESOURCE_BROKER_V1_CAPABILITIES) != 0u)
         return 0;
     for (uint32_t index = 0u; index < descriptor->hardware_id_length;
          ++index) {
