@@ -105,7 +105,9 @@ typedef enum RinNTServiceProcessStateV1 {
 #define RINNT_SERVICE_RAW_INPUT_CLASS_MOUSE UINT32_C(2)
 #define RINNT_SERVICE_RAW_INPUT_CLASS_HID UINT32_C(4)
 #define RINNT_SERVICE_RAW_INPUT_CLASS_MASK UINT32_C(7)
-#define RINNT_SERVICE_RAW_INPUT_HID_MAX_REPORT_BYTES UINT32_C(20)
+#define RINNT_SERVICE_RAW_INPUT_HID_INLINE_REPORT_BYTES UINT32_C(20)
+#define RINNT_SERVICE_RAW_INPUT_HID_MAX_REPORT_BYTES UINT32_C(64)
+#define RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_BYTES UINT32_C(20)
 
 typedef enum RinNTServiceRawInputEventTypeV1 {
     RINNT_SERVICE_RAW_INPUT_EVENT_KEY_DOWN = 1,
@@ -118,8 +120,67 @@ typedef enum RinNTServiceRawInputEventTypeV1 {
     RINNT_SERVICE_RAW_INPUT_EVENT_HID_REPORT = 8,
     RINNT_SERVICE_RAW_INPUT_EVENT_HID_SENSOR_SAMPLE = 9,
     RINNT_SERVICE_RAW_INPUT_EVENT_DEVICE_RESET = 10,
-    RINNT_SERVICE_RAW_INPUT_EVENT_HID_USAGE = 11
+    RINNT_SERVICE_RAW_INPUT_EVENT_HID_USAGE = 11,
+    RINNT_SERVICE_RAW_INPUT_EVENT_HID_REPORT_FRAGMENT = 12
 } RinNTServiceRawInputEventTypeV1;
+
+#define RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_FIRST UINT32_C(1)
+#define RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_LAST UINT32_C(2)
+#define RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_FLAGS_MASK UINT32_C(3)
+
+/* A fragment's data[0..2] contain total report length, byte offset, and
+ * fragment length. The 20 payload bytes occupy data[3..5] followed by the
+ * event's reserved word in little-endian byte order. */
+static inline uint8_t rinnt_service_raw_input_hid_fragment_byte(
+    const int32_t data[6], uint64_t reserved, uint32_t index)
+{
+    if (!data || index >= RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_BYTES)
+        return 0u;
+    if (index < 12u) {
+        uint32_t word = (uint32_t)data[3u + index / 4u];
+        return (uint8_t)(word >> ((index % 4u) * 8u));
+    }
+    return (uint8_t)(reserved >> ((index - 12u) * 8u));
+}
+
+static inline int rinnt_service_raw_input_hid_fragment_valid(
+    uint32_t flags, const int32_t data[6], uint64_t reserved)
+{
+    uint32_t total_length;
+    uint32_t offset;
+    uint32_t fragment_length;
+    uint32_t expected_length;
+    uint32_t expected_flags;
+    if (!data) return 0;
+    total_length = (uint32_t)data[0];
+    offset = (uint32_t)data[1];
+    fragment_length = (uint32_t)data[2];
+    if (total_length <= RINNT_SERVICE_RAW_INPUT_HID_INLINE_REPORT_BYTES ||
+        total_length > RINNT_SERVICE_RAW_INPUT_HID_MAX_REPORT_BYTES ||
+        offset >= total_length ||
+        offset % RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_BYTES != 0u)
+        return 0;
+    expected_length = total_length - offset;
+    if (expected_length > RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_BYTES)
+        expected_length = RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_BYTES;
+    if (fragment_length != expected_length) return 0;
+    expected_flags = (offset == 0u
+                          ? RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_FIRST
+                          : 0u) |
+        (offset + fragment_length == total_length
+             ? RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_LAST
+             : 0u);
+    if (flags != expected_flags ||
+        (flags & ~RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_FLAGS_MASK) != 0u)
+        return 0;
+    for (uint32_t index = fragment_length;
+         index < RINNT_SERVICE_RAW_INPUT_HID_FRAGMENT_BYTES; ++index) {
+        if (rinnt_service_raw_input_hid_fragment_byte(data, reserved, index) !=
+            0u)
+            return 0;
+    }
+    return 1;
+}
 
 /* Generic decoded HID usage event. data[0] is the HID Usage Page, data[1]
  * is the 16-bit Usage ID, and data[2] is 1 for asserted or 0 for released.
@@ -536,6 +597,12 @@ typedef struct RinNTServiceRawInputReadRequestV1 {
  * ABSOLUTE: x, y, minimum x, maximum x, minimum y, maximum y.
  * HID_REPORT: byte length 1..20, then five little-endian packed report
  * words. Bytes after the declared length must be zero.
+ * HID_REPORT_FRAGMENT: for opaque HID reports of 21..64 bytes, data[0] is
+ * total length, data[1] is byte offset, and data[2] is this fragment's
+ * length. The 20 fragment bytes are packed into data[3..5] and reserved
+ * (low byte first); flags contain FIRST and/or LAST. Fragments for one report
+ * are consecutive events with the same device, generation, and timestamp.
+ * A device reset or sequence gap invalidates any incomplete report.
  * HID_USAGE: data[0] is the HID Usage Page, data[1] is the 16-bit Usage ID,
  * and data[2] is 1 when asserted or 0 when released; remaining words are
  * zero. Generic usage events require the raw-input permission.
