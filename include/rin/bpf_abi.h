@@ -66,18 +66,29 @@ enum rin_bpf_map_type {
 enum rin_bpf_program_type {
     RIN_BPF_PROG_TYPE_UNSPEC = 0,
     RIN_BPF_PROG_TYPE_SOCKET_FILTER = 1,
-    RIN_BPF_PROG_TYPE_TRACEPOINT = 5
+    RIN_BPF_PROG_TYPE_TRACEPOINT = 5,
+    RIN_BPF_PROG_TYPE_XDP = 6
 };
 
 enum rin_bpf_attach_type {
     RIN_BPF_ATTACH_TYPE_TRACE_SYSCALL_ENTER = 0x52494e01u,
     RIN_BPF_ATTACH_TYPE_TRACE_SYSCALL_EXIT = 0x52494e02u,
-    RIN_BPF_ATTACH_TYPE_PACKET_INGRESS = 0x52494e03u
+    RIN_BPF_ATTACH_TYPE_PACKET_INGRESS = 0x52494e03u,
+    RIN_BPF_ATTACH_TYPE_XDP_INGRESS = 0x52494e04u
 };
 
 enum rin_bpf_link_type {
     RIN_BPF_LINK_TYPE_RAW_TRACEPOINT = 1,
-    RIN_BPF_LINK_TYPE_PACKET_FILTER = 2
+    RIN_BPF_LINK_TYPE_PACKET_FILTER = 2,
+    RIN_BPF_LINK_TYPE_XDP = 3
+};
+
+enum rin_bpf_xdp_action {
+    RIN_BPF_XDP_ABORTED = 0,
+    RIN_BPF_XDP_DROP = 1,
+    RIN_BPF_XDP_PASS = 2,
+    RIN_BPF_XDP_TX = 3,
+    RIN_BPF_XDP_REDIRECT = 4
 };
 
 enum rin_bpf_map_update_flag {
@@ -175,6 +186,9 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_LRU_PERCPU_HASH_MAP (1ull << 20)
 #define RIN_BPF_FEATURE_QUEUE_STACK_MAPS (1ull << 21)
 #define RIN_BPF_FEATURE_PROGRAM_ARRAY_TAIL_CALL (1ull << 22)
+#define RIN_BPF_FEATURE_XDP_PROGRAMS (1ull << 23)
+#define RIN_BPF_XDP_SUPPORTED_ACTION_MASK \
+    ((1u << RIN_BPF_XDP_DROP) | (1u << RIN_BPF_XDP_PASS))
 #define RIN_BPF_HELPER_TAIL_CALL 12u
 #define RIN_BPF_HELPER_GET_PRANDOM_U32 7u
 #define RIN_BPF_HELPER_MAP_PUSH_ELEM 87u
@@ -222,6 +236,18 @@ struct rin_bpf_sys_exit_context {
     rin_bpf_aligned_u64 pid_tgid;
     rin_bpf_aligned_u64 uid_gid;
     rin_bpf_aligned_u64 return_value;
+};
+
+/* Linux xdp_md layout. data/data_end/data_meta are verifier-tracked packet
+ * pointers in programs; the user context uses offsets and never contains
+ * kernel packet addresses. */
+struct rin_bpf_xdp_md {
+    uint32_t data;
+    uint32_t data_end;
+    uint32_t data_meta;
+    uint32_t ingress_ifindex;
+    uint32_t rx_queue_index;
+    uint32_t egress_ifindex;
 };
 
 /* Packet-filter context. Packet bytes are read through skb_load_bytes. */
@@ -364,6 +390,8 @@ struct rin_bpf_feature_query_attr {
     uint32_t max_pinned_objects;
     uint32_t helper_mask_extended[2];
     uint32_t reserved;
+    uint32_t xdp_action_mask;
+    uint32_t reserved2;
 };
 
 struct rin_bpf_program_info {
