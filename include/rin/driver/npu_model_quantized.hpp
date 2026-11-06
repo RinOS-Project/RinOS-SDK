@@ -56,7 +56,8 @@ enum OperationCode {
     OPERATION_AVERAGE_POOL_FLOAT32 = 0x10c,
     OPERATION_GLOBAL_MAX_POOL_FLOAT32 = 0x10d,
     OPERATION_IDENTITY_FLOAT32 = 0x10e,
-    OPERATION_FLATTEN_FLOAT32 = 0x10f
+    OPERATION_FLATTEN_FLOAT32 = 0x10f,
+    OPERATION_MAX_POOL_Q8 = 0x111
 };
 
 #define RIN_NPU_QUANTIZED_MODEL_MAX_SPATIAL_DIMS \
@@ -799,6 +800,30 @@ static inline bool operation_shape_valid(const Model* model,
         return true;
     }
     if (operation.opcode == OPERATION_GLOBAL_MAX_POOL_FLOAT32) {
+    if (operation.opcode == OPERATION_MAX_POOL_Q8) {
+        if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
+            operation.input_count != 1u ||
+            (model->tensors[operation.inputs[0]].data_type != DATA_TYPE_INT8 &&
+             model->tensors[operation.inputs[0]].data_type != DATA_TYPE_UINT8) ||
+            output.data_type != model->tensors[operation.inputs[0]].data_type ||
+            output.scale != model->tensors[operation.inputs[0]].scale ||
+            output.zero_point != model->tensors[operation.inputs[0]].zero_point)
+            return false;
+        const AveragePoolParameters* parameters =
+            average_pool_for_operation(model, operation_index);
+        uint32_t expected_rank = 0u;
+        uint32_t expected_dimensions[RIN_NPU_MODEL_MAX_RANK] = {};
+        if (!parameters || parameters->count_include_pad != 0u ||
+            !average_pool_output_shape(
+                model->tensors[operation.inputs[0]], *parameters,
+                &expected_rank, expected_dimensions) ||
+            output.rank != expected_rank)
+            return false;
+        for (uint32_t dimension = 0u; dimension < expected_rank; ++dimension)
+            if (output.dimensions[dimension] != expected_dimensions[dimension])
+                return false;
+        return true;
+    }
         if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
             operation.input_count != 1u ||
             model->tensors[operation.inputs[0]].data_type != DATA_TYPE_FLOAT32 ||
@@ -1265,6 +1290,17 @@ static inline bool model_valid(const Model* model)
             axis_quantization_for_tensor(model, operation.inputs[0]);
         const AxisQuantization* right_axis = operation.input_count == 2u
             ? axis_quantization_for_tensor(model, operation.inputs[1]) : 0;
+        } else if (operation.opcode == OPERATION_MAX_POOL_Q8) {
+            if ((operation_input.data_type != DATA_TYPE_INT8 &&
+                 operation_input.data_type != DATA_TYPE_UINT8) ||
+                operation_output.data_type != operation_input.data_type ||
+                operation_output.scale != operation_input.scale ||
+                operation_output.zero_point != operation_input.zero_point ||
+                axis_quantization_for_tensor(model, operation.inputs[0]) ||
+                axis_quantization_for_tensor(model, operation.output_tensor) ||
+                batch_quantization_for_tensor(model, operation.inputs[0]) ||
+                batch_quantization_for_tensor(model, operation.output_tensor))
+                return false;
         const BatchQuantization* left_batch =
             batch_quantization_for_tensor(model, operation.inputs[0]);
         const BatchQuantization* right_batch = operation.input_count == 2u
@@ -1358,15 +1394,18 @@ static inline bool model_valid(const Model* model)
     }
     uint32_t average_pool_operations = 0u;
     for (uint32_t index = 0u; index < model->operation_count; ++index)
-        if (model->operations[index].opcode == OPERATION_AVERAGE_POOL_FLOAT32)
+        if (model->operations[index].opcode == OPERATION_AVERAGE_POOL_FLOAT32 ||
+            model->operations[index].opcode == OPERATION_MAX_POOL_Q8)
             ++average_pool_operations;
     if (average_pool_operations != average_pool_count) return false;
     for (uint32_t index = 0u; index < average_pool_count; ++index) {
         const AveragePoolParameters& parameters = model->average_pools[index];
         if (parameters.reserved != 0u ||
             parameters.operation_index >= model->operation_count ||
-            model->operations[parameters.operation_index].opcode !=
-                OPERATION_AVERAGE_POOL_FLOAT32 ||
+            (model->operations[parameters.operation_index].opcode !=
+                 OPERATION_AVERAGE_POOL_FLOAT32 &&
+             model->operations[parameters.operation_index].opcode !=
+                 OPERATION_MAX_POOL_Q8) ||
             average_pool_for_operation(model, parameters.operation_index) !=
                 &parameters)
             return false;
@@ -1382,6 +1421,10 @@ static inline bool model_valid(const Model* model)
              consumer_index < model->operation_count; ++consumer_index) {
             const Operation& consumer = model->operations[consumer_index];
             for (uint32_t input = 0u; input < consumer.input_count; ++input) {
+        if (model->operations[parameters.operation_index].opcode ==
+                OPERATION_MAX_POOL_Q8 &&
+            parameters.count_include_pad != 0u)
+            return false;
                 const bool matched_dequantize =
                     consumer.opcode == OPERATION_DEQUANTIZE_Q8 &&
                     consumer.input_count == 2u &&
@@ -3540,6 +3583,10 @@ static inline RinResultCode evaluate_cpu(const CpuPlan* plan,
                             (double)accumulator * output_scale;
                         const uint64_t output_offset =
                             (batch * rows + row) * columns + column;
+        } else if (operation.opcode == OPERATION_MAX_POOL_Q8) {
+            const RinResultCode result = evaluate_max_pool_q8(
+                model, operation, index, tensors);
+            if (result != RIN_RESULT_OK) return result;
                         store_quantized(output_description, output,
                                         output_offset, real_value);
                     }

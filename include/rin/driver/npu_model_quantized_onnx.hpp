@@ -1129,6 +1129,13 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
       if (node.inputs[index].size == 0u)
         return RIN_RESULT_NOT_SUPPORTED;
     node.opcode = q::OPERATION_CONV_Q8;
+  } else if (slice_is(op, "MaxPool", 7u)) {
+    if (node.output_count != 1u || node.input_count != 1u ||
+        node.inputs[0].size == 0u || !node.has_kernel_shape ||
+        node.has_group || node.has_axis || node.has_block_size ||
+        node.has_count_include_pad)
+      return RIN_RESULT_NOT_SUPPORTED;
+    node.opcode = q::OPERATION_MAX_POOL_Q8;
   } else if (slice_is(op, "AveragePool", 11u)) {
     if (node.output_count != 1u || node.input_count != 1u ||
         node.inputs[0].size == 0u || !node.has_kernel_shape ||
@@ -1950,6 +1957,118 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       ++operations;
       continue;
     }
+    if (node.opcode == q::OPERATION_MAX_POOL_Q8) {
+      if (opset < 12u || average_pools >= w->average_pool_capacity ||
+          !w->average_pools)
+        return opset < 12u ? RIN_RESULT_NOT_SUPPORTED
+                           : RIN_RESULT_BUFFER_TOO_SMALL;
+      uint32_t input_index = 0u;
+      const int source_index = find_value(w, values, node.inputs[0]);
+      if (source_index < 0 ||
+          !(w->values[source_index].flags & VALUE_AVAILABLE)) {
+        rc = ensure_raw_q8_data(w, g, &values, &constants, node.inputs[0],
+                                &weight_bytes, &input_index);
+        if (rc != RIN_RESULT_OK)
+          return rc;
+      } else {
+        input_index = (uint32_t)source_index;
+      }
+      const q::TensorDescription &input_description = w->tensors[input_index];
+      if (!(w->values[input_index].flags & VALUE_HAS_DESCRIPTION) ||
+          (input_description.data_type != q::DATA_TYPE_INT8 &&
+           input_description.data_type != q::DATA_TYPE_UINT8) ||
+          input_description.rank < 3u ||
+          input_description.rank > RIN_NPU_MODEL_MAX_RANK ||
+          !(input_description.scale > 0.0f) ||
+          !(input_description.scale <= FLT_MAX))
+        return RIN_RESULT_NOT_SUPPORTED;
+      for (uint32_t index = 0u; index < quantizations; ++index)
+        if (w->quantizations[index].tensor_index == input_index)
+          return RIN_RESULT_NOT_SUPPORTED;
+      for (uint32_t index = 0u; index < batch_quantizations; ++index)
+        if (w->batch_quantizations[index].tensor_index == input_index)
+          return RIN_RESULT_NOT_SUPPORTED;
+
+      const uint32_t spatial_rank = input_description.rank - 2u;
+      if (node.kernel_shape_count != spatial_rank ||
+          (node.has_strides && node.stride_count != spatial_rank) ||
+          (node.has_dilations && node.dilation_count != spatial_rank) ||
+          (node.has_pads && node.pad_count != spatial_rank * 2u) ||
+          (node.has_auto_pad && node.has_pads))
+        return RIN_RESULT_NOT_SUPPORTED;
+      q::AveragePoolParameters parameters = {};
+      parameters.operation_index = operations;
+      parameters.spatial_rank = spatial_rank;
+      parameters.ceil_mode = node.has_ceil_mode ? node.ceil_mode : 0u;
+      for (uint32_t axis = 0u; axis < spatial_rank; ++axis) {
+        const uint32_t input_extent = input_description.dimensions[axis + 2u];
+        const uint32_t kernel = node.kernel_shape[axis];
+        const uint32_t stride = node.has_strides ? node.strides[axis] : 1u;
+        const uint32_t dilation = node.has_dilations
+            ? node.dilations[axis] : 1u;
+        if (!kernel || !stride || !dilation)
+          return RIN_RESULT_NOT_SUPPORTED;
+        parameters.kernel_shape[axis] = kernel;
+        parameters.strides[axis] = stride;
+        parameters.dilations[axis] = dilation;
+        if (node.auto_pad == 0u) {
+          if (node.has_pads) {
+            parameters.pads_begin[axis] = node.pads[axis];
+            parameters.pads_end[axis] = node.pads[spatial_rank + axis];
+          }
+        } else if (node.auto_pad == 1u) {
+          /* VALID has no padding. */
+        } else {
+          const uint64_t output_extent =
+              ((uint64_t)input_extent + stride - 1u) / stride;
+          const uint64_t effective_kernel =
+              (uint64_t)(kernel - 1u) * dilation + 1u;
+          const uint64_t covered_extent =
+              (output_extent - 1u) * stride + effective_kernel;
+          const uint64_t total_padding = covered_extent > input_extent
+              ? covered_extent - input_extent : 0u;
+          const uint64_t padding_begin = node.auto_pad == 2u
+              ? total_padding / 2u
+              : total_padding / 2u + total_padding % 2u;
+          const uint64_t padding_end = total_padding - padding_begin;
+          if (padding_begin > UINT32_MAX || padding_end > UINT32_MAX)
+            return RIN_RESULT_NOT_SUPPORTED;
+          parameters.pads_begin[axis] = (uint32_t)padding_begin;
+          parameters.pads_end[axis] = (uint32_t)padding_end;
+        }
+      }
+      uint32_t output_rank = 0u;
+      uint32_t output_dimensions[RIN_NPU_MODEL_MAX_RANK] = {};
+      if (!q::average_pool_output_shape(input_description, parameters,
+              &output_rank, output_dimensions))
+        return RIN_RESULT_NOT_SUPPORTED;
+      q::TensorDescription output_description = input_description;
+      output_description.rank = output_rank;
+      for (uint32_t axis = 0u; axis < output_rank; ++axis)
+        output_description.dimensions[axis] = output_dimensions[axis];
+      for (uint32_t axis = output_rank; axis < RIN_NPU_MODEL_MAX_RANK; ++axis)
+        output_description.dimensions[axis] = 0u;
+      const int previous = find_value(w, values, node.outputs[0]);
+      if (previous >= 0 && (w->values[previous].flags & VALUE_AVAILABLE))
+        return RIN_RESULT_CORRUPT_DATA;
+      uint32_t output_index = 0u;
+      rc = add_value(w, &values, node.outputs[0], &output_description,
+          VALUE_HAS_DESCRIPTION | VALUE_PRODUCED | VALUE_AVAILABLE,
+          &output_index);
+      if (rc != RIN_RESULT_OK)
+        return rc;
+      if (operations >= w->operation_capacity)
+        return RIN_RESULT_BUFFER_TOO_SMALL;
+      q::Operation operation = {};
+      operation.opcode = q::OPERATION_MAX_POOL_Q8;
+      operation.input_count = 1u;
+      operation.inputs[0] = input_index;
+      operation.output_tensor = output_index;
+      w->operations[operations] = operation;
+      w->average_pools[average_pools++] = parameters;
+      ++operations;
+      continue;
+    }
     if (node.opcode == q::OPERATION_AVERAGE_POOL_FLOAT32) {
       if (average_pools >= w->average_pool_capacity || !w->average_pools)
         return RIN_RESULT_BUFFER_TOO_SMALL;
@@ -2611,7 +2730,8 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
              q::OPERATION_DYNAMIC_QUANTIZE_Q8)
       has_dynamic_quantize = true;
     else if (w->operations[operation].opcode ==
-             q::OPERATION_GLOBAL_MAX_POOL_FLOAT32)
+                 q::OPERATION_GLOBAL_MAX_POOL_FLOAT32 ||
+             w->operations[operation].opcode == q::OPERATION_MAX_POOL_Q8)
       has_v10_operation = true;
     else if (w->operations[operation].opcode ==
                  q::OPERATION_IDENTITY_FLOAT32 ||
