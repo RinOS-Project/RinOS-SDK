@@ -55,7 +55,9 @@ enum rin_bpf_map_type {
     RIN_BPF_MAP_TYPE_HASH = 1,
     RIN_BPF_MAP_TYPE_ARRAY = 2,
     RIN_BPF_MAP_TYPE_PERCPU_HASH = 5,
-    RIN_BPF_MAP_TYPE_PERCPU_ARRAY = 6
+    RIN_BPF_MAP_TYPE_PERCPU_ARRAY = 6,
+    RIN_BPF_MAP_TYPE_LRU_HASH = 9,
+    RIN_BPF_MAP_TYPE_LRU_PERCPU_HASH = 10
 };
 
 enum rin_bpf_program_type {
@@ -166,6 +168,8 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_RANDOM_HELPER (1ull << 16)
 #define RIN_BPF_FEATURE_PERCPU_ARRAY_MAP (1ull << 17)
 #define RIN_BPF_FEATURE_PERCPU_HASH_MAP (1ull << 18)
+#define RIN_BPF_FEATURE_LRU_HASH_MAP (1ull << 19)
+#define RIN_BPF_FEATURE_LRU_PERCPU_HASH_MAP (1ull << 20)
 #define RIN_BPF_HELPER_GET_PRANDOM_U32 7u
 #define RIN_BPF_LOG_LEVEL_BASIC 1u
 #define RIN_BPF_LOG_LEVEL_VERBOSE 2u
