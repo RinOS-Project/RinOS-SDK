@@ -15,6 +15,8 @@
 #define RIN_PROCESS_MADVISE_ADVICE_SEQUENTIAL 2
 #define RIN_PROCESS_MADVISE_ADVICE_WILLNEED 3
 #define RIN_PROCESS_MADVISE_ADVICE_DONTNEED 4
+#define RIN_PROCESS_MADVISE_ADVICE_MERGEABLE 12
+#define RIN_PROCESS_MADVISE_ADVICE_UNMERGEABLE 13
 
 /* A non-empty iov_base must be page-aligned; iov_len rounds up to a page.
  * Each non-empty iovec is one atomic advice operation. The return value is
