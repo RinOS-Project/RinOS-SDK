@@ -17,7 +17,9 @@ typedef enum RinHidInputProviderOperationV1 {
     RIN_HID_INPUT_PROVIDER_QUERY_GAMEPAD = 1,
     RIN_HID_INPUT_PROVIDER_SET_VIBRATION = 2,
     RIN_HID_INPUT_PROVIDER_READ_RAW = 3,
-    RIN_HID_INPUT_PROVIDER_REVOKE_PROCESS = 4
+    RIN_HID_INPUT_PROVIDER_REVOKE_PROCESS = 4,
+    RIN_HID_INPUT_PROVIDER_SENSOR_SET_POWER = 5,
+    RIN_HID_INPUT_PROVIDER_SENSOR_GET_POWER_STATUS = 6
 } RinHidInputProviderOperationV1;
 
 typedef enum RinHidInputProviderResultV1 {
@@ -25,7 +27,8 @@ typedef enum RinHidInputProviderResultV1 {
     RIN_HID_INPUT_PROVIDER_NOT_FOUND = 1,
     RIN_HID_INPUT_PROVIDER_TEMPORARY = 2,
     RIN_HID_INPUT_PROVIDER_IO_ERROR = 3,
-    RIN_HID_INPUT_PROVIDER_ACCESS_DENIED = 4
+    RIN_HID_INPUT_PROVIDER_ACCESS_DENIED = 4,
+    RIN_HID_INPUT_PROVIDER_NOT_SUPPORTED = 5
 } RinHidInputProviderResultV1;
 
 /* This subject is copied from the authenticated RinNT peer by wincompatregd.
@@ -80,6 +83,13 @@ typedef struct RinHidInputProviderCallV1 {
     RinHidInputProviderNativeEventV1 event;
     uint64_t reserved2[2];
 } RinHidInputProviderCallV1;
+
+/* SENSOR_SET_POWER uses user_index for the requested power state, class_mask
+ * for the HID sensor type, and device_generation for the live attachment.
+ * SENSOR_GET_POWER_STATUS has those inputs zero except class_mask and device
+ * generation; on success class_mask is preserved, user_index receives the
+ * live power state, reserved0 receives the status, and reserved1 the driver's
+ * RinResultCode completion result. All unrelated request fields stay zero. */
 
 static inline RinResultCode rin_hid_input_provider_call_v1(
     RinHidInputProviderCallV1* request)

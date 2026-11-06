@@ -57,7 +57,9 @@ typedef enum RinNTServiceCommandV1 {
     RINNT_SERVICE_COMMAND_POLL_REGISTRY_NOTIFY = 22,
     RINNT_SERVICE_COMMAND_CANCEL_REGISTRY_NOTIFY = 23,
     RINNT_SERVICE_COMMAND_RENAME_REGISTRY_KEY = 24,
-    RINNT_SERVICE_COMMAND_COPY_REGISTRY_TREE = 25
+    RINNT_SERVICE_COMMAND_COPY_REGISTRY_TREE = 25,
+    RINNT_SERVICE_COMMAND_HID_SENSOR_SET_POWER = 26,
+    RINNT_SERVICE_COMMAND_HID_SENSOR_GET_POWER_STATUS = 27
 } RinNTServiceCommandV1;
 
 typedef enum RinNTServiceResult {
@@ -97,6 +99,7 @@ typedef enum RinNTServiceProcessStateV1 {
 #define RINNT_SERVICE_FEATURE_REGISTRY_TREE UINT64_C(64)
 #define RINNT_SERVICE_FEATURE_REGISTRY_AUDIT UINT64_C(128)
 #define RINNT_SERVICE_FEATURE_REGISTRY_NOTIFY UINT64_C(256)
+#define RINNT_SERVICE_FEATURE_HID_SENSOR_POWER UINT64_C(512)
 
 #define RINNT_SERVICE_XINPUT_MAX_USERS 4u
 #define RINNT_SERVICE_XINPUT_BUTTON_MASK UINT16_C(0xf3ff)
@@ -528,6 +531,34 @@ typedef struct RinNTServiceRawInputReadRequestV1 {
     uint64_t reserved;
 } RinNTServiceRawInputReadRequestV1;
 
+typedef enum RinNTServiceHidSensorPowerStatusV1 {
+    RINNT_SERVICE_HID_SENSOR_POWER_PENDING = 1,
+    RINNT_SERVICE_HID_SENSOR_POWER_COMPLETE = 2,
+    RINNT_SERVICE_HID_SENSOR_POWER_FAILED = 3
+} RinNTServiceHidSensorPowerStatusV1;
+
+/* Device handles are opaque values returned by Raw Input and are bound to the
+ * authenticated service session. The power request is queued asynchronously;
+ * GET_POWER_STATUS polls the same device generation and sensor type. */
+typedef struct RinNTServiceHidSensorPowerRequestV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t sensor_type;
+    uint32_t power_state;
+    uint64_t device_handle;
+    uint64_t device_generation;
+    uint64_t reserved;
+} RinNTServiceHidSensorPowerRequestV1;
+
+typedef struct RinNTServiceHidSensorPowerStatusResponseV1 {
+    uint32_t struct_size;
+    uint32_t version;
+    uint32_t status;
+    uint32_t power_state;
+    int32_t last_result;
+    uint32_t reserved;
+} RinNTServiceHidSensorPowerStatusResponseV1;
+
 /* data interpretation by event_type:
  * KEY: scan code, virtual key, repeat count, then zeroes.
  * MOVE: relative x/y, then zeroes.
@@ -608,6 +639,10 @@ static_assert(sizeof(RinNTServiceRawInputFilterResponseV1) == 24u,
               "RinNT service raw filter response ABI drift");
 static_assert(sizeof(RinNTServiceRawInputReadRequestV1) == 32u,
               "RinNT service raw read request ABI drift");
+static_assert(sizeof(RinNTServiceHidSensorPowerRequestV1) == 40u,
+              "RinNT sensor power request ABI drift");
+static_assert(sizeof(RinNTServiceHidSensorPowerStatusResponseV1) == 24u,
+              "RinNT sensor power status ABI drift");
 static_assert(sizeof(RinNTServiceRawInputEventResponseV1) == 80u,
               "RinNT service raw event ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
@@ -661,6 +696,10 @@ _Static_assert(sizeof(RinNTServiceRawInputFilterResponseV1) == 24u,
                "RinNT service raw filter response ABI drift");
 _Static_assert(sizeof(RinNTServiceRawInputReadRequestV1) == 32u,
                "RinNT service raw read request ABI drift");
+_Static_assert(sizeof(RinNTServiceHidSensorPowerRequestV1) == 40u,
+               "RinNT sensor power request ABI drift");
+_Static_assert(sizeof(RinNTServiceHidSensorPowerStatusResponseV1) == 24u,
+               "RinNT sensor power status ABI drift");
 _Static_assert(sizeof(RinNTServiceRawInputEventResponseV1) == 80u,
                "RinNT service raw event ABI drift");
 #endif
