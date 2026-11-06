@@ -344,6 +344,7 @@ typedef int32_t RinResultCode;
 #define RIN_PASS_WEBAUTHN_TRANSPORT_USB     1u
 #define RIN_PASS_WEBAUTHN_TRANSPORT_INTERNAL 2u
 #define RIN_PASS_WEBAUTHN_MAX_CREDENTIALS   8u
+#define RIN_PASS_WEBAUTHN_MAX_ALGORITHMS    8u
 #define RIN_PASS_WEBAUTHN_MAX_CREDENTIAL_ID 128u
 #define RIN_PASS_WEBAUTHN_ORIGIN_MAX        320u
 #define RIN_PASS_WEBAUTHN_RP_ID_STORAGE     256u
@@ -409,8 +410,13 @@ typedef int32_t RinResultCode;
 #define RIN_MANAGEMENT_OPERATION_PACKAGE_LAUNCH 1027u
 #define RIN_MANAGEMENT_OPERATION_PACKAGE_RECOVERY_LAUNCH 1028u
 #define RIN_MANAGEMENT_OPERATION_IME_PROVIDER_GET 1029u
+#define RIN_MANAGEMENT_OPERATION_TTS_PROVIDER_GET 1030u
 #define RIN_MANAGEMENT_IME_PROVIDER_FLAG_SIGNED 1u
 #define RIN_MANAGEMENT_IME_PROVIDER_FLAG_MASK 1u
+#define RIN_MANAGEMENT_TTS_PROVIDER_FLAG_SIGNED \
+    RIN_MANAGEMENT_IME_PROVIDER_FLAG_SIGNED
+#define RIN_MANAGEMENT_TTS_PROVIDER_FLAG_MASK \
+    RIN_MANAGEMENT_IME_PROVIDER_FLAG_MASK
 #define RIN_MANAGEMENT_PACKAGE_SOURCE_LOCAL 0u
 #define RIN_MANAGEMENT_PACKAGE_SOURCE_REPOSITORY 1u
 #define RIN_MANAGEMENT_KIND_DEVICE          1u
@@ -1677,7 +1683,9 @@ typedef struct RinManagementPackageInfoV1 {
     uint8_t install_path[96];
 } RinManagementPackageInfoV1;
 
-/* Query with package_name set and every other output field zero. The kernel returns a provider only when that signed package declares exactly one entrypoint named "ime" and the executable identity is currently valid. */
+/* Query with package_name set and every other output field zero. The kernel
+ * returns a provider only when that signed package declares exactly one
+ * entrypoint named "ime" and the executable identity is currently valid. */
 typedef struct RinManagementImeProviderV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -1690,6 +1698,10 @@ typedef struct RinManagementImeProviderV1 {
     uint8_t publisher_key_id[32];
     uint8_t reserved[32];
 } RinManagementImeProviderV1;
+
+/* Same wire layout as the IME provider record; the TTS lookup accepts only a
+ * signed package declaring the `tts` service entrypoint. */
+typedef RinManagementImeProviderV1 RinManagementTtsProviderV1;
 
 typedef struct RinManagementPackageStorageInfoV1 {
     uint32_t struct_size;
