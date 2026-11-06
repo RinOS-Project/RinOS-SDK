@@ -161,6 +161,8 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_TRACE_SYSCALL_EXIT (1ull << 13)
 #define RIN_BPF_FEATURE_SOCKET_FILTER (1ull << 14)
 #define RIN_BPF_FEATURE_VERIFIER_LOG (1ull << 15)
+#define RIN_BPF_FEATURE_RANDOM_HELPER (1ull << 16)
+#define RIN_BPF_HELPER_GET_PRANDOM_U32 7u
 #define RIN_BPF_LOG_LEVEL_BASIC 1u
 #define RIN_BPF_LOG_LEVEL_VERBOSE 2u
 #define RIN_BPF_LOG_LEVEL_ALL \
