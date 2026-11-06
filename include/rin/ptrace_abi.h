@@ -19,6 +19,7 @@
 #define RIN_PTRACE_INTERRUPT        0x4207u
 #define RIN_PTRACE_READ_MEMORY_V1   0x4210u
 #define RIN_PTRACE_WRITE_MEMORY_V1  0x4211u
+#define RIN_PTRACE_IS_TRACED_SELF   0x4212u
 #define RIN_PTRACE_NT_PRSTATUS      1u
 #define RIN_PTRACE_SETOPTIONS       0x4200u
 #define RIN_PTRACE_GETEVENTMSG      0x4201u
@@ -35,6 +36,8 @@
  * struct_size and thread_id before GETREGSET; zero thread_id selects any
  * stopped thread. READ_MEMORY_V1/WRITE_MEMORY_V1 take a RinPtraceMemoryV1
  * pointer in data. PEEKDATA/POKEDATA operate on one tracee register-width word.
+ * IS_TRACED_SELF requires pid/address/data to be zero and returns one when the
+ * calling process is attached to a live ptrace tracer, otherwise zero.
  */
 
 /* Versioned general register record. Registers are 64-bit slots on the wire;
