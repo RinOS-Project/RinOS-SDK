@@ -17,6 +17,7 @@
 #define RIN_NUMA_POLICY_OPERATION_MOVE_PAGES UINT32_C(7)
 #define RIN_NUMA_POLICY_OPERATION_GET_ALLOWED_NODES UINT32_C(8)
 #define RIN_NUMA_POLICY_OPERATION_SET_ALLOWED_NODES UINT32_C(9)
+#define RIN_NUMA_POLICY_OPERATION_MIGRATE_PAGES UINT32_C(10)
 
 #define RIN_NUMA_MOVE_PAGES_FLAG_NONE UINT16_C(0)
 #define RIN_NUMA_MOVE_PAGES_FLAG_MOVE UINT16_C(2)
@@ -80,6 +81,21 @@ typedef struct RinNumaMovePagesV1 {
     uint64_t status;
 } RinNumaMovePagesV1;
 
+/* Process-wide page migration request. Fixed-width masks keep the wire ABI
+ * identical for IA-32, x86_64, and compat32 callers. */
+typedef struct RinNumaMigratePagesV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t reserved0;
+    int32_t process_id; /* zero means the caller */
+    uint32_t maxnode;
+    uint32_t node_word_bits;
+    uint32_t reserved1;
+    uint64_t old_nodes; /* user pointer to unsigned-long node mask */
+    uint64_t new_nodes; /* user pointer to unsigned-long node mask */
+} RinNumaMigratePagesV1;
+
+
 /* Process cpuset memory-node allowance.  A zero mask resets the allowance to
  * all online nodes; nonzero masks must contain only online memory nodes. */
 typedef struct RinNumaNodeMaskV1 {
@@ -96,6 +112,8 @@ static_assert(sizeof(RinNumaMemoryPolicyRangeV1) == 48u,
               "RinNumaMemoryPolicyRangeV1 ABI drift");
 static_assert(sizeof(RinNumaMovePagesV1) == 48u,
               "RinNumaMovePagesV1 ABI drift");
+static_assert(sizeof(RinNumaMigratePagesV1) == 40u,
+              "RinNumaMigratePagesV1 ABI drift");
 static_assert(sizeof(RinNumaNodeMaskV1) == 16u,
               "RinNumaNodeMaskV1 ABI drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
@@ -105,6 +123,8 @@ _Static_assert(sizeof(RinNumaMemoryPolicyRangeV1) == 48u,
                "RinNumaMemoryPolicyRangeV1 ABI drift");
 _Static_assert(sizeof(RinNumaMovePagesV1) == 48u,
                "RinNumaMovePagesV1 ABI drift");
+_Static_assert(sizeof(RinNumaMigratePagesV1) == 40u,
+               "RinNumaMigratePagesV1 ABI drift");
 _Static_assert(sizeof(RinNumaNodeMaskV1) == 16u,
                "RinNumaNodeMaskV1 ABI drift");
 #endif
