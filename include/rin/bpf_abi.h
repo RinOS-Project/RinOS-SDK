@@ -57,7 +57,9 @@ enum rin_bpf_map_type {
     RIN_BPF_MAP_TYPE_PERCPU_HASH = 5,
     RIN_BPF_MAP_TYPE_PERCPU_ARRAY = 6,
     RIN_BPF_MAP_TYPE_LRU_HASH = 9,
-    RIN_BPF_MAP_TYPE_LRU_PERCPU_HASH = 10
+    RIN_BPF_MAP_TYPE_LRU_PERCPU_HASH = 10,
+    RIN_BPF_MAP_TYPE_QUEUE = 22,
+    RIN_BPF_MAP_TYPE_STACK = 23
 };
 
 enum rin_bpf_program_type {
@@ -170,7 +172,11 @@ enum rin_bpf_instruction_jump_op {
 #define RIN_BPF_FEATURE_PERCPU_HASH_MAP (1ull << 18)
 #define RIN_BPF_FEATURE_LRU_HASH_MAP (1ull << 19)
 #define RIN_BPF_FEATURE_LRU_PERCPU_HASH_MAP (1ull << 20)
+#define RIN_BPF_FEATURE_QUEUE_STACK_MAPS (1ull << 21)
 #define RIN_BPF_HELPER_GET_PRANDOM_U32 7u
+#define RIN_BPF_HELPER_MAP_PUSH_ELEM 87u
+#define RIN_BPF_HELPER_MAP_POP_ELEM 88u
+#define RIN_BPF_HELPER_MAP_PEEK_ELEM 89u
 #define RIN_BPF_LOG_LEVEL_BASIC 1u
 #define RIN_BPF_LOG_LEVEL_VERBOSE 2u
 #define RIN_BPF_LOG_LEVEL_ALL \
@@ -353,7 +359,8 @@ struct rin_bpf_feature_query_attr {
     uint32_t max_map_count;
     uint32_t max_program_map_count;
     uint32_t max_pinned_objects;
-    uint32_t reserved[3];
+    uint32_t helper_mask_extended[2];
+    uint32_t reserved;
 };
 
 struct rin_bpf_program_info {
