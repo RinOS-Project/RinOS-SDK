@@ -18,6 +18,7 @@ extern "C" {
 #define RIN_SDK_DEVICE_CLASS_USB_CONTROLLER UINT32_C(6)
 #define RIN_SDK_DEVICE_CLASS_BUS UINT32_C(7)
 #define RIN_SDK_DEVICE_CLASS_POWER UINT32_C(8)
+#define RIN_SDK_DEVICE_CLASS_SMART_CARD UINT32_C(9)
 
 /* Generic device-handle rights authorize only the SDK operations below.
  * READ is retained at its original ABI value as a read-only metadata/query

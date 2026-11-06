@@ -5,6 +5,10 @@
 #include <rin/service_directory.h>
 #include <rin/service.h>
 
+#if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_DEVICE)
+#include <rin/ccid.h>
+#endif
+
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_MEDIA)
 #include "rinmedia_sdk_client_v1.h"
 #endif
@@ -2034,6 +2038,26 @@ RinResult rin_device_enumerate_v1(uint32_t device_class,uint64_t index,RinDevice
 RinResult rin_device_open_v1(uint64_t device_id,uint32_t rights,RinDevice* device) { HANDLE_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_DEVICE,DEVICE_OPEN,device,device_id,rights,0,0,0,0); }
 RinResult rin_device_control_v1(RinDevice device,uint32_t operation,RinSliceV1 input,RinSliceV1 output,uint64_t* transferred) { SCALAR_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_DEVICE,DEVICE_CONTROL,transferred,device,operation,input.address,input.size,output.address,output.size); }
 RinResult rin_device_query_v1(RinDevice device,RinDeviceInfoV1* info) { VERSIONED_OUTPUT_SIMPLE_CALL(RIN_SDK_LIBRARY_DEVICE,DEVICE_QUERY,info,device,0,0,0,0,0); }
+RinResult rin_ccid_control_v1(RinDevice device,RinSliceV1 input,RinSliceV1 output,uint64_t* transferred_out) { return rin_device_control_v1(device,RIN_DEVICE_CONTROL_CCID,input,output,transferred_out); }
+RinResult rin_ccid_device_query_v1(RinDevice device,RinCcidDeviceInfoV1* info) {
+    RinSliceV1 input = {0u, 0u};
+    RinSliceV1 output;
+    uint64_t transferred = 0u;
+    RinResult result;
+    if (!info) return RIN_ERROR_INVALID_ARGUMENT;
+    output.address = (uint64_t)(uintptr_t)info;
+    output.size = sizeof(*info);
+    result = rin_device_control_v1(device,RIN_DEVICE_CONTROL_CCID_GET_INFO,input,output,&transferred);
+    if (result != RIN_SUCCESS) {
+        rin_sdk_zero_bytes(info,sizeof(*info));
+        return result;
+    }
+    if (transferred != sizeof(*info)) {
+        rin_sdk_zero_bytes(info,sizeof(*info));
+        return RIN_ERROR_INTEGRITY;
+    }
+    return RIN_SUCCESS;
+}
 #endif
 
 #if !defined(RINSDK_SPLIT_BUILD) || defined(RINSDK_BUILD_GPU)
