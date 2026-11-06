@@ -808,8 +808,13 @@ static inline RinResultCode node_output_description(
     if (node.opcode == OPERATION_ADD_FLOAT32 ||
         node.opcode == OPERATION_MULTIPLY_FLOAT32) {
         const TensorDescription& right = workspace->tensors[indices[1]];
-        if (!same_shape(left, right)) return RIN_RESULT_NOT_SUPPORTED;
-        *description_out = left;
+        if (opset_version >= 7u) {
+            if (!broadcast_shape(left, right, description_out))
+                return RIN_RESULT_NOT_SUPPORTED;
+        } else {
+            if (!same_shape(left, right)) return RIN_RESULT_NOT_SUPPORTED;
+            *description_out = left;
+        }
         return RIN_RESULT_OK;
     }
     if (node.opcode == OPERATION_RELU_FLOAT32) {
