@@ -9,8 +9,10 @@
 
 #define RIN_CRASH_SUMMARY_VERSION UINT16_C(2)
 #define RIN_CRASH_SUMMARY_POLICY_LOCAL_ONLY UINT32_C(1)
-#define RIN_CRASH_HISTORY_QUERY_VERSION UINT16_C(2)
+#define RIN_CRASH_HISTORY_QUERY_VERSION_LEGACY UINT16_C(2)
+#define RIN_CRASH_HISTORY_QUERY_VERSION UINT16_C(3)
 #define RIN_CRASH_HISTORY_ACK_VERSION UINT16_C(1)
+#define RIN_CRASH_HISTORY_ACK_FLAG_RETENTION_NOTICE UINT16_C(1)
 #define RIN_CRASH_HISTORY_MAX_RECORDS UINT16_C(2)
 #define RIN_CRASH_PENDING_QUERY_VERSION UINT16_C(2)
 #define RIN_CRASH_PENDING_MAX_RECORDS UINT16_C(1)
@@ -51,13 +53,14 @@ typedef struct RinCrashHistoryQueryV1 {
     uint16_t version;
     uint16_t capacity;
     uint32_t record_count;
-    uint32_t reserved;
+    /* v2は0固定。v3では履歴喪失の利用者向け通知が未ACKなら1。 */
+    uint32_t retention_notice_pending;
     uint64_t after_sequence;
     RinCrashSummaryV1 records[RIN_CRASH_HISTORY_MAX_RECORDS];
 } RinCrashHistoryQueryV1;
 
-/* Durable cursor update issued only after crashd has committed its recovery
- * registry. This acknowledges retained history; it does not erase raw data. */
+/* reservedのRETENTION_NOTICE flagは、crashdが警告を通知した後に限って指定する。
+ * 履歴ACKはraw recordを消去しない。 */
 typedef struct RinCrashHistoryAckV1 {
     uint32_t struct_size;
     uint16_t version;
@@ -121,6 +124,8 @@ int rin_crash_pending_minidumps_get_local(RinCrashPendingQueryV1* query);
 /* Persist the highest sequence durably handled by the authorized diagnostic
  * service. The kernel revalidates the caller and rejects future sequences. */
 int rin_crash_history_ack_local(uint64_t sequence);
+/* 通知の投稿に成功した後だけ、履歴cursorと喪失通知を同時にACKする。 */
+int rin_crash_history_ack_retention_notice_local(uint64_t sequence);
 
 #ifdef __cplusplus
 }
