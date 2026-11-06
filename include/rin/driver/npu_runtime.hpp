@@ -61,6 +61,7 @@ struct DeviceRequirements {
     uint64_t required_capabilities;
     uint64_t required_data_types;
     uint64_t minimum_buffer_bytes;
+    uint64_t required_operations;
 };
 
 class Runtime {
@@ -97,10 +98,10 @@ public:
         return RIN_RESULT_OK;
     }
 
-    /* Returns an index into the supplied enumeration, or BUFFER_TOO_SMALL
-     * when no device satisfies the model's memory, type, address, and vendor
-     * requirements. Preferred-vendor devices win; ties choose the largest
-     * usable buffer, then the lowest stable PCI identity. */
+    /* Returns an index into the supplied enumeration, or NOT_FOUND when no
+     * device satisfies the model's memory, type, operation, address, and
+     * vendor requirements. Preferred-vendor devices win; ties choose the
+     * largest usable buffer, then the lowest stable device identity. */
     static RinResultCode select_device(const DeviceInfo* devices,
                                        uint32_t count,
                                        const DeviceRequirements* requirements,
@@ -112,6 +113,8 @@ public:
              ~RIN_DRIVER_V3_NPU_CAPABILITY_MASK) != 0u ||
             (requirements->required_data_types &
              ~RIN_DRIVER_V3_NPU_DATA_TYPE_MASK) != 0u ||
+            (requirements->required_operations &
+             ~RIN_DRIVER_V3_NPU_OP_MASK) != 0u ||
             requirements->minimum_address_bits > 64u)
             return RIN_RESULT_INVALID_ARGUMENT;
         *index_out = UINT32_MAX;
@@ -125,6 +128,10 @@ public:
                 devices[index].identity;
             const RinDriverV3NpuCapabilitiesV1& capabilities =
                 devices[index].capabilities;
+            const uint64_t available_operations =
+                capabilities.version == RIN_DRIVER_V3_NPU_ABI_VERSION
+                    ? RIN_DRIVER_V3_NPU_OP_MASK
+                    : capabilities.reserved[0];
             if ((requirements->required_vendor_id != 0u &&
                  identity.vendor_id != requirements->required_vendor_id) ||
                 (capabilities.flags & requirements->required_capabilities) !=
@@ -138,7 +145,9 @@ public:
                 capabilities.max_queues_per_context <
                     requirements->minimum_queues_per_context ||
                 capabilities.max_buffer_bytes <
-                    requirements->minimum_buffer_bytes)
+                    requirements->minimum_buffer_bytes ||
+                (available_operations & requirements->required_operations) !=
+                    requirements->required_operations)
                 continue;
             const int preferred = requirements->preferred_vendor_id != 0u &&
                 identity.vendor_id == requirements->preferred_vendor_id;
@@ -160,6 +169,121 @@ public:
         if (selected == UINT32_MAX) return RIN_RESULT_NOT_FOUND;
         *index_out = selected;
         return RIN_RESULT_OK;
+    }
+
+    /* Derive conservative device requirements directly from a validated
+     * float32 graph. Every tensor must fit in one device buffer, and the
+     * selected backend must expose the context/buffer/queue/submit path. */
+    static RinResultCode requirements_for_model(
+        const model::Model* graph, uint32_t required_vendor_id,
+        uint32_t preferred_vendor_id, DeviceRequirements* requirements_out)
+    {
+        if (requirements_out == 0) return RIN_RESULT_INVALID_ARGUMENT;
+        if (graph && model::memory_ranges_overlap(graph, sizeof(*graph),
+                requirements_out, sizeof(*requirements_out)))
+            return RIN_RESULT_INVALID_ARGUMENT;
+        if (!graph) {
+            clear(requirements_out);
+            return RIN_RESULT_INVALID_ARGUMENT;
+        }
+        if (model::memory_ranges_overlap(graph->tensors,
+                (uint64_t)graph->tensor_count * sizeof(*graph->tensors),
+                requirements_out, sizeof(*requirements_out)) ||
+            model::memory_ranges_overlap(graph->inputs,
+                (uint64_t)graph->input_count * sizeof(*graph->inputs),
+                requirements_out, sizeof(*requirements_out)) ||
+            model::memory_ranges_overlap(graph->outputs,
+                (uint64_t)graph->output_count * sizeof(*graph->outputs),
+                requirements_out, sizeof(*requirements_out)) ||
+            model::memory_ranges_overlap(graph->operations,
+                (uint64_t)graph->operation_count * sizeof(*graph->operations),
+                requirements_out, sizeof(*requirements_out)))
+            return RIN_RESULT_INVALID_ARGUMENT;
+        if (!model::model_valid(graph)) {
+            clear(requirements_out);
+            return RIN_RESULT_INVALID_ARGUMENT;
+        }
+        clear(requirements_out);
+        DeviceRequirements requirements = base_requirements(
+            required_vendor_id, preferred_vendor_id);
+        for (uint32_t index = 0u; index < graph->tensor_count; ++index) {
+            uint64_t type_mask = 0u;
+            if (!driver_data_type(graph->tensors[index].data_type, &type_mask))
+                return RIN_RESULT_NOT_SUPPORTED;
+            const uint64_t elements =
+                model::tensor_elements(graph->tensors[index]);
+            if (elements == 0u || elements > UINT64_MAX / sizeof(float))
+                return RIN_RESULT_CORRUPT_DATA;
+            const uint64_t bytes = elements * sizeof(float);
+            requirements.required_data_types |= type_mask;
+            if (bytes > requirements.minimum_buffer_bytes)
+                requirements.minimum_buffer_bytes = bytes;
+        }
+        *requirements_out = requirements;
+        return RIN_RESULT_OK;
+    }
+
+    /* Quantized graphs may include Q8 intermediates, int32 accumulators, and
+     * int64 MaxPool indices. Requiring each declared storage type prevents a
+     * device with an incomplete type mask from being selected accidentally. */
+    static RinResultCode requirements_for_model(
+        const model::quantized::Model* graph, uint32_t required_vendor_id,
+        uint32_t preferred_vendor_id, DeviceRequirements* requirements_out)
+    {
+        if (requirements_out == 0) return RIN_RESULT_INVALID_ARGUMENT;
+        if (model::quantized::model_storage_overlaps(graph, requirements_out,
+                sizeof(*requirements_out)))
+            return RIN_RESULT_INVALID_ARGUMENT;
+        clear(requirements_out);
+        if (!model::quantized::model_valid(graph))
+            return RIN_RESULT_INVALID_ARGUMENT;
+        DeviceRequirements requirements = base_requirements(
+            required_vendor_id, preferred_vendor_id);
+        for (uint32_t index = 0u; index < graph->tensor_count; ++index) {
+            const model::quantized::TensorDescription& tensor =
+                graph->tensors[index];
+            uint64_t type_mask = 0u;
+            if (!driver_data_type(tensor.data_type, &type_mask))
+                return RIN_RESULT_NOT_SUPPORTED;
+            const uint64_t bytes =
+                model::quantized::tensor_storage_bytes(tensor);
+            if (bytes == 0u) return RIN_RESULT_CORRUPT_DATA;
+            requirements.required_data_types |= type_mask;
+            if (bytes > requirements.minimum_buffer_bytes)
+                requirements.minimum_buffer_bytes = bytes;
+        }
+        *requirements_out = requirements;
+        return RIN_RESULT_OK;
+    }
+
+    static RinResultCode select_device_for_model(
+        const DeviceInfo* devices, uint32_t count, const model::Model* graph,
+        uint32_t required_vendor_id, uint32_t preferred_vendor_id,
+        uint32_t* index_out)
+    {
+        DeviceRequirements requirements = {};
+        const RinResultCode status = requirements_for_model(
+            graph, required_vendor_id, preferred_vendor_id, &requirements);
+        if (status != RIN_RESULT_OK) {
+            if (index_out) *index_out = UINT32_MAX;
+            return status;
+        }
+        return select_device(devices, count, &requirements, index_out);
+    }
+
+    static RinResultCode select_device_for_model(
+        const DeviceInfo* devices, uint32_t count,
+        const model::quantized::Model* graph, uint32_t required_vendor_id,
+        uint32_t preferred_vendor_id, uint32_t* index_out)
+    {
+        DeviceRequirements requirements = {};
+        const RinResultCode status = requirements_for_model(
+            graph, required_vendor_id, preferred_vendor_id, &requirements);
+        if (status != RIN_RESULT_OK) {
+            if (index_out) *index_out = UINT32_MAX;
+            return status;
+        }
+        return select_device(devices, count, &requirements, index_out);
     }
 
     static RinResultCode query_device(uint64_t device_generation,
@@ -537,6 +661,53 @@ public:
     }
 
 private:
+    static DeviceRequirements base_requirements(uint32_t required_vendor_id,
+                                               uint32_t preferred_vendor_id)
+    {
+        DeviceRequirements requirements = {};
+        requirements.required_vendor_id = required_vendor_id;
+        requirements.preferred_vendor_id = preferred_vendor_id;
+        requirements.minimum_address_bits = 32u;
+        requirements.minimum_contexts = 1u;
+        requirements.minimum_queues_per_context = 1u;
+        requirements.required_operations =
+            RIN_DRIVER_V3_NPU_OP_CONTEXTS | RIN_DRIVER_V3_NPU_OP_BUFFERS |
+            RIN_DRIVER_V3_NPU_OP_QUEUES | RIN_DRIVER_V3_NPU_OP_SUBMIT;
+        return requirements;
+    }
+
+    static bool driver_data_type(uint32_t model_type, uint64_t* mask_out)
+    {
+        if (!mask_out) return false;
+        switch (model_type) {
+        case model::DATA_TYPE_FLOAT32:
+            *mask_out = RIN_DRIVER_V3_NPU_DATA_TYPE_FLOAT32;
+            return true;
+        case model::quantized::DATA_TYPE_INT8:
+            *mask_out = RIN_DRIVER_V3_NPU_DATA_TYPE_INT8;
+            return true;
+        case model::quantized::DATA_TYPE_UINT8:
+            *mask_out = RIN_DRIVER_V3_NPU_DATA_TYPE_UINT8;
+            return true;
+        case model::quantized::DATA_TYPE_INT32:
+            *mask_out = RIN_DRIVER_V3_NPU_DATA_TYPE_INT32;
+            return true;
+        case model::quantized::DATA_TYPE_INT64:
+            *mask_out = RIN_DRIVER_V3_NPU_DATA_TYPE_INT64;
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    static void clear(DeviceRequirements* requirements)
+    {
+        if (requirements == 0) return;
+        uint8_t* bytes = reinterpret_cast<uint8_t*>(requirements);
+        for (size_t index = 0u; index < sizeof(*requirements); ++index)
+            bytes[index] = 0u;
+    }
+
     static void zero_bytes(void* destination, size_t bytes)
     {
         uint8_t* output = static_cast<uint8_t*>(destination);
