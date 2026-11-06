@@ -118,6 +118,8 @@ struct QNode {
   uint32_t has_ceil_mode;
   uint32_t count_include_pad;
   uint32_t has_count_include_pad;
+  uint32_t storage_order;
+  uint32_t has_storage_order;
   uint32_t global_average_pool;
 };
 struct QuantizationValues {
@@ -333,12 +335,13 @@ static inline RinResultCode value_info(Slice bytes, Name *name_out,
   if (en < 0)
     return RIN_RESULT_CORRUPT_DATA;
   if (!htype || !hshape ||
-      (type != 1u && type != 2u && type != 3u && type != 6u))
+      (type != 1u && type != 2u && type != 3u && type != 6u && type != 7u))
     return RIN_RESULT_NOT_SUPPORTED;
   q::TensorDescription d = {};
   d.data_type = type == 1u ? q::DATA_TYPE_FLOAT32
       : type == 3u ? q::DATA_TYPE_INT8
-      : type == 6u ? q::DATA_TYPE_INT32 : q::DATA_TYPE_UINT8;
+      : type == 6u ? q::DATA_TYPE_INT32
+      : type == 7u ? q::DATA_TYPE_INT64 : q::DATA_TYPE_UINT8;
   d.scale = 1.0f;
   RinResultCode rc = parse_shape(shape, &d);
   if (rc != RIN_RESULT_OK)
@@ -1005,6 +1008,17 @@ static inline RinResultCode parse_qconv_attribute(Slice bytes, QNode *node) {
     *present = 1u;
     return RIN_RESULT_OK;
   }
+  if (name_is(attribute.name, "storage_order", 13u)) {
+    if (node->has_storage_order || attribute.type != 2u ||
+        !attribute.has_integer ||
+        (attribute.signed_integer_value != 0 &&
+         attribute.signed_integer_value != 1) || has_string ||
+        attribute.value_count)
+      return RIN_RESULT_NOT_SUPPORTED;
+    node->storage_order = (uint32_t)attribute.signed_integer_value;
+    node->has_storage_order = 1u;
+    return RIN_RESULT_OK;
+  }
   uint32_t *values = 0;
   uint32_t *value_count = 0;
   uint32_t *has_values = 0;
@@ -1067,9 +1081,13 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
       }
       ++node.input_count;
     } else if (f.number == 2u) {
-      if (node.output_count >= 3u || !field_name(f,
-              &node.outputs[node.output_count]))
+      if (node.output_count >= 3u || f.wire_type != 2u)
         return RIN_RESULT_CORRUPT_DATA;
+      if (f.bytes.size == 0u) {
+        node.outputs[node.output_count] = {};
+      } else if (!field_name(f, &node.outputs[node.output_count])) {
+        return RIN_RESULT_CORRUPT_DATA;
+      }
       ++node.output_count;
     } else if (f.number == 4u) {
       if (f.wire_type != 2u || hop)
@@ -1092,6 +1110,7 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
   if (n < 0 || !hop || node.output_count == 0u ||
       (hd && domain.size && !slice_is(domain, "ai.onnx", 7u)))
     return RIN_RESULT_CORRUPT_DATA;
+  if (node.outputs[0].size == 0u) return RIN_RESULT_CORRUPT_DATA;
   if (slice_is(op, "QLinearMatMul", 13u)) {
     if (node.output_count != 1u || node.input_count != 8u ||
         node.has_group || node.has_auto_pad ||
@@ -1130,7 +1149,8 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
         return RIN_RESULT_NOT_SUPPORTED;
     node.opcode = q::OPERATION_CONV_Q8;
   } else if (slice_is(op, "MaxPool", 7u)) {
-    if (node.output_count != 1u || node.input_count != 1u ||
+    if ((node.output_count != 1u && node.output_count != 2u) ||
+        node.input_count != 1u ||
         node.inputs[0].size == 0u || !node.has_kernel_shape ||
         node.has_group || node.has_axis || node.has_block_size ||
         node.has_count_include_pad)
@@ -1197,6 +1217,11 @@ static inline RinResultCode parse_node(Slice bytes, QNode *out) {
   } else {
     return RIN_RESULT_NOT_SUPPORTED;
   }
+  if (node.has_storage_order && node.opcode != q::OPERATION_MAX_POOL_Q8)
+    return RIN_RESULT_NOT_SUPPORTED;
+  if (node.output_count > 1u && node.outputs[1].size == 0u &&
+      node.opcode != q::OPERATION_MAX_POOL_Q8)
+    return RIN_RESULT_NOT_SUPPORTED;
   *out = node;
   return RIN_RESULT_OK;
 }
@@ -2021,6 +2046,7 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       parameters.operation_index = operations;
       parameters.spatial_rank = spatial_rank;
       parameters.ceil_mode = node.has_ceil_mode ? node.ceil_mode : 0u;
+      parameters.reserved = node.has_storage_order ? node.storage_order : 0u;
       for (uint32_t axis = 0u; axis < spatial_rank; ++axis) {
         const uint32_t input_extent = input_description.dimensions[axis + 2u];
         const uint32_t kernel = node.kernel_shape[axis];
@@ -2078,6 +2104,26 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
           &output_index);
       if (rc != RIN_RESULT_OK)
         return rc;
+      uint32_t indices_index = 0u;
+      const bool has_indices_output =
+          node.output_count == 2u && node.outputs[1].size != 0u;
+      if (has_indices_output) {
+        q::TensorDescription indices_description = {};
+        indices_description.data_type = q::DATA_TYPE_INT64;
+        indices_description.rank = output_rank;
+        indices_description.scale = 1.0f;
+        for (uint32_t axis = 0u; axis < output_rank; ++axis)
+          indices_description.dimensions[axis] = output_dimensions[axis];
+        const int previous_indices = find_value(w, values, node.outputs[1]);
+        if (previous_indices >= 0 &&
+            (w->values[previous_indices].flags & VALUE_AVAILABLE))
+          return RIN_RESULT_CORRUPT_DATA;
+        rc = add_value(w, &values, node.outputs[1], &indices_description,
+            VALUE_HAS_DESCRIPTION | VALUE_PRODUCED | VALUE_AVAILABLE,
+            &indices_index);
+        if (rc != RIN_RESULT_OK)
+          return rc;
+      }
       if (input_axis_quantization) {
         q::AxisQuantization output_quantization = *input_axis_quantization;
         output_quantization.tensor_index = output_index;
@@ -2095,6 +2141,8 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       operation.input_count = 1u;
       operation.inputs[0] = input_index;
       operation.output_tensor = output_index;
+      operation.reserved = has_indices_output
+          ? indices_index + 1u : 0u;
       w->operations[operations] = operation;
       w->average_pools[average_pools++] = parameters;
       ++operations;
