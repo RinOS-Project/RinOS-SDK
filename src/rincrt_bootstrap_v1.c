@@ -200,6 +200,7 @@ typedef void (*RinCrtCppExceptionCleanup)(void* object);
 typedef struct RinCrtCppExceptionCleanupRecord {
     RinCrtCppExceptionCleanup callback;
     void* object;
+    volatile unsigned char* coroutine_active;
     struct RinCrtCppExceptionCleanupRecord* previous;
 } RinCrtCppExceptionCleanupRecord;
 
@@ -327,6 +328,8 @@ static void rincrt_cpp_exception_unwind_cleanups_impl(
         RinCrtCppExceptionCleanupRecord* previous = record->previous;
         RinCrtCppExceptionCleanup callback = record->callback;
         void* object = record->object;
+        volatile unsigned char* coroutine_active =
+            record->coroutine_active;
         frame->cleanup_top = previous;
         rin_user_allocator_free(record);
         if (terminate_on_callback_exception) {
@@ -334,6 +337,7 @@ static void rincrt_cpp_exception_unwind_cleanups_impl(
         } else {
             callback(object);
         }
+        if (coroutine_active) *coroutine_active = 0u;
     }
 }
 
@@ -353,6 +357,25 @@ void rin_cpp_exception_register_cleanup(
     if (!record) rincrt_cpp_exception_cleanup_fatal();
     record->callback = callback;
     record->object = object;
+    record->coroutine_active = (volatile unsigned char*)0;
+    record->previous = frame->cleanup_top;
+    frame->cleanup_top = record;
+}
+
+void rin_cpp_exception_register_current_coroutine_cleanup(
+    RinCrtCppExceptionCleanup callback, void* object,
+    volatile unsigned char* active)
+{
+    RinCrtCppExceptionFrame* frame = rincrt_cpp_exception_top;
+    RinCrtCppExceptionCleanupRecord* record;
+    if (!callback || !object || !active) rincrt_cpp_exception_cleanup_fatal();
+    if (!frame) return;
+    record = (RinCrtCppExceptionCleanupRecord*)
+        rin_user_allocator_malloc(sizeof(*record));
+    if (!record) rincrt_cpp_exception_cleanup_fatal();
+    record->callback = callback;
+    record->object = object;
+    record->coroutine_active = active;
     record->previous = frame->cleanup_top;
     frame->cleanup_top = record;
 }
@@ -412,6 +435,8 @@ void rin_cpp_exception_install(RinCrtCppExceptionFrame* frame)
     }
     frame->previous = rincrt_cpp_exception_top;
     frame->cleanup_top = (void*)0;
+    frame->value = 0u;
+    frame->type = 0u;
     rincrt_cpp_exception_top = frame;
 }
 
@@ -422,6 +447,23 @@ void rin_cpp_exception_leave(RinCrtCppExceptionFrame* frame)
         if (rincrt_cpp_exception_top == frame) {
             rincrt_cpp_exception_top = frame->previous;
         }
+    }
+}
+
+/* A coroutine resume call may suspend while its frame-owned objects remain
+ * alive.  Drop this invocation's exception registrations without invoking
+ * their destructors; a later resume will register newly constructed locals,
+ * while older locals remain covered by the coroutine frame's active flags. */
+void rin_cpp_exception_discard(RinCrtCppExceptionFrame* frame)
+{
+    RinCrtCppExceptionCleanupRecord* record;
+    if (!frame) rincrt_cpp_exception_cleanup_fatal();
+    while ((record = frame->cleanup_top) != (void*)0) {
+        frame->cleanup_top = record->previous;
+        rin_user_allocator_free(record);
+    }
+    if (rincrt_cpp_exception_top == frame) {
+        rincrt_cpp_exception_top = frame->previous;
     }
 }
 
