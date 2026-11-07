@@ -139,6 +139,10 @@ static int rincrt_load_aligned_raw(void* pointer, void** raw_out)
 #define waitpid rincrt_test_waitpid
 #endif
 
+#if defined(RINCRT_HOST_TEST)
+extern void rincrt_test_process_exit(int status) __attribute__((noreturn));
+#endif
+
 enum {
     RINCRT_EINTR = 4,
     RINCRT_EIO = 5,
@@ -1304,8 +1308,12 @@ int atexit(void (*function)(void))
 
 void _exit(int status)
 {
+#if defined(RINCRT_HOST_TEST)
+    rincrt_test_process_exit(status);
+#else
     (void)rincrt_raw_syscall1(RIN_SYS_EXIT, (uintptr_t)(intptr_t)status);
     for (;;) {}
+#endif
 }
 
 void exit(int status)
