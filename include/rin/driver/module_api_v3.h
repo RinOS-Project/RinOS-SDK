@@ -7,6 +7,7 @@
 
 #include <rin/formats_v3.h>
 #include <rin/driver/admission_v3.h>
+#include <rin/driver/cellular_control_v1.h>
 
 #define RIN_DRIVER_V3_ABI_VERSION UINT32_C(0x00030000)
 #define RIN_DRIVER_V3_DMA_READ    UINT32_C(0x00000001)
@@ -469,6 +470,7 @@ typedef struct RinDriverV3NetRxMetadataV1 {
 #define RIN_DRIVER_V3_NET_RX_CHECKSUM_IPV4_HEADER UINT32_C(0x00000001)
 #define RIN_DRIVER_V3_NET_RX_CHECKSUM_IPV4_TRANSPORT UINT32_C(0x00000002)
 #define RIN_DRIVER_V3_NET_RX_CHECKSUM_FLAG_MASK UINT32_C(0x00000003)
+#define RIN_DRIVER_V3_NET_CONTROL_MAX_BYTES UINT32_C(4096)
 /* set_rx_mode receives this independent bitmask. ALL_MULTICAST admits
  * multicast Ethernet frames while preserving the interface's unicast filter. */
 #define RIN_DRIVER_V3_NET_RX_MODE_PROMISCUOUS UINT32_C(0x00000001)
@@ -874,6 +876,14 @@ typedef RinDriverV3Result (*RinDriverV3NetSetRxInterruptsFn)(
  * callbacks and kernel-owned DMA lease failures remain quarantined. */
 typedef RinDriverV3Result (*RinDriverV3NetRecoverFn)(
     uint64_t driver_context);
+/* The request and response buffers are synchronous, borrowed memory. The
+ * callback must validate operation-specific sizes and must not retain either
+ * pointer after it returns. response_length is zeroed on failure. */
+typedef RinDriverV3Result (*RinDriverV3NetControlFn)(
+    uint64_t driver_context, uint32_t operation, const void* request,
+    uint32_t request_length, void* response, uint32_t response_capacity,
+    uint32_t* response_length);
+#define RIN_DRIVER_V3_NET_CONTROL_CELLULAR UINT32_C(1)
 typedef RinDriverV3Result (*RinDriverV3AudioGetFormatFn)(
     uint64_t driver_context, RinDriverV3AudioFormat* output);
 typedef RinDriverV3Result (*RinDriverV3AudioConfigureFn)(
@@ -1231,6 +1241,19 @@ typedef struct RinDriverV3NetOpsV4 {
 #endif
 } RinDriverV3NetOpsV4;
 
+/* Optional synchronous network control plane. V1-V4 registrations retain
+ * their exact wire sizes and are rejected as UNSUPPORTED for control calls. */
+#define RIN_DRIVER_V3_NET_OPS_V5_EXTENSION_VERSION UINT32_C(1)
+typedef struct RinDriverV3NetOpsV5 {
+    RinDriverV3NetOpsV4 base;
+    uint32_t extension_size;
+    uint32_t extension_version;
+    RinDriverV3NetControlFn control;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t control_padding;
+#endif
+} RinDriverV3NetOpsV5;
+
 typedef struct RinDriverV3AudioOps {
     uint32_t struct_size;
     uint32_t version;
@@ -1466,6 +1489,19 @@ static inline int rin_driver_v3_net_ops_v4_valid(
         return 0;
 #if UINTPTR_MAX == UINT32_MAX
     if (ops->recover_padding != 0u) return 0;
+#endif
+    return 1;
+}
+
+static inline int rin_driver_v3_net_ops_v5_valid(
+    const RinDriverV3NetOpsV5* ops) {
+    if (!ops || !rin_driver_v3_net_ops_v4_valid(&ops->base) ||
+        ops->extension_size != sizeof(*ops) - sizeof(ops->base) ||
+        ops->extension_version !=
+            RIN_DRIVER_V3_NET_OPS_V5_EXTENSION_VERSION)
+        return 0;
+#if UINTPTR_MAX == UINT32_MAX
+    if (ops->control_padding != 0u) return 0;
 #endif
     return 1;
 }
@@ -2021,6 +2057,8 @@ static_assert(sizeof(RinDriverV3NetRxMetadataV1) == 16u &&
               "NDRV v3 network receive metadata ABI drift");
 static_assert(sizeof(RinDriverV3NetOpsV4) == 112u,
               "NDRV v3 network recovery operations ABI drift");
+static_assert(sizeof(RinDriverV3NetOpsV5) == 128u,
+              "NDRV v3 network control operations ABI drift");
 static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                   offsetof(RinDriverV3NetOps, poll_rx) == 16u &&
                   offsetof(RinDriverV3NetOps, remove) == 24u &&
@@ -2119,6 +2157,8 @@ _Static_assert(sizeof(RinDriverV3NetRxMetadataV1) == 16u &&
                "NDRV v3 network receive metadata ABI drift");
 _Static_assert(sizeof(RinDriverV3NetOpsV4) == 112u,
                "NDRV v3 network recovery operations ABI drift");
+_Static_assert(sizeof(RinDriverV3NetOpsV5) == 128u,
+               "NDRV v3 network control operations ABI drift");
 _Static_assert(offsetof(RinDriverV3NetOps, transmit) == 8u &&
                    offsetof(RinDriverV3NetOps, poll_rx) == 16u &&
                    offsetof(RinDriverV3NetOps, remove) == 24u &&
