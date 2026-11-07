@@ -52,6 +52,7 @@
      ((uint64_t)(device) << 24u) | ((uint64_t)(function) << 29u))
 #define RIN_DRIVER_V3_FIRMWARE_NAME_MAX 128u
 #define RIN_DRIVER_V3_FIRMWARE_MAX_READ UINT32_C(65536)
+#define RIN_DRIVER_V3_MEMORY_COPY_MAX_BYTES UINT32_C(4096)
 #define RIN_DRIVER_V3_IRQ_EVENT_MAX_BATCH 64u
 #define RIN_DRIVER_V3_IRQ_ROUTE_V1_VERSION UINT32_C(0x00010000)
 #define RIN_DRIVER_V3_FIRMWARE_CATALOG_MAGIC UINT32_C(0x57464452) /* RDFW */
@@ -399,6 +400,9 @@ typedef RinDriverV3Result (*RinDriverV3FirmwareCatalogReadFn)(
 typedef RinDriverV3Result (*RinDriverV3FirmwareCatalogReleaseFn)(
     uint64_t api_context, uint64_t session,
     RinDriverV3FirmwareCatalogLeaseV1* lease);
+typedef RinDriverV3Result (*RinDriverV3MemoryCopyFromLeaseFn)(
+    uint64_t api_context, uint64_t session, uint64_t memory_lease,
+    uint64_t offset, void* destination, uint32_t length);
 typedef RinDriverV3Result (*RinDriverV3ChildPublishFn)(
     uint64_t api_context, uint64_t session,
     const RinDriverV3ChildDescriptor* descriptor,
@@ -492,6 +496,12 @@ typedef struct RinDriverServicesV3 {
 #if UINTPTR_MAX == UINT32_MAX
     uint32_t firmware_catalog_release_padding;
 #endif
+    /* Optional size-gated tail extension. The kernel validates the active
+     * session, lease owner, DMA read permission, and exact byte range. */
+    RinDriverV3MemoryCopyFromLeaseFn copy_from_memory_lease;
+#if UINTPTR_MAX == UINT32_MAX
+    uint32_t copy_from_memory_lease_padding;
+#endif
 } RinDriverServicesV3;
 
 static inline const RinDriverServicesV3* rin_driver_services_v3_get(
@@ -517,6 +527,12 @@ static inline const RinDriverServicesV3* rin_driver_services_v3_get(
          services->struct_size <
              offsetof(RinDriverServicesV3, firmware_catalog_release) +
                  sizeof(services->firmware_catalog_release)) ||
+        (services->struct_size >
+             offsetof(RinDriverServicesV3, firmware_catalog_release) +
+                 sizeof(services->firmware_catalog_release) &&
+         services->struct_size <
+             offsetof(RinDriverServicesV3, copy_from_memory_lease) +
+                 sizeof(services->copy_from_memory_lease)) ||
         services->version != RIN_DRIVER_SERVICES_V3_VERSION ||
         (services->capabilities != 0u && services->api_context == 0u) ||
         (services->capabilities & ~known) != 0u ||
@@ -585,6 +601,11 @@ static inline const RinDriverServicesV3* rin_driver_services_v3_get(
                 sizeof(services->firmware_catalog_release_padding) &&
         services->firmware_catalog_release_padding != 0u)
         return NULL;
+    if (services->struct_size >=
+            offsetof(RinDriverServicesV3, copy_from_memory_lease_padding) +
+                sizeof(services->copy_from_memory_lease_padding) &&
+        services->copy_from_memory_lease_padding != 0u)
+        return NULL;
 #endif
     return services;
 }
@@ -608,6 +629,44 @@ static inline int rin_driver_services_v3_has_firmware_catalog(
            services->firmware_catalog_open &&
            services->firmware_catalog_read &&
            services->firmware_catalog_release;
+}
+
+static inline void rin_driver_services_v3_zero(void* memory, uint32_t size);
+static inline int rin_driver_services_v3_result_valid(
+    RinDriverV3Result result);
+
+static inline int rin_driver_services_v3_has_memory_copy_from_lease(
+    const RinDriverApiV3* api, const RinDriverServicesV3* services) {
+    const uint32_t required_size = (uint32_t)(
+        offsetof(RinDriverServicesV3, copy_from_memory_lease) +
+        sizeof(services->copy_from_memory_lease));
+    return api && services && services->struct_size >= required_size &&
+           (api->capabilities & RIN_DRIVER_V3_CAP_DMA_ISOLATED) != 0u &&
+           services->copy_from_memory_lease;
+}
+
+/* Copy a small protocol header from a live packet lease. The kernel pins the
+ * lease for the duration and never dereferences a driver-provided address. */
+static inline RinDriverV3Result
+rin_driver_services_v3_copy_from_memory_lease(
+    const RinDriverApiV3* api, uint64_t session, uint64_t memory_lease,
+    uint64_t offset, void* destination, uint32_t length) {
+    const RinDriverServicesV3* services = rin_driver_services_v3_get(api);
+    RinDriverV3Result result;
+    if (destination && length <= RIN_DRIVER_V3_MEMORY_COPY_MAX_BYTES)
+        rin_driver_services_v3_zero(destination, length);
+    if (!services || session == 0u || memory_lease == 0u || !destination ||
+        length == 0u || length > RIN_DRIVER_V3_MEMORY_COPY_MAX_BYTES ||
+        !rin_driver_services_v3_has_memory_copy_from_lease(api, services))
+        return RIN_DRIVER_V3_DENIED;
+    result = services->copy_from_memory_lease(
+        services->api_context, session, memory_lease, offset,
+        destination, length);
+    if (!rin_driver_services_v3_result_valid(result))
+        result = RIN_DRIVER_V3_BACKEND_FAILED;
+    if (result != RIN_DRIVER_V3_OK)
+        rin_driver_services_v3_zero(destination, length);
+    return result;
 }
 
 static inline int rin_driver_services_v3_bytes_zero(
@@ -667,10 +726,12 @@ static_assert(offsetof(RinDriverServicesV3, firmware_catalog_read) == 160u,
               "NDRV v3 firmware catalog read extension offset drift");
 static_assert(offsetof(RinDriverServicesV3, firmware_catalog_release) == 168u,
               "NDRV v3 firmware catalog release extension offset drift");
-static_assert(sizeof(RinDriverServicesV3) == 176u,
+static_assert(offsetof(RinDriverServicesV3, copy_from_memory_lease) == 176u,
+              "NDRV v3 memory lease copy extension offset drift");
+static_assert(sizeof(RinDriverServicesV3) == 184u,
               "NDRV v3 services tail extension drift");
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-_Static_assert(sizeof(RinDriverServicesV3) == 176u,
+_Static_assert(sizeof(RinDriverServicesV3) == 184u,
                "NDRV v3 services table ABI drift");
 _Static_assert(offsetof(RinDriverServicesV3, irq_poll) == 56u,
                "NDRV v3 IRQ callback offset drift");
@@ -692,6 +753,8 @@ _Static_assert(offsetof(RinDriverServicesV3, firmware_catalog_read) == 160u,
                "NDRV v3 firmware catalog read extension offset drift");
 _Static_assert(offsetof(RinDriverServicesV3, firmware_catalog_release) == 168u,
                "NDRV v3 firmware catalog release extension offset drift");
+_Static_assert(offsetof(RinDriverServicesV3, copy_from_memory_lease) == 176u,
+               "NDRV v3 memory lease copy extension offset drift");
 #endif
 
 static inline int rin_driver_v3_ioport_lease_valid(
