@@ -845,7 +845,8 @@ static inline bool operation_shape_valid(const Model* model,
             operation.input_count != 1u ||
             (model->tensors[operation.inputs[0]].data_type != DATA_TYPE_INT8 &&
              model->tensors[operation.inputs[0]].data_type != DATA_TYPE_UINT8) ||
-            output.data_type != model->tensors[operation.inputs[0]].data_type)
+            (output.data_type != DATA_TYPE_INT8 &&
+             output.data_type != DATA_TYPE_UINT8))
             return false;
         const AveragePoolParameters* parameters =
             average_pool_for_operation(model, operation_index);
@@ -1424,7 +1425,10 @@ static inline bool model_valid(const Model* model)
                    average_pool_q8) {
             if ((operation_input.data_type != DATA_TYPE_INT8 &&
                  operation_input.data_type != DATA_TYPE_UINT8) ||
-                operation_output.data_type != operation_input.data_type ||
+                (operation_output.data_type != DATA_TYPE_INT8 &&
+                 operation_output.data_type != DATA_TYPE_UINT8) ||
+                (max_pool &&
+                 operation_output.data_type != operation_input.data_type) ||
                 (max_pool &&
                  (operation_output.scale != operation_input.scale ||
                   operation_output.zero_point != operation_input.zero_point ||
@@ -3629,15 +3633,18 @@ static inline RinResultCode evaluate_average_pool_q8(
             if (!in_bounds) continue;
             const uint64_t input_element =
                 outer_index * input_spatial_elements + input_spatial;
-            sum += dequantize_model_value(
+            const float dequantized = (float)dequantize_model_value(
                 model, input_index, input, input_element);
+            sum += (double)dequantized;
             ++valid_samples;
         }
         const uint64_t divisor = parameters->count_include_pad
             ? kernel_elements : valid_samples;
+        const float pooled = divisor == 0u ? 0.0f
+            : (float)(sum / (double)divisor);
         if (divisor == 0u ||
             !store_model_quantized(model, operation.output_tensor, output,
-                output_element, sum / (double)divisor))
+                output_element, (double)pooled))
             return RIN_RESULT_INVALID_ARGUMENT;
     }
     return RIN_RESULT_OK;

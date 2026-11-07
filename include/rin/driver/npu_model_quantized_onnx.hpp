@@ -1662,6 +1662,368 @@ static inline RinResultCode value_name(Slice bytes, Name *out) {
     return RIN_RESULT_CORRUPT_DATA;
   return seen ? RIN_RESULT_OK : RIN_RESULT_CORRUPT_DATA;
 }
+
+static inline bool graph_has_tensor(const uint32_t *indices, uint32_t count,
+                                   uint32_t tensor_index) {
+  if (!indices)
+    return false;
+  for (uint32_t index = 0u; index < count; ++index)
+    if (indices[index] == tensor_index)
+      return true;
+  return false;
+}
+
+static inline void remap_operation_sidecars_after_remove(
+    Workspace *w, uint32_t removed, uint32_t convolution_count,
+    uint32_t integer_matmul_count, uint32_t integer_convolution_count,
+    uint32_t average_pool_count) {
+  for (uint32_t index = 0u; index < convolution_count; ++index)
+    if (w->convolutions[index].operation_index > removed)
+      --w->convolutions[index].operation_index;
+  for (uint32_t index = 0u; index < integer_matmul_count; ++index)
+    if (w->integer_matmuls[index].operation_index > removed)
+      --w->integer_matmuls[index].operation_index;
+  for (uint32_t index = 0u; index < integer_convolution_count; ++index)
+    if (w->integer_convolutions[index].operation_index > removed)
+      --w->integer_convolutions[index].operation_index;
+  for (uint32_t index = 0u; index < average_pool_count; ++index)
+    if (w->average_pools[index].operation_index > removed)
+      --w->average_pools[index].operation_index;
+}
+
+static inline bool remap_tensor_after_remove(uint32_t tensor_index,
+    uint32_t first_removed, uint32_t second_removed, uint32_t *out) {
+  if (!out || tensor_index == first_removed || tensor_index == second_removed)
+    return false;
+  *out = tensor_index - (tensor_index > first_removed ? 1u : 0u) -
+         (tensor_index > second_removed ? 1u : 0u);
+  return true;
+}
+
+static inline void remove_operation_at(Workspace *w,
+    uint32_t *operation_count, uint32_t removed,
+    uint32_t convolution_count, uint32_t integer_matmul_count,
+    uint32_t integer_convolution_count, uint32_t average_pool_count) {
+  for (uint32_t index = removed; index + 1u < *operation_count; ++index)
+    w->operations[index] = w->operations[index + 1u];
+  --*operation_count;
+  remap_operation_sidecars_after_remove(w, removed, convolution_count,
+      integer_matmul_count, integer_convolution_count, average_pool_count);
+}
+
+static inline bool tensor_removal_has_external_reference(
+    const Workspace *w, uint32_t tensor_a, uint32_t tensor_b,
+    uint32_t graph_input_count, const uint32_t *graph_inputs,
+    uint32_t graph_output_count, const uint32_t *graph_outputs,
+    uint32_t constant_count, const ConstantBinding *constants,
+    uint32_t quantization_count, uint32_t batch_quantization_count,
+    uint32_t integer_matmul_count, uint32_t integer_convolution_count,
+    uint32_t removed_dequantize, uint32_t removed_pool,
+    uint32_t removed_quantize, uint32_t operation_count) {
+  if (graph_has_tensor(graph_inputs, graph_input_count, tensor_a) ||
+      graph_has_tensor(graph_inputs, graph_input_count, tensor_b) ||
+      graph_has_tensor(graph_outputs, graph_output_count, tensor_a) ||
+      graph_has_tensor(graph_outputs, graph_output_count, tensor_b))
+    return true;
+  for (uint32_t index = 0u; index < constant_count; ++index)
+    if (constants[index].tensor_index == tensor_a ||
+        constants[index].tensor_index == tensor_b)
+      return true;
+  for (uint32_t index = 0u; index < quantization_count; ++index)
+    if (w->quantizations[index].tensor_index == tensor_a ||
+        w->quantizations[index].tensor_index == tensor_b)
+      return true;
+  for (uint32_t index = 0u; index < batch_quantization_count; ++index)
+    if (w->batch_quantizations[index].tensor_index == tensor_a ||
+        w->batch_quantizations[index].tensor_index == tensor_b)
+      return true;
+  for (uint32_t index = 0u; index < integer_matmul_count; ++index)
+    if (w->integer_matmuls[index].a_zero_point_tensor == tensor_a ||
+        w->integer_matmuls[index].a_zero_point_tensor == tensor_b ||
+        w->integer_matmuls[index].b_zero_point_tensor == tensor_a ||
+        w->integer_matmuls[index].b_zero_point_tensor == tensor_b)
+      return true;
+  for (uint32_t index = 0u; index < integer_convolution_count; ++index)
+    if (w->integer_convolutions[index].input_zero_point_tensor == tensor_a ||
+        w->integer_convolutions[index].input_zero_point_tensor == tensor_b ||
+        w->integer_convolutions[index].weight_zero_point_tensor == tensor_a ||
+        w->integer_convolutions[index].weight_zero_point_tensor == tensor_b)
+      return true;
+  for (uint32_t index = 0u; index < operation_count; ++index) {
+    if (index == removed_dequantize || index == removed_pool ||
+        index == removed_quantize)
+      continue;
+    const q::Operation &operation = w->operations[index];
+    if (operation.output_tensor == tensor_a ||
+        operation.output_tensor == tensor_b)
+      return true;
+    for (uint32_t input = 0u; input < operation.input_count; ++input)
+      if (operation.inputs[input] == tensor_a ||
+          operation.inputs[input] == tensor_b)
+        return true;
+    if ((operation.opcode == q::OPERATION_DYNAMIC_QUANTIZE_Q8 &&
+         (operation.inputs[1] == tensor_a ||
+          operation.inputs[1] == tensor_b ||
+          operation.reserved == tensor_a ||
+          operation.reserved == tensor_b)) ||
+        (operation.opcode == q::OPERATION_DEQUANTIZE_Q8 &&
+         operation.input_count == 2u &&
+         (operation.reserved == tensor_a ||
+          operation.reserved == tensor_b)) ||
+        (operation.opcode == q::OPERATION_MAX_POOL_Q8 &&
+         operation.reserved != 0u &&
+         (operation.reserved - 1u == tensor_a ||
+          operation.reserved - 1u == tensor_b)))
+      return true;
+  }
+  return false;
+}
+
+static inline bool compact_removed_average_pool_tensors(
+    Workspace *w, uint32_t *tensor_count, uint32_t operation_count,
+    uint32_t graph_input_count,
+    uint32_t *graph_inputs, uint32_t external_input_count,
+    uint32_t *external_inputs, uint32_t graph_output_count,
+    uint32_t *graph_outputs, uint32_t constant_count,
+    ConstantBinding *constants, uint32_t quantization_count,
+    uint32_t batch_quantization_count, uint32_t integer_matmul_count,
+    uint32_t integer_convolution_count, uint32_t first_removed,
+    uint32_t second_removed) {
+  const uint32_t old_count = *tensor_count;
+  if (first_removed >= old_count || second_removed >= old_count ||
+      first_removed == second_removed)
+    return false;
+  uint32_t compacted = 0u;
+  for (uint32_t index = 0u; index < old_count; ++index) {
+    if (index == first_removed || index == second_removed) continue;
+    if (compacted != index) {
+      w->tensors[compacted] = w->tensors[index];
+      w->values[compacted] = w->values[index];
+    }
+    w->values[compacted].tensor_index = compacted;
+    ++compacted;
+  }
+  for (uint32_t index = 0u; index < graph_input_count; ++index)
+    if (!remap_tensor_after_remove(graph_inputs[index], first_removed,
+            second_removed, &graph_inputs[index]))
+      return false;
+  for (uint32_t index = 0u; index < external_input_count; ++index)
+    if (!remap_tensor_after_remove(external_inputs[index], first_removed,
+            second_removed, &external_inputs[index]))
+      return false;
+  for (uint32_t index = 0u; index < graph_output_count; ++index)
+    if (!remap_tensor_after_remove(graph_outputs[index], first_removed,
+            second_removed, &graph_outputs[index]))
+      return false;
+  for (uint32_t index = 0u; index < constant_count; ++index)
+    if (!remap_tensor_after_remove(constants[index].tensor_index,
+            first_removed, second_removed, &constants[index].tensor_index))
+      return false;
+  for (uint32_t index = 0u; index < quantization_count; ++index)
+    if (!remap_tensor_after_remove(w->quantizations[index].tensor_index,
+            first_removed, second_removed,
+            &w->quantizations[index].tensor_index))
+      return false;
+  for (uint32_t index = 0u; index < batch_quantization_count; ++index)
+    if (!remap_tensor_after_remove(w->batch_quantizations[index].tensor_index,
+            first_removed, second_removed,
+            &w->batch_quantizations[index].tensor_index))
+      return false;
+  for (uint32_t index = 0u; index < integer_matmul_count; ++index) {
+    q::IntegerMatMulParameters &parameters = w->integer_matmuls[index];
+    if ((parameters.a_zero_point_tensor != UINT32_MAX &&
+         !remap_tensor_after_remove(parameters.a_zero_point_tensor,
+             first_removed, second_removed, &parameters.a_zero_point_tensor)) ||
+        (parameters.b_zero_point_tensor != UINT32_MAX &&
+         !remap_tensor_after_remove(parameters.b_zero_point_tensor,
+             first_removed, second_removed, &parameters.b_zero_point_tensor)))
+      return false;
+  }
+  for (uint32_t index = 0u; index < integer_convolution_count; ++index) {
+    q::IntegerConvolutionParameters &parameters =
+        w->integer_convolutions[index];
+    if ((parameters.input_zero_point_tensor != UINT32_MAX &&
+         !remap_tensor_after_remove(parameters.input_zero_point_tensor,
+             first_removed, second_removed,
+             &parameters.input_zero_point_tensor)) ||
+        (parameters.weight_zero_point_tensor != UINT32_MAX &&
+         !remap_tensor_after_remove(parameters.weight_zero_point_tensor,
+             first_removed, second_removed,
+             &parameters.weight_zero_point_tensor)))
+      return false;
+  }
+  for (uint32_t index = 0u; index < operation_count; ++index) {
+    q::Operation &operation = w->operations[index];
+    for (uint32_t input = 0u; input < operation.input_count; ++input)
+      if (!remap_tensor_after_remove(operation.inputs[input], first_removed,
+              second_removed, &operation.inputs[input]))
+        return false;
+    if (!remap_tensor_after_remove(operation.output_tensor, first_removed,
+            second_removed, &operation.output_tensor))
+      return false;
+    if (operation.opcode == q::OPERATION_DYNAMIC_QUANTIZE_Q8) {
+      if (!remap_tensor_after_remove(operation.inputs[1], first_removed,
+              second_removed, &operation.inputs[1]) ||
+          !remap_tensor_after_remove(operation.reserved, first_removed,
+              second_removed, &operation.reserved))
+        return false;
+    } else if (operation.opcode == q::OPERATION_DEQUANTIZE_Q8 &&
+               operation.input_count == 2u) {
+      if (!remap_tensor_after_remove(operation.reserved, first_removed,
+              second_removed, &operation.reserved))
+        return false;
+    } else if (operation.opcode == q::OPERATION_MAX_POOL_Q8 &&
+               operation.reserved != 0u) {
+      uint32_t indices_tensor = 0u;
+      if (!remap_tensor_after_remove(operation.reserved - 1u,
+              first_removed, second_removed, &indices_tensor))
+        return false;
+      operation.reserved = indices_tensor + 1u;
+    }
+  }
+  *tensor_count = old_count - 2u;
+  return true;
+}
+
+static inline bool fuse_qdq_average_pool(Workspace *w,
+    uint32_t *operation_count, uint32_t *tensor_count,
+    uint32_t quantization_count,
+    uint32_t batch_quantization_count, uint32_t convolution_count,
+    uint32_t integer_matmul_count, uint32_t integer_convolution_count,
+    uint32_t average_pool_count, uint32_t graph_input_count,
+    uint32_t *graph_inputs, uint32_t external_input_count,
+    uint32_t *external_inputs, uint32_t graph_output_count,
+    uint32_t *graph_outputs, uint32_t constant_count,
+    ConstantBinding *constants) {
+  for (uint32_t pool_index = 0u; pool_index < *operation_count;
+       ++pool_index) {
+    q::Operation &pool = w->operations[pool_index];
+    if (pool.opcode != q::OPERATION_AVERAGE_POOL_FLOAT32 ||
+        pool.input_count != 1u ||
+        graph_has_tensor(graph_outputs, graph_output_count,
+                         pool.output_tensor))
+      continue;
+
+    uint32_t dequantize_index = UINT32_MAX;
+    uint32_t quantize_index = UINT32_MAX;
+    uint32_t dequantize_producers = 0u;
+    uint32_t quantize_consumers = 0u;
+    for (uint32_t candidate = 0u; candidate < *operation_count; ++candidate) {
+      const q::Operation &operation = w->operations[candidate];
+      if (operation.opcode == q::OPERATION_DEQUANTIZE_Q8 &&
+          operation.output_tensor == pool.inputs[0]) {
+        dequantize_index = candidate;
+        ++dequantize_producers;
+      }
+      if (operation.opcode == q::OPERATION_QUANTIZE_Q8 &&
+          operation.input_count == 1u &&
+          operation.inputs[0] == pool.output_tensor) {
+        quantize_index = candidate;
+        ++quantize_consumers;
+      }
+    }
+    if (dequantize_producers != 1u || quantize_consumers != 1u ||
+        dequantize_index >= pool_index || quantize_index <= pool_index ||
+        quantize_index >= *operation_count ||
+        graph_has_tensor(graph_outputs, graph_output_count,
+                         pool.inputs[0]) ||
+        graph_has_tensor(graph_outputs, graph_output_count,
+                         pool.output_tensor))
+      continue;
+
+    const q::Operation dequantize = w->operations[dequantize_index];
+    const q::Operation quantize = w->operations[quantize_index];
+    if (dequantize.input_count != 1u || quantize.reserved != 0u ||
+        dequantize.inputs[0] >= *tensor_count ||
+        quantize.output_tensor >= *tensor_count ||
+        (w->tensors[dequantize.inputs[0]].data_type != q::DATA_TYPE_INT8 &&
+         w->tensors[dequantize.inputs[0]].data_type != q::DATA_TYPE_UINT8) ||
+        (w->tensors[quantize.output_tensor].data_type != q::DATA_TYPE_INT8 &&
+         w->tensors[quantize.output_tensor].data_type != q::DATA_TYPE_UINT8) ||
+        !q::same_shape(w->tensors[dequantize.inputs[0]],
+                       w->tensors[pool.inputs[0]]) ||
+        !q::same_shape(w->tensors[pool.output_tensor],
+                       w->tensors[quantize.output_tensor]))
+      continue;
+
+    uint32_t dequantize_output_uses = 0u;
+    uint32_t pool_output_uses = 0u;
+    for (uint32_t candidate = 0u; candidate < *operation_count; ++candidate) {
+      const q::Operation &operation = w->operations[candidate];
+      for (uint32_t input = 0u; input < operation.input_count; ++input) {
+        if (operation.inputs[input] == dequantize.output_tensor)
+          ++dequantize_output_uses;
+        if (operation.inputs[input] == pool.output_tensor)
+          ++pool_output_uses;
+      }
+    }
+    if (dequantize_output_uses != 1u || pool_output_uses != 1u)
+      continue;
+
+    bool spatial_quantization = false;
+    for (uint32_t index = 0u; index < quantization_count; ++index) {
+      const q::AxisQuantization &axis = w->quantizations[index];
+      if ((axis.tensor_index == dequantize.inputs[0] ||
+           axis.tensor_index == quantize.output_tensor) && axis.axis >= 2u)
+        spatial_quantization = true;
+    }
+    for (uint32_t index = 0u; index < batch_quantization_count; ++index) {
+      const q::BatchQuantization &batch = w->batch_quantizations[index];
+      if (batch.tensor_index != dequantize.inputs[0] &&
+          batch.tensor_index != quantize.output_tensor)
+        continue;
+      for (uint32_t axis = 2u; axis < batch.rank; ++axis)
+        if (batch.dimensions[axis] != 1u)
+          spatial_quantization = true;
+    }
+    if (spatial_quantization)
+      continue;
+    for (uint32_t candidate = 0u; candidate < *operation_count; ++candidate)
+      if (candidate != dequantize_index &&
+          w->operations[candidate].opcode ==
+              q::OPERATION_DYNAMIC_QUANTIZE_Q8 &&
+          w->operations[candidate].output_tensor == dequantize.inputs[0])
+        spatial_quantization = true;
+    if (spatial_quantization)
+      continue;
+
+    const uint32_t dequantized_tensor = dequantize.output_tensor;
+    const uint32_t pooled_tensor = pool.output_tensor;
+    const uint32_t output_tensor = quantize.output_tensor;
+    if (dequantized_tensor >= *tensor_count || pooled_tensor >= *tensor_count ||
+        output_tensor >= *tensor_count ||
+        tensor_removal_has_external_reference(w, dequantized_tensor,
+            pooled_tensor, graph_input_count, graph_inputs,
+            graph_output_count, graph_outputs, constant_count, constants,
+            quantization_count, batch_quantization_count,
+            integer_matmul_count, integer_convolution_count,
+            dequantize_index, pool_index, quantize_index, *operation_count))
+      continue;
+
+    q::Operation fused_pool = pool;
+    fused_pool.opcode = q::OPERATION_AVERAGE_POOL_Q8;
+    fused_pool.inputs[0] = dequantize.inputs[0];
+    fused_pool.output_tensor = output_tensor;
+    remove_operation_at(w, operation_count, quantize_index,
+        convolution_count, integer_matmul_count, integer_convolution_count,
+        average_pool_count);
+    remove_operation_at(w, operation_count, dequantize_index,
+        convolution_count, integer_matmul_count, integer_convolution_count,
+        average_pool_count);
+    --pool_index;
+    w->operations[pool_index] = fused_pool;
+    if (!compact_removed_average_pool_tensors(w, tensor_count,
+            *operation_count,
+            graph_input_count, graph_inputs, external_input_count,
+            external_inputs, graph_output_count, graph_outputs, constant_count,
+            constants, quantization_count, batch_quantization_count,
+            integer_matmul_count, integer_convolution_count,
+            dequantized_tensor, pooled_tensor))
+      return false;
+  }
+  return true;
+}
+
 static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
                                          Workspace *w, Result *out) {
   if (!out)
@@ -2797,9 +3159,16 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       return RIN_RESULT_CORRUPT_DATA;
     w->graph_outputs[i] = (uint32_t)idx;
   }
+  if (!fuse_qdq_average_pool(w, &operations, &values, quantizations,
+      batch_quantizations, convolutions, integer_matmuls,
+      integer_convolutions, average_pools, graph_input_count,
+      w->graph_inputs, externals, w->external_inputs, g.output_count,
+      w->graph_outputs, constants, w->constants))
+    return RIN_RESULT_CORRUPT_DATA;
   q::Model model = {};
   bool has_quantize_dequantize = false;
   bool has_dynamic_quantize = false;
+  bool has_q8_average_pool = false;
   bool has_v10_operation = false;
   for (uint32_t operation = 0u; operation < operations; ++operation)
     if (w->operations[operation].opcode == q::OPERATION_QUANTIZE_Q8 ||
@@ -2809,6 +3178,9 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
              q::OPERATION_DYNAMIC_QUANTIZE_Q8)
       has_dynamic_quantize = true;
     else if (w->operations[operation].opcode ==
+             q::OPERATION_AVERAGE_POOL_Q8)
+      has_q8_average_pool = true;
+    else if (w->operations[operation].opcode ==
                  q::OPERATION_GLOBAL_MAX_POOL_FLOAT32 ||
              w->operations[operation].opcode == q::OPERATION_MAX_POOL_Q8)
       has_v10_operation = true;
@@ -2816,7 +3188,9 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
                  q::OPERATION_IDENTITY_FLOAT32 ||
              w->operations[operation].opcode == q::OPERATION_FLATTEN_FLOAT32)
       has_v10_operation = true;
-  model.version = has_v10_operation
+  model.version = has_q8_average_pool
+      ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V11
+      : has_v10_operation
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10
       : average_pools
       ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9
@@ -2835,6 +3209,7 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
       : quantizations ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION
                       : RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1;
   model.struct_size = model.version ==
+          RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V11 || model.version ==
           RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 || model.version ==
           RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9
       ? sizeof(model)
