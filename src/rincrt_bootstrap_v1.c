@@ -215,6 +215,14 @@ typedef struct RinCrtCppExceptionFrame {
 void _exit(int status);
 void rin_cpp_exception_install(RinCrtCppExceptionFrame* frame);
 void rin_cpp_exception_leave(RinCrtCppExceptionFrame* frame);
+void rin_cpp_exception_begin_unwind(void);
+void rin_cpp_exception_end_unwind(void);
+void rin_cpp_exception_terminate_scope_begin(void);
+void rin_cpp_exception_terminate_scope_end(void);
+RinCrtCppExceptionCleanup rin_cpp_exception_frame_cleanup(
+    RinCrtCppExceptionFrame* frame);
+void rin_cpp_exception_release_frame_with_cleanup(
+    RinCrtCppExceptionFrame* frame, RinCrtCppExceptionCleanup cleanup);
 
 #if defined(__x86_64__) || defined(_M_X64)
 __attribute__((naked, returns_twice))
@@ -301,6 +309,7 @@ static _Thread_local uintptr_t rincrt_cpp_exception_current_value;
 static _Thread_local uintptr_t rincrt_cpp_exception_current_type;
 static _Thread_local RinCrtCppExceptionCleanup
     rincrt_cpp_exception_current_cleanup;
+static _Thread_local unsigned rincrt_cpp_exception_unwind_depth;
 
 static __attribute__((noreturn, no_stack_protector))
 void rincrt_cpp_exception_cleanup_fatal(void)
@@ -440,6 +449,28 @@ void rin_cpp_exception_install(RinCrtCppExceptionFrame* frame)
     rincrt_cpp_exception_top = frame;
 }
 
+void rin_cpp_exception_begin_unwind(void)
+{
+    if (rincrt_cpp_exception_unwind_depth == UINT32_MAX) _exit(134);
+    ++rincrt_cpp_exception_unwind_depth;
+}
+
+void rin_cpp_exception_end_unwind(void)
+{
+    if (rincrt_cpp_exception_unwind_depth == 0u) _exit(134);
+    --rincrt_cpp_exception_unwind_depth;
+}
+
+void rin_cpp_exception_terminate_scope_begin(void)
+{
+    rin_cpp_exception_begin_unwind();
+}
+
+void rin_cpp_exception_terminate_scope_end(void)
+{
+    rin_cpp_exception_end_unwind();
+}
+
 void rin_cpp_exception_leave(RinCrtCppExceptionFrame* frame)
 {
     if (frame && rincrt_cpp_exception_top == frame) {
@@ -472,11 +503,14 @@ static void rincrt_cpp_exception_throw_owned(
     uintptr_t value, uintptr_t type, RinCrtCppExceptionCleanup cleanup)
 {
     RinCrtCppExceptionFrame* frame = rincrt_cpp_exception_top;
+    if (rincrt_cpp_exception_unwind_depth != 0u) _exit(134);
     if (!frame) {
         _exit(1);
     }
     rincrt_cpp_exception_top = frame->previous;
+    ++rincrt_cpp_exception_unwind_depth;
     rincrt_cpp_exception_unwind_cleanups_impl(frame, 1);
+    --rincrt_cpp_exception_unwind_depth;
     frame->value = value;
     frame->type = type;
     rincrt_cpp_exception_current_value = value;
@@ -531,17 +565,51 @@ void rin_cpp_exception_throw_object_with_cleanup(
 
 void rin_cpp_exception_release_frame(RinCrtCppExceptionFrame* frame)
 {
+    RinCrtCppExceptionCleanup cleanup = (RinCrtCppExceptionCleanup)0;
+    if (frame && frame->value == rincrt_cpp_exception_current_value &&
+        frame->type == rincrt_cpp_exception_current_type) {
+        cleanup = rincrt_cpp_exception_current_cleanup;
+    }
     if (!frame || (frame->type & RINCRT_CPP_EXCEPTION_OBJECT_FLAG) == 0u ||
         frame->value == 0u) {
         return;
     }
-    if (frame->value == rincrt_cpp_exception_current_value &&
-        frame->type == rincrt_cpp_exception_current_type &&
-        rincrt_cpp_exception_current_cleanup) {
-        RinCrtCppExceptionCleanup cleanup =
-            rincrt_cpp_exception_current_cleanup;
-        rincrt_cpp_exception_current_cleanup =
-            (RinCrtCppExceptionCleanup)0;
+    if (cleanup) {
+        if (frame->value == rincrt_cpp_exception_current_value &&
+            frame->type == rincrt_cpp_exception_current_type) {
+            rincrt_cpp_exception_current_cleanup =
+                (RinCrtCppExceptionCleanup)0;
+        }
+        cleanup((void*)frame->value);
+    }
+    rin_user_allocator_free((void*)frame->value);
+    frame->value = 0u;
+    frame->type = 0u;
+}
+
+RinCrtCppExceptionCleanup rin_cpp_exception_frame_cleanup(
+    RinCrtCppExceptionFrame* frame)
+{
+    if (frame && frame->value == rincrt_cpp_exception_current_value &&
+        frame->type == rincrt_cpp_exception_current_type) {
+        return rincrt_cpp_exception_current_cleanup;
+    }
+    return (RinCrtCppExceptionCleanup)0;
+}
+
+void rin_cpp_exception_release_frame_with_cleanup(
+    RinCrtCppExceptionFrame* frame, RinCrtCppExceptionCleanup cleanup)
+{
+    if (!frame || (frame->type & RINCRT_CPP_EXCEPTION_OBJECT_FLAG) == 0u ||
+        frame->value == 0u) {
+        return;
+    }
+    if (cleanup) {
+        if (frame->value == rincrt_cpp_exception_current_value &&
+            frame->type == rincrt_cpp_exception_current_type) {
+            rincrt_cpp_exception_current_cleanup =
+                (RinCrtCppExceptionCleanup)0;
+        }
         cleanup((void*)frame->value);
     }
     rin_user_allocator_free((void*)frame->value);
