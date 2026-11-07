@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #define NETLINK_ROUTE 0
+#define NETLINK_SOCK_DIAG 4
 
 #define SOL_NETLINK 270
 #define NETLINK_LIST_MEMBERSHIPS 9
