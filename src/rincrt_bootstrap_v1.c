@@ -33,6 +33,8 @@ extern void __cxa_finalize(void* dso);
 extern int fflush(void* stream) __attribute__((weak));
 extern void (*__fini_array_start[])(void) __attribute__((weak));
 extern void (*__fini_array_end[])(void) __attribute__((weak));
+extern int __rin_run_process_dependency_finalizers(void)
+    __attribute__((weak));
 static volatile uint32_t g_rincrt_exit_started;
 #endif
 
@@ -1229,6 +1231,10 @@ void exit(int status)
         }
     }
     __cxa_finalize((void*)0);
+    if (__rin_run_process_dependency_finalizers != 0 &&
+        __rin_run_process_dependency_finalizers() != 0) {
+        _exit(127);
+    }
     if (fflush != 0) (void)fflush((void*)0);
 #endif
     _exit(status);

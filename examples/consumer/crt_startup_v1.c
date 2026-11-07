@@ -11,10 +11,8 @@ typedef struct RinSdkAuxiliaryEntry {
 extern char **environ;
 extern int main(int argc, char **argv, char **envp);
 extern int atexit(void (*function)(void));
-extern void _exit(int status) __attribute__((noreturn));
 extern void rin_exit(int status) __attribute__((noreturn));
 extern int __rin_run_startup_dependency_initializers(void);
-extern int __rin_run_process_dependency_finalizers(void);
 extern RinSdkArrayFunction __init_array_start[];
 extern RinSdkArrayFunction __init_array_end[];
 extern RinSdkArrayFunction __fini_array_start[];
@@ -80,13 +78,6 @@ static void rin_sdk_run_finalizers(void)
     }
 }
 
-#if defined(__x86_64__)
-static void rin_sdk_run_dependency_finalizers(void)
-{
-    if (__rin_run_process_dependency_finalizers() != 0) _exit(127);
-}
-#endif
-
 static int rin_sdk_snapshot_auxiliary_vector(RinSdkWord *auxiliary)
 {
     RinSdkWord index;
@@ -140,12 +131,8 @@ void __rin_sdk_start_from_initial_stack(RinSdkWord *initial_stack)
                              &rin_sdk_fini_array_count) != 0) {
         rin_exit(127);
     }
-#if defined(__x86_64__)
-    /* Register first so dependency finalizers run after the root image. */
-    if (atexit(rin_sdk_run_dependency_finalizers) != 0 ||
-        __rin_run_startup_dependency_initializers() != 0) {
-        rin_exit(127);
-    }
+#if defined(__x86_64__) || defined(__i386__)
+    if (__rin_run_startup_dependency_initializers() != 0) rin_exit(127);
 #endif
     /* Install the image finalizer before any constructor can call exit(). */
     if (atexit(rin_sdk_run_finalizers) != 0) rin_exit(127);
