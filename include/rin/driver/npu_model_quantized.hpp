@@ -14,7 +14,8 @@
  * versions add per-axis parameters, operation-specific sidecars, v5 runtime
  * outputs for ONNX DynamicQuantizeLinear, v6 blocked Q8 parameters, v7
  * integer matmul, v8 integer convolution parameters, v9 pooling geometry, and
- * v10 GlobalMaxPool, Q8 MaxPool, and float32 graph-shape operators. */
+ * v10 GlobalMaxPool, Q8 MaxPool, and float32 graph-shape operators. v11 adds
+ * Q8 AveragePool while preserving the v10 model and blob layouts. */
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V1 UINT32_C(0x00010000)
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION UINT32_C(0x00020000)
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V3 UINT32_C(0x00030000)
@@ -25,6 +26,7 @@
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 UINT32_C(0x00080000)
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 UINT32_C(0x00090000)
 #define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 UINT32_C(0x000a0000)
+#define RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V11 UINT32_C(0x000b0000)
 #define RIN_NPU_QUANTIZED_MODEL_BLOB_MAGIC UINT32_C(0x514e4952)
 #define RIN_NPU_QUANTIZED_MODEL_MAX_BLOB_BYTES UINT32_C(16384)
 #define RIN_NPU_QUANTIZED_MODEL_MAX_BACKENDS RIN_NPU_MODEL_MAX_BACKENDS
@@ -59,7 +61,8 @@ enum OperationCode {
     OPERATION_IDENTITY_FLOAT32 = 0x10e,
     OPERATION_FLATTEN_FLOAT32 = 0x10f,
     OPERATION_RESHAPE_FLOAT32 = 0x110,
-    OPERATION_MAX_POOL_Q8 = 0x111
+    OPERATION_MAX_POOL_Q8 = 0x111,
+    OPERATION_AVERAGE_POOL_Q8 = 0x112
 };
 
 #define RIN_NPU_QUANTIZED_MODEL_MAX_SPATIAL_DIMS \
@@ -259,6 +262,12 @@ struct Executable {
 
 static_assert(sizeof(float) == 4u && FLT_RADIX == 2,
               "Q8 model scales require IEEE-754 binary32 storage");
+
+static inline bool model_version_has_v10_features(uint32_t version)
+{
+    return version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
+           version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V11;
+}
 
 static inline bool data_type_bounds(uint32_t data_type, int32_t* minimum,
                                     int32_t* maximum)
@@ -560,7 +569,7 @@ static inline uint32_t model_convolution_count(const Model* model)
                      model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 ||
                      model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
                      model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-                     model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)
+                     model_version_has_v10_features(model->version))
         ? model->convolution_count : 0u;
 }
 
@@ -572,7 +581,7 @@ static inline uint32_t model_batch_quantization_count(const Model* model)
                      model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 ||
                      model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
                      model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-                     model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)
+                     model_version_has_v10_features(model->version))
         ? model->batch_quantization_count : 0u;
 }
 
@@ -582,7 +591,7 @@ static inline uint32_t model_integer_matmul_count(const Model* model)
             RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 ||
             model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
             model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-            model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)
+            model_version_has_v10_features(model->version))
         ? model->integer_matmul_count : 0u;
 }
 
@@ -591,7 +600,7 @@ static inline uint32_t model_integer_convolution_count(const Model* model)
     return model && (model->version ==
             RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
             model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-            model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)
+            model_version_has_v10_features(model->version))
         ? model->integer_convolution_count : 0u;
 }
 
@@ -599,7 +608,7 @@ static inline uint32_t model_average_pool_count(const Model* model)
 {
     return model && (model->version ==
             RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-            model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)
+            model_version_has_v10_features(model->version))
         ? model->average_pool_count : 0u;
 }
 
@@ -729,7 +738,7 @@ static inline bool operation_shape_valid(const Model* model,
                   model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 ||
                   model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
                   model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-                  model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10) &&
+                  model_version_has_v10_features(model->version)) &&
                  operation.input_count == 2u)) &&
             same_shape(output, model->tensors[operation.inputs[0]]);
     if (operation.opcode == OPERATION_MATMUL_Q8) {
@@ -788,7 +797,7 @@ static inline bool operation_shape_valid(const Model* model,
     }
     if (operation.opcode == OPERATION_AVERAGE_POOL_FLOAT32) {
         if ((model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 &&
-             model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10) ||
+             !model_version_has_v10_features(model->version)) ||
             operation.input_count != 1u ||
             model->tensors[operation.inputs[0]].data_type != DATA_TYPE_FLOAT32 ||
             output.data_type != DATA_TYPE_FLOAT32)
@@ -808,7 +817,7 @@ static inline bool operation_shape_valid(const Model* model,
         return true;
     }
     if (operation.opcode == OPERATION_MAX_POOL_Q8) {
-        if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
+        if (!model_version_has_v10_features(model->version) ||
             operation.input_count != 1u ||
             (model->tensors[operation.inputs[0]].data_type != DATA_TYPE_INT8 &&
              model->tensors[operation.inputs[0]].data_type != DATA_TYPE_UINT8) ||
@@ -831,8 +840,30 @@ static inline bool operation_shape_valid(const Model* model,
                 return false;
         return true;
     }
+    if (operation.opcode == OPERATION_AVERAGE_POOL_Q8) {
+        if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V11 ||
+            operation.input_count != 1u ||
+            (model->tensors[operation.inputs[0]].data_type != DATA_TYPE_INT8 &&
+             model->tensors[operation.inputs[0]].data_type != DATA_TYPE_UINT8) ||
+            output.data_type != model->tensors[operation.inputs[0]].data_type)
+            return false;
+        const AveragePoolParameters* parameters =
+            average_pool_for_operation(model, operation_index);
+        uint32_t expected_rank = 0u;
+        uint32_t expected_dimensions[RIN_NPU_MODEL_MAX_RANK] = {};
+        if (!parameters || parameters->reserved != 0u ||
+            !average_pool_output_shape(
+                model->tensors[operation.inputs[0]], *parameters,
+                &expected_rank, expected_dimensions) ||
+            output.rank != expected_rank)
+            return false;
+        for (uint32_t dimension = 0u; dimension < expected_rank; ++dimension)
+            if (output.dimensions[dimension] != expected_dimensions[dimension])
+                return false;
+        return true;
+    }
     if (operation.opcode == OPERATION_GLOBAL_MAX_POOL_FLOAT32) {
-        if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
+        if (!model_version_has_v10_features(model->version) ||
             operation.input_count != 1u ||
             model->tensors[operation.inputs[0]].data_type != DATA_TYPE_FLOAT32 ||
             output.data_type != DATA_TYPE_FLOAT32)
@@ -849,13 +880,13 @@ static inline bool operation_shape_valid(const Model* model,
         return true;
     }
     if (operation.opcode == OPERATION_IDENTITY_FLOAT32)
-        return model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 &&
+        return model_version_has_v10_features(model->version) &&
             operation.input_count == 1u &&
             model->tensors[operation.inputs[0]].data_type == DATA_TYPE_FLOAT32 &&
             output.data_type == DATA_TYPE_FLOAT32 &&
             same_shape(output, model->tensors[operation.inputs[0]]);
     if (operation.opcode == OPERATION_FLATTEN_FLOAT32) {
-        if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
+        if (!model_version_has_v10_features(model->version) ||
             operation.input_count != 1u ||
             model->tensors[operation.inputs[0]].data_type != DATA_TYPE_FLOAT32 ||
             output.data_type != DATA_TYPE_FLOAT32)
@@ -872,7 +903,7 @@ static inline bool operation_shape_valid(const Model* model,
         return true;
     }
     if (operation.opcode == OPERATION_RESHAPE_FLOAT32) {
-        if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
+        if (!model_version_has_v10_features(model->version) ||
             operation.input_count != 1u || operation.reserved > 1u ||
             model->tensors[operation.inputs[0]].data_type != DATA_TYPE_FLOAT32 ||
             output.data_type != DATA_TYPE_FLOAT32)
@@ -893,7 +924,7 @@ static inline uint32_t model_quantization_count(const Model* model)
                       model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 ||
                       model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
                       model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-                      model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)
+                      model_version_has_v10_features(model->version))
         ? model->quantization_count : 0u;
 }
 
@@ -957,11 +988,38 @@ static inline bool max_pool_q8_quantization_passthrough_valid(
     return true;
 }
 
+static inline bool average_pool_q8_quantization_valid(
+    const Model* model, uint32_t input_index, uint32_t output_index)
+{
+    const AxisQuantization* input_axis =
+        axis_quantization_for_tensor(model, input_index);
+    const AxisQuantization* output_axis =
+        axis_quantization_for_tensor(model, output_index);
+    if ((input_axis && input_axis->axis >= 2u) ||
+        (output_axis && output_axis->axis >= 2u))
+        return false;
+
+    const BatchQuantization* input_batch =
+        batch_quantization_for_tensor(model, input_index);
+    const BatchQuantization* output_batch =
+        batch_quantization_for_tensor(model, output_index);
+    const TensorDescription& input = model->tensors[input_index];
+    const TensorDescription& output = model->tensors[output_index];
+    if ((input_batch && input_batch->rank != input.rank) ||
+        (output_batch && output_batch->rank != output.rank))
+        return false;
+    for (uint32_t axis = 2u; axis < input.rank; ++axis)
+        if ((input_batch && input_batch->dimensions[axis] != 1u) ||
+            (output_batch && output_batch->dimensions[axis] != 1u))
+            return false;
+    return true;
+}
+
 static inline bool model_valid(const Model* model)
 {
     if (!model ||
         ((model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-          model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)
+          model_version_has_v10_features(model->version))
             ? model->struct_size != sizeof(*model) || model->reserved != 0u ||
                   model->reserved2 != 0u || model->reserved3 != 0u ||
                   model->reserved4 != 0u || model->reserved5 != 0u ||
@@ -1025,11 +1083,11 @@ static inline bool model_valid(const Model* model)
         (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 &&
          model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 &&
          model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 &&
-         model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 &&
+         !model_version_has_v10_features(model->version) &&
          integer_matmul_count != 0u))
         return false;
     if (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 &&
-        model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 &&
+        !model_version_has_v10_features(model->version) &&
         average_pool_count != 0u)
         return false;
 
@@ -1039,7 +1097,7 @@ static inline bool model_valid(const Model* model)
           model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 &&
           model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 &&
            model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 &&
-           model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10) {
+           !model_version_has_v10_features(model->version)) {
         for (uint32_t index = 0u; index < model->tensor_count; ++index)
             if (model->tensors[index].data_type == DATA_TYPE_FLOAT32)
                 return false;
@@ -1058,7 +1116,7 @@ static inline bool model_valid(const Model* model)
              model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 &&
              model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 &&
              model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 &&
-             model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10))
+             !model_version_has_v10_features(model->version)))
             return false;
     for (uint32_t index = 0u; index < quantization_count; ++index) {
         const AxisQuantization& axis = model->quantizations[index];
@@ -1067,7 +1125,7 @@ static inline bool model_valid(const Model* model)
              model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 ||
              model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
              model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-             model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10) &&
+             model_version_has_v10_features(model->version)) &&
             axis.reserved != 0u;
         if ((axis.reserved != 0u && !blocked) ||
             axis.tensor_index >= model->tensor_count ||
@@ -1165,6 +1223,8 @@ static inline bool model_valid(const Model* model)
         const bool flatten = operation.opcode == OPERATION_FLATTEN_FLOAT32;
         const bool reshape = operation.opcode == OPERATION_RESHAPE_FLOAT32;
         const bool max_pool = operation.opcode == OPERATION_MAX_POOL_Q8;
+        const bool average_pool_q8 =
+            operation.opcode == OPERATION_AVERAGE_POOL_Q8;
         if ((operation.reserved != 0u && !dynamic_quantize &&
              !flatten && !reshape &&
              !dynamic_dequantize && !max_pool) ||
@@ -1198,7 +1258,7 @@ static inline bool model_valid(const Model* model)
               (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 &&
                model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 &&
                 model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 &&
-                model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)) ||
+                !model_version_has_v10_features(model->version))) ||
              operation.input_count != 1u ||
              operation.inputs[1] >= model->tensor_count ||
              operation.reserved >= model->tensor_count ||
@@ -1214,7 +1274,7 @@ static inline bool model_valid(const Model* model)
               (model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 &&
                model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 &&
                 model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 &&
-                model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)) ||
+                !model_version_has_v10_features(model->version))) ||
              operation.reserved >= model->tensor_count ||
              available[operation.reserved] == 0u ||
              operation.reserved == operation.inputs[0] ||
@@ -1275,7 +1335,7 @@ static inline bool model_valid(const Model* model)
             if ((model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 &&
                  model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 &&
                  model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 &&
-                 model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10) ||
+                 !model_version_has_v10_features(model->version)) ||
                 operation_input.data_type == DATA_TYPE_FLOAT32 ||
                 (operation_input.data_type != DATA_TYPE_INT8 &&
                  operation_input.data_type != DATA_TYPE_UINT8) ||
@@ -1318,7 +1378,7 @@ static inline bool model_valid(const Model* model)
                 model->tensors[operation.inputs[1]];
             if ((model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 &&
                  model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 &&
-                 model->version != RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10) ||
+                 !model_version_has_v10_features(model->version)) ||
                 (operation_input.data_type != DATA_TYPE_INT8 &&
                  operation_input.data_type != DATA_TYPE_UINT8) ||
                 (weights.data_type != DATA_TYPE_INT8 &&
@@ -1360,14 +1420,21 @@ static inline bool model_valid(const Model* model)
             if (operation_input.data_type != DATA_TYPE_FLOAT32 ||
                 operation_output.data_type != DATA_TYPE_FLOAT32)
                 return false;
-        } else if (operation.opcode == OPERATION_MAX_POOL_Q8) {
+        } else if (operation.opcode == OPERATION_MAX_POOL_Q8 ||
+                   average_pool_q8) {
             if ((operation_input.data_type != DATA_TYPE_INT8 &&
                  operation_input.data_type != DATA_TYPE_UINT8) ||
                 operation_output.data_type != operation_input.data_type ||
-                operation_output.scale != operation_input.scale ||
-                operation_output.zero_point != operation_input.zero_point ||
-                !max_pool_q8_quantization_passthrough_valid(
-                    model, operation.inputs[0], operation.output_tensor))
+                (max_pool &&
+                 (operation_output.scale != operation_input.scale ||
+                  operation_output.zero_point != operation_input.zero_point ||
+                  !max_pool_q8_quantization_passthrough_valid(
+                      model, operation.inputs[0], operation.output_tensor))) ||
+                (average_pool_q8 &&
+                 (model->version !=
+                      RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V11 ||
+                  !average_pool_q8_quantization_valid(
+                      model, operation.inputs[0], operation.output_tensor))))
                 return false;
         } else {
             if (operation_output.data_type == DATA_TYPE_FLOAT32)
@@ -1389,6 +1456,8 @@ static inline bool model_valid(const Model* model)
             operation.opcode == OPERATION_MATMUL_INTEGER ||
             operation.opcode == OPERATION_CONV_INTEGER ||
             (operation.opcode == OPERATION_MAX_POOL_Q8 &&
+             left_axis->axis < 2u) ||
+            (operation.opcode == OPERATION_AVERAGE_POOL_Q8 &&
              left_axis->axis < 2u) ||
             (operation.opcode == OPERATION_DEQUANTIZE_Q8 &&
              operation.inputs[0] == left_axis->tensor_index) ||
@@ -1414,6 +1483,9 @@ static inline bool model_valid(const Model* model)
             (operation.opcode == OPERATION_MAX_POOL_Q8 &&
              max_pool_q8_quantization_passthrough_valid(
                  model, operation.inputs[0], operation.output_tensor)) ||
+            (operation.opcode == OPERATION_AVERAGE_POOL_Q8 &&
+             average_pool_q8_quantization_valid(
+                 model, operation.inputs[0], operation.output_tensor)) ||
             (operation.opcode == OPERATION_MATMUL_Q8 &&
              left_batch->dimensions[left_tensor.rank - 2u] ==
                  left_tensor.dimensions[left_tensor.rank - 2u] &&
@@ -1428,9 +1500,11 @@ static inline bool model_valid(const Model* model)
             !right_batch_valid ||
             (axis_quantization_for_tensor(model, operation.output_tensor) &&
              operation.opcode != OPERATION_QUANTIZE_Q8 &&
-             operation.opcode != OPERATION_MAX_POOL_Q8) ||
+             operation.opcode != OPERATION_MAX_POOL_Q8 &&
+             operation.opcode != OPERATION_AVERAGE_POOL_Q8) ||
             (batch_quantization_for_tensor(model, operation.output_tensor) &&
-             operation.opcode != OPERATION_MAX_POOL_Q8))
+             operation.opcode != OPERATION_MAX_POOL_Q8 &&
+             operation.opcode != OPERATION_AVERAGE_POOL_Q8))
             return false;
         available[operation.output_tensor] = 1u;
         if (dynamic_quantize) {
@@ -1484,7 +1558,8 @@ static inline bool model_valid(const Model* model)
     uint32_t average_pool_operations = 0u;
     for (uint32_t index = 0u; index < model->operation_count; ++index)
         if (model->operations[index].opcode == OPERATION_AVERAGE_POOL_FLOAT32 ||
-            model->operations[index].opcode == OPERATION_MAX_POOL_Q8)
+            model->operations[index].opcode == OPERATION_MAX_POOL_Q8 ||
+            model->operations[index].opcode == OPERATION_AVERAGE_POOL_Q8)
             ++average_pool_operations;
     if (average_pool_operations != average_pool_count) return false;
     for (uint32_t index = 0u; index < average_pool_count; ++index) {
@@ -1493,7 +1568,9 @@ static inline bool model_valid(const Model* model)
             (model->operations[parameters.operation_index].opcode !=
                  OPERATION_AVERAGE_POOL_FLOAT32 &&
              model->operations[parameters.operation_index].opcode !=
-                 OPERATION_MAX_POOL_Q8) ||
+                 OPERATION_MAX_POOL_Q8 &&
+             model->operations[parameters.operation_index].opcode !=
+                 OPERATION_AVERAGE_POOL_Q8) ||
             average_pool_for_operation(model, parameters.operation_index) !=
                 &parameters)
             return false;
@@ -1503,6 +1580,8 @@ static inline bool model_valid(const Model* model)
              (parameters.reserved > 1u ||
               parameters.count_include_pad != 0u)) ||
             (opcode == OPERATION_AVERAGE_POOL_FLOAT32 &&
+             parameters.reserved != 0u) ||
+            (opcode == OPERATION_AVERAGE_POOL_Q8 &&
              parameters.reserved != 0u))
             return false;
         for (uint32_t prior = 0u; prior < index; ++prior)
@@ -1550,7 +1629,7 @@ static inline bool model_valid(const Model* model)
              model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 ||
              model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
              model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-             model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10) &&
+             model_version_has_v10_features(model->version)) &&
             axis.reserved != 0u;
         for (uint32_t operation = 0u;
              operation < model->operation_count; ++operation) {
@@ -1575,7 +1654,8 @@ static inline bool model_valid(const Model* model)
                 candidate.input_count == 1u &&
                 candidate.inputs[0] == axis.tensor_index)
                 used = 1u;
-            if (candidate.opcode == OPERATION_MAX_POOL_Q8 &&
+            if ((candidate.opcode == OPERATION_MAX_POOL_Q8 ||
+                 candidate.opcode == OPERATION_AVERAGE_POOL_Q8) &&
                 (candidate.inputs[0] == axis.tensor_index ||
                  candidate.output_tensor == axis.tensor_index) &&
                 axis.axis < 2u)
@@ -1595,6 +1675,12 @@ static inline bool model_valid(const Model* model)
                 (candidate.inputs[0] == batch.tensor_index ||
                  candidate.output_tensor == batch.tensor_index) &&
                 max_pool_q8_quantization_passthrough_valid(
+                    model, candidate.inputs[0], candidate.output_tensor))
+                used = 1u;
+            if (candidate.opcode == OPERATION_AVERAGE_POOL_Q8 &&
+                (candidate.inputs[0] == batch.tensor_index ||
+                 candidate.output_tensor == batch.tensor_index) &&
+                average_pool_q8_quantization_valid(
                     model, candidate.inputs[0], candidate.output_tensor))
                 used = 1u;
             if (candidate.opcode != OPERATION_MATMUL_Q8 ||
@@ -1765,7 +1851,7 @@ static inline uint64_t model_hash(const Model* model)
             model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 ||
             model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
             model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-            model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)
+            model_version_has_v10_features(model->version))
             hash = hash_u32(hash, axis.reserved);
         for (uint32_t parameter = 0u; parameter < axis.count; ++parameter) {
             uint32_t scale_bits = 0u;
@@ -1874,9 +1960,8 @@ static inline uint64_t serialized_size(const Model* model)
         model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 ||
         model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
         model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-        model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10;
-    uint64_t size = ((model->version ==
-                          RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
+        model_version_has_v10_features(model->version);
+    uint64_t size = ((model_version_has_v10_features(model->version) ||
                       model->version ==
                           RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9)
                      ? UINT64_C(80)
@@ -1958,6 +2043,9 @@ static inline RinResultCode serialize(const Model* model, void* blob,
         model_integer_convolution_count(model);
     const uint32_t average_pool_count = model_average_pool_count(model);
     const uint32_t serialized_version = model->version ==
+            RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V11
+        ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V11
+        : model->version ==
             RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10
         ? RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10
         : model->version ==
@@ -1985,6 +2073,7 @@ static inline RinResultCode serialize(const Model* model, void* blob,
     write_u32_le(output, RIN_NPU_QUANTIZED_MODEL_BLOB_MAGIC);
     write_u32_le(output + 4u, serialized_version);
     const uint32_t header_bytes = serialized_version ==
+            RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V11 || serialized_version ==
             RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 || serialized_version ==
             RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9
         ? 80u
@@ -2081,7 +2170,7 @@ static inline RinResultCode serialize(const Model* model, void* blob,
              model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7 ||
              model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8 ||
              model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9 ||
-             model->version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10)
+             model_version_has_v10_features(model->version))
                 ? axis.reserved : 0u);
         offset += 16u;
         for (uint32_t parameter = 0u; parameter < axis.count; ++parameter) {
@@ -2225,7 +2314,8 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
     const bool version7 = version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V7;
     const bool version8 = version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V8;
     const bool version9 = version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V9;
-    const bool version10 = version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10;
+    const bool version10 = version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V10 ||
+        version == RIN_NPU_QUANTIZED_MODEL_ABI_VERSION_V11;
     if ((!version1 && !version2 && !version3 && !version4 && !version5 &&
          !version6 && !version7 && !version8 && !version9 && !version10) ||
         ((version2 || version3 || version4 || version5 || version6 ||
@@ -2372,6 +2462,7 @@ static inline RinResultCode deserialize(const void* blob, uint32_t blob_bytes,
                  ? storage_order > 1u
                  : storage_order != 0u) ||
             (operation_opcode != OPERATION_MAX_POOL_Q8 &&
+             operation_opcode != OPERATION_AVERAGE_POOL_Q8 &&
              operation_opcode != OPERATION_AVERAGE_POOL_FLOAT32) ||
             (uint64_t)spatial_rank * 20u > blob_bytes - scan_offset - 20u)
             return RIN_RESULT_CORRUPT_DATA;
@@ -3452,6 +3543,106 @@ static inline RinResultCode evaluate_average_pool_float32(
     return RIN_RESULT_OK;
 }
 
+static inline RinResultCode evaluate_average_pool_q8(
+    const Model* model, const Operation& operation, uint32_t operation_index,
+    TensorView* tensors)
+{
+    const AveragePoolParameters* parameters =
+        average_pool_for_operation(model, operation_index);
+    if (!parameters || operation.input_count != 1u ||
+        operation.opcode != OPERATION_AVERAGE_POOL_Q8)
+        return RIN_RESULT_CORRUPT_DATA;
+    const TensorDescription& input_description =
+        model->tensors[operation.inputs[0]];
+    const TensorDescription& output_description =
+        model->tensors[operation.output_tensor];
+    uint64_t input_spatial_elements = 1u;
+    uint64_t output_spatial_elements = 1u;
+    uint64_t kernel_elements = 1u;
+    for (uint32_t axis = 0u; axis < parameters->spatial_rank; ++axis) {
+        const uint32_t input_extent = input_description.dimensions[axis + 2u];
+        const uint32_t output_extent = output_description.dimensions[axis + 2u];
+        const uint32_t kernel_extent = parameters->kernel_shape[axis];
+        if (!input_extent || !output_extent || !kernel_extent ||
+            input_spatial_elements > UINT64_MAX / input_extent ||
+            output_spatial_elements > UINT64_MAX / output_extent ||
+            kernel_elements > UINT64_MAX / kernel_extent)
+            return RIN_RESULT_CORRUPT_DATA;
+        input_spatial_elements *= input_extent;
+        output_spatial_elements *= output_extent;
+        kernel_elements *= kernel_extent;
+    }
+    if (!output_spatial_elements || !kernel_elements)
+        return RIN_RESULT_CORRUPT_DATA;
+
+    const uint32_t input_index = operation.inputs[0];
+    const void* input = tensors[input_index].data;
+    void* output = tensors[operation.output_tensor].data;
+    const uint64_t output_elements =
+        tensors[operation.output_tensor].element_count;
+    for (uint64_t output_element = 0u;
+         output_element < output_elements; ++output_element) {
+        const uint64_t outer_index =
+            output_element / output_spatial_elements;
+        uint64_t output_spatial = output_element % output_spatial_elements;
+        uint32_t output_coordinates[
+            RIN_NPU_QUANTIZED_MODEL_MAX_SPATIAL_DIMS] = {};
+        for (uint32_t reverse = parameters->spatial_rank; reverse > 0u;
+             --reverse) {
+            const uint32_t axis = reverse - 1u;
+            const uint32_t extent = output_description.dimensions[axis + 2u];
+            output_coordinates[axis] = (uint32_t)(output_spatial % extent);
+            output_spatial /= extent;
+        }
+
+        double sum = 0.0;
+        uint64_t valid_samples = 0u;
+        for (uint64_t kernel_index = 0u;
+             kernel_index < kernel_elements; ++kernel_index) {
+            uint64_t remaining = kernel_index;
+            uint64_t input_spatial = 0u;
+            bool in_bounds = true;
+            uint32_t kernel_coordinates[
+                RIN_NPU_QUANTIZED_MODEL_MAX_SPATIAL_DIMS] = {};
+            for (uint32_t reverse = parameters->spatial_rank; reverse > 0u;
+                 --reverse) {
+                const uint32_t axis = reverse - 1u;
+                const uint32_t extent = parameters->kernel_shape[axis];
+                kernel_coordinates[axis] = (uint32_t)(remaining % extent);
+                remaining /= extent;
+            }
+            for (uint32_t axis = 0u; axis < parameters->spatial_rank; ++axis) {
+                const int64_t coordinate =
+                    (int64_t)output_coordinates[axis] *
+                        (int64_t)parameters->strides[axis] -
+                    (int64_t)parameters->pads_begin[axis] +
+                    (int64_t)kernel_coordinates[axis] *
+                        (int64_t)parameters->dilations[axis];
+                const uint32_t extent = input_description.dimensions[axis + 2u];
+                if (coordinate < 0 || coordinate >= (int64_t)extent) {
+                    in_bounds = false;
+                    break;
+                }
+                input_spatial = input_spatial * extent +
+                    (uint64_t)coordinate;
+            }
+            if (!in_bounds) continue;
+            const uint64_t input_element =
+                outer_index * input_spatial_elements + input_spatial;
+            sum += dequantize_model_value(
+                model, input_index, input, input_element);
+            ++valid_samples;
+        }
+        const uint64_t divisor = parameters->count_include_pad
+            ? kernel_elements : valid_samples;
+        if (divisor == 0u ||
+            !store_model_quantized(model, operation.output_tensor, output,
+                output_element, sum / (double)divisor))
+            return RIN_RESULT_INVALID_ARGUMENT;
+    }
+    return RIN_RESULT_OK;
+}
+
 static inline bool max_pool_q8_window(
     const TensorDescription& input_description,
     const TensorDescription& output_description,
@@ -3780,6 +3971,10 @@ static inline RinResultCode evaluate_cpu(const CpuPlan* plan,
             if (result != RIN_RESULT_OK) return result;
         } else if (operation.opcode == OPERATION_MAX_POOL_Q8) {
             const RinResultCode result = evaluate_max_pool_q8(
+                model, operation, index, tensors);
+            if (result != RIN_RESULT_OK) return result;
+        } else if (operation.opcode == OPERATION_AVERAGE_POOL_Q8) {
+            const RinResultCode result = evaluate_average_pool_q8(
                 model, operation, index, tensors);
             if (result != RIN_RESULT_OK) return result;
         } else if (operation.opcode == OPERATION_AVERAGE_POOL_FLOAT32) {
