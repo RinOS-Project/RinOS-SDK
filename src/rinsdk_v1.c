@@ -492,6 +492,64 @@ RinResult rin_service_restart(int scope, const char* id) {
                                    scope, id);
 }
 
+RinResult rin_service_wait_published(
+    const char* id, uint32_t timeout_ms,
+    uint32_t* publication_generation_inout,
+    RinServiceWaitCancellationFunctionV1 cancellation, void* context) {
+    const uint32_t after_generation = publication_generation_inout
+        ? *publication_generation_inout : 0u;
+    uint32_t remaining_ms = timeout_ms;
+    uint32_t waited_ms = 0u;
+
+    if (id == NULL || rin_sdk_service_id_size(id) == 0u ||
+        publication_generation_inout == NULL)
+        return RIN_ERROR_INVALID_ARGUMENT;
+    *publication_generation_inout = 0u;
+    for (;;) {
+        RinServicePublicationWaitV1 request;
+        uint32_t slice_ms = remaining_ms;
+        intptr_t raw_result;
+        RinResult result;
+
+        if (cancellation != NULL && cancellation(context))
+            return RIN_ERROR_CANCELLED;
+        if (cancellation != NULL && slice_ms > 25u) slice_ms = 25u;
+        memset(&request, 0, sizeof(request));
+        request.struct_size = sizeof(request);
+        request.version = RIN_SERVICE_PUBLICATION_WAIT_VERSION_V1;
+        request.timeout_ms = slice_ms;
+        request.after_generation = after_generation;
+        raw_result = _syscall2(
+            (uintptr_t)RIN_SYS_SERVICE_WAIT_PUBLISHED,
+            (uintptr_t)id, (uintptr_t)&request);
+        result = raw_result < 0
+            ? rin_sdk_service_status_result(raw_result)
+            : request.result;
+        if (result == RIN_SUCCESS &&
+            request.publication_generation > after_generation) {
+            *publication_generation_inout =
+                request.publication_generation;
+            return RIN_SUCCESS;
+        }
+        if (result == RIN_ERROR_TIMEOUT && cancellation != NULL &&
+            slice_ms < remaining_ms) {
+            if (cancellation(context)) return RIN_ERROR_CANCELLED;
+            remaining_ms -= slice_ms;
+            continue;
+        }
+        if (result != RIN_ERROR_TIMEOUT &&
+            result != RIN_ERROR_WOULD_BLOCK)
+            return result;
+        if (cancellation != NULL && cancellation(context))
+            return RIN_ERROR_CANCELLED;
+        if (slice_ms == 0u || slice_ms >= remaining_ms)
+            return RIN_ERROR_TIMEOUT;
+        remaining_ms -= slice_ms;
+        waited_ms += slice_ms;
+        if (waited_ms >= timeout_ms) return RIN_ERROR_TIMEOUT;
+    }
+}
+
 static RinResult rin_sdk_service_dependency(
     uint32_t operation, const char* id, uint32_t* state_out) {
     if (id == NULL ||

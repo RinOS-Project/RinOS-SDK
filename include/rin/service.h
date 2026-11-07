@@ -19,6 +19,16 @@ RIN_SDK_API RinResult rin_service_start(int scope, const char* id);
 RIN_SDK_API RinResult rin_service_stop(int scope, const char* id);
 RIN_SDK_API RinResult rin_service_restart(int scope, const char* id);
 
+/* Wait until a system service publishes a generation-tagged UNIX endpoint.
+ * On success publication_generation_inout receives the generation to pass
+ * back on the next wait. The optional cancellation callback is checked at
+ * bounded intervals while the kernel wait sleeps for publication. */
+typedef int (*RinServiceWaitCancellationFunctionV1)(void* context);
+RIN_SDK_API RinResult rin_service_wait_published(
+    const char* id, uint32_t timeout_ms,
+    uint32_t* publication_generation_inout,
+    RinServiceWaitCancellationFunctionV1 cancellation, void* context);
+
 /* A dependency lease starts one explicitly allowlisted system service for
  * this signed application process and authenticated session. The lease is
  * reclaimed when the process exits; releasing the last dependency-only lease

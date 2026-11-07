@@ -450,6 +450,7 @@ static RinResult rin_media_connect_service(int* socket_fd_out)
 {
     int fd;
     RinResult start_result;
+    uint32_t publication_generation = 0u;
 
     if (socket_fd_out == NULL) return RIN_ERROR_INVALID_ARGUMENT;
     *socket_fd_out = -1;
@@ -461,15 +462,13 @@ static RinResult rin_media_connect_service(int* socket_fd_out)
 
     start_result = rin_service_start(RIN_SERVICE_SCOPE_SYSTEM, "mediad");
     if (start_result != RIN_SUCCESS) return start_result;
-    for (uint32_t elapsed = 0u; elapsed < 500u; elapsed += 25u) {
-        (void)poll(NULL, 0u, 25);
-        fd = rin_media_connect_once();
-        if (fd >= 0) {
-            *socket_fd_out = fd;
-            return RIN_SUCCESS;
-        }
-    }
-    return RIN_ERROR_TIMEOUT;
+    start_result = rin_service_wait_published(
+        "mediad", 500u, &publication_generation, NULL, NULL);
+    if (start_result != RIN_SUCCESS) return start_result;
+    fd = rin_media_connect_once();
+    if (fd < 0) return RIN_ERROR_IO;
+    *socket_fd_out = fd;
+    return RIN_SUCCESS;
 }
 
 static RinResult rin_media_image_status_result(int32_t status)
@@ -587,7 +586,7 @@ static RinResult rin_media_connect_image_service(
     uint64_t* connection_id_out, int* socket_fd_out)
 {
     int fd;
-    uint32_t elapsed;
+    uint32_t publication_generation = 0u;
     RinResult start_result;
 
     if (connection_id_out != NULL) *connection_id_out = 0u;
@@ -602,15 +601,14 @@ static RinResult rin_media_connect_image_service(
     start_result = rin_service_start(RIN_SERVICE_SCOPE_SYSTEM,
                                      RIN_IMAGE_DECODER_SERVICE_ID);
     if (start_result != RIN_SUCCESS) return start_result;
-    for (elapsed = 0u; elapsed < 500u; elapsed += 25u) {
-        (void)poll(NULL, 0u, 25);
-        fd = rin_media_image_connect_once(connection_id_out);
-        if (fd >= 0) {
-            *socket_fd_out = fd;
-            return RIN_SUCCESS;
-        }
-    }
-    return RIN_ERROR_TIMEOUT;
+    start_result = rin_service_wait_published(
+        RIN_IMAGE_DECODER_SERVICE_ID, 500u,
+        &publication_generation, NULL, NULL);
+    if (start_result != RIN_SUCCESS) return start_result;
+    fd = rin_media_image_connect_once(connection_id_out);
+    if (fd < 0) return RIN_ERROR_IO;
+    *socket_fd_out = fd;
+    return RIN_SUCCESS;
 }
 
 static int rin_media_image_response_header(
