@@ -9,6 +9,7 @@
  * identical for i686 and x86_64 targets.  Function addresses are stored as
  * zero-extended uintptr_t values. */
 #define RIN_CXX_CORO_FRAME_HEADER_SIZE 64u
+#define RIN_CXX_CORO_FRAME_ALIGNMENT 8u
 #define RIN_CXX_CORO_FRAME_MAGIC UINT64_C(0x52494e434f524f31)
 #define RIN_CXX_CORO_FRAME_DONE UINT64_C(1)
 #define RIN_CXX_CORO_FRAME_NOOP UINT64_C(2)
