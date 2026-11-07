@@ -877,8 +877,9 @@ typedef RinDriverV3Result (*RinDriverV3NetSetRxInterruptsFn)(
 typedef RinDriverV3Result (*RinDriverV3NetRecoverFn)(
     uint64_t driver_context);
 /* The request and response buffers are synchronous, borrowed memory. The
- * callback must validate operation-specific sizes and must not retain either
- * pointer after it returns. response_length is zeroed on failure. */
+ * callback runs in task context and may wait using the Driver Services
+ * deadline API; it must validate operation-specific sizes and must not retain
+ * either pointer after it returns. response_length is zeroed on failure. */
 typedef RinDriverV3Result (*RinDriverV3NetControlFn)(
     uint64_t driver_context, uint32_t operation, const void* request,
     uint32_t request_length, void* response, uint32_t response_capacity,
