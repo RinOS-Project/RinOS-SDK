@@ -1890,18 +1890,27 @@ static inline bool fuse_qdq_average_pool(Workspace *w,
     uint32_t quantization_count,
     uint32_t batch_quantization_count, uint32_t convolution_count,
     uint32_t integer_matmul_count, uint32_t integer_convolution_count,
-    uint32_t average_pool_count, uint32_t graph_input_count,
+    uint32_t *average_pool_count, uint32_t graph_input_count,
     uint32_t *graph_inputs, uint32_t external_input_count,
     uint32_t *external_inputs, uint32_t graph_output_count,
     uint32_t *graph_outputs, uint32_t constant_count,
     ConstantBinding *constants) {
+  if (!w || !operation_count || !tensor_count || !average_pool_count)
+    return false;
   for (uint32_t pool_index = 0u; pool_index < *operation_count;
        ++pool_index) {
     q::Operation &pool = w->operations[pool_index];
-    if (pool.opcode != q::OPERATION_AVERAGE_POOL_FLOAT32 ||
+    const bool is_global_max_pool =
+        pool.opcode == q::OPERATION_GLOBAL_MAX_POOL_FLOAT32;
+    if ((!is_global_max_pool &&
+         pool.opcode != q::OPERATION_AVERAGE_POOL_FLOAT32) ||
         pool.input_count != 1u ||
         graph_has_tensor(graph_outputs, graph_output_count,
                          pool.output_tensor))
+      continue;
+    if (is_global_max_pool &&
+        (!w->average_pools ||
+         *average_pool_count >= w->average_pool_capacity))
       continue;
 
     uint32_t dequantize_index = UINT32_MAX;
@@ -1945,6 +1954,33 @@ static inline bool fuse_qdq_average_pool(Workspace *w,
         !q::same_shape(w->tensors[pool.output_tensor],
                        w->tensors[quantize.output_tensor]))
       continue;
+
+    if (is_global_max_pool) {
+      const q::TensorDescription &input_quantized =
+          w->tensors[dequantize.inputs[0]];
+      const q::TensorDescription &output_quantized =
+          w->tensors[quantize.output_tensor];
+      bool has_per_axis_parameters = false;
+      bool has_batch_parameters = false;
+      if (input_quantized.data_type != output_quantized.data_type ||
+          input_quantized.scale != output_quantized.scale ||
+          input_quantized.zero_point != output_quantized.zero_point)
+        continue;
+      for (uint32_t index = 0u; index < quantization_count; ++index) {
+        const q::AxisQuantization &axis = w->quantizations[index];
+        if (axis.tensor_index == dequantize.inputs[0] ||
+            axis.tensor_index == quantize.output_tensor)
+          has_per_axis_parameters = true;
+      }
+      for (uint32_t index = 0u; index < batch_quantization_count; ++index) {
+        const q::BatchQuantization &batch = w->batch_quantizations[index];
+        if (batch.tensor_index == dequantize.inputs[0] ||
+            batch.tensor_index == quantize.output_tensor)
+          has_batch_parameters = true;
+      }
+      if (has_per_axis_parameters || has_batch_parameters)
+        continue;
+    }
 
     uint32_t dequantize_output_uses = 0u;
     uint32_t pool_output_uses = 0u;
@@ -2000,16 +2036,37 @@ static inline bool fuse_qdq_average_pool(Workspace *w,
             dequantize_index, pool_index, quantize_index, *operation_count))
       continue;
 
+    if (is_global_max_pool) {
+      const q::TensorDescription &input =
+          w->tensors[dequantize.inputs[0]];
+      if (input.rank < 3u ||
+          input.rank > RIN_NPU_MODEL_MAX_RANK)
+        continue;
+      q::AveragePoolParameters parameters = {};
+      parameters.operation_index = pool_index;
+      parameters.spatial_rank = input.rank - 2u;
+      for (uint32_t axis = 0u; axis < parameters.spatial_rank; ++axis) {
+        const uint32_t extent = input.dimensions[axis + 2u];
+        if (extent == 0u) return false;
+        parameters.kernel_shape[axis] = extent;
+        parameters.strides[axis] = 1u;
+        parameters.dilations[axis] = 1u;
+      }
+      w->average_pools[*average_pool_count] = parameters;
+      ++*average_pool_count;
+    }
+
     q::Operation fused_pool = pool;
-    fused_pool.opcode = q::OPERATION_AVERAGE_POOL_Q8;
+    fused_pool.opcode = is_global_max_pool
+        ? q::OPERATION_MAX_POOL_Q8 : q::OPERATION_AVERAGE_POOL_Q8;
     fused_pool.inputs[0] = dequantize.inputs[0];
     fused_pool.output_tensor = output_tensor;
     remove_operation_at(w, operation_count, quantize_index,
         convolution_count, integer_matmul_count, integer_convolution_count,
-        average_pool_count);
+        *average_pool_count);
     remove_operation_at(w, operation_count, dequantize_index,
         convolution_count, integer_matmul_count, integer_convolution_count,
-        average_pool_count);
+        *average_pool_count);
     --pool_index;
     w->operations[pool_index] = fused_pool;
     if (!compact_removed_average_pool_tensors(w, tensor_count,
@@ -3161,7 +3218,7 @@ static inline RinResultCode import_model(const void *blob, uint32_t blob_bytes,
   }
   if (!fuse_qdq_average_pool(w, &operations, &values, quantizations,
       batch_quantizations, convolutions, integer_matmuls,
-      integer_convolutions, average_pools, graph_input_count,
+      integer_convolutions, &average_pools, graph_input_count,
       w->graph_inputs, externals, w->external_inputs, g.output_count,
       w->graph_outputs, constants, w->constants))
     return RIN_RESULT_CORRUPT_DATA;
