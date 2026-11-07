@@ -48,8 +48,28 @@ typedef enum RinNetworkNamespaceSyscallOperationV1 {
     RIN_NETWORK_NAMESPACE_OP_QUERY_SANDBOX = 8,
     /* Idempotent, result-recoverable interface move. The operation-specific
      * V2 payloads below occupy request/response reserved words. */
-    RIN_NETWORK_NAMESPACE_OP_MOVE_INTERFACE_V2 = 9
+    RIN_NETWORK_NAMESPACE_OP_MOVE_INTERFACE_V2 = 9,
+    /* Resolve an interface ID to a caller-authorized generation handle. */
+    RIN_NETWORK_NAMESPACE_OP_LOOKUP_INTERFACE = 10
 } RinNetworkNamespaceSyscallOperationV1;
+
+typedef struct RinNetworkNamespaceInterfaceLookupRequestV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    uint64_t interface_id;
+    uint64_t reserved[3];
+} RinNetworkNamespaceInterfaceLookupRequestV1;
+
+typedef struct RinNetworkNamespaceInterfaceLookupResultV1 {
+    uint32_t struct_size;
+    uint16_t version;
+    uint16_t flags;
+    RinNetworkNamespaceAbiHandleV1 handle;
+    RinNetworkNamespaceAbiHandleV1 namespace_handle;
+    uint64_t interface_id;
+    uint64_t reserved;
+} RinNetworkNamespaceInterfaceLookupResultV1;
 
 typedef struct RinNetworkNamespaceMoveInterfaceRequestV2 {
     uint32_t struct_size;
@@ -94,7 +114,8 @@ typedef struct RinNetworkNamespaceSyscallRequestV1 {
     uint32_t owner_uid;
     uint32_t reserved0;
     RinNetworkNamespaceAbiHandleV1 interface_handle;
-    /* All zero except QUERY_SANDBOX and MOVE_INTERFACE_V2, where this is
+    /* All zero except QUERY_SANDBOX, MOVE_INTERFACE_V2 and
+     * LOOKUP_INTERFACE, where this is
      * exactly the operation-specific versioned payload. */
     uint64_t reserved[5];
 } RinNetworkNamespaceSyscallRequestV1;
@@ -124,6 +145,10 @@ static_assert(sizeof(RinNetworkNamespaceSandboxQueryV1) == 40u,
               "RinNetworkNamespaceSandboxQueryV1 ABI drift");
 static_assert(sizeof(RinNetworkNamespaceMoveInterfaceRequestV2) == 40u,
               "RinNetworkNamespaceMoveInterfaceRequestV2 ABI drift");
+static_assert(sizeof(RinNetworkNamespaceInterfaceLookupRequestV1) == 40u,
+              "RinNetworkNamespaceInterfaceLookupRequestV1 ABI drift");
+static_assert(sizeof(RinNetworkNamespaceInterfaceLookupResultV1) == 40u,
+              "RinNetworkNamespaceInterfaceLookupResultV1 ABI drift");
 static_assert(sizeof(RinNetworkNamespaceMoveInterfaceResultV2) == 40u,
               "RinNetworkNamespaceMoveInterfaceResultV2 ABI drift");
 #else
@@ -135,6 +160,10 @@ _Static_assert(sizeof(RinNetworkNamespaceSandboxQueryV1) == 40u,
               "RinNetworkNamespaceSandboxQueryV1 ABI drift");
 _Static_assert(sizeof(RinNetworkNamespaceMoveInterfaceRequestV2) == 40u,
                "RinNetworkNamespaceMoveInterfaceRequestV2 ABI drift");
+_Static_assert(sizeof(RinNetworkNamespaceInterfaceLookupRequestV1) == 40u,
+               "RinNetworkNamespaceInterfaceLookupRequestV1 ABI drift");
+_Static_assert(sizeof(RinNetworkNamespaceInterfaceLookupResultV1) == 40u,
+               "RinNetworkNamespaceInterfaceLookupResultV1 ABI drift");
 _Static_assert(sizeof(RinNetworkNamespaceMoveInterfaceResultV2) == 40u,
                "RinNetworkNamespaceMoveInterfaceResultV2 ABI drift");
 #endif
